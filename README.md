@@ -36,7 +36,7 @@ $ sudo make
 
 ## 🚀 How to Use
 ```
-$ tomatoc
+$ tomato
 ```
 
 To run it at the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
