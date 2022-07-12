@@ -1,9 +1,9 @@
 <h1 align="center">
     <br>
-    <img src="./media/tomato.gif" alt="tomatowelcome" width="194px">
-    <img src="./media/coffee.gif" alt="tomatocoffee" width="194px">
-    <img src="./media/machine.gif" alt="tomatomachine" width="194px">
-    <img src="./media/beach.gif" alt="tomatobeach" width="194px">
+    <img src="./media/tomato.gif" alt="tomatowelcome" width="175px">
+    <img src="./media/coffee.gif" alt="tomatocoffee" width="175px">
+    <img src="./media/machine.gif" alt="tomatomachine" width="175px">
+    <img src="./media/beach.gif" alt="tomatobeach" width="175px">
     <br>
     Tomato.C
     <br>
