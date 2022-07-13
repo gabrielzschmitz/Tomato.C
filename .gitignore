@@ -1,6 +1,4 @@
 *.gif
 *.md
-.git/
 media/
 LICENSE
-.gitignore
