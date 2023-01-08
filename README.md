@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
-  <a href="#-controls">Controls</a> •
+  <a href="#%EF%B8%8F-controls">Controls</a> •
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
   <a href="#-dependencies">Dependencies</a> •
