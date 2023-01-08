@@ -39,8 +39,7 @@ void initScreen(){
     /* Invisible cursor */
     curs_set(0);
     /* Non-blocking getch */
-    //nodelay(stdscr, TRUE);
-    timeout(0);
+    nodelay(stdscr, TRUE);
     /* Enable keypad */
     keypad(stdscr, TRUE);
 }
