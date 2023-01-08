@@ -5,12 +5,30 @@
 # `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"' 
 #  ,|							  
 #  `'							  
+#  Makefile
 
-# Paths
-DIR = /usr/local/bin/
-MANDIR = /usr/local/share/man
+PREFIX = /usr/local
 
-tomato:
-	gcc tomato.c -o tomato
-	mv ./tomato ${DIR}
+tomato: tomato.o util.o input.o update.o
+	gcc -lncurses -o tomato tomato.o util.o input.o update.o
+
+tomato.o: tomato.c util.h input.h update.h
+	gcc -lncurses -c -g tomato.c
+
+util.o: util.c util.h
+	gcc -lncurses -c -g util.c
+
+input.o: input.c input.h
+	gcc -lncurses -c -g input.c
+
+update.o: update.c update.h
+	gcc -lncurses -c -g update.c
+
+clean:
+	rm -rf tomato tomato.o util.o input.o update.o
+
+install: tomato
+	mkdir -p ${PREFIX}/bin
+	cp -f tomato ${PREFIX}/bin
+	chmod 755 ${PREFIX}/bin/tomato
 
