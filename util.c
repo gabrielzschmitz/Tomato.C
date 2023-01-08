@@ -73,8 +73,8 @@ void timer(appData * app){
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
         /* Debug */
-        app->timer = app->timer - 60;
-        //app->timer = app->timer - 1;
+        //app->timer = app->timer - 60;
+        app->timer = app->timer - 1;
         setColor(COLOR_WHITE, COLOR_BLACK, COLOR_WHITE);
     }
 }
