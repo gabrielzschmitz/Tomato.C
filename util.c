@@ -232,9 +232,9 @@ void printMachine(appData * app){
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
         mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
         mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\_ _/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    -     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   ___    ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
+        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
         mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
         mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
         mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
@@ -246,9 +246,9 @@ void printMachine(appData * app){
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
         mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
         mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\_ _/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    I     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   ___    ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    †     ");
+        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
         mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
         mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
         mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
@@ -260,9 +260,9 @@ void printMachine(appData * app){
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
         mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
         mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\_ _/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    -     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   _|_    ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
+        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   _|_    ");
         mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
         mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
         mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
