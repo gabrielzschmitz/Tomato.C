@@ -20,6 +20,7 @@
 <p align="center">
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
+  <a href="#-controls">Controls</a> •
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
   <a href="#-dependencies">Dependencies</a> •
@@ -27,22 +28,31 @@
 </p>
 
 ## 💾 How to Install
-<b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>.
+<b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
 ```
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
 $ cd Tomato.C
-$ sudo make
+$ sudo make install
 ```
 
 ## 🚀 How to Use
+Just <b>type it</b> in the <b>terminal</b>:
 ```
 $ tomato
 ```
 
-To run it at the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
+<b>Tip:</b> For the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
 ```
-$ setsid -f "$TERMINAL" -g 25x14 -c tomato -e tomato
+$ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
 ```
+
+## 🕹️ Controls
+Use the following <b>keys</b> to <b>control</b> the application:
+
+ * <b><i>Arrow or VIM Keys:</i></b> To moviment and select;
+ * <b><i>ENTER:</i></b> To select;
+ * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
+ * <b><i>ESC or Q:</i></b> To quit;
 
 ## 🍅 The Pomodoro Method
 <img src="./media/tomatomethod.gif" alt="tomatomethod" width="210px" align="right">
@@ -59,15 +69,18 @@ The technique basically consists of using a timer to break down work into <b>int
 
  5. <b>Restart</b>.
 
+<b>Note</b>: the <b>timers</b> and the <b>amount of pomodoros can be changed</b> by the user.
 ## 📝 To-do
 - [X] Make a welcome screen
-- [ ] Implement input controls
-- [ ] Implement user options
-- [ ] Rewrite using ncurses
-- [ ] Make it auto center (without setsid)
+- [X] Rewrite using ncurses
+- [X] Implement input controls
+- [X] Implement user options
+- [X] Make it auto center
+- [ ] Implement mouse support
+- [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile, and [dunst](https://github.com/dunst-project/dunst) to show notifications.
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
 
 ## 📜 License
 This software is licensed under the [GPL-3](./LICENSE) license.
