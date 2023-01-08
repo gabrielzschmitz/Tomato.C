@@ -22,4 +22,6 @@
 
 /* Handle user input and app state */
 extern void handleInputs(appData * );
+extern void mainMenuInput(appData * , char );
+extern void settingsInput(appData * , char );
 
