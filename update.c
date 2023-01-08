@@ -20,10 +20,11 @@
 /* Update variables */
 void doUpdate(appData * app){
 
-    /*Mode 0*/
+    /* Mode 0 (Main Menu) */
     if(app->currentMode == 0){
         frameTimer(app);
 
+        /* Tomato Animation */
         if(app->frameTimer == (1 * 16)) app->logoFrame = 1;
         else if(app->frameTimer == (2 * 16)) app->logoFrame = 2;
         else if(app->frameTimer == (3 * 16)) app->logoFrame = 3;
@@ -37,7 +38,7 @@ void doUpdate(appData * app){
         }
     }
 
-    /*Mode 1*/
+    /* Mode 1 (Work Time) */
     if(app->currentMode == 1){
         timer(app);
         frameTimer(app);
@@ -56,6 +57,7 @@ void doUpdate(appData * app){
             }
         }
 
+        /* Coffee Animation */
         if(app->frameTimer == (3 * 16)) app->coffeeFrame = 1;
         else if(app->frameTimer == (6 * 16)){
             app->coffeeFrame = 0;
@@ -63,7 +65,7 @@ void doUpdate(appData * app){
         }
     }
 
-    /*Mode 2*/
+    /* Mode 2 (Short Pause) */
     if(app->currentMode == 2){
         timer(app);
         frameTimer(app);
@@ -75,6 +77,7 @@ void doUpdate(appData * app){
             system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
         }
 
+        /* Machine Animation */
         if(app->frameTimer == (2 * 16)) app->machineFrame = 1;
         else if(app->frameTimer == (4 * 16)) app->machineFrame = 2;
         else if(app->frameTimer == (6 * 16)){
@@ -83,13 +86,14 @@ void doUpdate(appData * app){
         }
     }
 
-    /*Mode 3*/
+    /* Mode 3 (Long Pause) */
     if(app->currentMode == 3){
         timer(app);
         frameTimer(app);
         if(app->timer == 0)
             app->currentMode = 0;
-
+        
+        /* Beach Animation */
         if(app->frameTimer == (3 * 16)) app->beachFrame = 1;
         else if(app->frameTimer == (6 * 16)){
             app->beachFrame = 0;
