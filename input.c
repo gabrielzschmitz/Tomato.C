@@ -20,37 +20,16 @@
 /* Handle user input and app state */
 void handleInputs(appData * app){
     app->userInput = getch();
+    char key;
 
     switch(app->userInput){
         case ENTER:
-            if(app->currentMode == 0){
-                if(app->menuPos == 1){
-                    app->timer = (app->workTime * 60 * 16);
-                    app->frameTimer = 0;
-                    app->currentMode = 1;
-                    app->pomodoroCounter = app->pomodoroCounter + 1;
-                    system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
-                }
-                else if(app->menuPos == 2){
-                    app->currentMode = -1;
-                    app->menuPos = 1;
-                }
-                else if(app->menuPos == 3){
-                    endwin();
-                    exit(EXIT_SUCCESS);
-                }
-                break;
-            }
-            else if(app->currentMode == -1){
-                if(app->menuPos == 5){
-                    app->frameTimer = 0;
-                    app->logoFrame = 0;
-                    app->currentMode = 0;
-                    app->menuPos = 1;
-                }
-                break;
-            }else
-                break;
+            key = 'E';
+            if(app->currentMode == 0)
+                mainMenuInput(app, key);
+            else if(app->currentMode == -1)
+                settingsInput(app, key);
+            break;
 
         case KEY_UP:
         case 'K':
@@ -62,106 +41,29 @@ void handleInputs(appData * app){
         case KEY_DOWN:
         case 'J':
         case 'j':
-            if(app->currentMode == 0){
-                if(app->menuPos != 3)
-                    app->menuPos++;
-                break;
-            }
-            if(app->currentMode == -1){
-                if(app->menuPos != 5)
-                    app->menuPos++;
-                break;
-            }
+            key = 'D';
+            if(app->currentMode == -1)
+                settingsInput(app, key);
+            else if(app->currentMode == 0)
+                mainMenuInput(app, key);
             break;
 
         case KEY_LEFT:
         case 'H':
         case 'h':
-            if(app->currentMode == -1){
-                if(app->menuPos == 1){
-                    if(app->pomodoros != 1)
-                        app->pomodoros --;
-                }
-                else if(app->menuPos == 2){
-                    if(app->workTimeLevels != 0){
-                        app->workTimeLevels--;
-                        app->workTime = app->workTime - 5;
-                    }
-                }
-                else if(app->menuPos == 3){
-                    if(app->shortPauseLevels != 0){
-                        app->shortPauseLevels --;
-                        app->shortPause = app->shortPause - 1;
-                    }
-                }
-                else if(app->menuPos == 4){
-                    if(app->longPauseLevels != 0){
-                        app->longPauseLevels --;
-                        app->longPause = app->longPause - 5;
-                    }
-                }
-                else if(app->menuPos == 5){
-                    app->frameTimer = 0;
-                    app->logoFrame = 0;
-                    app->currentMode = 0;
-                    app->menuPos = 1;
-                }
-                break;
-            }
+            key = 'L';
+            if(app->currentMode == -1)
+                settingsInput(app, key);
             break;
 
         case KEY_RIGHT:
         case 'L':
         case 'l':
-            if(app->currentMode == 0){
-                if(app->menuPos == 1){
-                    app->timer = (app->workTime * 60 * 16);
-                    app->frameTimer = 0;
-                    app->currentMode = 1;
-                    app->pomodoroCounter = app->pomodoroCounter + 1;
-                    system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
-                }
-                else if(app->menuPos == 2){
-                    app->currentMode = -1;
-                    app->menuPos = 1;
-                }
-                else if(app->menuPos == 3){
-                    endwin();
-                    exit(EXIT_SUCCESS);
-                }
-                break;
-            }
-            if(app->currentMode == -1){
-                if(app->menuPos == 1){
-                    if(app->pomodoros != 8)
-                        app->pomodoros++;
-                }
-                else if(app->menuPos == 2){
-                    if(app->workTimeLevels != 9){
-                        app->workTimeLevels++;
-                        app->workTime = app->workTime + 5;
-                    }
-                }
-                else if(app->menuPos == 3){
-                    if(app->shortPauseLevels != 9){
-                        app->shortPauseLevels ++;
-                        app->shortPause = app->shortPause + 1;
-                    }
-                }
-                else if(app->menuPos == 4){
-                    if(app->longPauseLevels != 11){
-                        app->longPauseLevels ++;
-                        app->longPause = app->longPause + 5;
-                    }
-                }
-                else if(app->menuPos == 5){
-                    app->frameTimer = 0;
-                    app->logoFrame = 0;
-                    app->currentMode = 0;
-                    app->menuPos = 1;
-                }
-                break;
-            }
+            key = 'R';
+            if(app->currentMode == 0)
+                mainMenuInput(app, key);
+            else if(app->currentMode == -1)
+                settingsInput(app, key);
             break;
 
         case CTRLX:
@@ -190,5 +92,119 @@ void handleInputs(appData * app){
             break;
     }
 
+}
+
+void mainMenuInput(appData * app, char key){
+    if(key == 'E'){
+        if(app->menuPos == 1){
+            app->timer = (app->workTime * 60 * 16);
+            app->frameTimer = 0;
+            app->currentMode = 1;
+            app->pomodoroCounter = app->pomodoroCounter + 1;
+            system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+        }
+        else if(app->menuPos == 2){
+            app->currentMode = -1;
+            app->menuPos = 1;
+        }else{
+            endwin();
+            exit(EXIT_SUCCESS);
+        }
+    }
+    else if(key == 'D'){
+        if(app->menuPos != 3)
+            app->menuPos++;
+    }
+    else if(key == 'R'){
+        if(app->menuPos == 1){
+                app->timer = (app->workTime * 60 * 16);
+                app->frameTimer = 0;
+                app->currentMode = 1;
+                app->pomodoroCounter = app->pomodoroCounter + 1;
+                system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+        }
+        else if(app->menuPos == 2){
+                app->currentMode = -1;
+                app->menuPos = 1;
+        }else{
+                endwin();
+                exit(EXIT_SUCCESS);
+        }
+    }else
+        return;
+}
+
+void settingsInput(appData * app, char key){
+    if(key == 'E'){
+        if(app->menuPos == 5){
+            app->frameTimer = 0;
+            app->logoFrame = 0;
+            app->currentMode = 0;
+            app->menuPos = 1;
+        }
+    }
+    else if(key == 'D'){
+        if(app->menuPos != 5)
+            app->menuPos++;
+    }
+    else if(key == 'L'){
+        if(app->menuPos == 1){
+            if(app->pomodoros != 1)
+                app->pomodoros --;
+        }
+        else if(app->menuPos == 2){
+            if(app->workTimeLevels != 0){
+                app->workTimeLevels--;
+                app->workTime = app->workTime - 5;
+            }
+        }
+        else if(app->menuPos == 3){
+            if(app->shortPauseLevels != 0){
+                app->shortPauseLevels --;
+                app->shortPause = app->shortPause - 1;
+            }
+        }
+        else if(app->menuPos == 4){
+            if(app->longPauseLevels != 0){
+                app->longPauseLevels --;
+                app->longPause = app->longPause - 5;
+            }
+        }else{
+            app->frameTimer = 0;
+            app->logoFrame = 0;
+            app->currentMode = 0;
+            app->menuPos = 1;
+        }
+    }
+    else if(key == 'R'){
+        if(app->menuPos == 1){
+            if(app->pomodoros != 8)
+                app->pomodoros++;
+        }
+        else if(app->menuPos == 2){
+            if(app->workTimeLevels != 9){
+                app->workTimeLevels++;
+                app->workTime = app->workTime + 5;
+            }
+        }
+        else if(app->menuPos == 3){
+            if(app->shortPauseLevels != 9){
+                app->shortPauseLevels ++;
+                app->shortPause = app->shortPause + 1;
+            }
+        }
+        else if(app->menuPos == 4){
+            if(app->longPauseLevels != 11){
+                app->longPauseLevels ++;
+                app->longPause = app->longPause + 5;
+            }
+        }else{
+            app->frameTimer = 0;
+            app->logoFrame = 0;
+            app->currentMode = 0;
+            app->menuPos = 1;
+        }
+    }else
+        return;
 }
 
