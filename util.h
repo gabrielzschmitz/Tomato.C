@@ -9,10 +9,6 @@
 // util.h
 */
 #include <ncurses.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <locale.h>
 
 /* Defining the colors pallete size */
 #define PALLETE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
