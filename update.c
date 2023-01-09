@@ -11,6 +11,7 @@
 #include "util.h"
 #include "input.h"
 #include "update.h"
+#include "anim.h"
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
