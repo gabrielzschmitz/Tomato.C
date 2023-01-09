@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
-  <a href="#%EF%B8%8F-controls">Controls</a> •
+  <a href="#%EF%B8%8F-controls-and-preferences">Controls and Preferences</a> •
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
   <a href="#-dependencies">Dependencies</a> •
@@ -46,13 +46,22 @@ $ tomato
 $ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
 ```
 
-## 🕹️ Controls
+## 🕹️ Controls and Preferences
+<img src="./media/preferences.gif" alt="preferences" width="210px" align="right">
+
 Use the following <b>keys</b> to <b>control</b> the application:
 
  * <b><i>Arrows or VIM Keys:</i></b> To moviment and select;
  * <b><i>ENTER:</i></b> To select;
  * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
- * <b><i>ESC or Q:</i></b> To quit;
+ * <b><i>ESC or Q:</i></b> To quit.
+
+You can configure the following settings:
+
+ * <b><i>Pomodoros Amount</i></b>;
+ * <b><i>Work Time</i></b>;
+ * <b><i>Short Pause Time</i></b>;
+ * <b><i>Long Pause Time</i></b>.
 
 ## 🍅 The Pomodoro Method
 <img src="./media/tomatomethod.gif" alt="tomatomethod" width="210px" align="right">
