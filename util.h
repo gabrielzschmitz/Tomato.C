@@ -45,14 +45,7 @@ extern void initScreen();
 extern void setColor(short int , short int , chtype );
 extern void getWindowSize(appData * );
 
-extern void frameTimer(appData * );
 extern void timer(appData * );
-
-extern void printLogo(appData * );
-extern void printCoffee(appData * );
-extern void printMachine(appData * );
-extern void printBeach(appData * );
-extern void printGear(appData * , int );
 
 extern void printMainMenu(appData *);
 extern void printPomodoroCounter(appData * );
