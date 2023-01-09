@@ -9,10 +9,6 @@
 // input.h
 */
 #include <ncurses.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <locale.h>
 
 /* Defining some ASCII Keys */
 # define ESC 27
