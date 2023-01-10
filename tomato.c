@@ -39,7 +39,7 @@ void initApp(appData * app){
 
 /* Print at screen */
 void drawScreen(appData * app){
-    clear();
+    erase();
     
     switch(app->currentMode){
         case -1:
