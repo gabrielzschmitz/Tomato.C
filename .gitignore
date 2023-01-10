@@ -1,5 +1,6 @@
 *.gif
 *.md
+*.o
 media/
 LICENSE
 sprites
