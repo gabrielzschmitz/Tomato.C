@@ -95,7 +95,7 @@ It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisibl
 ## 🤝 Contribute
 Feel free to contribute to the project, the only requirement is to follow the commit tittle pattern:
 
- * Emoji-Related-File Tittle
+ * File-Related-Emoji Tittle
 
 ## 📜 License
 This software is licensed under the [GPL-3](./LICENSE) license.
