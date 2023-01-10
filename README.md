@@ -86,6 +86,7 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Implement input controls
 - [X] Implement user options
 - [X] Make it auto center
+- [ ] Implement save current state
 - [ ] Implement mouse support
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
