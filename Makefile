@@ -7,34 +7,28 @@
 #  `'							  
 #  Makefile
 
-PREFIX = /usr/local
+include config.mk
 
 tomato: tomato.o util.o input.o update.o anim.o
-	gcc -o tomato tomato.o util.o input.o update.o anim.o -lncurses
 
 tomato.o: tomato.c util.h input.h update.h anim.h
-	gcc -c -g tomato.c -lncurses
 
-util.o: util.c util.h
-	gcc -c -g util.c -lncurses
+util.o: util.h
 
-anim.o: anim.c anim.h
-	gcc -c -g anim.c -lncurses
+anim.o: anim.h
 
-input.o: input.c input.h
-	gcc -c -g input.c -lncurses
+input.o: input.h
 
-update.o: update.c update.h
-	gcc -c -g update.c -lncurses
+update.o: update.h
 
 clean:
-	rm -rf tomato tomato.o util.o input.o update.o anim.o
+	rm -rf tomato *.o
 
 install: tomato
-	mkdir -p ${PREFIX}/bin
-	cp -f tomato ${PREFIX}/bin
-	chmod 755 ${PREFIX}/bin/tomato
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	cp -f tomato ${DESTDIR}${PREFIX}/bin
+	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
 uninstall:
-	rm -f ${PREFIX}/bin/tomato
+	rm -f ${DESTDIR}${PREFIX}/bin/tomato
 
