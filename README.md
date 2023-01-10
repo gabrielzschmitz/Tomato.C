@@ -86,13 +86,13 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Implement input controls
 - [X] Implement user options
 - [X] Make it auto center
-- [ ] Add a notification sound
+- [X] Add a notification sound
 - [ ] Implement save current state
 - [ ] Implement mouse support
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
 
 <b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications!
 
