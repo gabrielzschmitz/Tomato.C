@@ -86,11 +86,11 @@ void doUpdate(appData * app){
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
-            #ifdef __APPLE__
-                system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
-            #else
-                system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
-            #endif
+        #ifdef __APPLE__
+            system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+        #else
+            system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+        #endif
         }
 
         /* Machine Animation */
