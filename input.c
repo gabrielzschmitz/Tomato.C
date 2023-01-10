@@ -88,7 +88,7 @@ void handleInputs(appData * app){
             endwin();
             initScreen();
             getWindowSize(app);
-            erase();
+            clear();
             refresh();
             break;
     }
