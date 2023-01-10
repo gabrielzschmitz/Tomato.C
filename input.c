@@ -93,6 +93,8 @@ void handleInputs(appData * app){
             break;
     }
 
+    /* Throws away any typeahead that has been typed by the user and has not yet been read by the program */
+    flushinp();
 }
 
 void mainMenuInput(appData * app, char key){
