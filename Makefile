@@ -27,8 +27,12 @@ clean:
 install: tomato
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f tomato ${DESTDIR}${PREFIX}/bin
+	mkdir -p ${DESTDIR}${PREFIX}/share/tomato
+	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
+	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/tomato
+	rm -rf ${DESTDIR}${PREFIX}/share/tomato
 
