@@ -108,6 +108,7 @@ void mainMenuInput(appData * app, char key){
         #else
             system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
         #endif
+            system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -133,6 +134,7 @@ void mainMenuInput(appData * app, char key){
         #else
             system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
         #endif
+            system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
