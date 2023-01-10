@@ -98,6 +98,7 @@ void handleInputs(appData * app){
 void mainMenuInput(appData * app, char key){
     if(key == 'E'){
         if(app->menuPos == 1){
+            app->E = 'C';
             app->timer = (app->workTime * 60 * 16);
             app->frameTimer = 0;
             app->currentMode = 1;
@@ -118,18 +119,19 @@ void mainMenuInput(appData * app, char key){
     }
     else if(key == 'R'){
         if(app->menuPos == 1){
-                app->timer = (app->workTime * 60 * 16);
-                app->frameTimer = 0;
-                app->currentMode = 1;
-                app->pomodoroCounter = app->pomodoroCounter + 1;
-                system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+            app->E = 'C';
+            app->timer = (app->workTime * 60 * 16);
+            app->frameTimer = 0;
+            app->currentMode = 1;
+            app->pomodoroCounter = app->pomodoroCounter + 1;
+            system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
         }
         else if(app->menuPos == 2){
-                app->currentMode = -1;
-                app->menuPos = 1;
+            app->currentMode = -1;
+            app->menuPos = 1;
         }else{
-                endwin();
-                exit(EXIT_SUCCESS);
+            endwin();
+            exit(EXIT_SUCCESS);
         }
     }else
         return;
