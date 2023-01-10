@@ -103,7 +103,11 @@ void mainMenuInput(appData * app, char key){
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
-            system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+        #ifdef __APPLE__
+            system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+        #else
+            system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+        #endif
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -124,7 +128,11 @@ void mainMenuInput(appData * app, char key){
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
-            system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+        #ifdef __APPLE__
+            system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+        #else
+            system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+        #endif
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
