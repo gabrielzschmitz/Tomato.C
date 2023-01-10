@@ -94,6 +94,8 @@ The technique basically consists of using a timer to break down work into <b>int
 ## ⚓ Dependencies
 It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
 
+<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications!
+
 ## 🤝 Contribute
 Feel free to contribute to the project, the only requirement is to follow the commit tittle pattern:
 
