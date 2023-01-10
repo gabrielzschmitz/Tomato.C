@@ -45,12 +45,14 @@ void doUpdate(appData * app){
         frameTimer(app);
         if(app->timer == 0){
             if(app->pomodoroCounter == app->pomodoros){
+                app->E = 'B';
                 app->timer = (app->longPause * 60 * 16);
                 app->pomodoroCounter = 0;
                 app->frameTimer = 0;
                 app->currentMode = 3;
                 system("notify-send -t 5000 -c cpomo ' Pause Break' 'You have some time to chill'");
             }else{
+                app->E = 'M';
                 app->timer = (app->shortPause * 60 * 16);
                 app->frameTimer = 0;
                 app->currentMode = 2;
@@ -71,6 +73,7 @@ void doUpdate(appData * app){
         timer(app);
         frameTimer(app);
         if(app->timer == 0){
+            app->E = 'C';
             app->timer = (app->workTime * 60 * 16);
             app->frameTimer = 0;
             app->currentMode = 1;
