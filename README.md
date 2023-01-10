@@ -52,7 +52,7 @@ $ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
 
 Use the following <b>keys</b> to <b>control</b> the application:
 
- * <b><i>Arrows or VIM Keys:</i></b> To moviment and select;
+ * <b><i>Arrows or VIM Keys:</i></b> To move and select;
  * <b><i>ENTER:</i></b> To select;
  * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
  * <b><i>ESC or Q:</i></b> To quit.
