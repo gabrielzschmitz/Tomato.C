@@ -24,6 +24,7 @@
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
   <a href="#-dependencies">Dependencies</a> •
+  <a href="#-contribute">Contribute</a> •
   <a href="#-license">License</a>
 </p>
 
@@ -90,6 +91,11 @@ The technique basically consists of using a timer to break down work into <b>int
 
 ## ⚓ Dependencies
 It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+
+## 🤝 Contribute
+Feel free to contribute to the project, the only requirement is to follow the commit tittle pattern:
+
+ * Emoji-Related-File Tittle
 
 ## 📜 License
 This software is licensed under the [GPL-3](./LICENSE) license.
