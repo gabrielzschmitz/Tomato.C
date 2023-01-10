@@ -35,3 +35,6 @@ install: tomato
 	cp -f tomato ${PREFIX}/bin
 	chmod 755 ${PREFIX}/bin/tomato
 
+uninstall:
+	rm -f ${PREFIX}/bin/tomato
+
