@@ -25,7 +25,7 @@ void doUpdate(appData * app){
     if(app->currentMode == 0){
         frameTimer(app);
 
-        /* Tomato Animation */
+        /* Tomato Asounds/nimation */
         if(app->frameTimer == (1 * 16)) app->logoFrame = 1;
         else if(app->frameTimer == (2 * 16)) app->logoFrame = 2;
         else if(app->frameTimer == (3 * 16)) app->logoFrame = 3;
@@ -55,6 +55,7 @@ void doUpdate(appData * app){
             #else
                 system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
             #endif
+                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
             }else{
                 app->E = 'M';
                 app->timer = (app->shortPause * 60 * 16);
@@ -65,6 +66,7 @@ void doUpdate(appData * app){
             #else
                 system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
             #endif
+                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
             }
         }
 
@@ -91,6 +93,7 @@ void doUpdate(appData * app){
         #else
             system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
         #endif
+            system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
 
         /* Machine Animation */
