@@ -50,13 +50,21 @@ void doUpdate(appData * app){
                 app->pomodoroCounter = 0;
                 app->frameTimer = 0;
                 app->currentMode = 3;
-                system("notify-send -t 5000 -c cpomo ' Pause Break' 'You have some time to chill'");
+            #ifdef __APPLE__
+                system("osascript -e \'display notification \" Pause Break\" with title \"You have some time chill\"\'");
+            #else
+                system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
+            #endif
             }else{
                 app->E = 'M';
                 app->timer = (app->shortPause * 60 * 16);
                 app->frameTimer = 0;
                 app->currentMode = 2;
-                system("notify-send -t 5000 -c cpomo ' Pause Break' 'You have some time chill'");
+            #ifdef __APPLE__
+                system("osascript -e \'display notification \" Pause Break\" with title \"You have some time chill\"\'");
+            #else
+                system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
+            #endif
             }
         }
 
@@ -78,7 +86,11 @@ void doUpdate(appData * app){
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
-            system("notify-send -t 5000 -c cpomo '華 Work!' 'You need to focus'");
+            #ifdef __APPLE__
+                system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+            #else
+                system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+            #endif
         }
 
         /* Machine Animation */
