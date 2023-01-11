@@ -72,7 +72,7 @@ void timer(appData * app){
 
 /* Print the pomodoro counter */
 void printPomodoroCounter(appData * app){
-    if(app->E == 'C')
+    if(app->currentMode == 1)
         setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
     else
         setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
@@ -82,7 +82,7 @@ void printPomodoroCounter(appData * app){
 
 /* Print the pause indicator */
 void printPauseIndicator(appData * app){
-    if(app->E == 'C')
+    if(app->currentMode == 1)
         setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
     else
         setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
@@ -172,13 +172,13 @@ void printTimer(appData * app){
     char minutes[3] = {(div / 10) + '0', (div % 10) + '0', '\0'};
     char seconds[3] = {(mod / 10) + '0', (mod % 10) + '0', '\0'};
 
-    if(app->E == 'C'){
+    if(app->currentMode == 1){
         setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) + 6), ((app->x / 2) - 11), " Pomodoro");
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) + 6), ((app->x / 2) - 0), "[%02d minutes]", app->workTime);
     }
-    else if(app->E == 'M'){
+    else if(app->currentMode == 2){
         setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) + 6), ((app->x / 2) - 10), " Pause");
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
