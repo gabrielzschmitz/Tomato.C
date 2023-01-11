@@ -18,15 +18,20 @@
 </p>
 
 <p align="center">
+  <a href="#-dependencies">Dependencies</a> •
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
   <a href="#%EF%B8%8F-controls-and-preferences">Controls and Preferences</a> •
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
-  <a href="#-dependencies">Dependencies</a> •
   <a href="#-contribute">Contribute</a> •
   <a href="#-license">License</a>
 </p>
+
+## ⚓ Dependencies
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+
+<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications!
 
 ## 💾 How to Install
 <b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
@@ -91,11 +96,6 @@ The technique basically consists of using a timer to break down work into <b>int
 - [ ] Implement save current state
 - [ ] Implement mouse support
 - [ ] Implement simple note taking (maybe using a nvim instance)
-
-## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
-
-<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications!
 
 ## 🤝 Contribute
 Feel free to contribute to the project, the only requirement is to follow the commit tittle pattern:
