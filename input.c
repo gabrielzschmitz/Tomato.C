@@ -108,7 +108,6 @@ void handleInputs(appData * app){
 void mainMenuInput(appData * app, char key){
     if(key == 'E'){
         if(app->menuPos == 1){
-            app->E = 'C';
             app->timer = (app->workTime * 60 * 16);
             app->frameTimer = 0;
             app->currentMode = 1;
@@ -134,7 +133,6 @@ void mainMenuInput(appData * app, char key){
     }
     else if(key == 'R'){
         if(app->menuPos == 1){
-            app->E = 'C';
             app->timer = (app->workTime * 60 * 16);
             app->frameTimer = 0;
             app->currentMode = 1;
