@@ -23,7 +23,8 @@ void frameTimer(appData * app){
     int sec = 30;
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
-        app->frameTimer++;
+        if(app->pausedTimer != 1)
+            app->frameTimer++;
     }
 }
 
