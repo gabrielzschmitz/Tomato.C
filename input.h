@@ -13,6 +13,7 @@
 /* Defining some ASCII Keys */
 # define ESC 27
 # define ENTER 10
+# define CTRLP 16
 # define CTRLR 18
 # define CTRLX 24
 
