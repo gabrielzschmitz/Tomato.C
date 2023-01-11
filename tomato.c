@@ -35,7 +35,6 @@ void initApp(appData * app){
     app->longPauseLevels = 5;
     app->workTimeLevels = 4;
     app->shortPauseLevels = 4;
-    app->E = '0';
 }
 
 /* Print at screen */
