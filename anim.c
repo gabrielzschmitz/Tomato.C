@@ -30,8 +30,6 @@ void frameTimer(appData * app){
 
 /* Print the logo frames */
 void printLogo(appData * app){
-    app->E = 'L';
-
     if (app->logoFrame == 0){
         setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
@@ -148,8 +146,6 @@ void printLogo(appData * app){
 
 /* Print the coffee frames */
 void printCoffee(appData * app){
-    app->E = 'C';
-
     if(app->coffeeFrame == 0){
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) - 2), ((app->x / 2) - 3),"   ) )  ");
@@ -174,8 +170,6 @@ void printCoffee(appData * app){
  
 /* Print the coffee machine frames */
 void printMachine(appData * app){
-    app->E = 'M';
-
     if(app->machineFrame == 0){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
@@ -222,8 +216,6 @@ void printMachine(appData * app){
 
 /* Print the beach frames */
 void printBeach(appData * app){
-    app->E = 'B';
-
     if(app->beachFrame == 0){
         setColor(COLOR_YELLOW, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 7), "|");
@@ -294,8 +286,6 @@ void printBeach(appData * app){
 
 /* Print the gear frames */
 void printGear(appData * app, int flip){
-    app->E = 'G';
-
     if(flip == 1){
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) + 5), ((app->x / 2) - 15)," .----.                 .---.");
