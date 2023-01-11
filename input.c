@@ -77,6 +77,14 @@ void handleInputs(appData * app){
             }
             break;
 
+        case CTRLP:
+        case 'P':
+        case 'p':
+            if(app->currentMode != 0 && app->currentMode != -1){
+                app->pausedTimer = app->pausedTimer ^ 1;
+            }
+            break;
+
         case ESC:
         case 'Q':
         case 'q':
