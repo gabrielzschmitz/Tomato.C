@@ -30,6 +30,7 @@ void initApp(appData * app){
     app->coffeeFrame= 0;
     app->frameTimer = 0;
     app->timer = 0;
+    app->pausedTimer = 0;
     app->pomodoroCounter = 0;
     app->longPauseLevels = 5;
     app->workTimeLevels = 4;
@@ -54,17 +55,20 @@ void drawScreen(appData * app){
 
         case 1:
             printPomodoroCounter(app);
+            printPauseIndicator(app);
             printCoffee(app);
             printTimer(app);
             break;
 
         case 2:
             printPomodoroCounter(app);
+            printPauseIndicator(app);
             printMachine(app);
             printTimer(app);
             break;
 
         case 3:
+            printPauseIndicator(app);
             printBeach(app);
             printTimer(app);
             break;
