@@ -38,7 +38,6 @@ struct appData{
     int pausedTimer;
     int x;
     int y;
-    char E;
 };
 
 /* Defining the app funtions */
