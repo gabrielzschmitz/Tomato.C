@@ -62,24 +62,33 @@ void timer(appData * app){
     int sec = 30;
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
-        /* Debug */
-        //app->timer = app->timer - 60;
-        app->timer = app->timer - 1;
-        setColor(COLOR_WHITE, COLOR_BLACK, COLOR_WHITE);
+        if(app->pausedTimer != 1){
+            /* Debug */
+            //app->timer = app->timer - 60;
+            app->timer = app->timer - 1;
+        }
     }
 }
 
 /* Print the pomodoro counter */
 void printPomodoroCounter(appData * app){
-
-    if(app->E == 'C'){
+    if(app->E == 'C')
         setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 7), ((app->x / 2) + 10) ,"%02d", app->pomodoroCounter);
-    }
-    else{
+    else
         setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 7), ((app->x / 2) + 10) ,"%02d", app->pomodoroCounter);
-    }
+
+    mvprintw(((app->y / 2) - 7), ((app->x / 2) + 10) ,"%02d", app->pomodoroCounter);
+}
+
+/* Print the pause indicator */
+void printPauseIndicator(appData * app){
+    if(app->E == 'C')
+        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+    else
+        setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
+
+    if(app->pausedTimer == 1)
+        mvprintw(((app->y / 2) - 7), ((app->x / 2) - 11) ," ");
 }
 
 /* Print the Main Menu */

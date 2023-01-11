@@ -35,6 +35,7 @@ struct appData{
     int machineFrame;
     int beachFrame;
     int userInput;
+    int pausedTimer;
     int x;
     int y;
     char E;
@@ -49,6 +50,7 @@ extern void timer(appData * );
 
 extern void printMainMenu(appData *);
 extern void printPomodoroCounter(appData * );
+extern void printPauseIndicator(appData * );
 extern void printTimer(appData *);
 extern void printSettings(appData *);
 
