@@ -9,7 +9,7 @@
 
 PREFIX  = /usr/local
 CPPFLAGS = -I/usr/local/include
-CFLAGS  = -Wall -Wextra -pedantic
+CFLAGS  = -Wall -Wextra -pedantic -Os
 LDFLAGS = -L/usr/local/lib
-LDLIBS  = -lncursesw
+LDLIBS  = -lncurses
 
