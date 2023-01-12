@@ -8,6 +8,7 @@
 //  `'							    
 //  tomato.c
 */
+#include "config.h"
 #include "util.h"
 #include "input.h"
 #include "update.h"
@@ -20,21 +21,18 @@
 
 /* Initialize variables */
 void initApp(appData * app){
-    app->longPause = 30;
-    app->workTime = 25;
-    app->shortPause = 5;
-    app->pomodoros = 4;
+    app->longPause = LONGPAUSE;
+    app->workTime = WORKTIME;
+    app->shortPause = SHORTPAUSE;
+    app->pomodoros = POMODOROS;
     app->menuPos = 1;
+    app->pomodoroCounter = 0;
     app->currentMode = 0;
     app->logoFrame = 0;
     app->coffeeFrame= 0;
     app->frameTimer = 0;
     app->timer = 0;
     app->pausedTimer = 0;
-    app->pomodoroCounter = 0;
-    app->longPauseLevels = 5;
-    app->workTimeLevels = 4;
-    app->shortPauseLevels = 4;
 }
 
 /* Print at screen */
@@ -49,27 +47,27 @@ void drawScreen(appData * app){
             break;
 
         case 0:
-            printMainMenu(app);
+            printMainMenu(app, ICONS);
             break;
 
         case 1:
             printPomodoroCounter(app);
-            printPauseIndicator(app);
+            printPauseIndicator(app, ICONS);
             printCoffee(app);
-            printTimer(app);
+            printTimer(app, ICONS);
             break;
 
         case 2:
             printPomodoroCounter(app);
-            printPauseIndicator(app);
-            printMachine(app);
-            printTimer(app);
+            printPauseIndicator(app, ICONS);
+            printMachine(app, ICONS);
+            printTimer(app, ICONS);
             break;
 
         case 3:
-            printPauseIndicator(app);
+            printPauseIndicator(app, ICONS);
             printBeach(app);
-            printTimer(app);
+            printTimer(app, ICONS);
             break;
     }
 
@@ -77,7 +75,7 @@ void drawScreen(appData * app){
 }
 
 /* Putting it all together */
-int main(int argc, char *argv[]){
+int main(){
     /* Enable Emojis */
     setlocale(LC_CTYPE, "");
 
@@ -89,9 +87,9 @@ int main(int argc, char *argv[]){
 
     /* Main app loop */
     while(1){
-        handleInputs(&app);
+        handleInputs(&app, NOTIFY, SOUND, ICONS, WSL);
 
-        doUpdate(&app);
+        doUpdate(&app, NOTIFY, SOUND, ICONS, WSL);
 
         drawScreen(&app);
 
