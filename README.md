@@ -31,7 +31,7 @@
 ## ⚓ Dependencies
 It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
 
-<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications!
+<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and toggle it in the config.h!
 
 ## 💾 How to Install
 <b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
@@ -42,6 +42,7 @@ $ sudo make install
 ```
 
 ## 🚀 How to Use
+
 Just <b>type it</b> in the <b>terminal</b>:
 ```
 $ tomato
@@ -69,6 +70,8 @@ You can configure the following settings:
  * <b><i>Work Time</i></b>;
  * <b><i>Short Pause Time</i></b>;
  * <b><i>Long Pause Time</i></b>.
+
+<b>Note</b>: Edit the config.h to your preference than `sudo make install` again to take effect.
 
 ## 🍅 The Pomodoro Method
 <img src="./media/tomatomethod.gif" alt="tomatomethod" width="210px" align="right">
