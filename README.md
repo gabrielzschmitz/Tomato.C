@@ -29,7 +29,7 @@
 </p>
 
 ## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile and [ncurses](https://invisible-island.net/ncurses/) as the graphic library. 
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking. 
 
 But optionally you can install [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
 
