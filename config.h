@@ -33,7 +33,7 @@ static const int POMODOROS = 4;
 
 /* time for a work stage from 5 to 50 (default: 25)
  * (increment it by 5 by 5)*/
-static const int WORKTIME = 5;
+static const int WORKTIME = 25;
 
 /* time for the short pause from 1 to 10 (default: 5) */
 static const int SHORTPAUSE = 5;
