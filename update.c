@@ -63,11 +63,11 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             #else
                 if(NOTIFY == 1){
                     if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time chill\'");
                     else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c cpomo \'🌴 Pause Break\' \'You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \'🌴 Pause Break\' \'You have some time chill\'");
                     else
-                        system("notify-send -t 5000 -c cpomo \'Long Pause Break. You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \'Long Pause Break. You have some time chill\'");
                 }
             #endif
                 if(SOUND == 1 && WSL == 0)
@@ -88,11 +88,11 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             #else
                 if(NOTIFY == 1){
                     if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c cpomo \' Pause Break\' \'You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time chill\'");
                     else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c cpomo \'☕ Pause Break\' \'You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \'☕ Pause Break\' \'You have some time chill\'");
                     else
-                        system("notify-send -t 5000 -c cpomo \'Pause Break. You have some time chill\'");
+                        system("notify-send -t 5000 -c Tomato.C \'Pause Break. You have some time chill\'");
                 }
             #endif
                 if(SOUND == 1 && WSL == 0)
@@ -129,11 +129,11 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         #else
             if(NOTIFY == 1){
                 if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+                    system("notify-send -t 5000 -c Tomato.C \'華 Work!\' \'You need to focus\'");
                 else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c cpomo \'👷 Work!\' \'You need to focus\'");
+                    system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
                 else
-                    system("notify-send -t 5000 -c cpomo \'Work! You need to focus\'");
+                    system("notify-send -t 5000 -c Tomato.C \'Work! You need to focus\'");
             }
         #endif
             if(SOUND == 1 && WSL == 0)
