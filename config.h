@@ -18,7 +18,7 @@ static const int WSL = 0;
 /* iconsoff - iconson - nerdicons
  * Note: you'll need a patched 
  * nerdicons for that option */
-static const char *ICONS = "nerdicons";
+static const char * ICONS = "nerdicons";
 
 /* 1 means notifications on, 0 off
  * Note: you'll need dunst */
