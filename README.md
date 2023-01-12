@@ -29,9 +29,20 @@
 </p>
 
 ## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking. 
 
-But optionally you can install [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking. 
+But optionally you can install [dunst](https://github.com/dunst-project/dunst)(or other notification daemon with notify-send support) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
+
+```
+ARCH LINUX
+$ sudo pacman -S base-devel ncurses dunst mpv pkgconf
+UBUNTU
+$ sudo apt install build-essential libncurses5-dev libncursesw5-dev dunst mpv pkg-config
+FEDORA
+$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel dunst mpv pkgconf
+MACOS (MacPorts needed)
+$ brew install gcc && sudo port install ncurses mpv
+```
 
 <b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
 
