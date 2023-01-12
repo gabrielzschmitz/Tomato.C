@@ -36,9 +36,9 @@ static const int POMODOROS = 4;
 static const int WORKTIME = 5;
 
 /* time for the short pause from 1 to 10 (default: 5) */
-static const int SHORTPAUSE = 25;
+static const int SHORTPAUSE = 5;
 
 /* time for the long pause from 5 to 60 (default: 30)
  * (increment it by 5 by 5)*/
-static const int LONGPAUSE = 25;
+static const int LONGPAUSE = 30;
 
