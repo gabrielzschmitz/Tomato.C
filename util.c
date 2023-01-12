@@ -65,8 +65,8 @@ void timer(appData * app){
     if(clock() < end) {
         if(app->pausedTimer != 1){
             /* Debug */
-            app->timer = app->timer - 60;
-            //app->timer = app->timer - 1;
+            //app->timer = app->timer - 60;
+            app->timer = app->timer - 1;
         }
     }
 }
