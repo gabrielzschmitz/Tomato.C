@@ -14,6 +14,6 @@ LDFLAGS = -L/usr/local/lib
 ifdef __APPLE__
 LDLIBS  = -lncurses
 else
-LDLIBS  = -lncursesw -ltinfo
+LDLIBS  = `pkg-config --libs ncursesw`
 endif
 
