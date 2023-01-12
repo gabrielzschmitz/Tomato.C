@@ -11,7 +11,7 @@ include config.mk
 
 tomato: tomato.o util.o input.o update.o anim.o
 
-tomato.o: tomato.c util.h input.h update.h anim.h
+tomato.o: tomato.c util.h input.h update.h anim.h config.h
 
 util.o: util.h
 
