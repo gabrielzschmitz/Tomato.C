@@ -20,7 +20,7 @@
 #include <locale.h>
 
 /* Initialize screen with colors, enabled keyboard and another little configs */
-void initScreen(){
+void initScreen(void){
 #ifdef XCURSES
     Xinitscr(argc, argv);
 #else
