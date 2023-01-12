@@ -41,6 +41,11 @@ But optionally you can install [dunst](https://github.com/dunst-project/dunst) t
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
 $ cd Tomato.C
 $ sudo make install
+
+Using nix package manager:
+$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
+$ cd Tomato.C
+$ nix-build default.nix
 ```
 
 ## 🚀 How to Use
