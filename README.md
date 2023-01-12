@@ -29,9 +29,11 @@
 </p>
 
 ## ⚓ Dependencies
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library, [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+It only needs [gcc](https://gcc.gnu.org/) to compile and [ncurses](https://invisible-island.net/ncurses/) as the graphic library. 
 
-<b>Note</b>: if you're using <b>WSL</b>, use the [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and toggle it in the config.h!
+But optionally you can install [dunst](https://github.com/dunst-project/dunst) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons.
+
+<b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not sounds.
 
 ## 💾 How to Install
 <b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
