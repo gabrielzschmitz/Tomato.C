@@ -11,5 +11,9 @@ PREFIX  = /usr/local
 CPPFLAGS = -I/usr/local/include
 CFLAGS  = -Wall -Wextra -pedantic -Os
 LDFLAGS = -L/usr/local/lib
-LDLIBS  = -lncurses -ltinfo
+ifdef __APPLE__
+LDLIBS  = -lncurses
+else
+LDLIBS  = -lncursesw -ltinfo
+endif
 
