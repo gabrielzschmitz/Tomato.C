@@ -15,11 +15,12 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <locale.h>
 
 /* Handle user input and app state */
-void handleInputs(appData * app){
+void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
     app->userInput = getch();
     char key;
 
@@ -27,7 +28,7 @@ void handleInputs(appData * app){
         case ENTER:
             key = 'E';
             if(app->currentMode == 0)
-                mainMenuInput(app, key);
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
             else if(app->currentMode == -1)
                 settingsInput(app, key);
             break;
@@ -46,7 +47,7 @@ void handleInputs(appData * app){
             if(app->currentMode == -1)
                 settingsInput(app, key);
             else if(app->currentMode == 0)
-                mainMenuInput(app, key);
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
             break;
 
         case KEY_LEFT:
@@ -62,12 +63,14 @@ void handleInputs(appData * app){
         case 'l':
             key = 'R';
             if(app->currentMode == 0)
-                mainMenuInput(app, key);
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
             else if(app->currentMode == -1)
                 settingsInput(app, key);
             break;
 
         case CTRLX:
+        case 'X':
+        case 'x':
             if(app->currentMode != 0){
                 app->frameTimer = 0;
                 app->logoFrame = 0;
@@ -101,11 +104,12 @@ void handleInputs(appData * app){
             break;
     }
 
-    /* Throws away any typeahead that has been typed by the user and has not yet been read by the program */
+    /* Throws away any typeahead that has been typed by
+     * the user and has not yet been read by the program */
     flushinp();
 }
 
-void mainMenuInput(appData * app, char key){
+void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
     if(key == 'E'){
         if(app->menuPos == 1){
             app->timer = (app->workTime * 60 * 16);
@@ -113,11 +117,26 @@ void mainMenuInput(appData * app, char key){
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
         #ifdef __APPLE__
-            system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+            if(NOTIFY == 1){
+                if(strcmp(ICONS, "nerdicons") == 0)
+                    system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+                else if(strcmp(ICONS, "iconson") == 0)
+                    system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
+                else
+                    system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
+            }
         #else
-            system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+            if(NOTIFY == 1){
+                if(strcmp(ICONS, "nerdicons") == 0)
+                    system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+                else if(strcmp(ICONS, "iconson") == 0)
+                    system("notify-send -t 5000 -c cpomo \'👷 Work!\' \'You need to focus\'");
+                else
+                    system("notify-send -t 5000 -c cpomo \'Work!\' \'You need to focus\'");
+            }
         #endif
-            system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+            if(SOUND == 1 && WSL == 0)
+                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -138,11 +157,26 @@ void mainMenuInput(appData * app, char key){
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
         #ifdef __APPLE__
-            system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+            if(NOTIFY == 1){
+                if(strcmp(ICONS, "nerdicons") == 0)
+                    system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+                else if(strcmp(ICONS, "iconson") == 0)
+                    system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
+                else
+                    system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
+            }
         #else
-            system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+            if(NOTIFY == 1){
+                if(strcmp(ICONS, "nerdicons") == 0)
+                    system("notify-send -t 5000 -c cpomo \'華 Work!\' \'You need to focus\'");
+                else if(strcmp(ICONS, "iconson") == 0)
+                    system("notify-send -t 5000 -c cpomo \'👷 Work!\' \'You need to focus\'");
+                else
+                    system("notify-send -t 5000 -c cpomo \'Work!\' \'You need to focus\'");
+            }
         #endif
-            system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+            if(SOUND == 1 && WSL == 0)
+                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -174,22 +208,16 @@ void settingsInput(appData * app, char key){
                 app->pomodoros --;
         }
         else if(app->menuPos == 2){
-            if(app->workTimeLevels != 0){
-                app->workTimeLevels--;
+            if(app->workTime != 5)
                 app->workTime = app->workTime - 5;
-            }
         }
         else if(app->menuPos == 3){
-            if(app->shortPauseLevels != 0){
-                app->shortPauseLevels --;
+            if(app->shortPause != 1)
                 app->shortPause = app->shortPause - 1;
-            }
         }
         else if(app->menuPos == 4){
-            if(app->longPauseLevels != 0){
-                app->longPauseLevels --;
+            if(app->longPause != 5)
                 app->longPause = app->longPause - 5;
-            }
         }else{
             app->frameTimer = 0;
             app->logoFrame = 0;
@@ -200,25 +228,19 @@ void settingsInput(appData * app, char key){
     else if(key == 'R'){
         if(app->menuPos == 1){
             if(app->pomodoros != 8)
-                app->pomodoros++;
+                app->pomodoros ++;
         }
         else if(app->menuPos == 2){
-            if(app->workTimeLevels != 9){
-                app->workTimeLevels++;
+            if(app->workTime != 50)
                 app->workTime = app->workTime + 5;
-            }
         }
         else if(app->menuPos == 3){
-            if(app->shortPauseLevels != 9){
-                app->shortPauseLevels ++;
+            if(app->shortPause != 10)
                 app->shortPause = app->shortPause + 1;
-            }
         }
         else if(app->menuPos == 4){
-            if(app->longPauseLevels != 11){
-                app->longPauseLevels ++;
+            if(app->longPause != 60)
                 app->longPause = app->longPause + 5;
-            }
         }else{
             app->frameTimer = 0;
             app->logoFrame = 0;

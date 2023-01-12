@@ -18,7 +18,7 @@
 # define CTRLX 24
 
 /* Handle user input and app state */
-extern void handleInputs(appData * );
-extern void mainMenuInput(appData * , char );
+extern void handleInputs(appData * , const int , const int , const char * , const int );
+extern void mainMenuInput(appData * , char , const int , const int , const char * , const int );
 extern void settingsInput(appData * , char );
 
