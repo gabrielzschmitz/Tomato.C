@@ -15,6 +15,7 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <locale.h>
 
@@ -29,118 +30,348 @@ void frameTimer(appData * app){
 }
 
 /* Print the logo frames */
-void printLogo(appData * app){
-    if (app->logoFrame == 0){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),      "     \\         /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+void printLogo(appData * app, const char * icons){
+    if(strcmp(icons, "nerdicons") == 0){
+        if (app->logoFrame == 0){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),      "     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 1){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |╱    \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 2){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤ ─   |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 3){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     ╲   /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 4){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\    |    /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 5){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   ╱     /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 6){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   ─ ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else{
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    ╲|     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
     }
-    else if(app->logoFrame == 1){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |╱    \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
-    }
-    else if(app->logoFrame == 2){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤ ─   |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
-    }
-    else if(app->logoFrame == 3){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     ╲   /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
-    }
-    else if(app->logoFrame == 4){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\    |    /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
-    }
-    else if(app->logoFrame == 5){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   ╱     /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
-    }
-    else if(app->logoFrame == 6){
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   ─ ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+    else if(strcmp(icons, "iconson") == 0){
+        if (app->logoFrame == 0){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),      "     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 1){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |╱    \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 2){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o ─   |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 3){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     ╲   /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 4){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\    |    /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 5){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   ╱     /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 6){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   ─ o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else{
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    ╲|     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     o     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
     }
     else{
-        setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
-        setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    ╲|     \\    ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     ⬤     |    ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
-        setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        if (app->logoFrame == 0){
+           setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+           mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+           mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+           setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+           mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+           mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+           mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),      "     \\         /     ");
+           mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+           setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+           mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+           mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+           mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 1){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |╱    \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 2){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0 ─   |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 3){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     ╲   /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 4){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\    |    /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 5){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   ╱     /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else if(app->logoFrame == 6){
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   ─ 0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
+        else{
+            setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
+            setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    ╲|     \\    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10)," | _  _  _ |_ _    / ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
+        }
     }
 }
 
@@ -169,48 +400,93 @@ void printCoffee(appData * app){
 }
  
 /* Print the coffee machine frames */
-void printMachine(appData * app){
-    if(app->machineFrame == 0){
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
-        mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
-        mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
-        mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
-    }
-    else if(app->machineFrame == 1){
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    †     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
-        mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
-        mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
-        mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
-    }
-    else{
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
-        mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
-        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
-        mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   _|_    ");
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
-        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
-        mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
-        mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
-        mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+void printMachine(appData * app, const char * icons){
+    if(strcmp(icons, "iconsoff") == 0){
+        if(app->machineFrame == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    -     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   ___    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
+        else if(app->machineFrame == 1){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    I     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   ___    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
+        else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    -     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   -   |   _|_    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
+    }else{
+        if(app->machineFrame == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
+        else if(app->machineFrame == 1){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    †     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   ___    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
+        else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 9),"|   _   |\\       / ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 9),"|  |.|  | \\     /  ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9),"|  |.|  |__\\___/   ");
+            mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9),"|  |.|  |    ¯     ");
+            mvprintw(((app->y / 2)), ((app->x / 2) - 9),    "|   ¯   |   _|_    ");
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 9),"|_______|  \\___/_  ");
+            mvprintw(((app->y / 2) + 2), ((app->x / 2) - 9),"| _____ |  /~~~\\ \\ ");
+            mvprintw(((app->y / 2) + 3), ((app->x / 2) - 9),"||     ||__\\___/__ ");
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 9),"||_____|          |");
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 9),"|_________________|");
+        }
     }
 }
 
