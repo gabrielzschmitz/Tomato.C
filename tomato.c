@@ -75,7 +75,7 @@ void drawScreen(appData * app){
 }
 
 /* Putting it all together */
-int main(){
+int main(void){
     /* Enable Emojis */
     setlocale(LC_CTYPE, "");
 
