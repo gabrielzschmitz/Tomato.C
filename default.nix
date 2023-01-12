@@ -37,7 +37,7 @@ in
     meta = with lib; {
       description = "A pomodoro timer written in pure C.";
       homepage = "https://github.com/gabrielzschmitz/Tomato.C";
-      license = licenses.mit;
+      license = licenses.gpl3Plus;
       maintainers = with maintainers; [luisnquin];
     };
   }
