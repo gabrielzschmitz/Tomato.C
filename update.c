@@ -28,14 +28,14 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         frameTimer(app);
 
         /* Tomato Asounds/nimation */
-        if(app->frameTimer == (1 * 16)) app->logoFrame = 1;
-        else if(app->frameTimer == (2 * 16)) app->logoFrame = 2;
-        else if(app->frameTimer == (3 * 16)) app->logoFrame = 3;
-        else if(app->frameTimer == (4 * 16)) app->logoFrame = 4;
-        else if(app->frameTimer == (5 * 16)) app->logoFrame = 5;
-        else if(app->frameTimer == (6 * 16)) app->logoFrame = 6;
-        else if(app->frameTimer == (7 * 16)) app->logoFrame = 7;
-        else if(app->frameTimer == (8 * 16)){
+        if(app->frameTimer == (1 * 8)) app->logoFrame = 1;
+        else if(app->frameTimer == (2 * 8)) app->logoFrame = 2;
+        else if(app->frameTimer == (3 * 8)) app->logoFrame = 3;
+        else if(app->frameTimer == (4 * 8)) app->logoFrame = 4;
+        else if(app->frameTimer == (5 * 8)) app->logoFrame = 5;
+        else if(app->frameTimer == (6 * 8)) app->logoFrame = 6;
+        else if(app->frameTimer == (7 * 8)) app->logoFrame = 7;
+        else if(app->frameTimer == (8 * 8)){
             app->logoFrame = 0;
             app->frameTimer = 0;
         }
@@ -47,7 +47,7 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         frameTimer(app);
         if(app->timer == 0){
             if(app->pomodoroCounter == app->pomodoros){
-                app->timer = (app->longPause * 60 * 16);
+                app->timer = (app->longPause * 60 * 8);
                 app->pomodoroCounter = 0;
                 app->frameTimer = 0;
                 app->currentMode = 3;
@@ -71,9 +71,9 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
                 }
             #endif
                 if(SOUND == 1 && WSL == 0)
-                    system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+                    system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
             }else{
-                app->timer = (app->shortPause * 60 * 16);
+                app->timer = (app->shortPause * 60 * 8);
                 app->frameTimer = 0;
                 app->currentMode = 2;
             #ifdef __APPLE__
@@ -96,13 +96,13 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
                 }
             #endif
                 if(SOUND == 1 && WSL == 0)
-                    system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+                    system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
             }
         }
 
         /* Coffee Animation */
-        if(app->frameTimer == (3 * 16)) app->coffeeFrame = 1;
-        else if(app->frameTimer == (6 * 16)){
+        if(app->frameTimer == (3 * 8)) app->coffeeFrame = 1;
+        else if(app->frameTimer == (6 * 8)){
             app->coffeeFrame = 0;
             app->frameTimer = 0;
         }
@@ -113,7 +113,7 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         timer(app);
         frameTimer(app);
         if(app->timer == 0){
-            app->timer = (app->workTime * 60 * 16);
+            app->timer = (app->workTime * 60 * 8);
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
@@ -137,13 +137,13 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             }
         #endif
             if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
 
         /* Machine Animation */
-        if(app->frameTimer == (2 * 16)) app->machineFrame = 1;
-        else if(app->frameTimer == (4 * 16)) app->machineFrame = 2;
-        else if(app->frameTimer == (6 * 16)){
+        if(app->frameTimer == (2 * 8)) app->machineFrame = 1;
+        else if(app->frameTimer == (4 * 8)) app->machineFrame = 2;
+        else if(app->frameTimer == (6 * 8)){
             app->machineFrame = 0;
             app->frameTimer = 0;
         }
@@ -157,8 +157,8 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             app->currentMode = 0;
         
         /* Beach Animation */
-        if(app->frameTimer == (3 * 16)) app->beachFrame = 1;
-        else if(app->frameTimer == (6 * 16)){
+        if(app->frameTimer == (3 * 8)) app->beachFrame = 1;
+        else if(app->frameTimer == (6 * 8)){
             app->beachFrame = 0;
             app->frameTimer = 0;
         }
