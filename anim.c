@@ -284,7 +284,7 @@ void printLogo(appData * app, const char * icons){
             mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
             mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |╱    \\    ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |/    \\    ");
             mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
             mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
@@ -299,7 +299,7 @@ void printLogo(appData * app, const char * icons){
             mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0 ─   |    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0 -   |    ");
             mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -314,7 +314,7 @@ void printLogo(appData * app, const char * icons){
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
             mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
-            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     ╲   /     ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\     \\   /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
@@ -342,7 +342,7 @@ void printLogo(appData * app, const char * icons){
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
             mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
-            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   ╱     /     ");
+            mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\   /     /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2)), ((app->x / 2) - 10),    "___                 _");
@@ -355,7 +355,7 @@ void printLogo(appData * app, const char * icons){
             mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /     |     \\    ");
-            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   ─ 0     |    ");
+            mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |   - 0     |    ");
             mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -368,7 +368,7 @@ void printLogo(appData * app, const char * icons){
             mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
             mvprintw(((app->y / 2) - 5), ((app->x / 2) - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    ╲|     \\    ");
+            mvprintw(((app->y / 2) - 4), ((app->x / 2) - 10),"    /    \\|     \\    ");
             mvprintw(((app->y / 2) - 3), ((app->x / 2) - 10),"    |     0     |    ");
             mvprintw(((app->y / 2) - 2), ((app->x / 2) - 10),"     \\         /     ");
             mvprintw(((app->y / 2) - 1), ((app->x / 2) - 10),"      \'-.___.-\'      ");
