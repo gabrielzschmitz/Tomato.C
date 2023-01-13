@@ -19,6 +19,7 @@
 
 /* Handle user input and app state */
 extern void handleInputs(appData * , const int , const int , const char * , const int );
+extern void mouseInput(appData * , MEVENT , char , const int , const int , const char * , const int );
 extern void mainMenuInput(appData * , char , const int , const int , const char * , const int );
 extern void settingsInput(appData * , char );
 
