@@ -39,5 +39,5 @@ install: tomato
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/tomato
 	rm -rf ${DESTDIR}${PREFIX}/share/tomato
-	rm -rf ${DESTDIR}${APPPREFIX}/tomato.desktop
+	rm -f ${DESTDIR}${APPPREFIX}/tomato.desktop
 
