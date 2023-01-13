@@ -27,17 +27,17 @@ clean:
 install: tomato
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f tomato ${DESTDIR}${PREFIX}/bin
-	mkdir -p ${DESTDIR}${PREFIX}/share
-	mkdir -p ${DESTDIR}${PREFIX}/share/applications
-	cp -f tomato.desktop ${DESTDIR}${PREFIX}/share/applications
+	mkdir -p ${DESTDIR}${APPPREFIX}
+	cp -f tomato.desktop ${DESTDIR}${APPPREFIX}
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
-	cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
+	cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/tomato
 	rm -rf ${DESTDIR}${PREFIX}/share/tomato
+	rm -rf ${DESTDIR}${APPPREFIX}/tomato.desktop
 
