@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Tomato.C
+GenericName=Pomodoro Timer in C
+Terminal=true
+Exec=tomato
+Type=Application
+Categories=Utility;
+Icon=/usr/local/share/tomato/icons/tomato.svg
+
