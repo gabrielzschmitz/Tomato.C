@@ -21,11 +21,16 @@
 
 /* Time the animations frames */
 void frameTimer(appData * app){
-    int sec = 30;
+    int sec = 60;
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
-        if(app->pausedTimer != 1)
-            app->frameTimer++;
+        if(app->pausedTimer != 1){
+            app->framems++;
+            if(app->framems == 8){
+                app->framems = 0;
+                app->frameTimer = app->frameTimer + 1;
+            }
+        }
     }
 }
 
