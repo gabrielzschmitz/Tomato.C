@@ -36,7 +36,11 @@ void initScreen(void){
     }
     /* User input dont appear at screen */
     noecho();
-    /* User input imediatly avaiable*/
+    /* Makes terminal report mouse movement events */
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    printf("\033[?1003h\n");
+    /* User input imediatly avaiable */
+    mouseinterval(0);
     cbreak();
     /* Invisible cursor */
     curs_set(0);
@@ -60,13 +64,17 @@ void getWindowSize(appData * app){
 
 /* Time the pomodoros */
 void timer(appData * app){
-    int sec = 30;
+    int sec = 60;
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
         if(app->pausedTimer != 1){
             /* Debug */
-            //app->timer = app->timer - 60;
-            app->timer = app->timer - 1;
+            //app->timer = app->timer - 1;
+            app->timerms++;
+            if(app->timerms == 8){
+                app->timerms = 0;
+                app->timer = app->timer - 1;
+            }
         }
     }
 }
@@ -137,7 +145,7 @@ void printSettings(appData * app){
     mvprintw(((app->y / 2) - 4), ((app->x / 2) - 5), "preferences");
     if(app->menuPos == 1){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9), "-> pomodoros  %02d <-", app->pomodoros);
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 9), "<- pomodoros  %02d ->", app->pomodoros);
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
         mvprintw(((app->y / 2) - 2), ((app->x / 2) - 6), "pomodoros  %02d", app->pomodoros);
@@ -145,7 +153,7 @@ void printSettings(appData * app){
 
     if(app->menuPos == 2){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9), "-> work time %02dm <-", app->workTime);
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9), "<- work time %02dm ->", app->workTime);
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
         mvprintw(((app->y / 2) - 1), ((app->x / 2) - 6), "work time %02dm", app->workTime);
@@ -153,7 +161,7 @@ void printSettings(appData * app){
 
     if(app->menuPos == 3){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10), "-> short pause %02dm <-", app->shortPause);
+        mvprintw(((app->y / 2)), ((app->x / 2) - 10), "<- short pause %02dm ->", app->shortPause);
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
         mvprintw(((app->y / 2)), ((app->x / 2) - 7), "short pause %02dm", app->shortPause);
@@ -161,7 +169,7 @@ void printSettings(appData * app){
     
     if(app->menuPos == 4){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10), "-> long pause  %02dm <-", app->longPause);
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10), "<- long pause  %02dm ->", app->longPause);
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
         mvprintw(((app->y / 2) + 1), ((app->x / 2) - 7), "long pause  %02dm", app->longPause);
@@ -176,7 +184,7 @@ void printSettings(appData * app){
 }
 /* Print the Timer */
 void printTimer(appData * app, const char * ICONS){
-    int x = app->timer / 16;
+    int x = app->timer / 8;
     int div = x / 60;
     int mod = x % 60;
 
