@@ -77,6 +77,8 @@ $ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
 ## 🕹️ Controls and Preferences
 <img src="./media/preferences.gif" alt="preferences" width="210px" align="right">
 
+<b>Note</b>: You can <b>use the mouse</b> to <b>select</b> menu options and <b>increase or decrease</b> the settings (by clicking in the arrows).
+
 Use the following <b>keys</b> to <b>control</b> the application:
 
  * <b><i>Arrows or VIM Keys:</i></b> To move and select;
@@ -117,8 +119,8 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Implement user options
 - [X] Make it auto center
 - [X] Add a notification sound
+- [X] Implement mouse support
 - [ ] Implement save current state
-- [ ] Implement mouse support
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## 🤝 Contribute
