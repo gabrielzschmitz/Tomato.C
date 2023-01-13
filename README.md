@@ -21,7 +21,10 @@
   <a href="#-dependencies">Dependencies</a> •
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
-  <a href="#%EF%B8%8F-controls-and-preferences">Controls and Preferences</a> •
+  <a href="#%EF%B8%8F-controls-and-preferences">Controls and Preferences</a>
+</p>
+
+<p align="center">
   <a href="#-the-pomodoro-method">The Pomodoro Method</a> •
   <a href="#-to-do">To-do</a> •
   <a href="#-contribute">Contribute</a> •
