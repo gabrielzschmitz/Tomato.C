@@ -32,6 +32,8 @@ void initApp(appData * app){
     app->coffeeFrame= 0;
     app->frameTimer = 0;
     app->timer = 0;
+    app->framems = 0;
+    app->timerms = 0;
     app->pausedTimer = 0;
 }
 
@@ -70,7 +72,6 @@ void drawScreen(appData * app){
             printTimer(app, ICONS);
             break;
     }
-
     refresh();
 }
 
@@ -94,8 +95,11 @@ int main(void){
         drawScreen(&app);
 
         /* Setting the screen refresh rate to 60 */
-        napms(60);
+        napms(1000 / 60);
     }
+
+    /* Makes terminal stop reporting mouse movement events */
+    printf("\033[?1003l\n");
 
     /* Endding the screen created at initScreen */
     endwin();
