@@ -103,6 +103,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
         case 'Q':
         case 'q':
             endwin();
+            printf("\033[?1003l\n");
             exit(EXIT_SUCCESS);
             break;
 
