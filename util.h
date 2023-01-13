@@ -30,6 +30,8 @@ struct appData{
     int needMainMenu;
     int frameTimer;
     int timer;
+    int framems;
+    int timerms;
     int logoFrame;
     int coffeeFrame;
     int machineFrame;
