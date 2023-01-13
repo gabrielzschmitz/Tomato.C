@@ -21,10 +21,20 @@
 
 /* Handle user input and app state */
 void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
+    MEVENT event;
+
     app->userInput = getch();
     char key;
+    key = '0';
 
     switch(app->userInput){
+	case KEY_MOUSE:
+            if(app->currentMode == 0 || app->currentMode == -1){
+                if(getmouse(&event) == OK)
+                    mouseInput(app, event, key, NOTIFY, SOUND, ICONS, WSL);
+            }
+	    break;
+
         case ENTER:
             key = 'E';
             if(app->currentMode == 0)
@@ -73,6 +83,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
         case 'x':
             if(app->currentMode != 0){
                 app->frameTimer = 0;
+                app->framems = 0;
                 app->logoFrame = 0;
                 app->currentMode = 0;
                 app->menuPos = 1;
@@ -109,10 +120,88 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
     flushinp();
 }
 
+void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
+    if(app->currentMode == 0){
+        if(event.y == ((app->y / 2) + 4) && ((app->x / 2) + 2) >= event.x  && event.x >= ((app->x / 2) - 2)){
+            app->menuPos = 1;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            }
+        }
+        else if(event.y == ((app->y / 2) + 5) && ((app->x / 2) + 5) >= event.x  && event.x >= ((app->x / 2) - 5)){
+            app->menuPos = 2;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            }
+        }
+        else if(event.y == ((app->y / 2) + 6) && ((app->x / 2) + 2) >= event.x  && event.x >= ((app->x / 2) - 2)){
+            app->menuPos = 3;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            }
+        }
+    }
+    else if(app->currentMode == -1){
+        if(event.y == ((app->y / 2) - 2) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) - 9)){
+            app->menuPos = 1;
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 2) && ((app->x / 2) - 8) >= event.x  && event.x >= ((app->x / 2) - 9)){
+                key = 'L';
+                settingsInput(app, key);
+            }
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 2) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 8)){
+                key = 'R';
+                settingsInput(app, key);
+            }
+        }
+        else if(event.y == ((app->y / 2) - 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) - 9)){
+            app->menuPos = 2;
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 1) && ((app->x / 2) - 8) >= event.x  && event.x >= ((app->x / 2) - 9)){
+                key = 'L';
+                settingsInput(app, key);
+            }
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 8)){
+                key = 'R';
+                settingsInput(app, key);
+            }
+        }
+        else if(event.y == (app->y / 2) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) - 10)){
+            app->menuPos = 3;
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->y / 2) && ((app->x / 2) - 9) >= event.x  && event.x >= ((app->x / 2) - 10)){
+                key = 'L';
+                settingsInput(app, key);
+            }
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->y / 2) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) + 9)){
+                key = 'R';
+                settingsInput(app, key);
+            }
+        }
+        else if(event.y == ((app->y / 2) + 1) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) - 10)){
+            app->menuPos = 4;
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) + 1) && ((app->x / 2) - 9) >= event.x  && event.x >= ((app->x / 2) - 10)){
+                key = 'L';
+                settingsInput(app, key);
+            }
+            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) + 1) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) + 9)){
+                key = 'R';
+                settingsInput(app, key);
+            }
+        }
+        else if(event.y == ((app->y / 2) + 4) && ((app->x / 2) + 8) >= event.x  && event.x >= ((app->x / 2) - 8)){
+            app->menuPos = 5;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                settingsInput(app, key);
+            }
+        }
+    }
+}
 void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
     if(key == 'E'){
         if(app->menuPos == 1){
-            app->timer = (app->workTime * 60 * 16);
+            app->timer = (app->workTime * 60 * 8);
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
@@ -136,7 +225,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
             }
         #endif
             if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -152,7 +241,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
     }
     else if(key == 'R'){
         if(app->menuPos == 1){
-            app->timer = (app->workTime * 60 * 16);
+            app->timer = (app->workTime * 60 * 8);
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
@@ -176,7 +265,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
             }
         #endif
             if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
