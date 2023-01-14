@@ -27,6 +27,7 @@ in
       which
       gnumake
       ncurses
+      pkgconfig
     ];
 
     propagatedBuildInputs = with pkgs; [
