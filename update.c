@@ -27,7 +27,7 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         app->pausedTimer = 0;
         frameTimer(app);
 
-        /* Tomato Asounds/nimation */
+        /* Tomato Animation */
         if(app->frameTimer == (1 * 8)) app->logoFrame = 1;
         else if(app->frameTimer == (2 * 8)) app->logoFrame = 2;
         else if(app->frameTimer == (3 * 8)) app->logoFrame = 3;
