@@ -26,7 +26,7 @@ void frameTimer(appData * app){
     if(clock() < end) {
         if(app->pausedTimer != 1){
             app->framems++;
-            if(app->framems == 8){
+            if(app->framems >= 7.745966692){
                 app->framems = 0;
                 app->frameTimer = app->frameTimer + 1;
             }
