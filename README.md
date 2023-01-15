@@ -21,7 +21,8 @@
   <a href="#-dependencies">Dependencies</a> •
   <a href="#-how-to-install">How to Install</a> •
   <a href="#-how-to-use">How to Use</a> •
-  <a href="#%EF%B8%8F-controls-and-preferences">Controls and Preferences</a>
+  <a href="#%EF%B8%8F-controls">Controls</a> •
+  <a href="#%EF%B8%8F-preferences">Preferences</a>
 </p>
 
 <p align="center">
@@ -33,16 +34,16 @@
 
 ## ⚓ Dependencies
 
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking. 
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking.
 But optionally you can install [dunst](https://github.com/dunst-project/dunst)(or other notification daemon with notify-send support) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
 
 ```
 ARCH LINUX
-$ sudo pacman -S base-devel ncurses dunst mpv pkgconf
+$ sudo pacman -S base-devel ncurses mpv pkgconf
 UBUNTU
-$ sudo apt install build-essential libncurses5-dev libncursesw5-dev dunst mpv pkg-config
+$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config
 FEDORA
-$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel dunst mpv pkgconf
+$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf
 MACOS (MacPorts needed)
 $ brew install gcc && sudo port install ncurses mpv
 ```
@@ -51,15 +52,19 @@ $ brew install gcc && sudo port install ncurses mpv
 
 ## 💾 How to Install
 <b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
-```
-$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
-$ cd Tomato.C
-$ sudo make install
 
-Using nix package manager:
+<b>Note</b>: first install all the <i>dependencies</i>!
+
+```
+NIXOS:
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
 $ cd Tomato.C
 $ nix-build default.nix
+
+NORMAL:
+$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
+$ cd Tomato.C
+$ sudo make install
 ```
 
 ## 🚀 How to Use
@@ -74,30 +79,39 @@ $ tomato
 $ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
 ```
 
-## 🕹️ Controls and Preferences
-<img src="./media/preferences.gif" alt="preferences" width="210px" align="right">
-
-<b>Note</b>: You can <b>use the mouse</b> to <b>select</b> menu options and <b>increase or decrease</b> the settings (by clicking in the arrows).
+## 🕹️ Controls
+<img src="./media/preferences.gif" alt="preferences" width="190" align="right">
 
 Use the following <b>keys</b> to <b>control</b> the application:
-
+ * <b><i>Mouse:</i></b> To select and increase or decrease.
  * <b><i>Arrows or VIM Keys:</i></b> To move and select;
  * <b><i>ENTER:</i></b> To select;
  * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
  * <b><i>P or CTRL+P:</i></b> To toggle pause;
  * <b><i>ESC or Q:</i></b> To quit.
 
-You can configure the following settings:
+## ⚙️ Preferences
+You can configure the following settings at run time:
 
  * <b><i>Pomodoros Amount</i></b>;
  * <b><i>Work Time</i></b>;
  * <b><i>Short Pause Time</i></b>;
  * <b><i>Long Pause Time</i></b>.
 
-<b>Note</b>: Edit the config.h to your preference, then `sudo make install` again to take effect.
+And change the default configurations editing the [config.h](https://github.com/gabrielzschmitz/Tomato.C/blob/master/config.h), then `sudo make install` to take effect.
+You can change those configs:
+
+ * <b><i>WSL</i></b>: 0/1;
+ * <b><i>ICONS</i></b>: iconsoff - iconson - nerdicons;
+ * <b><i>NOTIFY</i></b>: 0/1;
+ * <b><i>SOUND</i></b>: 0/1;
+ * <b><i>POMODOROS</i></b>: 1-8;
+ * <b><i>WORKTIME</i></b>: 5-50;
+ * <b><i>SHORTPAUSE</i></b>: 1-10;
+ * <b><i>LONGPAUSE</i></b>: 5-60.
 
 ## 🍅 The Pomodoro Method
-<img src="./media/tomatomethod.gif" alt="tomatomethod" width="210px" align="right">
+<img src="./media/tomatomethod.gif" alt="tomatomethod" width="190px" align="right">
 
 The technique basically consists of using a timer to break down work into <b>intervals</b>, follow the <b>steps</b>:
 
@@ -118,7 +132,8 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Implement input controls
 - [X] Implement user options
 - [X] Make it auto center
-- [X] Add a notification sound
+- [X] Add notifications
+- [X] Add notifications sound
 - [X] Implement mouse support
 - [ ] Implement save current state
 - [ ] Implement simple note taking (maybe using a nvim instance)
