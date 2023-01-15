@@ -71,7 +71,7 @@ void timer(appData * app){
             /* Debug */
             //app->timer = app->timer - 1;
             app->timerms++;
-            if(app->timerms == 8){
+            if(app->timerms >= 7.745966692){
                 app->timerms = 0;
                 app->timer = app->timer - 1;
             }
