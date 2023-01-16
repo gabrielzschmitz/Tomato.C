@@ -34,16 +34,17 @@
 
 ## ⚓ Dependencies
 
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper librarys linking.
-But optionally you can install [dunst](https://github.com/dunst-project/dunst)(or other notification daemon with notify-send support) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper library's linking.
+
+But optionally you can install [libnotify](https://github.com/GNOME/libnotify) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
 
 ```
 ARCH LINUX
-$ sudo pacman -S base-devel ncurses mpv pkgconf
+$ sudo pacman -S base-devel ncurses mpv pkgconf libnotify
 UBUNTU
-$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config
+$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config libnotify4
 FEDORA
-$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf
+$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
 MACOS (MacPorts needed)
 $ brew install gcc && sudo port install ncurses mpv
 ```
