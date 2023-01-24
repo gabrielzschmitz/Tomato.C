@@ -16,6 +16,8 @@
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
+    const char *logFile;
+    const char *tmpFile;
     int pomodorosLevels;
     int workTimeLevels;
     int shortPauseLevels;
@@ -38,6 +40,12 @@ struct appData{
     int beachFrame;
     int userInput;
     int pausedTimer;
+    int cycles;
+    int needToLog;
+    int needResume;
+    int resume;
+    int newDay;
+    char date[50];
     int x;
     int y;
 };
@@ -46,6 +54,12 @@ struct appData{
 extern void initScreen();
 extern void setColor(short int , short int , chtype );
 extern void getWindowSize(appData * );
+
+extern void readLog(appData * );
+extern void setLogVars(appData * );
+extern void deleteLastLog(appData * );
+extern void printLog(appData * );
+extern void printResume(appData * );
 
 extern void timer(appData * );
 
