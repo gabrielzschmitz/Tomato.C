@@ -37,8 +37,10 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
 
         case ENTER:
             key = 'E';
-            if(app->currentMode == 0)
+            if(app->currentMode == 0 && app->needResume == 0)
                 mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            else if(app->currentMode == 0 && app->needResume == 1)
+                resumeInput(app, key);
             else if(app->currentMode == -1)
                 settingsInput(app, key);
             break;
@@ -46,7 +48,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
         case KEY_UP:
         case 'K':
         case 'k':
-            if(app->menuPos != 1)
+            if(app->menuPos != 1 && app->needResume == 0)
                 app->menuPos--;
             break;
 
@@ -56,7 +58,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
             key = 'D';
             if(app->currentMode == -1)
                 settingsInput(app, key);
-            else if(app->currentMode == 0)
+            if(app->currentMode == 0 && app->needResume == 0)
                 mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
             break;
 
@@ -66,14 +68,18 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
             key = 'L';
             if(app->currentMode == -1)
                 settingsInput(app, key);
+            else if(app->currentMode == 0 && app->needResume == 1)
+                resumeInput(app, key);
             break;
 
         case KEY_RIGHT:
         case 'L':
         case 'l':
             key = 'R';
-            if(app->currentMode == 0)
+            if(app->currentMode == 0 && app->needResume == 0)
                 mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            else if(app->currentMode == 0 && app->needResume == 1)
+                resumeInput(app, key);
             else if(app->currentMode == -1)
                 settingsInput(app, key);
             break;
@@ -100,9 +106,11 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
             break;
 
         case ESC:
+        case CTRLC:
         case 'Q':
         case 'q':
             printf("\033[?1003l\n");
+            printLog(app);
             endwin();
             exit(EXIT_SUCCESS);
             break;
@@ -122,7 +130,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
 }
 
 void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
-    if(app->currentMode == 0){
+    if(app->currentMode == 0 && app->needResume == 0){
         if(event.y == ((app->y / 2) + 4) && ((app->x / 2) + 2) >= event.x  && event.x >= ((app->x / 2) - 2)){
             app->menuPos = 1;
             if(event.bstate & BUTTON1_PRESSED){
@@ -142,6 +150,22 @@ void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const i
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
                 mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+            }
+        }
+    }
+    else if(app->currentMode == 0 && app->needResume == 1){
+        if(event.y == ((app->y / 2) + 1) && ((app->x / 2) - 2) >= event.x  && event.x >= ((app->x / 2) - 10)){
+            app->menuPos = 1;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                resumeInput(app, key);
+            }
+        }
+        else if(event.y == ((app->y / 2) + 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 2)){
+            app->menuPos = 2;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                resumeInput(app, key);
             }
         }
     }
@@ -199,13 +223,34 @@ void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const i
         }
     }
 }
+
+void resumeInput(appData * app, char key){
+    if(key == 'E'){
+        if(app->menuPos == 1){
+            setLogVars(app);
+            app->needResume = 0;
+        }
+        else if(app->menuPos == 2){
+            app->needResume = 0;
+            app->menuPos = 1;
+            deleteLastLog(app);
+        }
+    }
+    else if(key == 'R')
+        app->menuPos = 2;
+    else if(key == 'L')
+        app->menuPos = 1;
+}
+
 void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
     if(key == 'E'){
         if(app->menuPos == 1){
-            app->timer = (app->workTime * 60 * 8);
+            if(app->timer == 0)
+                app->timer = app->workTime;
             app->frameTimer = 0;
             app->currentMode = 1;
-            app->pomodoroCounter = app->pomodoroCounter + 1;
+            if(app->pomodoroCounter == 0)
+                app->pomodoroCounter = 1;
         #ifdef __APPLE__
             if(NOTIFY == 1){
                 if(strcmp(ICONS, "nerdicons") == 0)
@@ -242,10 +287,12 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
     }
     else if(key == 'R'){
         if(app->menuPos == 1){
-            app->timer = (app->workTime * 60 * 8);
+            if(app->timer == 0)
+                app->timer = app->workTime;
             app->frameTimer = 0;
             app->currentMode = 1;
-            app->pomodoroCounter = app->pomodoroCounter + 1;
+            if(app->pomodoroCounter == 0)
+                app->pomodoroCounter = 1;
         #ifdef __APPLE__
             if(NOTIFY == 1){
                 if(strcmp(ICONS, "nerdicons") == 0)
@@ -298,16 +345,16 @@ void settingsInput(appData * app, char key){
                 app->pomodoros --;
         }
         else if(app->menuPos == 2){
-            if(app->workTime != 5)
-                app->workTime = app->workTime - 5;
+            if(app->workTime != (5 * 60 * 8))
+                app->workTime = app->workTime - (5 * 60 * 8);
         }
         else if(app->menuPos == 3){
-            if(app->shortPause != 1)
-                app->shortPause = app->shortPause - 1;
+            if(app->shortPause != (1 * 60 * 8))
+                app->shortPause = app->shortPause - (1 * 60 * 8);
         }
         else if(app->menuPos == 4){
-            if(app->longPause != 5)
-                app->longPause = app->longPause - 5;
+            if(app->longPause != (5 * 60 * 8))
+                app->longPause = app->longPause - (5 * 60 * 8);
         }else{
             app->frameTimer = 0;
             app->logoFrame = 0;
@@ -321,16 +368,16 @@ void settingsInput(appData * app, char key){
                 app->pomodoros ++;
         }
         else if(app->menuPos == 2){
-            if(app->workTime != 50)
-                app->workTime = app->workTime + 5;
+            if(app->workTime != (50 * 60 * 8))
+                app->workTime = app->workTime + (5 * 60 * 8);
         }
         else if(app->menuPos == 3){
-            if(app->shortPause != 10)
-                app->shortPause = app->shortPause + 1;
+            if(app->shortPause != (10 * 60 * 8))
+                app->shortPause = app->shortPause + (1 * 60 * 8);
         }
         else if(app->menuPos == 4){
-            if(app->longPause != 60)
-                app->longPause = app->longPause + 5;
+            if(app->longPause != (60 * 60 * 8))
+                app->longPause = app->longPause + (5 * 60 * 8);
         }else{
             app->frameTimer = 0;
             app->logoFrame = 0;
