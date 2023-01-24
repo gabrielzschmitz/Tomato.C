@@ -65,7 +65,7 @@ $ nix-build default.nix
 NORMAL:
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
 $ cd Tomato.C
-$ sudo make install
+$ make install
 ```
 
 ## 🚀 How to Use
@@ -136,7 +136,7 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Add notifications
 - [X] Add notifications sound
 - [X] Implement mouse support
-- [ ] Implement save current state
+- [X] Implement save current state
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## 🤝 Contribute
