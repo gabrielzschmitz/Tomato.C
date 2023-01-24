@@ -41,7 +41,7 @@ void initScreen(void){
     printf("\033[?1003h\n");
     /* User input imediatly avaiable */
     mouseinterval(0);
-    cbreak();
+    raw();
     /* Invisible cursor */
     curs_set(0);
     /* Non-blocking getch */
@@ -62,17 +62,206 @@ void getWindowSize(appData * app){
     getmaxyx(stdscr, app->y, app->x);
 }
 
+/* Read log file at startup */
+void readLog(appData * app){
+    FILE *log;
+    log = fopen(app->logFile, "r");
+    
+    /* Get date and set if app was already runned in the day */
+    char line[4095+1];
+    time_t time_raw_format;
+    struct tm * ptr_time;
+
+    time (&time_raw_format);
+    ptr_time = localtime (&time_raw_format);
+    if(strftime(app->date, 50, "%d/%m/%Y", ptr_time) == 0){
+        perror("Couldn't read log file");
+    }else{
+        while(fgets(line, sizeof line, log))
+            if(strstr(line, app->date))
+                app->newDay = 0;
+    }
+
+    /* Get last line of the log file */
+    fseek(log, 0, SEEK_SET);
+    char lastline[1024]={0,};
+    while(fgets(lastline, 1024, log) != NULL){/* Just to get the last line */}
+
+    /* Check for session to resume */
+    if(strstr(lastline, "WT") != NULL || strstr(lastline, "SP") != NULL || strstr(lastline, "LP") != NULL)
+        app->needResume = 1;
+
+    fclose(log);
+}
+
+/* Delete the last line of the log file */
+void deleteLastLog(appData * app){
+    FILE *log;
+    log = fopen(app->logFile, "r");
+    char lastline[1024]={0,};
+    int lastlineIndex = 0;
+    while(fgets(lastline, 1024, log) != NULL){lastlineIndex++;}
+
+    fseek(log, 0, SEEK_SET);
+    FILE *tmp;
+    tmp = fopen(app->tmpFile, "w");
+    
+    char line[1024];
+    int lineCounter = 0;
+    
+    while(fgets(line, 1024, log) != NULL){
+        if(lineCounter != lastlineIndex - 1)
+            fputs(line, tmp);
+        lineCounter++;
+    }
+    
+    fclose(log);
+    fclose(tmp);
+
+    rename(app->tmpFile, app->logFile);
+}
+/* Set the variables as described in the Log instead of the default */
+void setLogVars(appData * app){
+    FILE *log;
+    log = fopen(app->logFile, "r");
+    
+    /* Get last line of the log file */
+    fseek(log, 0, SEEK_SET);
+    char lastline[1024]={0,};
+    int lastlineIndex = 0;
+    /* Just to get the last line and count lines */
+    while(fgets(lastline, 1024, log) != NULL){lastlineIndex++;}
+
+    /* Get variables */
+    if(sscanf(lastline, "%d/%d WT %d D %d %d %d",
+              &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+        app->timer = (app->timer - app->workTime) * -1;
+        app->frameTimer = 0;
+        app->currentMode = 1;
+    }
+    else if(sscanf(lastline, "%d/%d SP %d D %d %d %d",
+                   &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+        app->timer = (app->timer - app->shortPause) * -1;
+        app->frameTimer = 0;
+        app->currentMode = 2;
+    }
+    else if(sscanf(lastline, "%d/%d LP %d D %d %d %d",
+                   &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+        app->timer = (app->timer - app->longPause) * -1;
+        app->frameTimer = 0;
+        app->currentMode = 3;
+    }
+
+    fclose(log);
+    deleteLastLog(app);
+}
+
+/* Print current infos in the log file */
+void printLog(appData * app){
+    int totalTime = ((app->pomodoros * app->workTime) + ((app->pomodoros - 1) * app->shortPause) + app->longPause) / (60 * 8);
+
+    FILE *log;
+    log = fopen(app->logFile, "a+");
+    if(app->newDay == 1)
+        fprintf(log, "%s\n", app->date);
+
+    switch(app->currentMode){
+        case -1:
+        case 0:
+            if(app->cycles != 0 && app->needToLog == 1){
+                fprintf(log, "TT %dmin D %d %d %d\n", totalTime,
+                        app->workTime,
+                        app->shortPause,
+                        app->longPause);
+            }
+            break;
+
+        case 1:
+            fprintf(log, "%d/%d WT %d D %d %d %d\n",
+                    app->pomodoroCounter,
+                    app->pomodoros,
+                    (app->workTime - app->timer),
+                    app->workTime,
+                    app->shortPause,
+                    app->longPause);
+            break;
+
+        case 2:
+            fprintf(log, "%d/%d SP %d D %d %d %d\n",
+                    app->pomodoroCounter,
+                    app->pomodoros,
+                    (app->shortPause - app->timer),
+                    app->workTime,
+                    app->shortPause,
+                    app->longPause);
+            break;
+
+        case 3:
+            fprintf(log, "%d/%d LP %d D %d %d %d\n",
+                    app->pomodoros,
+                    app->pomodoros,
+                    (app->longPause - app->timer),
+                    app->workTime,
+                    app->shortPause,
+                    app->longPause);
+            break;
+
+    }
+    fclose(log);
+}
+
+/* Print resume menu */
+void printResume(appData * app){
+    if(app->needResume == 1){
+        /* Up and Down */
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        for(int i = 0; i < 33; i++){
+            mvaddch(((app->y / 2) - 3), (((app->x / 2) - 16) + i), ACS_HLINE);
+            mvaddch(((app->y / 2) + 2), (((app->x / 2) - 16) + i), ACS_HLINE);
+        }
+        /* Corners */
+        mvaddch(((app->y / 2) - 3), ((app->x / 2) - 17), ACS_ULCORNER);
+        mvaddch(((app->y / 2) - 3), ((app->x / 2) + 17), ACS_URCORNER);
+        mvaddch(((app->y / 2) + 2), ((app->x / 2) - 17), ACS_LLCORNER);
+        mvaddch(((app->y / 2) + 2), ((app->x / 2) + 17), ACS_LRCORNER);
+        /* Sides */
+        for(int i = 0; i < 4; i++){
+            mvaddch((((app->y / 2) - 2) + i), ((app->x / 2) - 17), ACS_VLINE);
+            mvaddch((((app->y / 2) - 2) + i), ((app->x / 2) + 17), ACS_VLINE);
+        }
+
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 16), "An unfinished cycle was detected!");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 16), "         Want to resume?         ");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) - 16), "                                 ");
+        if(app->menuPos == 1){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 16), "      -> Yes <- ");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) - 16), "         Yes    ");
+        }
+
+        if(app->menuPos == 2){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) + 1),  " -> No <-       ");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw(((app->y / 2) + 1), ((app->x / 2) + 1),  "    No          ");
+        }
+    }
+}
+
 /* Time the pomodoros */
 void timer(appData * app){
     int sec = 60;
     clock_t end = clock() + sec * (CLOCKS_PER_SEC);
     if(clock() < end) {
         if(app->pausedTimer != 1){
-            /* Debug */
-            //app->timer = app->timer - 1;
             app->timerms++;
             if(app->timerms >= 7.745966692){
                 app->timerms = 0;
+                /* Debug */
+                //app->timer = app->timer - 60;
                 app->timer = app->timer - 1;
             }
         }
@@ -112,31 +301,34 @@ void printPauseIndicator(appData * app, const char * ICONS){
 
 /* Print the Main Menu */
 void printMainMenu(appData * app, const char * ICONS){
-    printLogo(app, ICONS);
+    if(app->needResume == 0){
+        printLogo(app, ICONS);
 
-    if(app->menuPos == 1){
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) + 4), ((app->x / 2) - 5), "-> start <-");
-    }else{
-        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2) + 4), ((app->x / 2) - 2), "start");
-    }
+        if(app->menuPos == 1 && app->needResume == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 5), "-> start <-");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw(((app->y / 2) + 4), ((app->x / 2) - 2), "start");
+        }
 
-    if(app->menuPos == 2){
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) + 5), ((app->x / 2) - 8), "-> preferences <-");
-    }else{
-        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2) + 5), ((app->x / 2) - 5), "preferences");
-    }
+        if(app->menuPos == 2 && app->needResume == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 8), "-> preferences <-");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw(((app->y / 2) + 5), ((app->x / 2) - 5), "preferences");
+        }
 
-    if(app->menuPos == 3){
-        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) + 6), ((app->x / 2) - 5), "-> leave <-");
-    }else{
-        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2) + 6), ((app->x / 2) - 2), "leave");
+        if(app->menuPos == 3 && app->needResume == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 5), "-> leave <-");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 2), "leave");
+        }
     }
+    printResume(app);
 }
 
 /* Print the Main Menu */
@@ -153,26 +345,26 @@ void printSettings(appData * app){
 
     if(app->menuPos == 2){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9), "<- work time %02dm ->", app->workTime);
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 9), "<- work time %02dm ->", app->workTime / (60 * 8));
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 6), "work time %02dm", app->workTime);
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 6), "work time %02dm", app->workTime / (60 * 8));
     }
 
     if(app->menuPos == 3){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 10), "<- short pause %02dm ->", app->shortPause);
+        mvprintw(((app->y / 2)), ((app->x / 2) - 10), "<- short pause %02dm ->", app->shortPause / (60 * 8));
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2)), ((app->x / 2) - 7), "short pause %02dm", app->shortPause);
+        mvprintw(((app->y / 2)), ((app->x / 2) - 7), "short pause %02dm", app->shortPause / (60 * 8));
     }
     
     if(app->menuPos == 4){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10), "<- long pause  %02dm ->", app->longPause);
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 10), "<- long pause  %02dm ->", app->longPause / (60 * 8));
     }else{
         setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 7), "long pause  %02dm", app->longPause);
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 7), "long pause  %02dm", app->longPause / (60 * 8));
     }
     if(app->menuPos == 5){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
@@ -196,17 +388,17 @@ void printTimer(appData * app, const char * ICONS){
         if(strcmp(ICONS, "nerdicons") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 11), " Pomodoro");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 0), "[%02d minutes]", app->workTime);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 0), "[%02d minutes]", app->workTime / (60 * 8));
         }
         else if(strcmp(ICONS, "iconson") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 12), "🍅 Pomodoro");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 1), "[%02d minutes]", app->workTime);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 1), "[%02d minutes]", app->workTime / (60 * 8));
         }
         else{
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 10), "Pomodoro");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->workTime);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->workTime / (60 * 8));
         }
     }
     else if(app->currentMode == 2){
@@ -214,17 +406,17 @@ void printTimer(appData * app, const char * ICONS){
         if(strcmp(ICONS, "nerdicons") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 10), " Pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->shortPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->shortPause / (60 * 8));
         }
         else if(strcmp(ICONS, "iconson") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 10), "☕ Pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->shortPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 1), "[%02d minutes]", app->shortPause / (60 * 8));
         }
         else{
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 9), "Pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 2), "[%02d minutes]", app->shortPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) - 2), "[%02d minutes]", app->shortPause / (60 * 8));
         }
     }
     else{
@@ -232,17 +424,17 @@ void printTimer(appData * app, const char * ICONS){
         if(strcmp(ICONS, "nerdicons") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 12), " Long pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 1), "[%02d minutes]", app->longPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 1), "[%02d minutes]", app->longPause / (60 * 8));
         }
         else if(strcmp(ICONS, "iconson") == 0){
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 13), "🌴 Long pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 2), "[%02d minutes]", app->longPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 2), "[%02d minutes]", app->longPause / (60 * 8));
         }
         else{
             mvprintw(((app->y / 2) + 6), ((app->x / 2) - 11), "Long pause");
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 0), "[%02d minutes]", app->longPause);
+            mvprintw(((app->y / 2) + 6), ((app->x / 2) + 0), "[%02d minutes]", app->longPause / (60 * 8));
         }
     }
     setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
