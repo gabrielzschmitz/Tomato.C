@@ -1,0 +1,21 @@
+# Month/Day/Year
+# mm/dd/yy
+#
+# Total session time (in minutes)
+# TT %dmin
+#
+# Default values - WorkTime ShortPause LongPause (in ticks)
+# D %d %d %d
+#
+# Current work time (in ticks)
+# WT %d
+#
+# Current short pause (in ticks)
+# SP %d
+#
+# Current long pause (in ticks)
+# LP %d
+#
+# Current pomodoro/Total pomodoros
+# %d/%d
+#
