@@ -15,15 +15,16 @@
 #include "anim.h"
 #include <ncurses.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <locale.h>
 
 /* Initialize variables */
 void initApp(appData * app){
-    app->longPause = LONGPAUSE;
-    app->workTime = WORKTIME;
-    app->shortPause = SHORTPAUSE;
+    app->longPause = (LONGPAUSE * 60 * 8);
+    app->workTime = (WORKTIME * 60 * 8);
+    app->shortPause = (SHORTPAUSE * 60 * 8);
     app->pomodoros = POMODOROS;
     app->menuPos = 1;
     app->pomodoroCounter = 0;
@@ -35,6 +36,17 @@ void initApp(appData * app){
     app->framems = 0;
     app->timerms = 0;
     app->pausedTimer = 0;
+    app->cycles = 0;
+    app->needToLog = 0;
+    app->needResume = 0;
+    app->resume = 0;
+    app->newDay = 1;
+
+    /* Defined in the config.mk */
+    app->logFile = LOGFILE;
+    app->tmpFile = TMPFILE;
+
+    readLog(app);
 }
 
 /* Print at screen */
@@ -67,6 +79,7 @@ void drawScreen(appData * app){
             break;
 
         case 3:
+            printPomodoroCounter(app);
             printPauseIndicator(app, ICONS);
             printBeach(app);
             printTimer(app, ICONS);
