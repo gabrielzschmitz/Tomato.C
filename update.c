@@ -47,10 +47,10 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         frameTimer(app);
         if(app->timer == 0){
             if(app->pomodoroCounter == app->pomodoros){
-                app->timer = (app->longPause * 60 * 8);
-                app->pomodoroCounter = 0;
+                app->timer = app->longPause;
                 app->frameTimer = 0;
                 app->currentMode = 3;
+                app->pomodoroCounter = app->pomodoros;
             #ifdef __APPLE__
                 if(NOTIFY == 1){
                     if(strcmp(ICONS, "nerdicons") == 0)
@@ -73,7 +73,7 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
                 if(SOUND == 1 && WSL == 0)
                     system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
             }else{
-                app->timer = (app->shortPause * 60 * 8);
+                app->timer = app->shortPause;
                 app->frameTimer = 0;
                 app->currentMode = 2;
             #ifdef __APPLE__
@@ -113,7 +113,7 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
         timer(app);
         frameTimer(app);
         if(app->timer == 0){
-            app->timer = (app->workTime * 60 * 8);
+            app->timer = app->workTime;
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
@@ -153,8 +153,14 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
     if(app->currentMode == 3){
         timer(app);
         frameTimer(app);
-        if(app->timer == 0)
+        if(app->timer == 0){
             app->currentMode = 0;
+            app->cycles++;
+            app->needToLog = 1;
+            printLog(app);
+            app->needToLog = 0;
+            app->pomodoroCounter = 0;
+        }
         
         /* Beach Animation */
         if(app->frameTimer == (3 * 8)) app->beachFrame = 1;
