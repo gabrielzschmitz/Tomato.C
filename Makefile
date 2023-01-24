@@ -23,21 +23,26 @@ update.o: update.h
 
 clean:
 	rm -rf tomato *.o
+	cp -f tomato.log ${DESTDIR}${LOGPREFIX}
 
 install: tomato
-	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f tomato ${DESTDIR}${PREFIX}/bin
-	mkdir -p ${DESTDIR}${APPPREFIX}
-	cp -f tomato.desktop ${DESTDIR}${APPPREFIX}
-	mkdir -p ${DESTDIR}${PREFIX}/share/tomato
-	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
-	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
-	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
-	cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
-	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
+	sudo mkdir -p ${DESTDIR}${PREFIX}/bin
+	sudo cp -f tomato ${DESTDIR}${PREFIX}/bin
+	sudo mkdir -p ${DESTDIR}${APPPREFIX}
+	sudo cp -f tomato.desktop ${DESTDIR}${APPPREFIX}
+	mkdir -p ${DESTDIR}${LOGPREFIX}
+	sudo mkdir -p ${DESTDIR}${PREFIX}/share/tomato
+	sudo mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
+	sudo mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
+	cp -n tomato.log ${DESTDIR}${LOGPREFIX}
+	sudo cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
+	sudo cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
+	chmod 666 ${DESTDIR}${LOGPREFIX}/tomato.log
+	sudo chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/tomato
-	rm -rf ${DESTDIR}${PREFIX}/share/tomato
-	rm -f ${DESTDIR}${APPPREFIX}/tomato.desktop
+	sudo rm -f ${DESTDIR}${PREFIX}/bin/tomato
+	sudo rm -rf ${DESTDIR}${LOGPREFIX}
+	sudo rm -rf ${DESTDIR}${PREFIX}/share/tomato
+	sudo rm -f ${DESTDIR}${APPPREFIX}/tomato.desktop
 
