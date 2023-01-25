@@ -18,6 +18,8 @@
 #include <string.h>
 #include <time.h>
 #include <locale.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 /* Initialize screen with colors, enabled keyboard and another little configs */
 void initScreen(void){
@@ -60,6 +62,70 @@ void setColor(short int fg, short int bg, chtype attr){
 /* Get the window X and Y size */
 void getWindowSize(appData * app){
     getmaxyx(stdscr, app->y, app->x);
+}
+
+/* Set the log folder and files */
+void createLog(appData * app){
+    /* Get /home/user */
+    char * home = getenv("HOME");
+
+    /* Set log folder fullpath */
+    char * logPrefix = NULL;
+    logPrefix = malloc(strlen(home) + strlen(app->logPrefix) + 1);
+    strcpy(logPrefix, home);
+    strcat(logPrefix, "/");
+    strcat(logPrefix, app->logPrefix);
+    app->logPrefix = logPrefix;
+
+    /* Set log file fullpath */
+    char * logFile= NULL;
+    logFile = malloc(strlen(home) + strlen(app->logFile) + 1);
+    strcpy(logFile, home);
+    strcat(logFile, "/");
+    strcat(logFile, app->logFile);
+    app->logFile = logFile;
+
+    /* Set tmp file fullpath */
+    char * tmpFile= NULL;
+    tmpFile = malloc(strlen(home) + strlen(app->tmpFile) + 1);
+    strcpy(tmpFile, home);
+    strcat(tmpFile, "/");
+    strcat(tmpFile, app->tmpFile);
+    app->tmpFile = tmpFile;
+    
+    /* Create log folder */
+    mkdir(app->logPrefix, 0766);
+
+    /* Create log file if doesn't exist */
+    FILE *log;
+    log = fopen(app->logFile, "r");
+    if(log)
+        fclose(log);
+    else{
+        log = fopen(app->logFile, "w");
+        fprintf(log, "# Month/Day/Year\n"
+        "# mm/dd/yy\n"
+        "#\n"
+        "# Total session time (in minutes)\n"
+        "# TT %%dmin\n"
+        "#\n"
+        "# Default values - WorkTime ShortPause LongPause (in ticks)\n"
+        "# D %%d %%d %%d\n"
+        "#\n"
+        "# Current work time (in ticks)\n"
+        "# WT %%d\n"
+        "#\n"
+        "# Current short pause (in ticks)\n"
+        "# SP %%d\n"
+        "#\n"
+        "# Current long pause (in ticks)\n"
+        "# LP %%d\n"
+        "#\n"
+        "# Current pomodoro/Total pomodoros\n"
+        "# %%d/%%d\n"
+        "#");
+        fclose(log);
+    }
 }
 
 /* Read log file at startup */
