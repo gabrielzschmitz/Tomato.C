@@ -77,7 +77,7 @@ $ tomato
 
 <b>Tip:</b> For the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
 ```
-$ setsid -f "$TERMINAL" -g 33x21 -c tomato -e tomato
+$ setsid -f "$TERMINAL" -g 35x21 -c tomato -e tomato
 ```
 
 ## 🕹️ Controls
