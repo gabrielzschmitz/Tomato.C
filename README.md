@@ -65,7 +65,7 @@ $ nix-build default.nix
 NORMAL:
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
 $ cd Tomato.C
-$ make install
+$ sudo make install
 ```
 
 ## 🚀 How to Use
