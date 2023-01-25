@@ -16,8 +16,9 @@
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
-    const char *logFile;
-    const char *tmpFile;
+    char *logPrefix;
+    char *logFile;
+    char *tmpFile;
     int pomodorosLevels;
     int workTimeLevels;
     int shortPauseLevels;
@@ -55,6 +56,7 @@ extern void initScreen();
 extern void setColor(short int , short int , chtype );
 extern void getWindowSize(appData * );
 
+extern void createLog(appData * );
 extern void readLog(appData * );
 extern void setLogVars(appData * );
 extern void deleteLastLog(appData * );
