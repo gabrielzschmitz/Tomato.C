@@ -43,9 +43,10 @@ void initApp(appData * app){
     app->newDay = 1;
 
     /* Defined in the config.mk */
+    app->logPrefix = LOGPREFIX;
     app->logFile = LOGFILE;
     app->tmpFile = TMPFILE;
-
+    createLog(app);
     readLog(app);
 }
 
