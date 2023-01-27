@@ -77,7 +77,7 @@ $ tomato
 
 <b>Tip:</b> For the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
 ```
-$ setsid -f "$TERMINAL" -g 35x21 -c tomato -e tomato
+$ setsid -f "$TERMINAL" -g 49x25 -c tomato -e tomato
 ```
 
 ## 🕹️ Controls
@@ -106,6 +106,7 @@ You can change those configs:
  * <b><i>ICONS</i></b>: iconsoff - iconson - nerdicons;
  * <b><i>NOTIFY</i></b>: 0/1;
  * <b><i>SOUND</i></b>: 0/1;
+ * <b><i>BGTRANSPARENCY</i></b>: 0/1;
  * <b><i>POMODOROS</i></b>: 1-8;
  * <b><i>WORKTIME</i></b>: 5-50;
  * <b><i>SHORTPAUSE</i></b>: 1-10;
