@@ -8,6 +8,8 @@
 //  `'							    
 //  config.h
 */
+#ifndef CONFIG_H_
+#define CONFIG_H_
 
 /* 1 if you're in WSL, 0 if not 
  * Note: you'll need wsl-notify-send
@@ -28,6 +30,10 @@ static const int NOTIFY = 1;
  * Note: you'll need mpv */
 static const int SOUND = 1;
 
+/* 1 if you want transparent background, 0 if not
+ * Note: you'll need a terminal already transparent */
+static const int BGTRANSPARENCY = 1;
+
 /* amount of pomodoros from 1 to 8 (default: 4) */
 static const int POMODOROS = 4;
 
@@ -41,4 +47,6 @@ static const int SHORTPAUSE = 5;
 /* time for the long pause from 5 to 60 (default: 30)
  * (increment it by 5 by 5)*/
 static const int LONGPAUSE = 30;
+
+#endif
 
