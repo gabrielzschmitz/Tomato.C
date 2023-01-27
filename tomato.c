@@ -8,13 +8,17 @@
 //  `'							    
 //  tomato.c
 */
-#include "config.h"
-#include "util.h"
-#include "input.h"
-#include "update.h"
+#include "tomato.h"
 #include "anim.h"
+#include "draw.h"
+#include "input.h"
+#include "notify.h"
+#include "update.h"
+#include "util.h"
+#include "config.h"
 #include <ncurses.h>
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -22,6 +26,9 @@
 
 /* Initialize variables */
 void initApp(appData * app){
+    /* One Second Based in the Frames per Second */
+    app->sfps = (2 * sqrt(15));
+
     app->longPause = (LONGPAUSE * 60 * 8);
     app->workTime = (WORKTIME * 60 * 8);
     app->shortPause = (SHORTPAUSE * 60 * 8);
@@ -31,6 +38,7 @@ void initApp(appData * app){
     app->currentMode = 0;
     app->logoFrame = 0;
     app->coffeeFrame= 0;
+    app->bannerFrame= 0;
     app->frameTimer = 0;
     app->timer = 0;
     app->framems = 0;
@@ -41,13 +49,27 @@ void initApp(appData * app){
     app->needResume = 0;
     app->resume = 0;
     app->newDay = 1;
+    app->runOnce = 1; 
 
     /* Defined in the config.mk */
     app->logPrefix = LOGPREFIX;
     app->logFile = LOGFILE;
     app->tmpFile = TMPFILE;
+
     createLog(app);
     readLog(app);
+}
+
+/* Update variables */
+void doUpdate(appData * app){
+    /* Update all the app modes */
+    updateMainMenu(app);
+    updateWorkTime(app);
+    updateShortPause(app);
+    updateLongPause(app);
+
+    /* Get X and Y window size */
+    getWindowSize(app);
 }
 
 /* Print at screen */
@@ -56,34 +78,35 @@ void drawScreen(appData * app){
     
     switch(app->currentMode){
         case -1:
-            printGear(app, 1);
+            printWrench(app, 1);
             printSettings(app);
-            printGear(app, 0);
+            printWrench(app, 0);
             break;
 
         case 0:
-            printMainMenu(app, ICONS);
+            printResume(app);
+            printMainMenu(app);
             break;
 
         case 1:
             printPomodoroCounter(app);
-            printPauseIndicator(app, ICONS);
+            printPauseIndicator(app);
             printCoffee(app);
-            printTimer(app, ICONS);
+            printTimer(app);
             break;
 
         case 2:
             printPomodoroCounter(app);
-            printPauseIndicator(app, ICONS);
-            printMachine(app, ICONS);
-            printTimer(app, ICONS);
+            printPauseIndicator(app);
+            printMachine(app);
+            printTimer(app);
             break;
 
         case 3:
             printPomodoroCounter(app);
-            printPauseIndicator(app, ICONS);
+            printPauseIndicator(app);
             printBeach(app);
-            printTimer(app, ICONS);
+            printTimer(app);
             break;
     }
     refresh();
@@ -97,14 +120,15 @@ int main(void){
     /* Creating the app struct */
     appData app;
 
+    /* Initializing the app */
     initScreen();
     initApp(&app);
 
     /* Main app loop */
     while(1){
-        handleInputs(&app, NOTIFY, SOUND, ICONS, WSL);
+        handleInputs(&app);
 
-        doUpdate(&app, NOTIFY, SOUND, ICONS, WSL);
+        doUpdate(&app);
 
         drawScreen(&app);
 
