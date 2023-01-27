@@ -6,12 +6,16 @@
 // `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
 //  ,|							    
 //  `'							    
-// util.c
+// anim.c
 */
-#include "util.h"
-#include "input.h"
-#include "update.h"
+#include "tomato.h"
 #include "anim.h"
+#include "draw.h"
+#include "input.h"
+#include "notify.h"
+#include "update.h"
+#include "util.h"
+#include "config.h"
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +30,7 @@ void frameTimer(appData * app){
     if(clock() < end) {
         if(app->pausedTimer != 1){
             app->framems++;
-            if(app->framems >= 7.745966692){
+            if(app->framems >= app->sfps){
                 app->framems = 0;
                 app->frameTimer = app->frameTimer + 1;
             }
@@ -35,8 +39,8 @@ void frameTimer(appData * app){
 }
 
 /* Print the logo frames */
-void printLogo(appData * app, const char * icons){
-    if(strcmp(icons, "nerdicons") == 0){
+void printLogo(appData * app){
+    if(strcmp(ICONS, "nerdicons") == 0){
         if (app->logoFrame == 0){
             setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
@@ -150,7 +154,7 @@ void printLogo(appData * app, const char * icons){
             mvprintw(((app->y / 2) + 2), ((app->x / 2) - 10)," |(_)|||(_||_(_) . \\_");
         }
     }
-    else if(strcmp(icons, "iconson") == 0){
+    else if(strcmp(ICONS, "iconson") == 0){
         if (app->logoFrame == 0){
             setColor(COLOR_GREEN, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 6), ((app->x / 2) - 10),"       __\\W/__       ");
@@ -405,8 +409,8 @@ void printCoffee(appData * app){
 }
  
 /* Print the coffee machine frames */
-void printMachine(appData * app, const char * icons){
-    if(strcmp(icons, "iconsoff") == 0){
+void printMachine(appData * app){
+    if(strcmp(ICONS, "iconsoff") == 0){
         if(app->machineFrame == 0){
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
             mvprintw(((app->y / 2) - 5), ((app->x / 2) - 9),"________._________ ");
@@ -566,7 +570,7 @@ void printBeach(appData * app){
 }
 
 /* Print the gear frames */
-void printGear(appData * app, int flip){
+void printWrench(appData * app, int flip){
     if(flip == 1){
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
         mvprintw(((app->y / 2) + 5), ((app->x / 2) - 15)," .----.                 .---.");
@@ -581,6 +585,53 @@ void printGear(appData * app, int flip){
         mvprintw(((app->y / 2) - 7), ((app->x / 2) - 15),":  >_<   _____________   )");
         mvprintw(((app->y / 2) - 6), ((app->x / 2) - 15),"'.     .`             '.  '---.");
         mvprintw(((app->y / 2) - 5), ((app->x / 2) - 15),"  '---`                 '----`");
+    }
+}
+
+void printBanner(appData * app){
+    setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+    if(app->bannerFrame == 0){
+        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 20),"    _________________________________    ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 20),"___|");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) + 17),"|___");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 20),"\\  |                                 |  /");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) + 17),"|  /");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) - 20)," \\ |");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) + 17),"| / ");
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 20)," / |_________________________________| \\ ");
+        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 20),"/______)                         (______\\");
+    }
+    else if(app->bannerFrame == 1){
+        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 21),"     _________________________________     ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 21),"____|");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) + 17),"|____");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 21),"\\   |");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) + 17),"|   /");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) - 21)," \\  |");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) + 17),"|  / ");
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 21)," /  |_________________________________|  \\ ");
+        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 21),"/_______)                         (_______\\");
+    }
+    else if(app->bannerFrame == 2){
+        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 23),"      ___________________________________      ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 23),"_____|");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) + 18),"|_____");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 23),"\\    |");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) + 18),"|    /");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) - 23)," \\   |");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) + 18),"|   / ");
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 23)," /   |___________________________________|   \\ ");
+        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 23),"/_______)                             (_______\\");
+    }else{
+        mvprintw(((app->y / 2) - 3), ((app->x / 2) - 24),"       ___________________________________       ");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) - 24),"______|");
+        mvprintw(((app->y / 2) - 2), ((app->x / 2) + 18),"|______");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) - 24),"\\     |");
+        mvprintw(((app->y / 2) - 1), ((app->x / 2) + 18),"|     /");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) - 24)," \\    |");
+        mvprintw(((app->y / 2) + 0), ((app->x / 2) + 18),"|    / ");
+        mvprintw(((app->y / 2) + 1), ((app->x / 2) - 24)," /    |___________________________________|    \\ ");
+        mvprintw(((app->y / 2) + 2), ((app->x / 2) - 24),"/________)                             (________\\");
     }
 }
 
