@@ -8,6 +8,8 @@
 //  `'							    
 // input.h
 */
+#ifndef INPUT_H_
+#define INPUT_H_
 #include <ncurses.h>
 
 /* Defining some ASCII Keys */
@@ -19,9 +21,16 @@
 # define CTRLX 24
 
 /* Handle user input and app state */
-extern void handleInputs(appData * , const int , const int , const char * , const int );
-extern void mouseInput(appData * , MEVENT , char , const int , const int , const char * , const int );
-extern void resumeInput(appData * , char );
-extern void mainMenuInput(appData * , char , const int , const int , const char * , const int );
+extern void handleInputs(appData * );
+/* Handle mouse input */
+extern void mouseInput(appData * , MEVENT , char );
+
+/* Handle input at the main menu */
+extern void mainMenuInput(appData * , char );
+/* Handle input at the settings menu */
 extern void settingsInput(appData * , char );
+/* Handle input at the resume menu */
+extern void resumeInput(appData * , char );
+
+#endif
 
