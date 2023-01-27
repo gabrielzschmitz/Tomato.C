@@ -6,12 +6,16 @@
 // `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
 //  ,|							    
 //  `'							    
-// util.c
+// input.c
 */
-#include "util.h"
-#include "input.h"
-#include "update.h"
+#include "tomato.h"
 #include "anim.h"
+#include "draw.h"
+#include "input.h"
+#include "notify.h"
+#include "update.h"
+#include "util.h"
+#include "config.h"
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +24,7 @@
 #include <locale.h>
 
 /* Handle user input and app state */
-void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
+void handleInputs(appData * app){
     MEVENT event;
 
     app->userInput = getch();
@@ -31,14 +35,14 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
 	case KEY_MOUSE:
             if(app->currentMode == 0 || app->currentMode == -1){
                 if(getmouse(&event) == OK)
-                    mouseInput(app, event, key, NOTIFY, SOUND, ICONS, WSL);
+                    mouseInput(app, event, key);
             }
 	    break;
 
         case ENTER:
             key = 'E';
             if(app->currentMode == 0 && app->needResume == 0)
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             else if(app->currentMode == 0 && app->needResume == 1)
                 resumeInput(app, key);
             else if(app->currentMode == -1)
@@ -59,7 +63,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
             if(app->currentMode == -1)
                 settingsInput(app, key);
             if(app->currentMode == 0 && app->needResume == 0)
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             break;
 
         case KEY_LEFT:
@@ -77,7 +81,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
         case 'l':
             key = 'R';
             if(app->currentMode == 0 && app->needResume == 0)
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             else if(app->currentMode == 0 && app->needResume == 1)
                 resumeInput(app, key);
             else if(app->currentMode == -1)
@@ -110,7 +114,7 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
         case 'Q':
         case 'q':
             printf("\033[?1003l\n");
-            printLog(app);
+            writeToLog(app);
             endwin();
             exit(EXIT_SUCCESS);
             break;
@@ -129,39 +133,40 @@ void handleInputs(appData * app, const int NOTIFY, const int SOUND, const char *
     flushinp();
 }
 
-void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
+/* Handle mouse input */
+void mouseInput(appData * app, MEVENT event, char key){
     if(app->currentMode == 0 && app->needResume == 0){
-        if(event.y == ((app->y / 2) + 4) && ((app->x / 2) + 2) >= event.x  && event.x >= ((app->x / 2) - 2)){
+        if(event.y == (app->middley + 4) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
             app->menuPos = 1;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) + 5) && ((app->x / 2) + 5) >= event.x  && event.x >= ((app->x / 2) - 5)){
+        else if(event.y == (app->middley + 5) && (app->middlex + 5) >= event.x  && event.x >= (app->middlex - 5)){
             app->menuPos = 2;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) + 6) && ((app->x / 2) + 2) >= event.x  && event.x >= ((app->x / 2) - 2)){
+        else if(event.y == (app->middley + 6) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
             app->menuPos = 3;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
-                mainMenuInput(app, key, NOTIFY, SOUND, ICONS, WSL);
+                mainMenuInput(app, key);
             }
         }
     }
     else if(app->currentMode == 0 && app->needResume == 1){
-        if(event.y == ((app->y / 2) + 1) && ((app->x / 2) - 2) >= event.x  && event.x >= ((app->x / 2) - 10)){
+        if(event.y == (app->middley) && (app->middlex - 2) >= event.x  && event.x >= (app->middlex - 10)){
             app->menuPos = 1;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
                 resumeInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) + 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 2)){
+        else if(event.y == (app->middley) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex + 2)){
             app->menuPos = 2;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
@@ -170,51 +175,51 @@ void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const i
         }
     }
     else if(app->currentMode == -1){
-        if(event.y == ((app->y / 2) - 2) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) - 9)){
+        if(event.y == (app->middley - 2) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex - 9)){
             app->menuPos = 1;
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 2) && ((app->x / 2) - 8) >= event.x  && event.x >= ((app->x / 2) - 9)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley - 2) && (app->middlex - 8) >= event.x  && event.x >= (app->middlex - 9)){
                 key = 'L';
                 settingsInput(app, key);
             }
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 2) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 8)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley - 2) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex + 8)){
                 key = 'R';
                 settingsInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) - 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) - 9)){
+        else if(event.y == (app->middley - 1) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex - 9)){
             app->menuPos = 2;
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 1) && ((app->x / 2) - 8) >= event.x  && event.x >= ((app->x / 2) - 9)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley - 1) && (app->middlex - 8) >= event.x  && event.x >= (app->middlex - 9)){
                 key = 'L';
                 settingsInput(app, key);
             }
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) - 1) && ((app->x / 2) + 9) >= event.x  && event.x >= ((app->x / 2) + 8)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley - 1) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex + 8)){
                 key = 'R';
                 settingsInput(app, key);
             }
         }
-        else if(event.y == (app->y / 2) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) - 10)){
+        else if(event.y == app->middley && (app->middlex + 10) >= event.x  && event.x >= (app->middlex - 10)){
             app->menuPos = 3;
-            if(event.bstate & BUTTON1_PRESSED && event.y == (app->y / 2) && ((app->x / 2) - 9) >= event.x  && event.x >= ((app->x / 2) - 10)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == app->middley && (app->middlex - 9) >= event.x  && event.x >= (app->middlex - 10)){
                 key = 'L';
                 settingsInput(app, key);
             }
-            if(event.bstate & BUTTON1_PRESSED && event.y == (app->y / 2) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) + 9)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == app->middley && (app->middlex + 10) >= event.x  && event.x >= (app->middlex + 9)){
                 key = 'R';
                 settingsInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) + 1) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) - 10)){
+        else if(event.y == (app->middley + 1) && (app->middlex + 10) >= event.x  && event.x >= (app->middlex - 10)){
             app->menuPos = 4;
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) + 1) && ((app->x / 2) - 9) >= event.x  && event.x >= ((app->x / 2) - 10)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley + 1) && (app->middlex - 9) >= event.x  && event.x >= (app->middlex - 10)){
                 key = 'L';
                 settingsInput(app, key);
             }
-            if(event.bstate & BUTTON1_PRESSED && event.y == ((app->y / 2) + 1) && ((app->x / 2) + 10) >= event.x  && event.x >= ((app->x / 2) + 9)){
+            if(event.bstate & BUTTON1_PRESSED && event.y == (app->middley + 1) && (app->middlex + 10) >= event.x  && event.x >= (app->middlex + 9)){
                 key = 'R';
                 settingsInput(app, key);
             }
         }
-        else if(event.y == ((app->y / 2) + 4) && ((app->x / 2) + 8) >= event.x  && event.x >= ((app->x / 2) - 8)){
+        else if(event.y == (app->middley + 4) && (app->middlex + 8) >= event.x  && event.x >= (app->middlex - 8)){
             app->menuPos = 5;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
@@ -224,25 +229,8 @@ void mouseInput(appData * app, MEVENT event, char key, const int NOTIFY, const i
     }
 }
 
-void resumeInput(appData * app, char key){
-    if(key == 'E'){
-        if(app->menuPos == 1){
-            setLogVars(app);
-            app->needResume = 0;
-        }
-        else if(app->menuPos == 2){
-            app->needResume = 0;
-            app->menuPos = 1;
-            deleteLastLog(app);
-        }
-    }
-    else if(key == 'R')
-        app->menuPos = 2;
-    else if(key == 'L')
-        app->menuPos = 1;
-}
-
-void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
+/* Handle input at the main menu */
+void mainMenuInput(appData * app, char key){
     if(key == 'E'){
         if(app->menuPos == 1){
             if(app->timer == 0)
@@ -251,27 +239,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
             app->currentMode = 1;
             if(app->pomodoroCounter == 0)
                 app->pomodoroCounter = 1;
-        #ifdef __APPLE__
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0)
-                    system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
-                else if(strcmp(ICONS, "iconson") == 0)
-                    system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
-                else
-                    system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
-            }
-        #else
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'華 Work!\' \'You need to focus\'");
-                else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
-                else
-                    system("notify-send -t 5000 -c Tomato.C \'Work! You need to focus\'");
-            }
-        #endif
-            if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+            notify("worktime");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -293,27 +261,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
             app->currentMode = 1;
             if(app->pomodoroCounter == 0)
                 app->pomodoroCounter = 1;
-        #ifdef __APPLE__
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0)
-                    system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
-                else if(strcmp(ICONS, "iconson") == 0)
-                    system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
-                else
-                    system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
-            }
-        #else
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'華 Work!\' \'You need to focus\'");
-                else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
-                else
-                    system("notify-send -t 5000 -c Tomato.C \'Work! You need to focus\'");
-            }
-        #endif
-            if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+            notify("worktime");
         }
         else if(app->menuPos == 2){
             app->currentMode = -1;
@@ -326,6 +274,7 @@ void mainMenuInput(appData * app, char key, const int NOTIFY, const int SOUND, c
         return;
 }
 
+/* Handle input at the settings menu */
 void settingsInput(appData * app, char key){
     if(key == 'E'){
         if(app->menuPos == 5){
@@ -386,5 +335,24 @@ void settingsInput(appData * app, char key){
         }
     }else
         return;
+}
+
+/* Handle input at the resume menu */
+void resumeInput(appData * app, char key){
+    if(key == 'E'){
+        if(app->menuPos == 1){
+            setLogVars(app);
+            app->needResume = 0;
+        }
+        else if(app->menuPos == 2){
+            app->needResume = 0;
+            app->menuPos = 1;
+            deleteLastLog(app);
+        }
+    }
+    else if(key == 'R')
+        app->menuPos = 2;
+    else if(key == 'L')
+        app->menuPos = 1;
 }
 
