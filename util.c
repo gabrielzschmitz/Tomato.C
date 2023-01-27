@@ -303,8 +303,8 @@ void timer(appData * app){
             if(app->timerms >= app->sfps){
                 app->timerms = 0;
                 /* Debug */
-                app->timer = app->timer - 60;
-                //app->timer = app->timer - 1;
+                //app->timer = app->timer - 60;
+                app->timer = app->timer - 1;
             }
         }
     }
