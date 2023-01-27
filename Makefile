@@ -5,25 +5,28 @@
 # `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"' 
 #  ,|							  
 #  `'							  
-#  Makefile
+# Makefile
 
 include config.mk
 
-tomato: tomato.o util.o input.o update.o anim.o
+tomato: tomato.o anim.o draw.o input.o notify.o update.o util.o
 
-tomato.o: tomato.c util.h input.h update.h anim.h config.h
-
-util.o: util.h
+tomato.o: tomato.c tomato.h anim.c draw.c input.c notify.c update.c util.c config.h
 
 anim.o: anim.h
 
+draw.o: draw.h
+
 input.o: input.h
+
+notify.o: notify.h
 
 update.o: update.h
 
+util.o: util.h
+
 clean:
 	rm -rf tomato *.o
-	cp -f tomato.log ${DESTDIR}${LOGPREFIX}
 
 install: tomato
 	mkdir -p ${DESTDIR}${PREFIX}/bin
@@ -33,7 +36,7 @@ install: tomato
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
-	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
+	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 sounds/endnotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
 	sudo cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
