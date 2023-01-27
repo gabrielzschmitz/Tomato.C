@@ -6,12 +6,16 @@
 // `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
 //  ,|							    
 //  `'							    
-// util.c
+// update.c
 */
-#include "util.h"
-#include "input.h"
-#include "update.h"
+#include "tomato.h"
 #include "anim.h"
+#include "draw.h"
+#include "input.h"
+#include "notify.h"
+#include "update.h"
+#include "util.h"
+#include "config.h"
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,84 +23,63 @@
 #include <time.h>
 #include <locale.h>
 
-/* Update variables */
-void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICONS, const int WSL){
-
-    /* Mode 0 (Main Menu) */
+/* Mode 0 (Main Menu) */
+void updateMainMenu(appData * app){
     if(app->currentMode == 0){
         app->pausedTimer = 0;
         frameTimer(app);
 
-        /* Tomato Animation */
-        if(app->frameTimer == (1 * 8)) app->logoFrame = 1;
-        else if(app->frameTimer == (2 * 8)) app->logoFrame = 2;
-        else if(app->frameTimer == (3 * 8)) app->logoFrame = 3;
-        else if(app->frameTimer == (4 * 8)) app->logoFrame = 4;
-        else if(app->frameTimer == (5 * 8)) app->logoFrame = 5;
-        else if(app->frameTimer == (6 * 8)) app->logoFrame = 6;
-        else if(app->frameTimer == (7 * 8)) app->logoFrame = 7;
-        else if(app->frameTimer == (8 * 8)){
-            app->logoFrame = 0;
-            app->frameTimer = 0;
+        if(app->needResume == 0){
+            /* Tomato Animation */
+            if(app->frameTimer == (1 * 8)) app->logoFrame = 1;
+            else if(app->frameTimer == (2 * 8)) app->logoFrame = 2;
+            else if(app->frameTimer == (3 * 8)) app->logoFrame = 3;
+            else if(app->frameTimer == (4 * 8)) app->logoFrame = 4;
+            else if(app->frameTimer == (5 * 8)) app->logoFrame = 5;
+            else if(app->frameTimer == (6 * 8)) app->logoFrame = 6;
+            else if(app->frameTimer == (7 * 8)) app->logoFrame = 7;
+            else if(app->frameTimer == (8 * 8)){
+                app->logoFrame = 0;
+                app->frameTimer = 0;
+            }
+        }else{
+            if(app->runOnce == 1){
+                /* Banner Animation */
+                if(app->frameTimer == (0 * 1)) app->bannerFrame = 0;
+                else if(app->frameTimer == (1 * 1)) app->bannerFrame = 1;
+                else if(app->frameTimer == (2 * 1)) app->bannerFrame = 2;
+                else if(app->frameTimer == (3 * 1)){
+                    app->bannerFrame = 3;
+                    app->frameTimer = 0;
+                    app->runOnce = 0;
+                }
+            }
         }
     }
+}
 
-    /* Mode 1 (Work Time) */
+/* Mode 1 (Work Time) */
+void updateWorkTime(appData * app){
     if(app->currentMode == 1){
+        if(app->runOnce == 1){
+            notify("worktime");
+            app->runOnce = 0;
+        }
+
         timer(app);
         frameTimer(app);
-        if(app->timer == 0){
+        if(app->timer <= 0){
             if(app->pomodoroCounter == app->pomodoros){
                 app->timer = app->longPause;
                 app->frameTimer = 0;
                 app->currentMode = 3;
                 app->pomodoroCounter = app->pomodoros;
-            #ifdef __APPLE__
-                if(NOTIFY == 1){
-                    if(strcmp(ICONS, "nerdicons") == 0)
-                        system("osascript -e \'display notification \" Pause Break\" with title \"You have some time chill\"\'");
-                    else if(strcmp(ICONS, "iconson") == 0)
-                        system("osascript -e \'display notification \"🌴 Pause Break\" with title \"You have some time chill\"\'");
-                    else
-                        system("osascript -e \'display notification \"Long Pause Break\" with title \"You have some time chill\"\'");
-                }
-            #else
-                if(NOTIFY == 1){
-                    if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time chill\'");
-                    else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c Tomato.C \'🌴 Pause Break\' \'You have some time chill\'");
-                    else
-                        system("notify-send -t 5000 -c Tomato.C \'Long Pause Break. You have some time chill\'");
-                }
-            #endif
-                if(SOUND == 1 && WSL == 0)
-                    system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+                app->runOnce = 1;
             }else{
                 app->timer = app->shortPause;
                 app->frameTimer = 0;
                 app->currentMode = 2;
-            #ifdef __APPLE__
-                if(NOTIFY == 1){
-                    if(strcmp(ICONS, "nerdicons") == 0)
-                        system("osascript -e \'display notification \" Pause Break\" with title \"You have some time chill\"\'");
-                    else if(strcmp(ICONS, "iconson") == 0)
-                        system("osascript -e \'display notification \"☕ Pause Break\" with title \"You have some time chill\"\'");
-                    else
-                        system("osascript -e \'display notification \"Pause Break\" with title \"You have some time chill\"\'");
-                }
-            #else
-                if(NOTIFY == 1){
-                    if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time chill\'");
-                    else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                        system("notify-send -t 5000 -c Tomato.C \'☕ Pause Break\' \'You have some time chill\'");
-                    else
-                        system("notify-send -t 5000 -c Tomato.C \'Pause Break. You have some time chill\'");
-                }
-            #endif
-                if(SOUND == 1 && WSL == 0)
-                    system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+                app->runOnce = 1;
             }
         }
 
@@ -107,37 +90,24 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             app->frameTimer = 0;
         }
     }
+}
 
-    /* Mode 2 (Short Pause) */
+/* Mode 2 (Short Pause) */
+void updateShortPause(appData * app){
     if(app->currentMode == 2){
+        if(app->runOnce == 1){
+            notify("shortpause");
+            app->runOnce = 0;
+        }
+
         timer(app);
         frameTimer(app);
-        if(app->timer == 0){
+        if(app->timer <= 0){
             app->timer = app->workTime;
             app->frameTimer = 0;
             app->currentMode = 1;
             app->pomodoroCounter = app->pomodoroCounter + 1;
-        #ifdef __APPLE__
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0)
-                    system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
-                else if(strcmp(ICONS, "iconson") == 0)
-                    system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
-                else
-                    system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
-            }
-        #else
-            if(NOTIFY == 1){
-                if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'華 Work!\' \'You need to focus\'");
-                else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                    system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
-                else
-                    system("notify-send -t 5000 -c Tomato.C \'Work! You need to focus\'");
-            }
-        #endif
-            if(SOUND == 1 && WSL == 0)
-                system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+            app->runOnce = 1;
         }
 
         /* Machine Animation */
@@ -148,18 +118,26 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             app->frameTimer = 0;
         }
     }
+}
 
-    /* Mode 3 (Long Pause) */
+/* Mode 3 (Long Pause) */
+void updateLongPause(appData * app){
     if(app->currentMode == 3){
+        if(app->runOnce == 1){
+            notify("longpause");
+            app->runOnce = 0;
+        }
+
         timer(app);
         frameTimer(app);
-        if(app->timer == 0){
+        if(app->timer <= 0){
             app->currentMode = 0;
             app->cycles++;
             app->needToLog = 1;
-            printLog(app);
+            writeToLog(app);
             app->needToLog = 0;
             app->pomodoroCounter = 0;
+            notify("end");
         }
         
         /* Beach Animation */
@@ -169,8 +147,5 @@ void doUpdate(appData * app, const int NOTIFY, const int SOUND, const char * ICO
             app->frameTimer = 0;
         }
     }
-
-    /*Get X and Y window size*/
-    getWindowSize(app);
 }
 

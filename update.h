@@ -8,8 +8,15 @@
 //  `'							    
 // update.h
 */
+#ifndef UPDATE_H_
+#define UPDATE_H_
 #include <ncurses.h>
 
-/* Update variables */
-extern void doUpdate(appData * , const int , const int , const char * , const int );
+/* Update modes */
+extern void updateMainMenu(appData *);
+extern void updateWorkTime(appData * );
+extern void updateShortPause(appData * );
+extern void updateLongPause(appData * );
+
+#endif
 
