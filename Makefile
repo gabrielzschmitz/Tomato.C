@@ -37,6 +37,7 @@ install: tomato
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
 	cp -f sounds/dfltnotify.mp3 sounds/pausenotify.mp3 sounds/endnotify.mp3 ${DESTDIR}${PREFIX}/share/tomato/sounds
+	sed -i "s|Icon=.*|Icon=${DESTDIR}${PREFIX}/share/tomato/icons/tomato.svg|" tomato.desktop
 	sudo cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 
