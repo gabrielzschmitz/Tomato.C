@@ -18,6 +18,7 @@ struct appData{
     char *logPrefix;
     char *logFile;
     char *tmpFile;
+    char *timerFile;
     int pomodorosLevels;
     int workTimeLevels;
     int shortPauseLevels;
