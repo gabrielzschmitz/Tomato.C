@@ -115,6 +115,7 @@ void handleInputs(appData * app){
         case 'q':
             printf("\033[?1003l\n");
             writeToLog(app);
+            endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
             break;
