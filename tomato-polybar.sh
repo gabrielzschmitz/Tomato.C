@@ -1,3 +1,13 @@
+#
+#         .             .              .		    
+#         |             |              |           .	    
+# ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,  
+# | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /   
+# `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
+#  ,|							    
+#  `'							    
+# tomato-polybar.sh
+#
 #!/bin/sh
 
 TIME="$(cat /home/gabrielzschmitz/.local/share/tomato/time.log)"
@@ -10,3 +20,4 @@ case $TIME in
         echo $TIME
     ;;
 esac
+
