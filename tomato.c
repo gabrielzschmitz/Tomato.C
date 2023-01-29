@@ -55,6 +55,7 @@ void initApp(appData * app){
     app->logPrefix = LOGPREFIX;
     app->logFile = LOGFILE;
     app->tmpFile = TMPFILE;
+    app->timerFile = TIMERFILE;
 
     createLog(app);
     readLog(app);
