@@ -137,6 +137,7 @@ void updateLongPause(appData * app){
             writeToLog(app);
             app->needToLog = 0;
             app->pomodoroCounter = 0;
+            endTimerLog(app);
             notify("end");
         }
         
