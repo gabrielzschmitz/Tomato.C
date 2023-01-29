@@ -106,6 +106,14 @@ void createLog(appData * app){
     strcat(tmpFile, app->tmpFile);
     app->tmpFile = tmpFile;
     
+    /* Set time file fullpath */
+    char * timeFile= NULL;
+    timeFile = malloc(strlen(home) + strlen(app->timerFile) + 1);
+    strcpy(timeFile, home);
+    strcat(timeFile, "/");
+    strcat(timeFile, app->timerFile);
+    app->timerFile = timeFile;
+    
     /* Create log folder */
     mkdir(app->logPrefix, 0766);
 
@@ -291,6 +299,14 @@ void writeToLog(appData * app){
 
     }
     fclose(log);
+}
+
+/* End the timer log file */
+void endTimerLog(appData * app){
+    FILE *time;
+    time = fopen(app->timerFile, "w");
+    fprintf(time, "00:00");
+    fclose(time);
 }
 
 /* Time the pomodoros */

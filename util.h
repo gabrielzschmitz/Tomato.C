@@ -28,6 +28,7 @@ extern void readLog(appData * );
 extern void setLogVars(appData * );
 extern void deleteLastLog(appData * );
 extern void writeToLog(appData * );
+extern void endTimerLog(appData * );
 
 /* Time the pomodoros */
 extern void timer(appData * );
