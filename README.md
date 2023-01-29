@@ -32,51 +32,30 @@
   <a href="#-license">License</a>
 </p>
 
-## ⚓ Dependencies
+## 🍅 The Pomodoro Method
+<img src="./media/tomatomethod.gif" alt="tomatomethod" width="190px" align="right">
 
-It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper library's linking.
+The technique basically consists of using a timer to break down work into <b>intervals</b>, follow the <b>steps</b>:
 
-But optionally you can install [libnotify](https://github.com/GNOME/libnotify) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
+ 1. Get a <b>to-do list</b>;
 
-```
-ARCH LINUX
-$ sudo pacman -S base-devel ncurses mpv pkgconf libnotify
-UBUNTU
-$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config libnotify4
-FEDORA
-$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
-MACOS (MacPorts needed)
-$ brew install gcc && sudo port install ncurses mpv
-```
+ 2. Start [Tomato.C](https://github.com/gabrielzschmitz/Tomato.C) and focus on a <b>single task for 25 minutes</b> straight until notification pops up;
 
-<b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
+ 3. Then <b>record what you completed</b> and enjoy a <b>5 minutes break</b>;
 
-## 💾 How to Install
-<b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
+ 4. After <b>4 pomodoros</b> (steps 2 and 3), take a longer, <b>30 minutes break</b>;
 
-<b>Note</b>: first install all the <i>dependencies</i>!
-
-```
-NIXOS:
-$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
-$ cd Tomato.C
-$ nix-build default.nix
-
-NORMAL:
-$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
-$ cd Tomato.C
-$ sudo make install
-```
+ 5. <b>Restart</b>.
 
 ## 🚀 How to Use
-
+<b>Note</b>: <b>Never!</b> Run the app with admin privilages.
 Just <b>type it</b> in the <b>terminal</b>:
-```
+```shell
 $ tomato
 ```
 
 <b>Tip:</b> For the best terminal resolution use [setsid](https://man7.org/linux/man-pages/man1/setsid.1.html) (the geometry depends on your font size):
-```
+```shell
 $ setsid -f "$TERMINAL" -g 49x25 -c Tomato.C -e tomato
 ```
 
@@ -112,22 +91,76 @@ You can change those configs:
  * <b><i>SHORTPAUSE</i></b>: 1-10;
  * <b><i>LONGPAUSE</i></b>: 5-60.
 
-## 🍅 The Pomodoro Method
-<img src="./media/tomatomethod.gif" alt="tomatomethod" width="190px" align="right">
-
-The technique basically consists of using a timer to break down work into <b>intervals</b>, follow the <b>steps</b>:
-
- 1. Get a <b>to-do list</b>;
-
- 2. Start [Tomato.C](https://github.com/gabrielzschmitz/Tomato.C) and focus on a <b>single task for 25 minutes</b> straight until notification pops up;
-
- 3. Then <b>record what you completed</b> and enjoy a <b>5 minutes break</b>;
-
- 4. After <b>4 pomodoros</b> (steps 2 and 3), take a longer, <b>30 minutes break</b>;
-
- 5. <b>Restart</b>.
-
 <b>Note</b>: the <b>timers</b> and the <b>amount of pomodoros can be changed</b> by the user.
+
+## ⏰ Time to system bar
+<img src="./media/polybarmodule.gif" alt="polybar module"> (20x for easier recording)
+
+Using of the built-in feature of having the current file acessible through a file (<i>$HOME/.local/share/tomato/time.log)</i> you can pretty much do anything you want with that data.
+
+If you're using polybar, you can use the <i>tomato-polybar.sh</i> to get the time of your current pomodoro cycle at your polybar.
+Just make the script executable and move to your polybar config folder:
+
+```shell
+$ chmod +x tomato-polybar.sh
+$ mv tomato-polybar.sh ~/.config/polybar
+```
+
+And include the module at your polybar config:
+```
+modules-right = <other-modules> tomato <other-modules>
+
+[module/tomato]
+type = custom/script
+
+exec = $HOME/.config/polybar/tomato-polybar.sh
+interval = 0
+
+format = <label>
+format-background = ${colors.bg}
+format-foreground = ${colors.fg}
+format-padding = 1
+tail = true
+
+label = %output%
+```
+
+## ⚓ Dependencies
+
+It only needs [gcc](https://gcc.gnu.org/) to compile, [ncurses](https://invisible-island.net/ncurses/) as the graphic library and [pkg-config](https://github.com/freedesktop/pkg-config) to proper library's linking.
+
+But optionally you can install [libnotify](https://github.com/GNOME/libnotify) to show notifications, [mpv](https://mpv.io/) for the notifications sounds and a [Nerd Font](https://www.nerdfonts.com/) for the icons:
+
+```shell
+ARCH LINUX
+$ sudo pacman -S base-devel ncurses mpv pkgconf libnotify
+UBUNTU
+$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config libnotify4
+FEDORA
+$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
+MACOS (MacPorts needed)
+$ brew install gcc && sudo port install ncurses mpv
+```
+
+<b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
+
+## 💾 How to Install
+<b>Note</b>: a good practice is to clone the repo at <i>$HOME/.local/src/</i>
+
+<b>Note</b>: first install all the <i>dependencies</i>!
+
+```shell
+NIXOS:
+$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
+$ cd Tomato.C
+$ nix-build default.nix
+
+NORMAL:
+$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
+$ cd Tomato.C
+$ sudo make install
+```
+
 ## 📝 To-do
 - [X] Make a welcome screen
 - [X] Rewrite using ncurses
@@ -138,6 +171,7 @@ The technique basically consists of using a timer to break down work into <b>int
 - [X] Add notifications sound
 - [X] Implement mouse support
 - [X] Implement save current state
+- [X] Current Time to file
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## 🤝 Contribute
