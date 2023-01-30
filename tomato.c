@@ -52,10 +52,14 @@ void initApp(appData * app){
     app->runOnce = 1; 
 
     /* Defined in the config.mk */
-    app->logPrefix = LOGPREFIX;
-    app->logFile = LOGFILE;
-    app->tmpFile = TMPFILE;
-    app->timerFile = TIMERFILE;
+    app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
+    strcpy(app->logPrefix, LOGPREFIX);
+    app->logFile = malloc(strlen(LOGFILE) + 1);
+    strcpy(app->logFile, LOGFILE);
+    app->tmpFile = malloc(strlen(TMPFILE) + 1);
+    strcpy(app->tmpFile, TMPFILE);
+    app->timerFile = malloc(strlen(TIMERFILE) + 1);
+    strcpy(app->timerFile, TIMERFILE);
 
     createLog(app);
     readLog(app);
@@ -108,6 +112,8 @@ void drawScreen(appData * app){
             printPauseIndicator(app);
             printBeach(app);
             printTimer(app);
+            break;
+        default:
             break;
     }
     refresh();

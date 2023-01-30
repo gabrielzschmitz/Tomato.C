@@ -15,10 +15,10 @@
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
-    char *logPrefix;
-    char *logFile;
-    char *tmpFile;
-    char *timerFile;
+    char * logPrefix;
+    char * logFile;
+    char * tmpFile;
+    char * timerFile;
     int pomodorosLevels;
     int workTimeLevels;
     int shortPauseLevels;
