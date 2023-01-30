@@ -127,6 +127,8 @@ void handleInputs(appData * app){
             clear();
             refresh();
             break;
+        default:
+            break;
     }
 
     /* Throws away any typeahead that has been typed by
@@ -246,6 +248,8 @@ void mainMenuInput(appData * app, char key){
             app->currentMode = -1;
             app->menuPos = 1;
         }else{
+            printf("\033[?1003l\n");
+            endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
         }
@@ -268,6 +272,8 @@ void mainMenuInput(appData * app, char key){
             app->currentMode = -1;
             app->menuPos = 1;
         }else{
+            printf("\033[?1003l\n");
+            endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
         }
