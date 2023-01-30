@@ -84,7 +84,7 @@ void createLog(appData * app){
 
     /* Set log folder fullpath */
     char * logPrefix = NULL;
-    logPrefix = malloc(strlen(home) + strlen(app->logPrefix) + 1);
+    logPrefix = malloc(strlen(home) + sizeof(char) + strlen(app->logPrefix) + 1);
     strcpy(logPrefix, home);
     strcat(logPrefix, "/");
     strcat(logPrefix, app->logPrefix);
@@ -92,7 +92,7 @@ void createLog(appData * app){
 
     /* Set log file fullpath */
     char * logFile= NULL;
-    logFile = malloc(strlen(home) + strlen(app->logFile) + 1);
+    logFile = malloc(strlen(home) + sizeof(char) + strlen(app->logFile) + 1);
     strcpy(logFile, home);
     strcat(logFile, "/");
     strcat(logFile, app->logFile);
@@ -100,19 +100,19 @@ void createLog(appData * app){
 
     /* Set tmp file fullpath */
     char * tmpFile= NULL;
-    tmpFile = malloc(strlen(home) + strlen(app->tmpFile) + 1);
+    tmpFile = malloc(strlen(home) + sizeof(char) + strlen(app->tmpFile) + 1);
     strcpy(tmpFile, home);
     strcat(tmpFile, "/");
     strcat(tmpFile, app->tmpFile);
     app->tmpFile = tmpFile;
     
-    /* Set time file fullpath */
-    char * timeFile= NULL;
-    timeFile = malloc(strlen(home) + strlen(app->timerFile) + 1);
-    strcpy(timeFile, home);
-    strcat(timeFile, "/");
-    strcat(timeFile, app->timerFile);
-    app->timerFile = timeFile;
+    /* Set timer file fullpath */
+    char * timerFile= NULL;
+    timerFile = malloc(strlen(home) + sizeof(char) + strlen(app->timerFile) + 1);
+    strcpy(timerFile, home);
+    strcat(timerFile, "/");
+    strcat(timerFile, app->timerFile);
+    app->timerFile = timerFile;
     
     /* Create log folder */
     mkdir(app->logPrefix, 0766);
@@ -296,7 +296,8 @@ void writeToLog(appData * app){
                     app->shortPause,
                     app->longPause);
             break;
-
+        default:
+            break;
     }
     fclose(log);
 }
