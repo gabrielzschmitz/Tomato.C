@@ -92,33 +92,26 @@ You can change those configs:
  * <b><i>LONGPAUSE</i></b>: 5-60.
 
 ## ⏰ Time to system bar
-<img src="./media/polybarmodule.gif" alt="polybar module"> (20x for easier recording)
+<img src="./media/polybarmodule.gif" alt="polybar module">
 
-Using of the built-in feature of having the current file acessible through a file (<i>$HOME/.local/share/tomato/time.log)</i> you can pretty much do anything you want with that data.
+Using of the <i>tomatotimer</i> program you can pretty much do anything you want with the output.
 
-If you're using polybar, you can use the <i>tomato-polybar.sh</i> to get the time of your current pomodoro cycle at your polybar.
-Just make the script executable and move to your polybar config folder:
-
-```shell
-$ chmod +x tomato-polybar.sh
-$ mv tomato-polybar.sh ~/.config/polybar
-```
-
-And include the module at your polybar config:
+For exemple, if you're using polybar, you can use it to get the time of your current pomodoro cycle at bar.
+Just include the module at your polybar config:
 ```
 modules-right = <other-modules> tomato <other-modules>
 
 [module/tomato]
 type = custom/script
 
-exec = $HOME/.config/polybar/tomato-polybar.sh
+exec = tomatotimer
 interval = 0
+tail = true
 
 format = <label>
 format-background = ${colors.bg}
 format-foreground = ${colors.fg}
 format-padding = 1
-tail = true
 
 label = %output%
 ```
