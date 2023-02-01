@@ -81,10 +81,11 @@ void getWindowSize(appData * app){
 void createLog(appData * app){
     /* Get /home/user */
     char * home = getenv("HOME");
+    int homeLen = strlen(home);
 
     /* Set log folder fullpath */
     char * logPrefix = NULL;
-    logPrefix = malloc(strlen(home) + sizeof(char) + strlen(app->logPrefix) + 1);
+    logPrefix = malloc(homeLen + sizeof(char) + strlen(app->logPrefix) + 1);
     strcpy(logPrefix, home);
     strcat(logPrefix, "/");
     strcat(logPrefix, app->logPrefix);
@@ -92,7 +93,7 @@ void createLog(appData * app){
 
     /* Set log file fullpath */
     char * logFile= NULL;
-    logFile = malloc(strlen(home) + sizeof(char) + strlen(app->logFile) + 1);
+    logFile = malloc(homeLen + sizeof(char) + strlen(app->logFile) + 1);
     strcpy(logFile, home);
     strcat(logFile, "/");
     strcat(logFile, app->logFile);
@@ -100,7 +101,7 @@ void createLog(appData * app){
 
     /* Set tmp file fullpath */
     char * tmpFile= NULL;
-    tmpFile = malloc(strlen(home) + sizeof(char) + strlen(app->tmpFile) + 1);
+    tmpFile = malloc(homeLen + sizeof(char) + strlen(app->tmpFile) + 1);
     strcpy(tmpFile, home);
     strcat(tmpFile, "/");
     strcat(tmpFile, app->tmpFile);
@@ -108,7 +109,7 @@ void createLog(appData * app){
     
     /* Set timer file fullpath */
     char * timerFile= NULL;
-    timerFile = malloc(strlen(home) + sizeof(char) + strlen(app->timerFile) + 1);
+    timerFile = malloc(homeLen + sizeof(char) + strlen(app->timerFile) + 1);
     strcpy(timerFile, home);
     strcat(timerFile, "/");
     strcat(timerFile, app->timerFile);
