@@ -94,9 +94,9 @@ You can change those configs:
 ## ⏰ Time to system bar
 <img src="./media/polybarmodule.gif" alt="polybar module">
 
-Using of the <i>tomatotimer</i> program you can pretty much do anything you want with the output.
+Using of the <i>-t</i> flag you can pretty much do anything you want with the output.
 
-For exemple, if you're using polybar, you can use it to get the time of your current pomodoro cycle at bar.
+For exemple, if you're using polybar, you can use it to get the time of your current pomodoro cycle to the bar.
 Just include the module at your polybar config:
 ```
 modules-right = <other-modules> tomato <other-modules>
@@ -104,7 +104,7 @@ modules-right = <other-modules> tomato <other-modules>
 [module/tomato]
 type = custom/script
 
-exec = tomatotimer
+exec = tomato -t
 interval = 0
 tail = true
 
