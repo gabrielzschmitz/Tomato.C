@@ -328,3 +328,56 @@ void timer(appData * app){
     }
 }
 
+/* Initialize timer log paths */
+char * initTimerPath(const char * timerFile){
+    /* Get /home/user */
+    char * home = getenv("HOME");
+    int homeLen = strlen(home);
+
+    /* Set timer file fullpath */
+    char * path = NULL;
+    path = malloc(homeLen + sizeof(char) + strlen(timerFile) + 1);
+    strcpy(path, home);
+    strcat(path, "/");
+    strcat(path, timerFile);
+
+    return path;
+}
+
+/* Read timer log and print the content */
+int printTimerLog(const char * path){
+    FILE *log;
+    log = fopen(path, "r");
+    char timer[1024]={0,};
+    
+    do {
+        if(!log){
+            perror("Couldn't read log file");
+            return 1;
+        }else{
+            fgets(timer, sizeof timer, log);
+            if(strstr(timer, "00:00"))
+                puts("");
+            else
+                printf("%s", timer);
+            break;
+        }
+    } while (0);
+
+    fclose(log);
+    return 0;
+}
+
+/* Putting it all timer log functions together */
+int tomatoTimer(const char * timerFile){
+    /* Initializing the app */
+    char * path = NULL;
+    path = initTimerPath(timerFile);
+
+    /* Print the timer file content */
+    int status = printTimerLog(path);
+
+    /* Return exit status */
+    return status;
+}
+
