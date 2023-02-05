@@ -33,5 +33,9 @@ extern void endTimerLog(appData * );
 /* Time the pomodoros */
 extern void timer(appData * );
 
+extern char * initTimerPath(const char * );
+extern int printTimerLog(const char * );
+extern int tomatoTimer(const char *);
+
 #endif
 
