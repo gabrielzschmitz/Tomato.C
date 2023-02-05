@@ -114,8 +114,10 @@ void handleInputs(appData * app){
         case 'Q':
         case 'q':
             printf("\033[?1003l\n");
-            writeToLog(app);
-            endTimerLog(app);
+            if(WORKLOG == 1)
+                writeToLog(app);
+            if(TIMERLOG == 1)
+                endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
             break;
@@ -249,7 +251,8 @@ void mainMenuInput(appData * app, char key){
             app->menuPos = 1;
         }else{
             printf("\033[?1003l\n");
-            endTimerLog(app);
+            if(TIMERLOG == 1)
+                endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
         }
@@ -273,7 +276,8 @@ void mainMenuInput(appData * app, char key){
             app->menuPos = 1;
         }else{
             printf("\033[?1003l\n");
-            endTimerLog(app);
+            if(TIMERLOG == 1)
+                endTimerLog(app);
             endwin();
             exit(EXIT_SUCCESS);
         }
