@@ -66,7 +66,7 @@ extern void doUpdate(appData * );
 extern void drawScreen(appData * );
 
 /* Putting it all together */
-extern int main(void);
+extern int main(int , char *[]);
 
 #endif
 

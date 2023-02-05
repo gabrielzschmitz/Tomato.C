@@ -52,17 +52,18 @@ void initApp(appData * app){
     app->runOnce = 1; 
 
     /* Defined in the config.mk */
-    app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
-    strcpy(app->logPrefix, LOGPREFIX);
-    app->logFile = malloc(strlen(LOGFILE) + 1);
-    strcpy(app->logFile, LOGFILE);
-    app->tmpFile = malloc(strlen(TMPFILE) + 1);
-    strcpy(app->tmpFile, TMPFILE);
-    app->timerFile = malloc(strlen(TIMERFILE) + 1);
-    strcpy(app->timerFile, TIMERFILE);
-
-    createLog(app);
-    readLog(app);
+    if(WORKLOG == 1){
+        app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
+        strcpy(app->logPrefix, LOGPREFIX);
+        app->logFile = malloc(strlen(LOGFILE) + 1);
+        strcpy(app->logFile, LOGFILE);
+        app->tmpFile = malloc(strlen(TMPFILE) + 1);
+        strcpy(app->tmpFile, TMPFILE);
+        app->timerFile = malloc(strlen(TIMERFILE) + 1);
+        strcpy(app->timerFile, TIMERFILE);
+        createLog(app);
+        readLog(app);
+    }
 }
 
 /* Update variables */
@@ -120,7 +121,21 @@ void drawScreen(appData * app){
 }
 
 /* Putting it all together */
-int main(void){
+int main(int argc, char *argv[]){
+    if(argc == 2 && !strcmp("-t", argv[1]) && TIMERLOG == 1){
+        char * timerFile = malloc(strlen(TIMERFILE) + 1);
+        strcpy(timerFile, TIMERFILE);
+        int status = tomatoTimer(timerFile);
+        return status;
+    }
+    else if(argc == 2 && !strcmp("-t", argv[1]) && TIMERLOG != 1){
+        printf("enable timer log to use [-t]");
+        return 1;
+    }
+    else if(argc != 1){
+        printf("usage: tomato [-t]");
+        return 0;
+    }
     /* Enable Emojis */
     setlocale(LC_CTYPE, "");
 
