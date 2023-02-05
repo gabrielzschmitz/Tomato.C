@@ -134,10 +134,12 @@ void updateLongPause(appData * app){
             app->currentMode = 0;
             app->cycles++;
             app->needToLog = 1;
-            writeToLog(app);
+            if(WORKLOG == 1)
+                writeToLog(app);
             app->needToLog = 0;
             app->pomodoroCounter = 0;
-            endTimerLog(app);
+            if(TIMERLOG == 1)
+                endTimerLog(app);
             notify("end");
         }
         
