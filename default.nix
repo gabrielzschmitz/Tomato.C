@@ -19,7 +19,7 @@ in
     };
 
     installPhase = ''
-      mkdir -p $out/bin && cp tomato tomatotimer $out/bin/
+      mkdir -p $out/bin && cp tomato tomatonoise $out/bin/
 
       ln -s $(which notify-send) $out/bin/
       ln -s $(which mpv) $out/bin/
