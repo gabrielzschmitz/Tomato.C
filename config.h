@@ -14,7 +14,8 @@
 /* 1 if you're in WSL, 0 if not 
  * Note: you'll need wsl-notify-send
  * for the notifications and the 
- * notifications sounds will not work */
+ * notifications sounds and white noises
+ * will not work */
 static const int WSL = 0;
 
 /* iconsoff - iconson - nerdicons
@@ -23,12 +24,24 @@ static const int WSL = 0;
 static const char * ICONS = "nerdicons";
 
 /* 1 means notifications on, 0 off
- * Note: you'll need dunst */
+ * Note: you'll need libnotify if you're at linux*/
 static const int NOTIFY = 1;
 
 /* 1 means notification sound on, 0 off 
  * Note: you'll need mpv */
 static const int SOUND = 1;
+
+/* 1 means noises on, 0 off
+ * Note: you'll need mpv */
+static const int NOISE = 1;
+
+/* noises volume level stage from 10 to 100 (default: 50)
+ * Note: you'll need mpv
+ * (increment it by 10 by 10)*/
+static const int RAINVOLUME = 70;
+static const int FIREVOLUME = 70;
+static const int WINDVOLUME = 70;
+static const int THUNDERVOLUME = 70;
 
 /* 1 if you want transparent background, 0 if not
  * Note: you'll need a terminal already transparent */
@@ -47,6 +60,16 @@ static const int SHORTPAUSE = 5;
 /* time for the long pause from 5 to 60 (default: 30)
  * (increment it by 5 by 5)*/
 static const int LONGPAUSE = 30;
+
+/* 1 means work log on, 0 off
+ * Note: if you turn it off the app will not resume
+ * from unfinished cycle anymore */
+static const int WORKLOG = 1;
+
+/* 1 means timer log on, 0 off
+ * Note: if you turn it off "$tomato -t"
+ * will not work */
+static const int TIMERLOG = 1;
 
 #endif
 
