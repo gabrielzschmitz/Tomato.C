@@ -22,6 +22,439 @@
 #include <string.h>
 #include <time.h>
 #include <locale.h>
+#include <inttypes.h>
+
+/* Print noise menu */
+void printNoiseMenu(appData * app){
+    if(NOISE == 1){
+        if(app->playNoise == 0 && app->needResume != 1){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            if(strcmp(ICONS, "nerdicons") == 0){
+                mvprintw( 1, 2, "󰖖 ");
+                mvprintw( 2, 2, "󰈸 ");
+                mvprintw( 3, 2, "󰖝 ");
+                mvprintw( 4, 2, "󱐋 ");
+            }
+            else if(strcmp(ICONS, "iconson") == 0){
+                mvprintw( 1, 2, "☔ ");
+                mvprintw( 2, 2, "🔥 ");
+                mvprintw( 3, 2, "🍃 ");
+                mvprintw( 4, 2, "⚡ ");
+            }
+            else{
+                mvprintw( 1, 2, "R ");
+                mvprintw( 2, 2, "F ");
+                mvprintw( 3, 2, "W ");
+                mvprintw( 4, 2, "T ");
+            }
+        }
+        if(app->playRainNoise == 1 && app->needResume != 1){
+            setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
+            if(strcmp(ICONS, "nerdicons") == 0) mvprintw( 1, 2, "󰖖 ");
+            else if(strcmp(ICONS, "iconson") == 0) mvprintw( 1, 2, "☔ ");
+            else mvprintw( 1, 2, "R ");
+
+            uintmax_t rainVolume = strtoumax(app->rainVolume, NULL, 10);
+            if(app->printVolume == 1){
+                switch(rainVolume){
+                    case 0:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 7, "▒▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 10:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- █");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 8, "▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 20:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ██");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 9, "▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 30:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ███");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 10, "▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 40:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 11, "▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 50:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- █████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 12, "▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 60:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ██████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 13, "▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 70:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ███████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 14, "▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 80:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 15, "▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 90:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- █████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 16, "▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    case 100:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 5,  "- ██████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 1, 17, " +");
+                        break;
+                    default:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 1, 5, "- ▒▒▒▒▒▒▒▒▒▒ +");
+                        break;
+                }
+            }
+        }
+        if(app->playFireNoise == 1 && app->needResume != 1){
+            setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
+            if(strcmp(ICONS, "nerdicons") == 0) mvprintw( 2, 2, "󰈸 ");
+            else if(strcmp(ICONS, "iconson") == 0)  mvprintw( 2, 2, "🔥 ");
+            else mvprintw( 2, 2, "F ");
+
+            uintmax_t fireVolume = strtoumax(app->fireVolume, NULL, 10);
+            if(app->printVolume == 2){
+                switch(fireVolume){
+                    case 0:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 7, "▒▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 10:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- █");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 8, "▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 20:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ██");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 9, "▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 30:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ███");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 10, "▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 40:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 11, "▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 50:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- █████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 12, "▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 60:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ██████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 13, "▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 70:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ███████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 14, "▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 80:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 15, "▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 90:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- █████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 2, 16, "▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    case 100:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 5,  "- ██████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 2, 17, " +");
+                        break;
+                    default:
+                        mvprintw( 2, 5, "- ▒▒▒▒▒▒▒▒▒▒ +");
+                        break;
+                }
+            }
+        }
+        if(app->playWindNoise == 1 && app->needResume != 1){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            if(strcmp(ICONS, "nerdicons") == 0) mvprintw( 3, 2, "󰖝 ");
+            else if(strcmp(ICONS, "iconson") == 0)  mvprintw( 3, 2, "🍃 ");
+            else mvprintw( 3, 2, "W ");
+
+            uintmax_t windVolume = strtoumax(app->windVolume, NULL, 10);
+            if(app->printVolume == 3){
+                switch(windVolume){
+                    case 0:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 7, "▒▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 10:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- █");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 8, "▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 20:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ██");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 9, "▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 30:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ███");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 10, "▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 40:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 11, "▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 50:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- █████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 12, "▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 60:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ██████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 13, "▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 70:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ███████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 14, "▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 80:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 15, "▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 90:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- █████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 3, 16, "▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    case 100:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 5,  "- ██████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 3, 17, " +");
+                        break;
+                    default:
+                        mvprintw( 3, 5, "- ▒▒▒▒▒▒▒▒▒▒ +");
+                        break;
+                }
+            }
+        }
+        if(app->playThunderNoise == 1 && app->needResume != 1){
+            setColor(COLOR_YELLOW, COLOR_BLACK, A_BOLD);
+            if(strcmp(ICONS, "nerdicons") == 0) mvprintw( 4, 2, "󱐋 ");
+            else if(strcmp(ICONS, "iconson") == 0)  mvprintw( 4, 2, "⚡ ");
+            else mvprintw( 4, 2, "T ");
+
+            uintmax_t thunderVolume = strtoumax(app->thunderVolume, NULL, 10);
+            if(app->printVolume == 4){
+                switch(thunderVolume){
+                    case 0:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 7, "▒▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 10:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- █");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 8, "▒▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 20:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ██");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 9, "▒▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 30:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ███");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 10, "▒▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 40:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 11, "▒▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 50:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- █████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 12, "▒▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 60:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ██████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 13, "▒▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 70:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ███████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 14, "▒▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 80:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 15, "▒▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 90:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- █████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+                        mvprintw( 4, 16, "▒");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    case 100:
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 5,  "- ██████████");
+                        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+                        mvprintw( 4, 17, " +");
+                        break;
+                    default:
+                        mvprintw( 4, 5, "- ▒▒▒▒▒▒▒▒▒▒ +");
+                        break;
+                }
+            }
+        }
+    }
+}
 
 /* Print resume menu */
 void printResume(appData * app){
@@ -60,22 +493,21 @@ void printPomodoroCounter(appData * app){
 
 /* Print the pause indicator */
 void printPauseIndicator(appData * app){
-    if(app->currentMode == 1)
+    if(app->currentMode == 1 && app->pausedTimer == 1)
         setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
-    else
+    else if((app->currentMode == 2 && app->pausedTimer == 1) || (app->currentMode == 3 && app->pausedTimer == 1))
         setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
-
+    else
+        setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    
     if(strcmp(ICONS, "nerdicons") == 0){
-        if(app->pausedTimer == 1)
-            mvprintw((app->middley - 7), (app->middlex - 11) ," ");
+        mvprintw((app->middley - 7), (app->middlex - 11) ," ");
     }
     else if(strcmp(ICONS, "iconson") == 0){
-        if(app->pausedTimer == 1)
-            mvprintw((app->middley - 7), (app->middlex - 11) ,"⏸️ ");
+        mvprintw((app->middley - 7), (app->middlex - 11) ,"⏸️ ");
     }
     else{
-        if(app->pausedTimer == 1)
-            mvprintw((app->middley - 7), (app->middlex - 11) ,"P ");;
+        mvprintw((app->middley - 7), (app->middlex - 11) ,"P ");;
     }
 }
 
