@@ -12,6 +12,9 @@
 #define DRAW_H_
 #include <ncurses.h>
 
+/* Print noise menu */
+void printNoiseMenu(appData * );
+
 /* Print resume menu */
 extern void printResume(appData * );
 
