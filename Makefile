@@ -30,7 +30,7 @@ update.o: update.h
 util.o: util.h
 
 clean:
-	rm -rf tomato *.o
+	rm -rf tomato tomatonoise *.o
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
