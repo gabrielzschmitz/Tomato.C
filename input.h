@@ -17,8 +17,13 @@
 # define ENTER 10
 # define CTRLC 3
 # define CTRLP 16
-# define CTRLR 18
 # define CTRLX 24
+
+/* Defining noise ASCII Keys */
+# define CTRLR 18
+# define CTRLF 6
+# define CTRLW 23
+# define CTRLT 20
 
 /* Handle user input and app state */
 extern void handleInputs(appData * );

@@ -22,22 +22,89 @@
 #include <string.h>
 #include <time.h>
 #include <locale.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <inttypes.h>
 
 /* Handle user input and app state */
 void handleInputs(appData * app){
     MEVENT event;
-
     app->userInput = getch();
     char key;
     key = '0';
 
     switch(app->userInput){
 	case KEY_MOUSE:
-            if(app->currentMode == 0 || app->currentMode == -1){
-                if(getmouse(&event) == OK)
-                    mouseInput(app, event, key);
-            }
+            if(getmouse(&event) == OK)
+                mouseInput(app, event, key);
 	    break;
+        case '1':
+        case 'r':
+            toggleNoise(app, 1);
+            break;
+        case 'R':
+            if(app->playRainNoise == 1){
+                app->printVolume = 1;
+                controlVolumeNoise(app, 1, '+');
+            }
+            break;
+        case CTRLR:
+            if(app->playRainNoise == 1){
+                app->printVolume = 1;
+                controlVolumeNoise(app, 1, '-');
+            }
+            break;
+
+        case '2':
+        case 'f':
+            toggleNoise(app, 2);
+            break;
+        case 'F':
+            if(app->playFireNoise == 1){
+                app->printVolume = 2;
+                controlVolumeNoise(app, 2, '+');
+            }
+            break;
+        case CTRLF:
+            if(app->playFireNoise == 1){
+                app->printVolume = 2;
+                controlVolumeNoise(app, 2, '-');
+            }
+            break;
+
+        case '3':
+        case 'w':
+            toggleNoise(app, 3);
+            break;
+        case 'W':
+            if(app->playWindNoise == 1){
+                app->printVolume = 3;
+                controlVolumeNoise(app, 3, '+');
+            }
+            break;
+        case CTRLW:
+            if(app->playWindNoise == 1){
+                app->printVolume = 3;
+                controlVolumeNoise(app, 3, '-');
+            }
+            break;
+        
+        case '4':
+        case 't':
+            toggleNoise(app, 4);
+            break;
+        case 'T':
+            if(app->playThunderNoise == 1){
+                app->printVolume = 4;
+                controlVolumeNoise(app, 4, '+');
+            }
+            break;
+        case CTRLT:
+            if(app->playThunderNoise == 1){
+                app->printVolume = 4;
+                controlVolumeNoise(app, 4, '-');
+            }
+            break;
 
         case ENTER:
             key = 'E';
@@ -114,6 +181,7 @@ void handleInputs(appData * app){
         case 'Q':
         case 'q':
             printf("\033[?1003l\n");
+            killNoise();
             if(WORKLOG == 1)
                 writeToLog(app);
             if(TIMERLOG == 1)
@@ -129,6 +197,7 @@ void handleInputs(appData * app){
             clear();
             refresh();
             break;
+
         default:
             break;
     }
@@ -140,6 +209,55 @@ void handleInputs(appData * app){
 
 /* Handle mouse input */
 void mouseInput(appData * app, MEVENT event, char key){
+    if(app->needResume != 1){
+        /* Show volume bars */
+        app->printVolume = 0;
+        if ((event.y == 1) && (2 <= event.x && event.x <= 19))
+            app->printVolume = 1;
+        else if ((event.y == 2) && (2 <= event.x && event.x <= 19))
+            app->printVolume = 2;
+        else if ((event.y == 3) && (2 <= event.x && event.x <= 19))
+            app->printVolume = 3;
+        else if ((event.y == 4) && (2 <= event.x && event.x <= 19))
+            app->printVolume = 4;
+
+        /* Toggle on or off noises */
+        if((event.y == 1) && (event.x == 2 || event.x == 3)){
+            if(event.bstate & BUTTON1_PRESSED)
+                toggleNoise(app, 1);
+        }
+        else if((event.y == 2) && (event.x == 2 || event.x == 3)){
+            if(event.bstate & BUTTON1_PRESSED)
+                toggleNoise(app, 2);
+        }
+        else if((event.y == 3) && (event.x == 2 || event.x == 3)){
+            if(event.bstate & BUTTON1_PRESSED)
+                toggleNoise(app, 3);
+        }
+        else if((event.y == 4) && (event.x == 2 || event.x == 3)){
+            if(event.bstate & BUTTON1_PRESSED)
+                toggleNoise(app, 4);
+        }
+
+        /* Noise volume control */
+        if((event.y == 1) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 1, '-');
+        else if((event.y == 1) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 1, '+');
+        if((event.y == 2) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 2, '-');
+        else if((event.y == 2) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 2, '+');
+        if((event.y == 3) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 3, '-');
+        else if((event.y == 3) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 3, '+');
+        if((event.y == 4) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 4, '-');
+        else if((event.y == 4) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 4, '+');
+
+    }
     if(app->currentMode == 0 && app->needResume == 0){
         if(event.y == (app->middley + 4) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
             app->menuPos = 1;
@@ -232,6 +350,13 @@ void mouseInput(appData * app, MEVENT event, char key){
             }
         }
     }
+    if(app->currentMode != 0 && app->currentMode != -1){
+        if(event.y == (app->middley - 7) && (app->middlex - 10) >= event.x && event.x >= (app->middlex - 11)){
+            if(event.bstate & BUTTON1_PRESSED)
+                app->pausedTimer = app->pausedTimer ^ 1;
+        }
+    }
+
 }
 
 /* Handle input at the main menu */
@@ -251,6 +376,7 @@ void mainMenuInput(appData * app, char key){
             app->menuPos = 1;
         }else{
             printf("\033[?1003l\n");
+            killNoise();
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
@@ -276,6 +402,7 @@ void mainMenuInput(appData * app, char key){
             app->menuPos = 1;
         }else{
             printf("\033[?1003l\n");
+            killNoise();
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
