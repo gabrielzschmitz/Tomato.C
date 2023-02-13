@@ -37,6 +37,7 @@ extern char * initTimerPath(const char * );
 extern int printTimerLog(const char * );
 extern int tomatoTimer(const char *);
 
+/* Noise funtions */
 extern void toggleNoise(appData * , int );
 extern void killNoise(void);
 extern void controlVolumeNoise(appData * , int , char );

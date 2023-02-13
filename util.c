@@ -245,7 +245,6 @@ void deleteLastLog(appData * app){
     
     fclose(log);
     fclose(tmp);
-
     rename(app->tmpFile, app->logFile);
 }
 
