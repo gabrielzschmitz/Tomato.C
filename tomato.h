@@ -6,7 +6,7 @@
 // `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
 //  ,|							    
 //  `'							    
-// util.h
+// tomato.h
 */
 #ifndef TOMATO_H_
 #define TOMATO_H_
