@@ -22,8 +22,9 @@
 #include <string.h>
 #include <time.h>
 #include <locale.h>
+#include <unistd.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <inttypes.h>
 
 /* Initialize screen with colors, enabled keyboard and another little configs */
 void initScreen(void){
@@ -379,5 +380,214 @@ int tomatoTimer(const char * timerFile){
 
     /* Return exit status */
     return status;
+}
+
+void toggleNoise(appData * app, int noise){
+    if(noise == 1){
+        if(app->playRainNoise == 0){
+            app->playRainNoise = 1;
+            if(app->runRainOnce == 0){
+                char * rainnoisecmd[] = {
+                    "/usr/local/share/tomato/sounds/ambience-rain.wav",
+                    app->rainVolume, "tomato noise rain",
+                    NULL};
+                app->rainNoisePID = fork();
+                app->runRainOnce = 1;
+                if(app->rainNoisePID == 0)
+                    execv(TOMATONOISE, rainnoisecmd);
+            }
+            else{
+                FILE *tmpfile;
+                tmpfile = fopen("/tmp/tomato_rain_state", "w");
+                fprintf(tmpfile, "%s ON", app->rainVolume);
+                fclose(tmpfile);
+            }
+        }
+        else if(app->playRainNoise == 1){
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_rain_state", "w");
+            fprintf(tmpfile, "%s ON", "0");
+            fclose(tmpfile);
+            app->playRainNoise = 0;
+        }
+    }
+    else if(noise == 2){
+        if(app->playFireNoise == 0){
+            app->playFireNoise = 1;
+            if(app->runFireOnce == 0){
+                char * firenoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-fire.wav", app->fireVolume, "tomato noise fire", NULL};
+                app->fireNoisePID = fork();
+                app->runFireOnce = 1;
+                if(app->fireNoisePID == 0)
+                    execv(TOMATONOISE, firenoisecmd);
+            }
+            else{
+                FILE *tmpfile;
+                tmpfile = fopen("/tmp/tomato_fire_state", "w");
+                fprintf(tmpfile, "%s ON", app->fireVolume);
+                fclose(tmpfile);
+            }
+        }
+        else if(app->playFireNoise == 1){
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_fire_state", "w");
+            fprintf(tmpfile, "%s ON", "0");
+            fclose(tmpfile);
+            app->playFireNoise = 0;
+        }
+    }
+    else if(noise == 3){
+        if(app->playWindNoise == 0){
+            app->playWindNoise = 1;
+            if(app->runWindOnce == 0){
+                char * windnoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-wind.wav", app->windVolume, "tomato noise wind", NULL};
+                app->windNoisePID = fork();
+                app->runWindOnce = 1;
+                if(app->windNoisePID == 0)
+                    execv(TOMATONOISE, windnoisecmd);
+            }
+            else{
+                FILE *tmpfile;
+                tmpfile = fopen("/tmp/tomato_wind_state", "w");
+                fprintf(tmpfile, "%s ON", app->windVolume);
+                fclose(tmpfile);
+            }
+        }
+        else if(app->playWindNoise == 1){
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_wind_state", "w");
+            fprintf(tmpfile, "%s ON", "0");
+            fclose(tmpfile);
+            app->playWindNoise = 0;
+        }
+    }
+    else if(noise == 4){
+        if(app->playThunderNoise == 0){
+            app->playThunderNoise = 1;
+            if(app->runThunderOnce == 0){
+                char * thundernoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-thunder.wav", app->thunderVolume, "tomato noise thunder", NULL};
+                app->thunderNoisePID = fork();
+                app->runThunderOnce = 1;
+                if(app->thunderNoisePID == 0)
+                    execv(TOMATONOISE, thundernoisecmd);
+            }
+            else{
+                FILE *tmpfile;
+                tmpfile = fopen("/tmp/tomato_thunder_state", "w");
+                fprintf(tmpfile, "%s ON", app->thunderVolume);
+                fclose(tmpfile);
+            }
+        }
+        else if(app->playThunderNoise == 1){
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_thunder_state", "w");
+            fprintf(tmpfile, "%s ON", "0");
+            fclose(tmpfile);
+            app->playThunderNoise = 0;
+        }
+    }
+}
+
+void killNoise(void){
+    FILE *tmpfile;
+
+    tmpfile = fopen("/tmp/tomato_rain_state", "w");
+    fprintf(tmpfile, "%d OFF", RAINVOLUME);
+    fclose(tmpfile);
+
+    tmpfile = fopen("/tmp/tomato_fire_state", "w");
+    fprintf(tmpfile, "%d OFF", FIREVOLUME);
+    fclose(tmpfile);
+
+    tmpfile = fopen("/tmp/tomato_wind_state", "w");
+    fprintf(tmpfile, "%d OFF", WINDVOLUME);
+    fclose(tmpfile);
+
+    tmpfile = fopen("/tmp/tomato_thunder_state", "w");
+    fprintf(tmpfile, "%d OFF", THUNDERVOLUME);
+    fclose(tmpfile);
+}
+
+void controlVolumeNoise(appData * app, int noise, char sign){
+    if(noise == 1){
+        if(sign == '-'){
+            uintmax_t rainVolume = strtoumax(app->rainVolume, NULL, 10);
+            if(rainVolume > 0)
+                sprintf(app->rainVolume, "%lu", (rainVolume - 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_rain_state", "w");
+            fprintf(tmpfile, "%s ON", app->rainVolume);
+            fclose(tmpfile);
+        }
+        else if(sign == '+'){
+            uintmax_t rainVolume = strtoumax(app->rainVolume, NULL, 10);
+            if(rainVolume < 100)
+                sprintf(app->rainVolume, "%lu", (rainVolume + 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_rain_state", "w");
+            fprintf(tmpfile, "%s ON", app->rainVolume);
+            fclose(tmpfile);
+        }
+    }
+    else if(noise == 2){
+        if(sign == '-'){
+            uintmax_t fireVolume = strtoumax(app->fireVolume, NULL, 10);
+            if(fireVolume > 0)
+                sprintf(app->fireVolume, "%lu", (fireVolume - 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_fire_state", "w");
+            fprintf(tmpfile, "%s ON", app->fireVolume);
+            fclose(tmpfile);
+        }
+        else if(sign == '+'){
+            uintmax_t fireVolume = strtoumax(app->fireVolume, NULL, 10);
+            if(fireVolume < 100)
+                sprintf(app->fireVolume, "%lu", (fireVolume + 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_fire_state", "w");
+            fprintf(tmpfile, "%s ON", app->fireVolume);
+            fclose(tmpfile);
+        }
+    }
+    else if(noise == 3){
+        if(sign == '-'){
+            uintmax_t windVolume = strtoumax(app->windVolume, NULL, 10);
+            if(windVolume > 0)
+                sprintf(app->windVolume, "%lu", (windVolume - 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_wind_state", "w");
+            fprintf(tmpfile, "%s ON", app->windVolume);
+            fclose(tmpfile);
+        }
+        else if(sign == '+'){
+            uintmax_t windVolume = strtoumax(app->windVolume, NULL, 10);
+            if(windVolume < 100)
+                sprintf(app->windVolume, "%lu", (windVolume + 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_wind_state", "w");
+            fprintf(tmpfile, "%s ON", app->windVolume);
+            fclose(tmpfile);
+        }
+    }
+    else if(noise == 4){
+        if(sign == '-'){
+            uintmax_t thunderVolume = strtoumax(app->thunderVolume, NULL, 10);
+            if(thunderVolume > 0)
+                sprintf(app->thunderVolume, "%lu", (thunderVolume - 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_thunder_state", "w");
+            fprintf(tmpfile, "%s ON", app->thunderVolume);
+            fclose(tmpfile);
+        }
+        else if(sign == '+'){
+            uintmax_t thunderVolume = strtoumax(app->thunderVolume, NULL, 10);
+            if(thunderVolume < 100)
+                sprintf(app->thunderVolume, "%lu", (thunderVolume + 10));
+            FILE *tmpfile;
+            tmpfile = fopen("/tmp/tomato_thunder_state", "w");
+            fprintf(tmpfile, "%s ON", app->thunderVolume);
+            fclose(tmpfile);
+        }
+    }
 }
 
