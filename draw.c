@@ -48,6 +48,7 @@ void printNoiseMenu(appData * app){
                 mvprintw( 4, 2, "T ");
             }
         }
+
         if(app->playRainNoise == 1 && app->needResume != 1){
             setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
             if(strcmp(ICONS, "nerdicons") == 0) mvprintw( 1, 2, "󰖖 ");
