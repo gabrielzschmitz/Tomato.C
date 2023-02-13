@@ -14,12 +14,12 @@ in
 
     src = pkgs.fetchgit {
       url = repository-url;
-      rev = "c874e2cd1d7b0c61b34f3ffab5d141a5f1daa57e";
-      sha256 = "etP5j4He/RZ8/FsA7Dn5uuIlM2nhQIl4Yxz9lTSb2sU=";
+      rev = "2bf6e116cbdaa611930340a7778b5bf85071ab62";
+      sha256 = "H+zfRECLki3t2h2DqFMheoTd3bXhz4xY1XaeEZonwMY=";
     };
 
     installPhase = ''
-      mkdir -p $out/bin && cp tomato $out/bin/
+      mkdir -p $out/bin && cp tomato tomatotimer $out/bin/
 
       ln -s $(which notify-send) $out/bin/
       ln -s $(which mpv) $out/bin/
