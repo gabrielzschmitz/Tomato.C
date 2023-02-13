@@ -18,7 +18,6 @@
 # define CTRLC 3
 # define CTRLP 16
 # define CTRLX 24
-
 /* Defining noise ASCII Keys */
 # define CTRLR 18
 # define CTRLF 6

@@ -38,6 +38,7 @@ void handleInputs(appData * app){
             if(getmouse(&event) == OK)
                 mouseInput(app, event, key);
 	    break;
+
         case '1':
         case 'r':
             toggleNoise(app, 1);
