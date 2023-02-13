@@ -34,4 +34,3 @@ extern void printSettings(appData * );
 extern void printTimer(appData * );
 
 #endif
-
