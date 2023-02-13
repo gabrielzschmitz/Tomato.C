@@ -60,15 +60,18 @@ $ setsid -f "$TERMINAL" -g 49x25 -c Tomato.C -e tomato
 ```
 
 ## 🕹️ Controls
-<img src="./media/preferences.gif" alt="preferences" width="190" align="right">
+<img src="./media/noises.gif" alt="noises" width="250" align="right">
 
 Use the following <b>keys</b> to <b>control</b> the application:
- * <b><i>Mouse:</i></b> To select and increase or decrease.
+ * <b><i>Mouse:</i></b> To select, toggle and increase or decrease.
  * <b><i>Arrows or VIM Keys:</i></b> To move and select;
  * <b><i>ENTER:</i></b> To select;
  * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
  * <b><i>P or CTRL+P:</i></b> To toggle pause;
  * <b><i>ESC or Q:</i></b> To quit.
+ * <b><i>(R F W T) or (1 2 3 4):</i></b> To toggle noise;
+ * <b><i>CTRL+(R F W T):</i></b> To decrease noise volume;
+ * <b><i>SHIFT+(R F W T):</i></b> To increase noise volume;
 
 ## ⚙️ Preferences
 You can configure the following settings at run time:
@@ -77,14 +80,23 @@ You can configure the following settings at run time:
  * <b><i>Work Time</i></b>;
  * <b><i>Short Pause Time</i></b>;
  * <b><i>Long Pause Time</i></b>.
+ * <b><i>Noises Volume</i></b>.
+
 
 And change the default configurations editing the [config.h](https://github.com/gabrielzschmitz/Tomato.C/blob/master/config.h), then `sudo make install` to take effect.
 You can change those configs:
+
+<img src="./media/preferences.gif" alt="preferences" width="210" align="right">
 
  * <b><i>WSL</i></b>: 0/1;
  * <b><i>ICONS</i></b>: iconsoff - iconson - nerdicons;
  * <b><i>NOTIFY</i></b>: 0/1;
  * <b><i>SOUND</i></b>: 0/1;
+ * <b><i>NOISE</i></b>: 0/1;
+ * <b><i>RAINVOLUME</i></b>: 10-100;
+ * <b><i>FIREVOLUME</i></b>: 10-100;
+ * <b><i>WINDVOLUME</i></b>: 10-100;
+ * <b><i>THUNDERVOLUME</i></b>: 10-100;
  * <b><i>BGTRANSPARENCY</i></b>: 0/1;
  * <b><i>POMODOROS</i></b>: 1-8;
  * <b><i>WORKTIME</i></b>: 5-50;
@@ -165,6 +177,7 @@ $ sudo make install
 - [X] Implement mouse support
 - [X] Implement save current state
 - [X] Current Time to file
+- [X] Add white noise functionality
 - [ ] Implement simple note taking (maybe using a nvim instance)
 
 ## 🤝 Contribute
