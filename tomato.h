@@ -11,10 +11,35 @@
 #ifndef TOMATO_H_
 #define TOMATO_H_
 #include <ncurses.h>
+#include <mpv/client.h>
 
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
+    int currentPID;
+    int rainNoisePID;
+    int fireNoisePID;
+    int windNoisePID;
+    int thunderNoisePID;
+    int runRainOnce;
+    int runFireOnce;
+    int runWindOnce;
+    int runThunderOnce;
+    int playNoise;
+    int playRainNoise;
+    int playFireNoise;
+    int playWindNoise;
+    int playThunderNoise;
+    int printVolume;
+    int printRainVolume;
+    int printFireVolume;
+    int printWindVolume;
+    int printThunderVolume;
+    char rainVolume[4];
+    char fireVolume[4];
+    char windVolume[4];
+    char thunderVolume[4];
+    char * mpvCmd;
     char * logPrefix;
     char * logFile;
     char * tmpFile;

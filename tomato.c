@@ -23,35 +23,62 @@
 #include <stdlib.h>
 #include <time.h>
 #include <locale.h>
+#include <unistd.h>
 
 /* Initialize variables */
 void initApp(appData * app){
     /* One Second Based in the Frames per Second */
     app->sfps = (2 * sqrt(15));
 
-    app->longPause = (LONGPAUSE * 60 * 8);
-    app->workTime = (WORKTIME * 60 * 8);
-    app->shortPause = (SHORTPAUSE * 60 * 8);
-    app->pomodoros = POMODOROS;
-    app->menuPos = 1;
-    app->pomodoroCounter = 0;
-    app->currentMode = 0;
+    /* Animation variables */
     app->logoFrame = 0;
     app->coffeeFrame= 0;
     app->bannerFrame= 0;
     app->frameTimer = 0;
-    app->timer = 0;
     app->framems = 0;
-    app->timerms = 0;
+
+    /* Noise variables */
+    sprintf(app->rainVolume, "%d", RAINVOLUME);
+    sprintf(app->fireVolume, "%d", FIREVOLUME);
+    sprintf(app->windVolume, "%d", WINDVOLUME);
+    sprintf(app->thunderVolume, "%d", THUNDERVOLUME);
+    app->printVolume = 0;
+    app->rainNoisePID = 0;
+    app->fireNoisePID = 0;
+    app->windNoisePID = 0;
+    app->thunderNoisePID = 0;
+    app->runRainOnce = 0;
+    app->runFireOnce = 0;
+    app->runWindOnce = 0;
+    app->runThunderOnce = 0;
+    app->playNoise = 0;
+    app->playRainNoise = 0;
+    app->playFireNoise = 0;
+    app->playWindNoise = 0;
+    app->playThunderNoise = 0;
+
+    /* Pomodoro variables */
     app->pausedTimer = 0;
+    app->longPause = (LONGPAUSE * 60 * 8);
+    app->workTime = (WORKTIME * 60 * 8);
+    app->shortPause = (SHORTPAUSE * 60 * 8);
+    app->pomodoros = POMODOROS;
+    app->pomodoroCounter = 0;
     app->cycles = 0;
+    app->newDay = 1;
+
+    /* Misc variables */
+    app->currentPID = getpid();
+    app->menuPos = 1;
+    app->currentMode = 0;
+    app->timer = 0;
+    app->timerms = 0;
     app->needToLog = 0;
     app->needResume = 0;
     app->resume = 0;
-    app->newDay = 1;
     app->runOnce = 1; 
 
-    /* Defined in the config.mk */
+    /* File variables (defined in the config.mk) */
     if(WORKLOG == 1){
         app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
         strcpy(app->logPrefix, LOGPREFIX);
@@ -64,6 +91,7 @@ void initApp(appData * app){
         createLog(app);
         readLog(app);
     }
+
 }
 
 /* Update variables */
@@ -87,11 +115,13 @@ void drawScreen(appData * app){
             printWrench(app, 1);
             printSettings(app);
             printWrench(app, 0);
+            printNoiseMenu(app);
             break;
 
         case 0:
             printResume(app);
             printMainMenu(app);
+            printNoiseMenu(app);
             break;
 
         case 1:
@@ -99,6 +129,7 @@ void drawScreen(appData * app){
             printPauseIndicator(app);
             printCoffee(app);
             printTimer(app);
+            printNoiseMenu(app);
             break;
 
         case 2:
@@ -106,6 +137,7 @@ void drawScreen(appData * app){
             printPauseIndicator(app);
             printMachine(app);
             printTimer(app);
+            printNoiseMenu(app);
             break;
 
         case 3:
@@ -113,6 +145,7 @@ void drawScreen(appData * app){
             printPauseIndicator(app);
             printBeach(app);
             printTimer(app);
+            printNoiseMenu(app);
             break;
         default:
             break;
