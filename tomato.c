@@ -91,7 +91,6 @@ void initApp(appData * app){
         createLog(app);
         readLog(app);
     }
-
 }
 
 /* Update variables */
