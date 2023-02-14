@@ -43,17 +43,9 @@ int play(char * file, char * volume, char * title){
     int save;
 
     FILE *tmpfile;
-    tmpfile = fopen(tmppath, "r");
-    if(tmpfile){
-        tmpfile = fopen(tmppath, "w");
-        fprintf(tmpfile, "%s", volume);
-        fclose(tmpfile);
-    }
-    else{
-        tmpfile = fopen(tmppath, "w");
-        fprintf(tmpfile, "%s", volume);
-        fclose(tmpfile);
-    }
+    tmpfile = fopen(tmppath, "w");
+    fprintf(tmpfile, "%s ON", volume);
+    fclose(tmpfile);
 
     // Done setting up options.
     mpvCheckError(mpv_initialize(mpvCtx));
