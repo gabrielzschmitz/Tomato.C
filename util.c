@@ -414,7 +414,10 @@ void toggleNoise(appData * app, int noise){
         if(app->playFireNoise == 0){
             app->playFireNoise = 1;
             if(app->runFireOnce == 0){
-                char * firenoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-fire.wav", app->fireVolume, "tomato noise fire", NULL};
+                char * firenoisecmd[] = {
+                    "/usr/local/share/tomato/sounds/ambience-fire.wav",
+                    app->fireVolume, "tomato noise fire",
+                    NULL};
                 app->fireNoisePID = fork();
                 app->runFireOnce = 1;
                 if(app->fireNoisePID == 0)
@@ -439,7 +442,10 @@ void toggleNoise(appData * app, int noise){
         if(app->playWindNoise == 0){
             app->playWindNoise = 1;
             if(app->runWindOnce == 0){
-                char * windnoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-wind.wav", app->windVolume, "tomato noise wind", NULL};
+                char * windnoisecmd[] = {
+                    "/usr/local/share/tomato/sounds/ambience-wind.wav",
+                    app->windVolume, "tomato noise wind",
+                    NULL};
                 app->windNoisePID = fork();
                 app->runWindOnce = 1;
                 if(app->windNoisePID == 0)
@@ -464,7 +470,10 @@ void toggleNoise(appData * app, int noise){
         if(app->playThunderNoise == 0){
             app->playThunderNoise = 1;
             if(app->runThunderOnce == 0){
-                char * thundernoisecmd[] = {"/home/gabrielzschmitz/.local/src/Tomato.C/sounds/ambience-thunder.wav", app->thunderVolume, "tomato noise thunder", NULL};
+                char * thundernoisecmd[] = {
+                    "/usr/local/share/tomato/sounds/ambience-thunder.wav",
+                    app->thunderVolume, "tomato noise thunder",
+                    NULL};
                 app->thunderNoisePID = fork();
                 app->runThunderOnce = 1;
                 if(app->thunderNoisePID == 0)
