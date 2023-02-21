@@ -464,15 +464,15 @@ void printResume(appData * app){
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
         mvprintw((app->middley - 2), (app->middlex - 16), "An unfinished cycle was detected!");
         if(strcmp(ICONS, "nerdicons") == 0){
-            mvprintw((app->middley - 1), (app->middlex - 16), " %d🍅/%d🍅                 %02dm/%02dm ",
+            mvprintw((app->middley - 1), (app->middlex - 16), " %d/%d🍅                    %02d/%02dm ",
                      app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
         }
         else if(strcmp(ICONS, "iconson") == 0){
-            mvprintw((app->middley - 1), (app->middlex - 16), " %d🍅/%d🍅                 %02dm/%02dm ",
+            mvprintw((app->middley - 1), (app->middlex - 16), " %d/%d🍅                    %02d/%02dm ",
                      app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
         }
         else{
-            mvprintw((app->middley - 1), (app->middlex - 16), " %dP/%dP                   %02dm/%02dm ",
+            mvprintw((app->middley - 1), (app->middlex - 16), " %d/%dP                     %02d/%02dm ",
                      app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
         }
         mvprintw(app->middley, (app->middlex - 16),       "         Want to resume?         ");
