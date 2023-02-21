@@ -64,6 +64,7 @@ $ setsid -f "$TERMINAL" -g 49x25 -c Tomato.C -e tomato
 
 Use the following <b>keys</b> to <b>control</b> the application:
  * <b><i>Mouse:</i></b> To select, toggle and increase or decrease.
+ * <b><i>Mouse Scroll Wheel:</i></b> To increase or decrease noises volume.
  * <b><i>Arrows or VIM Keys:</i></b> To move and select;
  * <b><i>ENTER:</i></b> To select;
  * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
