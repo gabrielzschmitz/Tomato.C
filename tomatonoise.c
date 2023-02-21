@@ -39,7 +39,7 @@ int play(char * file, char * volume, char * title){
     else
         strcpy(tmppath, "/tmp/tomato_noise_state");
 
-    char line[25];
+    char line[16];
     int save;
 
     FILE *tmpfile;
