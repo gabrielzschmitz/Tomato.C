@@ -76,7 +76,7 @@ void initApp(appData * app){
     app->needToLog = 0;
     app->needResume = 0;
     app->resume = 0;
-    app->runOnce = 1; 
+    app->runOnce = 1;
 
     /* File variables (defined in the config.mk) */
     if(WORKLOG == 1){
