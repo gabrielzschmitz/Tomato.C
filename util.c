@@ -180,6 +180,19 @@ void readLog(appData * app){
     if(strstr(lastline, "WT") != NULL || strstr(lastline, "SP") != NULL || strstr(lastline, "LP") != NULL)
         app->needResume = 1;
 
+    /* Get unfinished variables */
+    sscanf(lastline, "%d/%d WT %d D %d %*d %*d",
+           &app->unfinishedPomodoroCounter, &app->unfinishedPomodoros,
+           &app->unfinishedTimer, &app->unfinishedFullTimer);
+    sscanf(lastline, "%d/%d SP %d D %*d %d %*d",
+           &app->unfinishedPomodoroCounter, &app->unfinishedPomodoros,
+           &app->unfinishedTimer, &app->unfinishedFullTimer);
+    sscanf(lastline, "%d/%d LP %d D %*d %*d %d",
+           &app->unfinishedPomodoroCounter, &app->unfinishedPomodoros,
+           &app->unfinishedTimer, &app->unfinishedFullTimer);
+    app->unfinishedTimer = app->unfinishedTimer / (60 * 8);
+    app->unfinishedFullTimer = app->unfinishedFullTimer / (60 * 8);
+
     fclose(log);
 }
 
@@ -197,21 +210,24 @@ void setLogVars(appData * app){
 
     /* Get variables */
     if(sscanf(lastline, "%d/%d WT %d D %d %d %d",
-              &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+              &app->pomodoroCounter, &app->pomodoros, &app->timer,
+              &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->workTime) * -1;
         app->frameTimer = 0;
         app->currentMode = 1;
         notify("worktime");
     }
     else if(sscanf(lastline, "%d/%d SP %d D %d %d %d",
-                   &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+                   &app->pomodoroCounter, &app->pomodoros, &app->timer,
+                   &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->shortPause) * -1;
         app->frameTimer = 0;
         app->currentMode = 2;
         notify("shortpause");
     }
     else if(sscanf(lastline, "%d/%d LP %d D %d %d %d",
-                   &app->pomodoroCounter, &app->pomodoros, &app->timer, &app->workTime, &app->shortPause, &app->longPause) == 6){
+                   &app->pomodoroCounter, &app->pomodoros, &app->timer,
+                   &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->longPause) * -1;
         app->frameTimer = 0;
         app->currentMode = 3;
@@ -348,21 +364,18 @@ char * initTimerPath(const char * timerFile){
 int printTimerLog(const char * path){
     FILE *log;
     log = fopen(path, "r");
-    char timer[1024]={0,};
+    char timer[32]={0,};
     
-    do {
-        if(!log){
-            perror("Couldn't read log file");
-            return 1;
-        }else{
-            fgets(timer, sizeof timer, log);
-            if(strstr(timer, "00:00"))
-                puts("");
-            else
-                printf("%s", timer);
-            break;
-        }
-    } while (0);
+    if(!log){
+        perror("Couldn't read log file");
+        return 1;
+    }else{
+        fgets(timer, sizeof timer, log);
+        if(strstr(timer, "00:00"))
+            puts("");
+        else
+            printf("%s", timer);
+    }
 
     fclose(log);
     return 0;
