@@ -41,7 +41,8 @@ void handleInputs(appData * app){
 
         case '1':
         case 'r':
-            toggleNoise(app, 1);
+            if(app->needResume != 1)
+                toggleNoise(app, 1);
             break;
         case 'R':
             if(app->playRainNoise == 1){
@@ -58,7 +59,8 @@ void handleInputs(appData * app){
 
         case '2':
         case 'f':
-            toggleNoise(app, 2);
+            if(app->needResume != 1)
+                toggleNoise(app, 2);
             break;
         case 'F':
             if(app->playFireNoise == 1){
@@ -75,7 +77,8 @@ void handleInputs(appData * app){
 
         case '3':
         case 'w':
-            toggleNoise(app, 3);
+            if(app->needResume != 1)
+                toggleNoise(app, 3);
             break;
         case 'W':
             if(app->playWindNoise == 1){
@@ -92,7 +95,8 @@ void handleInputs(appData * app){
         
         case '4':
         case 't':
-            toggleNoise(app, 4);
+            if(app->needResume != 1)
+                toggleNoise(app, 4);
             break;
         case 'T':
             if(app->playThunderNoise == 1){
@@ -188,6 +192,7 @@ void handleInputs(appData * app){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
+            printf("Goodbye!");
             exit(EXIT_SUCCESS);
             break;
 
@@ -213,13 +218,13 @@ void mouseInput(appData * app, MEVENT event, char key){
     if(app->needResume != 1){
         /* Show volume bars */
         app->printVolume = 0;
-        if ((event.y == 1) && (2 <= event.x && event.x <= 19))
+        if((app->playRainNoise == 1) && (event.y == 1) && (2 <= event.x && event.x <= 19))
             app->printVolume = 1;
-        else if ((event.y == 2) && (2 <= event.x && event.x <= 19))
+        else if((app->playFireNoise == 1) && (event.y == 2) && (2 <= event.x && event.x <= 19))
             app->printVolume = 2;
-        else if ((event.y == 3) && (2 <= event.x && event.x <= 19))
+        else if((app->playWindNoise == 1) && (event.y == 3) && (2 <= event.x && event.x <= 19))
             app->printVolume = 3;
-        else if ((event.y == 4) && (2 <= event.x && event.x <= 19))
+        else if((app->playThunderNoise == 1) && (event.y == 4) && (2 <= event.x && event.x <= 19))
             app->printVolume = 4;
 
         /* Toggle on or off noises */
@@ -241,21 +246,37 @@ void mouseInput(appData * app, MEVENT event, char key){
         }
 
         /* Noise volume control */
-        if((event.y == 1) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+        if((app->printVolume == 1) && (event.y == 1) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 1, '-');
-        else if((event.y == 1) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+        else if((app->printVolume == 1) && (event.y == 1) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 1, '+');
-        if((event.y == 2) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+        if((app->printVolume == 2) && (event.y == 2) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 2, '-');
-        else if((event.y == 2) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+        else if((app->printVolume == 2) && (event.y == 2) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 2, '+');
-        if((event.y == 3) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+        if((app->printVolume == 3) && (event.y == 3) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 3, '-');
-        else if((event.y == 3) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+        else if((app->printVolume == 3) && (event.y == 3) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 3, '+');
-        if((event.y == 4) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+        if((app->printVolume == 4) && (event.y == 4) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
             controlVolumeNoise(app, 4, '-');
-        else if((event.y == 4) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+        else if((app->printVolume == 4) && (event.y == 4) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+            controlVolumeNoise(app, 4, '+');
+        if((app->printVolume == 1) && (event.bstate & BUTTON5_PRESSED))
+            controlVolumeNoise(app, 1, '-');
+        else if((app->printVolume == 1) && (event.bstate & BUTTON4_PRESSED))
+            controlVolumeNoise(app, 1, '+');
+        if((app->printVolume == 2) && (event.bstate & BUTTON5_PRESSED))
+            controlVolumeNoise(app, 2, '-');
+        else if((app->printVolume == 2) && (event.bstate & BUTTON4_PRESSED))
+            controlVolumeNoise(app, 2, '+');
+        if((app->printVolume == 3) && (event.bstate & BUTTON5_PRESSED))
+            controlVolumeNoise(app, 3, '-');
+        else if((app->printVolume == 3) && (event.bstate & BUTTON4_PRESSED))
+            controlVolumeNoise(app, 3, '+');
+        if((app->printVolume == 4) && (event.bstate & BUTTON5_PRESSED))
+            controlVolumeNoise(app, 4, '-');
+        else if((app->printVolume == 4) && (event.bstate & BUTTON4_PRESSED))
             controlVolumeNoise(app, 4, '+');
 
     }
@@ -283,14 +304,14 @@ void mouseInput(appData * app, MEVENT event, char key){
         }
     }
     else if(app->currentMode == 0 && app->needResume == 1){
-        if(event.y == (app->middley) && (app->middlex - 2) >= event.x  && event.x >= (app->middlex - 10)){
+        if(event.y == (app->middley + 1) && (app->middlex - 7) >= event.x  && event.x >= (app->middlex - 15)){
             app->menuPos = 1;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
                 resumeInput(app, key);
             }
         }
-        else if(event.y == (app->middley) && (app->middlex + 9) >= event.x  && event.x >= (app->middlex + 2)){
+        else if(event.y == (app->middley + 1) && (app->middlex + 14) >= event.x  && event.x >= (app->middlex + 7)){
             app->menuPos = 2;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
@@ -381,6 +402,7 @@ void mainMenuInput(appData * app, char key){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
+            printf("Goodbye!");
             exit(EXIT_SUCCESS);
         }
     }
@@ -407,6 +429,7 @@ void mainMenuInput(appData * app, char key){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
+            printf("Goodbye!");
             exit(EXIT_SUCCESS);
         }
     }else
