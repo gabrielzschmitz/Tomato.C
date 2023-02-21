@@ -463,21 +463,33 @@ void printResume(appData * app){
         printBanner(app);
         setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
         mvprintw((app->middley - 2), (app->middlex - 16), "An unfinished cycle was detected!");
-        mvprintw((app->middley - 1), (app->middlex - 16), "         Want to resume?         ");
+        if(strcmp(ICONS, "nerdicons") == 0){
+            mvprintw((app->middley - 1), (app->middlex - 16), " %d🍅/%d🍅                 %02dm/%02dm ",
+                     app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
+        }
+        else if(strcmp(ICONS, "iconson") == 0){
+            mvprintw((app->middley - 1), (app->middlex - 16), " %d🍅/%d🍅                 %02dm/%02dm ",
+                     app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
+        }
+        else{
+            mvprintw((app->middley - 1), (app->middlex - 16), " %dP/%dP                   %02dm/%02dm ",
+                     app->unfinishedPomodoroCounter, app->unfinishedPomodoros, app->unfinishedTimer, app->unfinishedFullTimer);
+        }
+        mvprintw(app->middley, (app->middlex - 16),       "         Want to resume?         ");
         if(app->menuPos == 1){
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw((app->middley + 0), (app->middlex - 16), "      -> Yes <- ");
+            mvprintw((app->middley + 1), (app->middlex - 15), "-> YES <-");
         }else{
-            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-            mvprintw((app->middley + 0), (app->middlex - 16), "         Yes    ");
+                setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw((app->middley + 1), (app->middlex - 15), "   YES   ");
         }
 
         if(app->menuPos == 2){
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw((app->middley + 0), (app->middlex + 1),  " -> No <-       ");
+            mvprintw((app->middley + 1), (app->middlex + 7),  "-> NO <-");
         }else{
             setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-            mvprintw((app->middley + 0), (app->middlex + 1),  "    No          ");
+            mvprintw((app->middley + 1), (app->middlex + 7),  "   NO   ");
         }
     }
 }
