@@ -598,8 +598,10 @@ void printBanner(appData * app){
         mvprintw((app->middley - 1), (app->middlex + 17),"|  /");
         mvprintw((app->middley + 0), (app->middlex - 20)," \\ |");
         mvprintw((app->middley + 0), (app->middlex + 17),"| / ");
-        mvprintw((app->middley + 1), (app->middlex - 20)," / |_________________________________| \\ ");
-        mvprintw((app->middley + 2), (app->middlex - 20),"/______)                         (______\\");
+        mvprintw((app->middley + 1), (app->middlex - 20)," < |");
+        mvprintw((app->middley + 1), (app->middlex + 17),"| > ");
+        mvprintw((app->middley + 2), (app->middlex - 20)," / |_________________________________| \\ ");
+        mvprintw((app->middley + 3), (app->middlex - 20),"/______)                         (______\\");
     }
     else if(app->bannerFrame == 1){
         mvprintw((app->middley - 3), (app->middlex - 21),"     _________________________________     ");
@@ -609,8 +611,10 @@ void printBanner(appData * app){
         mvprintw((app->middley - 1), (app->middlex + 17),"|   /");
         mvprintw((app->middley + 0), (app->middlex - 21)," \\  |");
         mvprintw((app->middley + 0), (app->middlex + 17),"|  / ");
-        mvprintw((app->middley + 1), (app->middlex - 21)," /  |_________________________________|  \\ ");
-        mvprintw((app->middley + 2), (app->middlex - 21),"/_______)                         (_______\\");
+        mvprintw((app->middley + 1), (app->middlex - 21)," <  |");
+        mvprintw((app->middley + 1), (app->middlex + 17),"|  > ");
+        mvprintw((app->middley + 2), (app->middlex - 21)," /  |_________________________________|  \\ ");
+        mvprintw((app->middley + 3), (app->middlex - 21),"/_______)                         (_______\\");
     }
     else if(app->bannerFrame == 2){
         mvprintw((app->middley - 3), (app->middlex - 23),"      ___________________________________      ");
@@ -620,8 +624,10 @@ void printBanner(appData * app){
         mvprintw((app->middley - 1), (app->middlex + 18),"|    /");
         mvprintw((app->middley + 0), (app->middlex - 23)," \\   |");
         mvprintw((app->middley + 0), (app->middlex + 18),"|   / ");
-        mvprintw((app->middley + 1), (app->middlex - 23)," /   |___________________________________|   \\ ");
-        mvprintw((app->middley + 2), (app->middlex - 23),"/_______)                             (_______\\");
+        mvprintw((app->middley + 1), (app->middlex - 23)," <   |");
+        mvprintw((app->middley + 1), (app->middlex + 18),"|   > ");
+        mvprintw((app->middley + 2), (app->middlex - 23)," /   |___________________________________|   \\ ");
+        mvprintw((app->middley + 3), (app->middlex - 23),"/_______)                             (_______\\");
     }else{
         mvprintw((app->middley - 3), (app->middlex - 24),"       ___________________________________       ");
         mvprintw((app->middley - 2), (app->middlex - 24),"______|");
@@ -630,8 +636,10 @@ void printBanner(appData * app){
         mvprintw((app->middley - 1), (app->middlex + 18),"|     /");
         mvprintw((app->middley + 0), (app->middlex - 24)," \\    |");
         mvprintw((app->middley + 0), (app->middlex + 18),"|    / ");
-        mvprintw((app->middley + 1), (app->middlex - 24)," /    |___________________________________|    \\ ");
-        mvprintw((app->middley + 2), (app->middlex - 24),"/________)                             (________\\");
+        mvprintw((app->middley + 1), (app->middlex - 24)," <    |");
+        mvprintw((app->middley + 1), (app->middlex + 18),"|    > ");
+        mvprintw((app->middley + 2), (app->middlex - 24)," /    |___________________________________|    \\ ");
+        mvprintw((app->middley + 3), (app->middlex - 24),"/________)                             (________\\");
     }
 }
 
