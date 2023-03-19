@@ -192,7 +192,7 @@ void handleInputs(appData * app){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
-            printf("Goodbye!");
+            printf("Goodbye!\n");
             exit(EXIT_SUCCESS);
             break;
 
@@ -402,7 +402,7 @@ void mainMenuInput(appData * app, char key){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
-            printf("Goodbye!");
+            printf("Goodbye!\n");
             exit(EXIT_SUCCESS);
         }
     }
@@ -429,7 +429,7 @@ void mainMenuInput(appData * app, char key){
             if(TIMERLOG == 1)
                 endTimerLog(app);
             endwin();
-            printf("Goodbye!");
+            printf("Goodbye!\n");
             exit(EXIT_SUCCESS);
         }
     }else
