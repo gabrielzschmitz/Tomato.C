@@ -30,7 +30,7 @@ void notify(const char * message){
     #ifdef __APPLE__
         if(NOTIFY == 1){
             if(strcmp(ICONS, "nerdicons") == 0)
-                system("osascript -e \'display notification \"華 Work!\" with title \"You need to focus\"\'");
+                system("osascript -e \'display notification \"󱎫 Work!\" with title \"You need to focus\"\'");
             else if(strcmp(ICONS, "iconson") == 0)
                 system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
             else
@@ -39,7 +39,7 @@ void notify(const char * message){
     #else
         if(NOTIFY == 1){
             if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'華 Work!\' \'You need to focus\'");
+                system("notify-send -t 5000 -c Tomato.C \'󱎫 Work!\' \'You need to focus\'");
             else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
                 system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
             else
