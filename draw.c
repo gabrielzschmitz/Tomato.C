@@ -514,7 +514,7 @@ void printPauseIndicator(appData * app){
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
     
     if(strcmp(ICONS, "nerdicons") == 0){
-        mvprintw((app->middley - 7), (app->middlex - 11) ," ");
+        mvprintw((app->middley - 7), (app->middlex - 11) ,"");
     }
     else if(strcmp(ICONS, "iconson") == 0){
         mvprintw((app->middley - 7), (app->middlex - 11) ,"⏸️ ");
@@ -619,7 +619,7 @@ void printTimer(appData * app){
             mvprintw((app->middley + 6), (app->middlex + 0), "[%02d minutes]", app->workTime / (60 * 8));
             if(TIMERLOG == 1){
                 if(app->pausedTimer == 1)
-                    fprintf(time, " ");
+                    fprintf(time, "");
                 fprintf(time, " ");
             }
         }
@@ -649,7 +649,7 @@ void printTimer(appData * app){
             mvprintw((app->middley + 6), (app->middlex - 1), "[%02d minutes]", app->shortPause / (60 * 8));
             if(TIMERLOG == 1){
                 if(app->pausedTimer == 1)
-                    fprintf(time, " ");
+                    fprintf(time, "");
                 fprintf(time, " ");
             }
         }
@@ -679,7 +679,7 @@ void printTimer(appData * app){
             mvprintw((app->middley + 6), (app->middlex + 1), "[%02d minutes]", app->longPause / (60 * 8));
             if(TIMERLOG == 1){
                 if(app->pausedTimer == 1)
-                    fprintf(time, " ");
+                    fprintf(time, "");
                 fprintf(time, " ");
             }
         }
