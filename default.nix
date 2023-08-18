@@ -6,16 +6,21 @@
 #  ,|
 #  `'
 # default.nix
-{pkgs ? import <nixpkgs> {}}:
-pkgs.stdenv.mkDerivation {
+{
+  pkgconfig,
+  libnotify,
+  gnumake,
+  ncurses,
+  stdenv,
+  which,
+  mpv,
+  gcc,
+  lib,
+}:
+stdenv.mkDerivation {
   name = "tomato";
 
-  src = pkgs.fetchFromGitHub {
-    owner = "gabrielzschmitz";
-    repo = "Tomato.C";
-    rev = "61aa8a3263b602176fef374fc331429dce405d52";
-    sha256 = "0752qgydqmgn8if77r6rx1v72l4zn76yv9f127v3b8nl24165ggv";
-  };
+  src = ./.;
 
   installPhase = ''
     mkdir -p $out/bin && cp tomato tomatonoise $out/bin/
@@ -24,7 +29,7 @@ pkgs.stdenv.mkDerivation {
     ln -s $(which mpv) $out/bin/
   '';
 
-  buildInputs = with pkgs; [
+  buildInputs = [
     gcc
     which
     gnumake
@@ -32,12 +37,12 @@ pkgs.stdenv.mkDerivation {
     pkgconfig
   ];
 
-  propagatedBuildInputs = with pkgs; [
+  propagatedBuildInputs = [
     libnotify
     mpv
   ];
 
-  meta = with pkgs.lib; {
+  meta = with lib; {
     description = "A pomodoro timer written in pure C.";
     homepage = "https://github.com/gabrielzschmitz/Tomato.C";
     license = licenses.gpl3Plus;
