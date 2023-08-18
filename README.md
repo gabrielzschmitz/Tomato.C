@@ -162,9 +162,7 @@ $ cd Tomato.C
 $ nix-build default.nix
 
 NIXOS (flakes):
-$ git clone https://github.com/gabrielzschmitz/Tomato.C.git
-$ cd Tomato.C
-$ nix develop # In order to get the tomato package in the $PATH
+$ nix run github:gabrielzschmitz/Tomato.C # In order to get the tomato package in the $PATH
 
 NORMAL:
 $ git clone https://github.com/gabrielzschmitz/Tomato.C.git
