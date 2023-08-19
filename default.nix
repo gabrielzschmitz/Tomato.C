@@ -20,7 +20,10 @@
 stdenv.mkDerivation {
   name = "tomato";
 
-  src = ./.;
+  src = builtins.path {
+    name = "Tomato.C";
+    path = ./.;
+  };
 
   installPhase = ''
     mkdir -p $out/bin && cp tomato tomatonoise $out/bin/
