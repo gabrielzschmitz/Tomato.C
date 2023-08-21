@@ -53,3 +53,6 @@ uninstall:
 	rm -rf ${DESTDIR}${PREFIX}/share/tomato
 	rm -f ${DESTDIR}${APPPREFIX}/tomato.desktop
 
+nix-try:
+	nix build
+	./result/bin/tomato
