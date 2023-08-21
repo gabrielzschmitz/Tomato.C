@@ -28,7 +28,7 @@
 /* Initialize variables */
 void initApp(appData * app){
     /* One Second Based in the Frames per Second */
-    app->sfps = (2 * sqrt(15));
+    app->sfps = sqrt(60);
 
     /* Animation variables */
     app->logoFrame = 0;
