@@ -25,19 +25,38 @@ stdenv.mkDerivation {
     path = ./.;
   };
 
-  installPhase = ''
-    mkdir -p $out/bin && cp tomato tomatonoise $out/bin/
+  preConfigure = ''
+    substituteInPlace notify.c \
+      --replace /usr/local/ $out/
 
-    ln -s $(which notify-send) $out/bin/
-    ln -s $(which mpv) $out/bin/
+    substituteInPlace tomato.desktop \
+      --replace /usr/local/ $out/
+
+    substituteInPlace util.c \
+      --replace /usr/local/ $out/
+
+      substituteInPlace config.mk \
+      --replace '/usr/local' $out
+  '';
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp tomato tomatonoise $out/bin/
+
+    mkdir -p $out/share/applications/
+    mkdir -p $out/share/tomato/
+
+    cp $src/tomato.desktop $out/share/applications/
+    cp -r $src/sounds/ $out/share/tomato/
+    cp -r $src/icons/ $out/share/tomato/
   '';
 
   buildInputs = [
-    gcc
-    which
+    pkgconfig
     gnumake
     ncurses
-    pkgconfig
+    which
+    gcc
   ];
 
   propagatedBuildInputs = [
