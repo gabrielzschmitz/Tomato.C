@@ -1,11 +1,11 @@
 /*
-//         .             .              .		    
-//         |             |              |           .	    
-// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,  
-// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /   
-// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
-//  ,|							    
-//  `'							    
+//         .             .              .
+//         |             |              |           .
+// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,
+// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /
+// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'
+//  ,|
+//  `'
 // notify.c
 */
 #include "tomato.h"
@@ -24,101 +24,81 @@
 #include <locale.h>
 
 /* Send a notification with sound */
-void notify(const char * message){
-    /* Work notification */
-    if(strcmp(message, "worktime") == 0){
-    #ifdef __APPLE__
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0)
-                system("osascript -e \'display notification \"󱎫 Work!\" with title \"You need to focus\"\'");
-            else if(strcmp(ICONS, "iconson") == 0)
-                system("osascript -e \'display notification \"👷 Work!\" with title \"You need to focus\"\'");
-            else
-                system("osascript -e \'display notification \"Work!\" with title \"You need to focus\"\'");
-        }
-    #else
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'󱎫 Work!\' \'You need to focus\'");
-            else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'👷 Work!\' \'You need to focus\'");
-            else
-                system("notify-send -t 5000 -c Tomato.C \'Work! You need to focus\'");
-        }
-    #endif
-        if(SOUND == 1 && WSL == 0)
-            system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/dfltnotify.mp3 --really-quiet &");
+void notify(const char *message)
+{
+    if (strcmp(message, "worktime") == 0) /* Work notification */
+    {
+        if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
+            send_notification("󱎫 Work!", "You need to focus");
+        else if (strcmp(ICONS, "iconson") == 0 && WSL == 0)
+            send_notification("👷 Work!", "You need to focus");
+        else
+            send_notification("Work!", "You need to focus!");
+
+        play_audio("/usr/local/share/tomato/sounds/dfltnotify.mp3");
     }
-    /* Short Pause notification */
-    else if(strcmp(message, "shortpause") == 0){
-    #ifdef __APPLE__
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0)
-                system("osascript -e \'display notification \" Pause Break\" with title \"You have some time to chill\"\'");
-            else if(strcmp(ICONS, "iconson") == 0)
-                system("osascript -e \'display notification \"☕ Pause Break\" with title \"You have some time to chill\"\'");
-            else
-                system("osascript -e \'display notification \"Pause Break\" with title \"You have some time to chill\"\'");
-        }
-    #else
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time to chill\'");
-            else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'☕ Pause Break\' \'You have some time to chill\'");
-            else
-                system("notify-send -t 5000 -c Tomato.C \'Pause Break. You have some time to chill\'");
-        }
-    #endif
-        if(SOUND == 1 && WSL == 0)
-            system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+    else if (strcmp(message, "shortpause") == 0) /* Short Pause notification */
+    {
+        if (strcmp(ICONS, "nerdicons") == 0)
+            send_notification(" Pause Break", "You have some time to chill");
+        else if (strcmp(ICONS, "iconson") == 0)
+            send_notification("☕ Pause Break", "You have some time to chill");
+        else
+            send_notification("Pause Break", "You have some time to chill");
+
+        play_audio("/usr/local/share/tomato/sounds/pausenotify.mp3");
     }
-    /* Long Pause notification */
-    else if(strcmp(message, "longpause") == 0){
-    #ifdef __APPLE__
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0)
-                system("osascript -e \'display notification \" Pause Break\" with title \"You have some time to chill\"\'");
-            else if(strcmp(ICONS, "iconson") == 0)
-                system("osascript -e \'display notification \"🌴 Pause Break\" with title \"You have some time to chill\"\'");
-            else
-                system("osascript -e \'display notification \"Long Pause Break\" with title \"You have some time to chill\"\'");
-        }
-    #else
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \' Pause Break\' \'You have some time to chill\'");
-            else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'🌴 Pause Break\' \'You have some time to chill\'");
-            else
-                system("notify-send -t 5000 -c Tomato.C \'Long Pause Break. You have some time to chill\'");
-        }
-    #endif
-        if(SOUND == 1 && WSL == 0)
-            system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/pausenotify.mp3 --really-quiet &");
+    else if (strcmp(message, "longpause") == 0) /* Long Pause notification */
+    {
+        if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
+            send_notification(" Long Pause Break", "You have some time to chill");
+        else if (strcmp(ICONS, "iconson") == 0 && WSL == 0)
+            send_notification("🌴 Long Pause Break", "You have some time to chill");
+        else
+            send_notification("Long Pause Break", "You have some time to chill");
+
+        play_audio("/usr/local/share/tomato/sounds/pausenotify.mp3");
     }
-    /* End of cycle notification */
-    else{
-    #ifdef __APPLE__
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0)
-                system("osascript -e \'display notification \" End of Pomodoro Cycle\" with title \"Feel free to start another!\"\'");
-            else if(strcmp(ICONS, "iconson") == 0)
-                system("osascript -e \'display notification \"🍅 End of Pomodoro Cycle\" with title \"Feel free to start another!\"\'");
-            else
-                system("osascript -e \'display notification \"End of a Pomodoro Cycle\" with title \"Feel free to start another!\"\'");
-        }
-    #else
-        if(NOTIFY == 1){
-            if(strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \' End of Pomodoro Cycle\' \'Feel free to start another!\'");
-            else if(strcmp(ICONS, "iconson") == 0 && WSL == 0)
-                system("notify-send -t 5000 -c Tomato.C \'🍅 End of Pomodoro Cycle\' \'Feel free to start another!\'");
-            else
-                system("notify-send -t 5000 -c Tomato.C \'End of Pomodoro Cycle. Feel free to start another!\'");
-        }
-    #endif
-        if(SOUND == 1 && WSL == 0)
-            system("mpv --no-vid --no-input-terminal --volume=50 /usr/local/share/tomato/sounds/endnotify.mp3 --really-quiet &");
+    else /* End of cycle notification */
+    {
+
+        if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
+            send_notification(" End of Pomodoro Cycle", "Feel free to start another!");
+        else if (strcmp(ICONS, "iconson") == 0 && WSL == 0)
+            send_notification("🍅 End of Pomodoro Cycle", "Feel free to start another!");
+        else
+            send_notification("End of Pomodoro Cycle", "Feel free to start another!");
+
+        play_audio("/usr/local/share/tomato/sounds/endnotify.mp3");
+    }
+}
+
+void send_notification(char *title, char *description)
+{
+    if (NOTIFY == 0)
+        return;
+
+    int max_command_length = 256;
+
+    const char *command[max_command_length];
+
+#ifdef __APPLE__
+    snprintf(command, max_command_length, "osascript -e \'display notification \"%s\" with title \"%s\"\'", title, description);
+#else
+    snprintf(command, max_command_length, "notify-send -t 5000 -a Tomato.C \"%s\" \"%s\" ", title, description);
+#endif
+    (void)system(command);
+}
+
+void play_audio(char *record_path)
+{
+    if (SOUND == 1 && WSL == 0)
+    {
+        int max_audio_cmd_length = 256;
+
+        char *command[max_audio_cmd_length];
+
+        snprintf(command, max_audio_cmd_length, "mpv --no-vid --no-input-terminal --volume=50 %s --really-quiet &", record_path);
+        (void)system(command);
     }
 }
