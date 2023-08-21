@@ -47,7 +47,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),      "     \\         /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -61,7 +61,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |╱    \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\         /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -75,7 +75,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤ ─   |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |      ─   |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\         /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -89,7 +89,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\     ╲   /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -103,7 +103,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\    |    /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -117,7 +117,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\   ╱     /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -131,7 +131,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /     |     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |   ─ ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |   ─      |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\         /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
@@ -145,7 +145,7 @@ void printLogo(appData * app){
             mvprintw((app->middley - 5), (app->middlex - 10),"     .\'.-\'_\'-.\'.     ");
             setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
             mvprintw((app->middley - 4), (app->middlex - 10),"    /    ╲|     \\    ");
-            mvprintw((app->middley - 3), (app->middlex - 10),"    |     ⬤     |    ");
+            mvprintw((app->middley - 3), (app->middlex - 10),"    |          |    ");
             mvprintw((app->middley - 2), (app->middlex - 10),"     \\         /     ");
             mvprintw((app->middley - 1), (app->middlex - 10),"      \'-.___.-\'      ");
             setColor(COLOR_MAGENTA, COLOR_BLACK, A_BOLD);
