@@ -514,7 +514,7 @@ void printPauseIndicator(appData * app){
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
     
     if(strcmp(ICONS, "nerdicons") == 0){
-        mvprintw((app->middley - 7), (app->middlex - 11) ,"");
+        mvprintw((app->middley - 7), (app->middlex - 11) ," ");
     }
     else if(strcmp(ICONS, "iconson") == 0){
         mvprintw((app->middley - 7), (app->middlex - 11) ,"⏸️ ");
