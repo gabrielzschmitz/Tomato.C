@@ -39,19 +39,7 @@ stdenv.mkDerivation {
       --replace '/usr/local' $out
   '';
 
-  installPhase = ''
-    mkdir -p $out/bin
-    cp tomato tomatonoise $out/bin/
-
-    mkdir -p $out/share/applications/
-    mkdir -p $out/share/tomato/
-
-    cp $src/tomato.desktop $out/share/applications/
-    cp -r $src/sounds/ $out/share/tomato/
-    cp -r $src/icons/ $out/share/tomato/
-  '';
-
-  buildInputs = [
+  nativeBuildInputs = [
     pkgconfig
     gnumake
     ncurses
@@ -63,6 +51,22 @@ stdenv.mkDerivation {
     libnotify
     mpv
   ];
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp tomato tomatonoise $out/bin/
+
+    # Runtime dependencies
+    ln -s ${libnotify}/bin/notify-send $out/bin/
+    ln -s ${mpv}/bin/mpv $out/bin/
+
+    mkdir -p $out/share/applications/
+    mkdir -p $out/share/tomato/
+
+    cp $src/tomato.desktop $out/share/applications/
+    cp -r $src/sounds/ $out/share/tomato/
+    cp -r $src/icons/ $out/share/tomato/
+  '';
 
   meta = with lib; {
     description = "A pomodoro timer written in pure C.";
