@@ -23,6 +23,14 @@ static const int WSL = 0;
  * nerdicons for that option */
 static const char * ICONS = "nerdicons";
 
+/* 1 means you'll be asked to continue 
+ * after each work cycle, 0 means not */
+static const int AUTOSTARTWORK = 1;
+
+/* 1 means you'll be asked to continue 
+ * after each pause, 0 means not */
+static const int AUTOSTARTPAUSE = 1;
+
 /* 1 means notifications on, 0 off
  * Note: you'll need libnotify if you're at linux*/
 static const int NOTIFY = 1;
