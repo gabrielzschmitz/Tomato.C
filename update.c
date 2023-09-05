@@ -61,7 +61,7 @@ void updateMainMenu(appData * app){
 /* Mode 1 (Work Time) */
 void updateWorkTime(appData * app){
     if(app->currentMode == 1){
-        if(app->runOnce == 1){
+        if(app->runOnce == 1 && app->pausedTimer == 0){
             notify("worktime");
             app->runOnce = 0;
         }
@@ -69,7 +69,11 @@ void updateWorkTime(appData * app){
         timer(app);
         frameTimer(app);
         if(app->timer <= 0){
-            if(app->pomodoroCounter == app->pomodoros){
+            if(app->autostartWork == 0 && app->pausedTimer == 0){
+                app->pausedTimer = 1;
+                notify("autostartwork");
+            }
+            else if(app->pomodoroCounter == app->pomodoros){
                 app->timer = app->longPause;
                 app->frameTimer = 0;
                 app->currentMode = 3;
@@ -95,7 +99,7 @@ void updateWorkTime(appData * app){
 /* Mode 2 (Short Pause) */
 void updateShortPause(appData * app){
     if(app->currentMode == 2){
-        if(app->runOnce == 1){
+        if(app->runOnce == 1 && app->pausedTimer == 0){
             notify("shortpause");
             app->runOnce = 0;
         }
@@ -103,11 +107,17 @@ void updateShortPause(appData * app){
         timer(app);
         frameTimer(app);
         if(app->timer <= 0){
-            app->timer = app->workTime;
-            app->frameTimer = 0;
-            app->currentMode = 1;
-            app->pomodoroCounter = app->pomodoroCounter + 1;
-            app->runOnce = 1;
+            if(app->autostartPause == 0 && app->pausedTimer == 0){
+                app->pausedTimer = 1;
+                notify("autostartpause");
+            }
+            else{
+                app->timer = app->workTime;
+                app->frameTimer = 0;
+                app->currentMode = 1;
+                app->pomodoroCounter = app->pomodoroCounter + 1;
+                app->runOnce = 1;
+            }
         }
 
         /* Machine Animation */
@@ -123,14 +133,14 @@ void updateShortPause(appData * app){
 /* Mode 3 (Long Pause) */
 void updateLongPause(appData * app){
     if(app->currentMode == 3){
-        if(app->runOnce == 1){
+        if(app->runOnce == 1 && app->pausedTimer == 0){
             notify("longpause");
             app->runOnce = 0;
         }
 
         timer(app);
         frameTimer(app);
-        if(app->timer <= 0){
+        if(app->timer <= 0 && app->pausedTimer == 0){
             app->currentMode = 0;
             app->cycles++;
             app->needToLog = 1;
