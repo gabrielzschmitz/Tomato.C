@@ -479,7 +479,7 @@ void settingsInput(appData * app, char key){
                 app->pomodoros ++;
         }
         else if(app->menuPos == 2){
-            if(app->workTime != (50 * 60 * 8))
+            if(app->workTime != (75 * 60 * 8))
                 app->workTime = app->workTime + (5 * 60 * 8);
         }
         else if(app->menuPos == 3){
