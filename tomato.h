@@ -70,6 +70,8 @@ struct appData{
     int pausedTimer;
     int cycles;
     int needToLog;
+    int autostartWork; 
+    int autostartPause; 
     int unfinishedPomodoroCounter;
     int unfinishedPomodoros;
     int unfinishedTimer;

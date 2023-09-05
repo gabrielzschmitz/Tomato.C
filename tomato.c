@@ -66,6 +66,8 @@ void initApp(appData * app){
     app->pomodoroCounter = 0;
     app->cycles = 0;
     app->newDay = 1;
+    app->autostartWork = AUTOSTARTWORK;
+    app->autostartPause = AUTOSTARTPAUSE;
 
     /* Misc variables */
     app->currentPID = getpid();
