@@ -26,7 +26,27 @@
 /* Send a notification with sound */
 void notify(const char *message)
 {
-    if (strcmp(message, "worktime") == 0) /* Work notification */
+    if (strcmp(message, "autostartwork") == 0) /* Autostart work notification */{
+        if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
+            send_notification("󱣲 A pomodoro has ended!", "Unpause to start the pause");
+        else if (strcmp(ICONS, "iconson") == 0 && WSL == 0)
+            send_notification("🔄 A pomodoro has ended!", "Unpause to start the pause");
+        else
+            send_notification("A pomodoro has ended!", "Unpause to start the pause");
+
+        play_audio("/usr/local/share/tomato/sounds/dfltnotify.mp3");
+    }
+    if (strcmp(message, "autostartpause") == 0) /* Autostart pause notification */{
+        if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
+            send_notification("󱣲 A pause has ended!", "Unpause to continue");
+        else if (strcmp(ICONS, "iconson") == 0 && WSL == 0)
+            send_notification("🔄 A pause has ended!", "Unpause to continue");
+        else
+            send_notification("A pause has ended!", "Unpause to continue");
+
+        play_audio("/usr/local/share/tomato/sounds/pausenotify.mp3");
+    }
+    else if (strcmp(message, "worktime") == 0) /* Work notification */
     {
         if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
             send_notification("󱎫 Work!", "You need to focus");
@@ -59,7 +79,7 @@ void notify(const char *message)
 
         play_audio("/usr/local/share/tomato/sounds/pausenotify.mp3");
     }
-    else /* End of cycle notification */
+    else if (strcmp(message, "end") == 0)/* End of cycle notification */
     {
 
         if (strcmp(ICONS, "nerdicons") == 0 && WSL == 0)
@@ -70,6 +90,9 @@ void notify(const char *message)
             send_notification("End of Pomodoro Cycle", "Feel free to start another!");
 
         play_audio("/usr/local/share/tomato/sounds/endnotify.mp3");
+    }
+    else{
+        return;
     }
 }
 
