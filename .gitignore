@@ -1,6 +1,7 @@
 *.gif
 *.md
 *.o
+.vscode/
 media/
 LICENSE
 sprites
