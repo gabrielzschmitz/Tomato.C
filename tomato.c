@@ -72,6 +72,7 @@ void initApp(appData * app){
     /* Misc variables */
     app->currentPID = getpid();
     app->menuPos = 1;
+    app->lastMode = 0;
     app->currentMode = 0;
     app->timer = 0;
     app->timerms = 0;
@@ -79,6 +80,16 @@ void initApp(appData * app){
     app->needResume = 0;
     app->resume = 0;
     app->runOnce = 1;
+
+    /* Notepad variables */
+    createNotepad(&app->notes);
+    app->emptyNotepad = 1;
+    app->inputLength = 0;
+    app->notesAmount = 0;
+    app->inputMode = 'n';
+    app->addingNote = 0;
+    app->addingTask = 0;
+    app->currentNote = 0;
 
     /* File variables (defined in the config.mk) */
     if(WORKLOG == 1){
@@ -112,17 +123,27 @@ void drawScreen(appData * app){
     erase();
     
     switch(app->currentMode){
+        case -2:
+            printNotepad(app);
+            printNotepadIndicator(app);
+            printNoiseMenu(app);
+            break;
+
         case -1:
             printWrench(app, 1);
             printSettings(app);
             printWrench(app, 0);
             printNoiseMenu(app);
+            if(NOTEPAD == 1)
+                printNotepadIndicator(app);
             break;
 
         case 0:
             printResume(app);
             printMainMenu(app);
             printNoiseMenu(app);
+            if(NOTEPAD == 1)
+                printNotepadIndicator(app);
             break;
 
         case 1:
@@ -131,6 +152,8 @@ void drawScreen(appData * app){
             printCoffee(app);
             printTimer(app);
             printNoiseMenu(app);
+            if(NOTEPAD == 1)
+                printNotepadIndicator(app);
             break;
 
         case 2:
@@ -139,6 +162,8 @@ void drawScreen(appData * app){
             printMachine(app);
             printTimer(app);
             printNoiseMenu(app);
+            if(NOTEPAD == 1)
+                printNotepadIndicator(app);
             break;
 
         case 3:
@@ -147,6 +172,8 @@ void drawScreen(appData * app){
             printBeach(app);
             printTimer(app);
             printNoiseMenu(app);
+            if(NOTEPAD == 1)
+                printNotepadIndicator(app);
             break;
         default:
             break;

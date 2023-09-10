@@ -13,9 +13,35 @@
 #include <ncurses.h>
 #include <mpv/client.h>
 
+/* Defining some limits */
+#define MAXLINES 20
+#define MAXINPUTLENGTH 32
+
+// Defining the notes struct
+typedef struct note note;
+struct note{
+    char *note;
+    char type;
+    int linesAmount;
+};
+
+// Defining the Notepad
+typedef struct notepad notepad;
+struct notepad{
+    note *lines[MAXLINES];
+};
+
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
+    notepad notes;
+    int currentNote;
+    int emptyNotepad;
+    int notesAmount;
+    int inputLength;
+    char inputMode;
+    int addingNote;
+    int addingTask;
     int currentPID;
     int rainNoisePID;
     int fireNoisePID;
@@ -54,6 +80,7 @@ struct appData{
     int longPause;
     int menuPos;
     int pomodoroCounter;
+    int lastMode;
     int currentMode;
     int needMainMenu;
     int frameTimer;
