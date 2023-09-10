@@ -18,11 +18,16 @@
 # define CTRLC 3
 # define CTRLP 16
 # define CTRLX 24
-/* Defining noise ASCII Keys */
+# define CTRLD 4
 # define CTRLR 18
 # define CTRLF 6
 # define CTRLW 23
 # define CTRLT 20
+
+/* Input note */
+extern void inputNote(appData * );
+/* Input task */
+extern void inputTask(appData * );
 
 /* Handle user input and app state */
 extern void handleInputs(appData * );
