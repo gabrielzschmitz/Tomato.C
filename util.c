@@ -26,6 +26,21 @@
 #include <sys/stat.h>
 #include <inttypes.h>
 
+/* Function to create a new note */
+note *createNote(char type){
+    note *newNote = (note *)malloc(sizeof(note));
+    newNote->note = NULL;
+    newNote->type = type;
+    newNote->linesAmount = 1;
+    return newNote;
+}
+
+/* Function to create a new notepad */
+notepad *createNotepad(notepad *notes){
+    notes = (notepad *)malloc(sizeof(notepad));
+    return notes;
+}
+
 /* Initialize screen with colors, enabled keyboard and another little configs */
 void initScreen(void){
 #ifdef XCURSES
@@ -214,6 +229,7 @@ void setLogVars(appData * app){
               &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->workTime) * -1;
         app->frameTimer = 0;
+        app->lastMode = app->currentMode;
         app->currentMode = 1;
         notify("worktime");
     }
@@ -222,6 +238,7 @@ void setLogVars(appData * app){
                    &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->shortPause) * -1;
         app->frameTimer = 0;
+        app->lastMode = app->currentMode;
         app->currentMode = 2;
         notify("shortpause");
     }
@@ -230,6 +247,7 @@ void setLogVars(appData * app){
                    &app->workTime, &app->shortPause, &app->longPause) == 6){
         app->timer = (app->timer - app->longPause) * -1;
         app->frameTimer = 0;
+        app->lastMode = app->currentMode;
         app->currentMode = 3;
         notify("longpause");
     }

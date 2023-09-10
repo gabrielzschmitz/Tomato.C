@@ -15,6 +15,11 @@
 /* Defining the colors pallete size */
 #define PALLETE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 
+/* Function to create a new note */
+extern note * createNote(char );
+/* Function to create a new notepad */
+extern notepad * createNotepad(notepad * );
+
 /* Initialize screen with some little configs */
 extern void initScreen(void);
 /* Set text foreground and background colors */
@@ -35,7 +40,7 @@ extern void timer(appData * );
 
 extern char * initTimerPath(const char * );
 extern int printTimerLog(const char * );
-extern int tomatoTimer(const char *);
+extern int tomatoTimer(const char * );
 
 /* Noise funtions */
 extern void toggleNoise(appData * , int );
