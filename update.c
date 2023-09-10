@@ -76,12 +76,14 @@ void updateWorkTime(appData * app){
             else if(app->pomodoroCounter == app->pomodoros){
                 app->timer = app->longPause;
                 app->frameTimer = 0;
+                app->lastMode = app->currentMode;
                 app->currentMode = 3;
                 app->pomodoroCounter = app->pomodoros;
                 app->runOnce = 1;
             }else{
                 app->timer = app->shortPause;
                 app->frameTimer = 0;
+                app->lastMode = app->currentMode;
                 app->currentMode = 2;
                 app->runOnce = 1;
             }
@@ -114,6 +116,7 @@ void updateShortPause(appData * app){
             else{
                 app->timer = app->workTime;
                 app->frameTimer = 0;
+                app->lastMode = app->currentMode;
                 app->currentMode = 1;
                 app->pomodoroCounter = app->pomodoroCounter + 1;
                 app->runOnce = 1;
@@ -141,6 +144,7 @@ void updateLongPause(appData * app){
         timer(app);
         frameTimer(app);
         if(app->timer <= 0 && app->pausedTimer == 0){
+            app->lastMode = app->currentMode;
             app->currentMode = 0;
             app->cycles++;
             app->needToLog = 1;
