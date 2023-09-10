@@ -43,13 +43,16 @@ static const int SOUND = 1;
  * Note: you'll need mpv */
 static const int NOISE = 1;
 
+/* 1 means notepad enabled, 0 disabled */
+static const int NOTEPAD = 1;
+
 /* noises volume level stage from 10 to 100 (default: 50)
  * Note: you'll need mpv
  * (increment it by 10 by 10)*/
-static const int RAINVOLUME = 70;
-static const int FIREVOLUME = 70;
-static const int WINDVOLUME = 70;
-static const int THUNDERVOLUME = 70;
+static const int RAINVOLUME = 50;
+static const int FIREVOLUME = 50;
+static const int WINDVOLUME = 50;
+static const int THUNDERVOLUME = 50;
 
 /* 1 if you want transparent background, 0 if not
  * Note: you'll need a terminal already transparent */
@@ -58,7 +61,7 @@ static const int BGTRANSPARENCY = 1;
 /* amount of pomodoros from 1 to 8 (default: 4) */
 static const int POMODOROS = 4;
 
-/* time for a work stage from 5 to 50 (default: 25)
+/* time for a work stage from 5 to 75 (default: 25)
  * (increment it by 5 by 5)*/
 static const int WORKTIME = 25;
 
