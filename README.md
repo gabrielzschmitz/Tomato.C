@@ -85,7 +85,7 @@ Use the following <b>keys</b> to <b>control</b> the application:
 * <b><i>CTRL+(R F W T):</i></b> To decrease noise volume;
 * <b><i>SHIFT+(R F W T):</i></b> To increase noise volume.
 
-## ⚙️ Preferences
+## 🔧 Preferences
 
 You can configure the following settings at run time:
 
