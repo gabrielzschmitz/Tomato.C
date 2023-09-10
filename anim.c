@@ -643,3 +643,55 @@ void printBanner(appData * app){
     }
 }
 
+/* Print the Notepad */
+void printNotepad(appData * app){
+    setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    mvprintw((app->middley - 11), (app->middlex - 18)," _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ");
+    mvprintw((app->middley - 10), (app->middlex - 18),"(-(-(-(-(-(-(-(-(-(-(-(-(-(-(-(-(-(-(()");
+    mvprintw((app->middley - 9 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 8 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 7 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 6 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 5 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 4 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 3 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 2 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 1 ), (app->middlex - 18),"|");
+    mvprintw((app->middley - 0 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 1 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 2 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 3 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 4 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 5 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 6 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 7 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 8 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 9 ), (app->middlex - 18),"|");
+    mvprintw((app->middley + 10), (app->middlex - 18),"|");
+
+    printNotes(app);
+
+    setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    mvprintw((app->middley - 9 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 8 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 7 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 6 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 5 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 4 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 3 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 2 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 1 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley - 0 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 1 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 2 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 3 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 4 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 5 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 6 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 7 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 8 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 9 ), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 10), (app->middlex - 18 + 37),"||");
+    mvprintw((app->middley + 11), (app->middlex - 18),"|____________________________________|/");
+}
+
