@@ -69,16 +69,21 @@ setsid -f "$TERMINAL" -g 49x25 -c Tomato.C -e tomato
 
 Use the following <b>keys</b> to <b>control</b> the application:
 
-* <b><i>Mouse:</i></b> To select, toggle and increase or decrease.
-* <b><i>Mouse Scroll Wheel:</i></b> To increase or decrease noises volume.
+* <b><i>Mouse:</i></b> To select, toggle and increase or decrease;
+* <b><i>Mouse Scroll Wheel:</i></b> To increase or decrease noises volume;
 * <b><i>Arrows or VIM Keys:</i></b> To move and select;
 * <b><i>ENTER:</i></b> To select;
 * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
 * <b><i>P or CTRL+P:</i></b> To toggle pause;
-* <b><i>ESC or Q:</i></b> To quit.
+* <b><i>ESC or Q:</i></b> To quit;
+* <b><i>N:</i></b> To toggle notepad;
+* <b><i>A/a:</i></b> To add note/task;
+* <b><i>SPACE:</i></b> To toggle task;
+* <b><i>ESC:</i></b> To cancel adding a note/task;
+* <b><i>D or CTRL+D:</i></b> To delete note/task;
 * <b><i>(R F W T) or (1 2 3 4):</i></b> To toggle noise;
 * <b><i>CTRL+(R F W T):</i></b> To decrease noise volume;
-* <b><i>SHIFT+(R F W T):</i></b> To increase noise volume;
+* <b><i>SHIFT+(R F W T):</i></b> To increase noise volume.
 
 ## ⚙️ Preferences
 
@@ -100,6 +105,9 @@ You can change those configs:
 * <b><i>NOTIFY</i></b>: 0/1;
 * <b><i>SOUND</i></b>: 0/1;
 * <b><i>NOISE</i></b>: 0/1;
+* <b><i>NOTEPAD</i></b>: 0/1;
+* <b><i>AUTOSTARTWORK</i></b>: 0/1;
+* <b><i>AUTOSTARTPAUSE</i></b>: 0/1;
 * <b><i>RAINVOLUME</i></b>: 10-100;
 * <b><i>FIREVOLUME</i></b>: 10-100;
 * <b><i>WINDVOLUME</i></b>: 10-100;
@@ -214,7 +222,6 @@ $ sudo make install
 ## 📝 To-do
 
 * [X] Make a welcome screen
-
 * [X] Rewrite using ncurses
 * [X] Implement input controls
 * [X] Implement user options
@@ -225,7 +232,7 @@ $ sudo make install
 * [X] Implement save current state
 * [X] Current Time to file
 * [X] Add white noise functionality
-* [ ] Implement simple note taking (maybe using a nvim instance)
+* [X] Implement simple note taking
 
 ## 🤝 Contribute
 
@@ -240,3 +247,4 @@ Feel free to contribute to the project, the only requirement is to follow the **
 ## 📜 License
 
 This software is licensed under the [GPL-3](./LICENSE) license.
+
