@@ -12,8 +12,11 @@
 #define DRAW_H_
 #include <ncurses.h>
 
+/* Print notes */
+extern void printNotes(appData * );
+
 /* Print noise menu */
-void printNoiseMenu(appData * );
+extern void printNoiseMenu(appData * );
 
 /* Print resume menu */
 extern void printResume(appData * );
@@ -23,6 +26,9 @@ extern void printPomodoroCounter(appData * );
 
 /* Print the pause indicator */
 extern void printPauseIndicator(appData * );
+
+/* Print the Notepad Indicator */
+extern void printNotepadIndicator(appData * );
 
 /* Print the Main Menu */
 extern void printMainMenu(appData * );

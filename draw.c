@@ -24,11 +24,50 @@
 #include <locale.h>
 #include <inttypes.h>
 
+/* Print notes */
+void printNotes(appData * app){
+    if(app->emptyNotepad != 1)
+        for(int i = 0; i < app->notesAmount; i++){
+            if(i == app->currentNote)
+                setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            else
+                setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+
+            if(app->notes.lines[i]->type == '-')
+                mvprintw((app->middley - 9) + i, (app->middlex - 17+ 1), "%c  %s", app->notes.lines[i]->type, app->notes.lines[i]->note);
+            else{
+                if(app->notes.lines[i]->type == 'x')
+                    mvprintw((app->middley - 9) + i, (app->middlex - 17), "[X]");
+                else
+                    mvprintw((app->middley - 9) + i, (app->middlex - 17), "[ ]");
+                mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4), "%s", app->notes.lines[i]->note);
+            }
+        }
+    
+    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    if(app->addingNote == 1){
+        if(app->inputLength == 0)
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4), "▏");
+        mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 1), "%c", app->notes.lines[app->notesAmount]->type);
+        for(int i = 0; i < app->inputLength; i++){
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c▏", app->notes.lines[app->notesAmount]->note[i]);
+        }
+    }
+    else if(app->addingTask == 1){
+        if(app->inputLength == 0)
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4), "▏");
+        mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17), "[ ]");
+        for(int i = 0; i < app->inputLength; i++){
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c▏", app->notes.lines[app->notesAmount]->note[i]);
+        }
+    }
+}
+
 /* Print noise menu */
 void printNoiseMenu(appData * app){
     if(NOISE == 1){
         if(app->playNoise == 0 && app->needResume != 1){
-            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
             if(strcmp(ICONS, "nerdicons") == 0){
                 mvprintw( 1, 2, "󰖖 ");
                 mvprintw( 2, 2, "󰈸 ");
@@ -524,6 +563,23 @@ void printPauseIndicator(appData * app){
     }
 }
 
+/* Print the Notepad Indicator */
+void printNotepadIndicator(appData * app){
+    if(app->currentMode == -2)
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+    else
+        setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    if(strcmp(ICONS, "nerdicons") == 0){
+        mvprintw(1, (app->x - 2) ,"󱞂 ");
+    }
+    else if(strcmp(ICONS, "iconson") == 0){
+        mvprintw(1, (app->x - 2) ,"📝 ");
+    }
+    else{
+        mvprintw(1, (app->x - 2) ,"N ");;
+    }
+}
+
 /* Print the main menu */
 void printMainMenu(appData * app){
     if(app->needResume == 0){
@@ -598,6 +654,7 @@ void printSettings(appData * app){
         mvprintw((app->middley + 4), (app->middlex - 8), "back to main menu");
     }
 }
+
 /* Print the Timer */
 void printTimer(appData * app){
     FILE *time;
