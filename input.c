@@ -264,15 +264,35 @@ void handleInputs(appData * app){
             case CTRLC:
             case 'Q':
             case 'q':
-                printf("\033[?1003l\n");
-                killNoise();
-                if(WORKLOG == 1)
-                    writeToLog(app);
-                if(TIMERLOG == 1)
-                    endTimerLog(app);
-                endwin();
-                printf("Goodbye!\n");
-                exit(EXIT_SUCCESS);
+                if(app->currentMode == 0){
+                    printf("\033[?1003l\n");
+                    killNoise();
+                    if(WORKLOG == 1)
+                        writeToLog(app);
+                    if(TIMERLOG == 1)
+                        endTimerLog(app);
+                    endwin();
+                    printf("Goodbye!\n");
+                    exit(EXIT_SUCCESS);
+                }
+                else if(app->currentMode == -2){
+                    if(app->currentMode != -2 && NOTEPAD == 1){
+                        app->lastMode = app->currentMode;
+                        app->currentMode = -2;
+                    }
+                    else if(NOTEPAD == 1){
+                        app->currentMode = app->lastMode;
+                        app->lastMode = -2;
+                    }
+                }
+                else{
+                    app->runOnce = 1;
+                    app->pausedTimer = 0;
+                    app->currentMode = 0;
+                    app->frameTimer = 0;
+                    app->timer = 0;
+                    app->timerms = 0;
+                }
                 break;
 
             case KEY_RESIZE:
