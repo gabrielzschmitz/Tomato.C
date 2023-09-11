@@ -303,7 +303,7 @@ void handleInputs(appData * app){
 
 /* Input note */
 void inputNote(appData * app){
-    if(app->userInput == KEY_BACKSPACE && app->inputLength > 0){
+    if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE)&& app->inputLength > 0){
         app->notes.lines[app->notesAmount]->note[app->inputLength - 1] = '\0';
         app->inputLength -= 1;
     }
@@ -329,7 +329,7 @@ void inputNote(appData * app){
 
 /* Input task */
 void inputTask(appData * app){
-    if(app->userInput == KEY_BACKSPACE && app->inputLength > 0){
+    if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE) && app->inputLength > 0){
         app->notes.lines[app->notesAmount]->note[app->inputLength - 1] = '\0';
         app->inputLength -= 1;
     }
