@@ -223,11 +223,11 @@ void handleInputs(appData * app){
 
             case 'N':
             case 'n':
-                if(app->currentMode != -2 && NOTEPAD == 1){
+                if(app->currentMode != -2 && app->needResume != 1 && NOTEPAD == 1){
                     app->lastMode = app->currentMode;
                     app->currentMode = -2;
                 }
-                else if(NOTEPAD == 1){
+                else if(app->currentMode == 2 && NOTEPAD == 1){
                     app->currentMode = app->lastMode;
                     app->lastMode = -2;
                 }
@@ -362,6 +362,10 @@ void handleInputs(appData * app){
                     }
                 }
                 else{
+                    if(WORKLOG == 1)
+                        writeToLog(app);
+                    if(TIMERLOG == 1)
+                        endTimerLog(app);
                     app->menuPos = 1;
                     app->runOnce = 1;
                     app->pausedTimer = 0;
@@ -635,7 +639,7 @@ void mouseInput(appData * app, MEVENT event, char key){
             app->printVolume = 4;
 
         /* Toggle on or off notepad */
-        if((event.y == 1) && (event.x == app->x - 2 || event.x == app->x - 1) && NOTEPAD == 1){
+        if((event.y == 1) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
             if(event.bstate & BUTTON1_PRESSED){
                 if(app->currentMode != -2){
                     app->lastMode = app->currentMode;
