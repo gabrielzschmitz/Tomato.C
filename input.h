@@ -26,7 +26,7 @@
 #define CTRLT 20
 
 /* Input note */
-extern void inputNote(appData * );
+extern void inputNote(appData * , int );
 /* Input task */
 extern void inputTask(appData * );
 

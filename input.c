@@ -32,6 +32,8 @@ void handleInputs(appData * app){
     ESCDELAY = 25;
 
     MEVENT event;
+    if(app->userInput != -1 && app->userInput != app->lastInput)
+        app->lastInput = app->userInput;
     app->userInput = getch();
     char key;
     key = '0';
@@ -45,17 +47,17 @@ void handleInputs(appData * app){
 
             case '1':
             case 'r':
-                if(app->needResume != 1)
+                if(app->needResume != 1 && app->editingNote == 0)
                     toggleNoise(app, 1);
                 break;
             case 'R':
-                if(app->playRainNoise == 1){
+                if(app->playRainNoise == 1 && app->editingNote == 0){
                     app->printVolume = 1;
                     controlVolumeNoise(app, 1, '+');
                 }
                 break;
             case CTRLR:
-                if(app->playRainNoise == 1){
+                if(app->playRainNoise == 1 && app->editingNote == 0){
                     app->printVolume = 1;
                     controlVolumeNoise(app, 1, '-');
                 }
@@ -63,17 +65,17 @@ void handleInputs(appData * app){
 
             case '2':
             case 'f':
-                if(app->needResume != 1)
+                if(app->needResume != 1 && app->editingNote == 0)
                     toggleNoise(app, 2);
                 break;
             case 'F':
-                if(app->playFireNoise == 1){
+                if(app->playFireNoise == 1 && app->editingNote == 0){
                     app->printVolume = 2;
                     controlVolumeNoise(app, 2, '+');
                 }
                 break;
             case CTRLF:
-                if(app->playFireNoise == 1){
+                if(app->playFireNoise == 1 && app->editingNote == 0){
                     app->printVolume = 2;
                     controlVolumeNoise(app, 2, '-');
                 }
@@ -81,17 +83,17 @@ void handleInputs(appData * app){
 
             case '3':
             case 'w':
-                if(app->needResume != 1)
+                if(app->needResume != 1 && app->editingNote == 0)
                     toggleNoise(app, 3);
                 break;
             case 'W':
-                if(app->playWindNoise == 1){
+                if(app->playWindNoise == 1 && app->editingNote == 0){
                     app->printVolume = 3;
                     controlVolumeNoise(app, 3, '+');
                 }
                 break;
             case CTRLW:
-                if(app->playWindNoise == 1){
+                if(app->playWindNoise == 1 && app->editingNote == 0){
                     app->printVolume = 3;
                     controlVolumeNoise(app, 3, '-');
                 }
@@ -99,17 +101,17 @@ void handleInputs(appData * app){
             
             case '4':
             case 't':
-                if(app->needResume != 1)
+                if(app->needResume != 1 && app->editingNote == 0)
                     toggleNoise(app, 4);
                 break;
             case 'T':
-                if(app->playThunderNoise == 1){
+                if(app->playThunderNoise == 1 && app->editingNote == 0){
                     app->printVolume = 4;
                     controlVolumeNoise(app, 4, '+');
                 }
                 break;
             case CTRLT:
-                if(app->playThunderNoise == 1){
+                if(app->playThunderNoise == 1 && app->editingNote == 0){
                     app->printVolume = 4;
                     controlVolumeNoise(app, 4, '-');
                 }
@@ -120,6 +122,7 @@ void handleInputs(appData * app){
                 if(app->currentNote == 0 && app->notesAmount == 1){
                     app->notes.lines[app->currentNote]->note = NULL;
                     app->notesAmount -= 1;
+                    app->cursorx = 0;
                 }
                 else if(app->notesAmount - 1 > app->currentNote){
                     int i = app->currentNote;
@@ -129,15 +132,67 @@ void handleInputs(appData * app){
                         i++;
                     }
                     app->notes.lines[app->notesAmount - 1]->note = NULL;
-                    if(app->currentNote > 0)
+                    if(app->currentNote > 0){
                         app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
                     app->notesAmount -= 1;
                 }
                 else if(app->notesAmount - 1 == app->currentNote){
                     app->notes.lines[app->currentNote]->note = NULL;
-                    if(app->currentNote > 0)
+                    if(app->currentNote > 0){
                         app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
                     app->notesAmount -= 1;
+                }
+                break;
+                
+            case 'd':
+                if(app->currentNote == 0 && app->notesAmount == 1 && app->lastInput == 'd'){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    app->notesAmount -= 1;
+                    app->cursorx = 0;
+                }
+                else if(app->notesAmount - 1 > app->currentNote && app->lastInput == 'd'){
+                    int i = app->currentNote;
+                    while(i < app->notesAmount - 1){
+                        strcpy(app->notes.lines[i]->note, app->notes.lines[i + 1]->note);
+                        app->notes.lines[i]->type = app->notes.lines[i + 1]->type;
+                        i++;
+                    }
+                    app->notes.lines[app->notesAmount - 1]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->notesAmount -= 1;
+                }
+                else if(app->notesAmount - 1 == app->currentNote && app->lastInput == 'd'){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    app->notesAmount -= 1;
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                }
+                break;
+
+            case 'e':
+                if(app->currentMode == -2 && NOTEPAD == 1){
+                    app->editingNote = 1;
+                    app->inputLength = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->insertCursorx = app->cursorx;
+                    app->inputMode = 'i';
+                    app->emptyNotepad = 0;
                 }
                 break;
 
@@ -200,6 +255,13 @@ void handleInputs(appData * app){
             case 'k':
                 if(app->currentNote != 0 && app->currentMode == -2)
                     app->currentNote--;
+                if(app->notesAmount != 0 && app->cursory != 0 && app->currentMode == -2){
+                    app->cursory--;
+                    if(app->cursorx == (int) strlen(app->notes.lines[app->cursory + 1]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    else if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                }
                 if(app->menuPos != 1 && app->needResume == 0)
                     app->menuPos--;
                 break;
@@ -207,8 +269,15 @@ void handleInputs(appData * app){
             case KEY_DOWN:
             case 'J':
             case 'j':
-                if(app->currentNote != app->notesAmount - 1 && app->currentMode == -2)
+                if(app->currentNote != app->notesAmount - 1 && app->currentMode == -2 && app->notesAmount != 0)
                     app->currentNote++;
+                if(app->cursory != app->notesAmount - 1 && app->currentMode == -2 && app->notesAmount != 0){
+                    app->cursory++;
+                    if(app->cursorx == (int) strlen(app->notes.lines[app->cursory - 1]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    else if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                }
                 key = 'D';
                 if(app->currentMode == -1)
                     settingsInput(app, key);
@@ -220,6 +289,8 @@ void handleInputs(appData * app){
             case 'H':
             case 'h':
                 key = 'L';
+                if(app->cursorx != 0 && app->currentMode == -2 && app->notesAmount != 0)
+                    app->cursorx--;
                 if(app->currentMode == -1)
                     settingsInput(app, key);
                 else if(app->currentMode == 0 && app->needResume == 1)
@@ -230,6 +301,9 @@ void handleInputs(appData * app){
             case 'L':
             case 'l':
                 key = 'R';
+                if(app->notesAmount != 0)
+                    if(app->cursorx <= ((int) strlen(app->notes.lines[app->cursory]->note) - 1) && app->currentMode == -2)
+                        app->cursorx++;
                 if(app->currentMode == 0 && app->needResume == 0)
                     mainMenuInput(app, key);
                 else if(app->currentMode == 0 && app->needResume == 1)
@@ -309,11 +383,17 @@ void handleInputs(appData * app){
     }
     else if(app->inputMode == 'i'){
         if(app->addingNote == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
-            inputNote(app);
+            inputNote(app, app->notesAmount);
         }
-        if(app->addingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
-            inputTask(app);
+        else if(app->editingNote == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
+            inputNote(app, app->currentNote);
         }
+        //else if(app->addingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
+        //    inputTask(app, app->notesAmount);
+        //}
+        //else if(app->editingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
+        //    inputTask(app, app->cursory);
+        //}
     }
 
     /* Throws away any typeahead that has been typed by
@@ -322,25 +402,107 @@ void handleInputs(appData * app){
 }
 
 /* Input note */
-void inputNote(appData * app){
-    if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE)&& app->inputLength > 0){
-        app->notes.lines[app->notesAmount]->note[app->inputLength - 1] = '\0';
+void inputNote(appData * app, int note){
+    if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE) && app->inputLength > 0){
+        if(app->editingNote == 0)
+            app->notes.lines[note]->note[app->insertCursorx - 1] = '\0';
+        else{
+            for(int i = app->insertCursorx; i < app->inputLength; i++)
+                app->notes.lines[note]->note[i] = app->notes.lines[note]->note[i + 1];
+            app->notes.lines[note]->note[app->inputLength] = '\0';
+        }
         app->inputLength -= 1;
+        app->insertCursorx -= 1;
     }
     else{
-        if(app->userInput == ESC || (app->userInput == ENTER && app->inputLength < 1)){
+        if(app->userInput == ENTER && app->inputLength < 1){
             app->addingNote = 0;
             app->inputMode = 'n';
             app->inputLength = 0;
+            app->insertCursorx = 0;
+            if(app->editingNote == 1){
+                if(app->currentNote == 0 && app->notesAmount == 1){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    app->notesAmount -= 1;
+                    app->cursorx = 0;
+                }
+                else if(app->notesAmount - 1 > app->currentNote){
+                    int i = app->currentNote;
+                    while(i < app->notesAmount - 1){
+                        strcpy(app->notes.lines[i]->note, app->notes.lines[i + 1]->note);
+                        app->notes.lines[i]->type = app->notes.lines[i + 1]->type;
+                        i++;
+                    }
+                    app->notes.lines[app->notesAmount - 1]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->notesAmount -= 1;
+                }
+                else if(app->notesAmount - 1 == app->currentNote){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->notesAmount -= 1;
+                }
+                app->editingNote = 0;
+            }
+        }
+        else if(app->userInput == ENTER && app->inputLength > 1){
+            if(app->editingNote == 0)
+                app->notesAmount += 1;
+            app->inputLength = 0;
+            app->cursorx = app->insertCursorx;
+            if(app->cursorx > (int) strlen(app->notes.lines[app->currentNote]->note) && app->editingNote != 1)
+                app->cursorx = (int) strlen(app->notes.lines[app->currentNote]->note);
+            app->insertCursorx = 0;
+            app->addingNote = 0;
+            app->editingNote = 0;
+            app->inputMode = 'n';
+        }
+        else if(app->userInput == KEY_LEFT){
+            if(app->inputLength > 0 && app->insertCursorx > 0)
+                app->insertCursorx -= 1;
+        }
+        else if(app->userInput == KEY_RIGHT){
+            if(app->inputLength > app->insertCursorx)
+                app->insertCursorx += 1;
+        }
+        else if(app->userInput == KEY_UP)
+            return;
+        else if(app->userInput == KEY_DOWN)
+            return;
+        else if(app->userInput == ESC && app->inputLength > 1){
+            if(app->editingNote == 0)
+                app->notesAmount += 1;
+            app->inputLength = 0;
+            app->insertCursorx = 0;
+            app->addingNote = 0;
+            if(app->editingNote != 0)
+                app->editingNote = 0;
+            app->inputMode = 'n';
         }
         else{
-            app->notes.lines[app->notesAmount]->note[app->inputLength] = app->userInput;
-            app->notes.lines[app->notesAmount]->note[app->inputLength + 1] = '\0';
+            for(int i = app->inputLength; i > app->insertCursorx; i--)
+                app->notes.lines[note]->note[i] = app->notes.lines[note]->note[i - 1];
+            app->notes.lines[note]->note[app->insertCursorx] = app->userInput;
+            app->notes.lines[note]->note[app->inputLength + 1] = '\0';
             app->inputLength += 1;
+            app->insertCursorx += 1;
             if((app->inputLength > MAXINPUTLENGTH - 1 && app->inputLength > 1) || (app->userInput == ENTER && app->inputLength > 1)){
-                app->notesAmount += 1;
+                if(app->editingNote == 0)
+                    app->notesAmount += 1;
                 app->inputLength = 0;
+                app->insertCursorx = 0;
                 app->addingNote = 0;
+                app->editingNote = 0;
                 app->inputMode = 'n';
             }
         }
@@ -352,20 +514,45 @@ void inputTask(appData * app){
     if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE) && app->inputLength > 0){
         app->notes.lines[app->notesAmount]->note[app->inputLength - 1] = '\0';
         app->inputLength -= 1;
+        app->insertCursorx -= 1;
     }
     else{
-        if(app->userInput == ESC || (app->userInput == ENTER && app->inputLength < 1)){
+        if(app->userInput == ENTER && app->inputLength < 1){
             app->addingTask = 0;
             app->inputMode = 'n';
             app->inputLength = 0;
+            app->insertCursorx = 0;
+        }
+        else if(app->userInput == KEY_LEFT){
+            if(app->inputLength > 0 && app->insertCursorx > 0)
+                app->insertCursorx -= 1;
+        }
+        else if(app->userInput == KEY_RIGHT){
+            if(app->inputLength > app->insertCursorx)
+                app->insertCursorx += 1;
+        }
+        else if(app->userInput == KEY_UP)
+            return;
+        else if(app->userInput == KEY_DOWN)
+            return;
+        else if(app->userInput == ESC && app->inputLength > 1){
+            app->notesAmount += 1;
+            app->inputLength = 0;
+            app->insertCursorx = 0;
+            app->addingTask = 0;
+            app->inputMode = 'n';
         }
         else{
-            app->notes.lines[app->notesAmount]->note[app->inputLength] = app->userInput;
+            for(int i = app->inputLength; i > app->insertCursorx; i--)
+                app->notes.lines[app->notesAmount]->note[i] = app->notes.lines[app->notesAmount]->note[i - 1];
+            app->notes.lines[app->notesAmount]->note[app->insertCursorx] = app->userInput;
             app->notes.lines[app->notesAmount]->note[app->inputLength + 1] = '\0';
             app->inputLength += 1;
+            app->insertCursorx += 1;
             if((app->inputLength > MAXINPUTLENGTH - 1 && app->inputLength > 1) || (app->userInput == ENTER && app->inputLength > 1)){
                 app->notesAmount += 1;
                 app->inputLength = 0;
+                app->insertCursorx = 0;
                 app->addingTask = 0;
                 app->inputMode = 'n';
             }
