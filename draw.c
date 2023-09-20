@@ -24,33 +24,76 @@
 #include <locale.h>
 #include <inttypes.h>
 
+/* Print cursor */
+void printCursor(appData * app){
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+    if(app->editingNote == 1 || app->editingTask == 1 || app->addingNote == 1 || app->addingTask == 1)
+        mvprintw((app->middley - 9) + app->cursory, (app->middlex - 17 + 4) + app->cursorx, "▏");
+    else
+        mvprintw((app->middley - 9) + app->cursory, (app->middlex - 17 + 4) + app->cursorx, "█");
+}
+
 /* Print notes */
 void printNotes(appData * app){
-    if(app->emptyNotepad != 1)
+    if(app->emptyNotepad != 1){
         for(int i = 0; i < app->notesAmount; i++){
             if(i == app->currentNote)
                 setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
             else
                 setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
 
-            if(app->notes.lines[i]->type == '-')
-                mvprintw((app->middley - 9) + i, (app->middlex - 17+ 1), "%c  %s", app->notes.lines[i]->type, app->notes.lines[i]->note);
+            if(app->notes.lines[i]->type == '-'){
+                mvprintw((app->middley - 9) + i, (app->middlex - 17+ 1), "%c", app->notes.lines[i]->type);
+                for(int j = 0; j < (int) strlen(app->notes.lines[i]->note); j++){
+                    if(j < app->cursorx || i != app->currentNote)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else if(app->addingNote == 1 || app->addingTask == 1)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j + 1, "%c", app->notes.lines[i]->note[j]);
+                }
+            }
             else{
                 if(app->notes.lines[i]->type == 'x')
                     mvprintw((app->middley - 9) + i, (app->middlex - 17), "[X]");
                 else
                     mvprintw((app->middley - 9) + i, (app->middlex - 17), "[ ]");
-                mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4), "%s", app->notes.lines[i]->note);
+                for(int j = 0; j < (int) strlen(app->notes.lines[i]->note); j++){
+                    if(j < app->cursorx || i != app->currentNote)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else if(app->addingNote == 1 || app->addingTask == 1)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j + 1, "%c", app->notes.lines[i]->note[j]);
+                }
             }
         }
-    
+    }
+
     setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
     if(app->addingNote == 1){
         if(app->inputLength == 0)
             mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4), "▏");
         mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 1), "%c", app->notes.lines[app->notesAmount]->type);
         for(int i = 0; i < app->inputLength; i++){
-            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c▏", app->notes.lines[app->notesAmount]->note[i]);
+            if(i < app->insertCursorx)
+                mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c", app->notes.lines[app->notesAmount]->note[i]);
+            else
+                mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i + 1, "%c", app->notes.lines[app->notesAmount]->note[i]);
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + app->insertCursorx, "▏");
+        }
+    }
+    else if(app->editingNote == 1){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        if(app->inputLength == 0)
+            mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4), "▏");
+        mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 1), "%c", app->notes.lines[app->currentNote]->type);
+        for(int i = 0; i < app->inputLength; i++){
+            if(i < app->insertCursorx)
+                mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + i, "%c", app->notes.lines[app->currentNote]->note[i]);
+            else
+                mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + i + 1, "%c", app->notes.lines[app->currentNote]->note[i]);
+            mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + app->insertCursorx, "▏");
         }
     }
     else if(app->addingTask == 1){
@@ -58,7 +101,11 @@ void printNotes(appData * app){
             mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4), "▏");
         mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17), "[ ]");
         for(int i = 0; i < app->inputLength; i++){
-            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c▏", app->notes.lines[app->notesAmount]->note[i]);
+            if(i < app->insertCursorx)
+                mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i, "%c", app->notes.lines[app->notesAmount]->note[i]);
+            else
+                mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + i + 1, "%c", app->notes.lines[app->notesAmount]->note[i]);
+            mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + app->insertCursorx, "▏");
         }
     }
 }

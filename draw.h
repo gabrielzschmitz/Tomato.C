@@ -12,6 +12,9 @@
 #define DRAW_H_
 #include <ncurses.h>
 
+/* Print cursor */
+extern void printCursor(appData * );
+
 /* Print notes */
 extern void printNotes(appData * );
 
