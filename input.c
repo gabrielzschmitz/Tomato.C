@@ -362,6 +362,7 @@ void handleInputs(appData * app){
                     }
                 }
                 else{
+                    app->menuPos = 1;
                     app->runOnce = 1;
                     app->pausedTimer = 0;
                     app->currentMode = 0;
