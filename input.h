@@ -28,7 +28,7 @@
 /* Input note */
 extern void inputNote(appData * , int );
 /* Input task */
-extern void inputTask(appData * );
+extern void inputTask(appData * , int );
 
 /* Handle user input and app state */
 extern void handleInputs(appData * );

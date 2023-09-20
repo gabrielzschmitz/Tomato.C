@@ -188,11 +188,13 @@ void handleInputs(appData * app){
 
             case 'e':
                 if(app->currentMode == -2 && NOTEPAD == 1){
-                    app->editingNote = 1;
+                    if(app->notes.lines[app->cursory]->type == '-')
+                        app->editingNote = 1;
+                    else
+                        app->editingTask = 1;
                     app->inputLength = (int) strlen(app->notes.lines[app->cursory]->note);
                     app->insertCursorx = app->cursorx;
                     app->inputMode = 'i';
-                    app->emptyNotepad = 0;
                 }
                 break;
 
@@ -388,12 +390,12 @@ void handleInputs(appData * app){
         else if(app->editingNote == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
             inputNote(app, app->currentNote);
         }
-        //else if(app->addingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
-        //    inputTask(app, app->notesAmount);
-        //}
-        //else if(app->editingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
-        //    inputTask(app, app->cursory);
-        //}
+        else if(app->addingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
+            inputTask(app, app->notesAmount);
+        }
+        else if(app->editingTask == 1 && app->userInput != -1 && app->userInput != KEY_RESIZE && app->userInput != KEY_MOUSE){
+            inputTask(app, app->currentNote);
+        }
     }
 
     /* Throws away any typeahead that has been typed by
@@ -510,9 +512,15 @@ void inputNote(appData * app, int note){
 }
 
 /* Input task */
-void inputTask(appData * app){
+void inputTask(appData * app, int note){
     if((app->userInput == BACKSPACE || app->userInput == KEY_BACKSPACE) && app->inputLength > 0){
-        app->notes.lines[app->notesAmount]->note[app->inputLength - 1] = '\0';
+        if(app->editingTask == 0)
+            app->notes.lines[note]->note[app->insertCursorx - 1] = '\0';
+        else{
+            for(int i = app->insertCursorx; i < app->inputLength; i++)
+                app->notes.lines[note]->note[i] = app->notes.lines[note]->note[i + 1];
+            app->notes.lines[note]->note[app->inputLength] = '\0';
+        }
         app->inputLength -= 1;
         app->insertCursorx -= 1;
     }
@@ -522,6 +530,52 @@ void inputTask(appData * app){
             app->inputMode = 'n';
             app->inputLength = 0;
             app->insertCursorx = 0;
+            if(app->editingTask == 1){
+                if(app->currentNote == 0 && app->notesAmount == 1){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    app->notesAmount -= 1;
+                    app->cursorx = 0;
+                }
+                else if(app->notesAmount - 1 > app->currentNote){
+                    int i = app->currentNote;
+                    while(i < app->notesAmount - 1){
+                        strcpy(app->notes.lines[i]->note, app->notes.lines[i + 1]->note);
+                        app->notes.lines[i]->type = app->notes.lines[i + 1]->type;
+                        i++;
+                    }
+                    app->notes.lines[app->notesAmount - 1]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->notesAmount -= 1;
+                }
+                else if(app->notesAmount - 1 == app->currentNote){
+                    app->notes.lines[app->currentNote]->note = NULL;
+                    if(app->currentNote > 0){
+                        app->currentNote -= 1;
+                        app->cursory -= 1;
+                    }
+                    if(app->cursorx > (int) strlen(app->notes.lines[app->cursory]->note))
+                        app->cursorx = (int) strlen(app->notes.lines[app->cursory]->note);
+                    app->notesAmount -= 1;
+                }
+                app->editingTask = 0;
+            }
+        }
+        else if(app->userInput == ENTER && app->inputLength > 1){
+            if(app->editingTask == 0)
+                app->notesAmount += 1;
+            app->inputLength = 0;
+            app->cursorx = app->insertCursorx;
+            if(app->cursorx > (int) strlen(app->notes.lines[app->currentNote]->note) && app->editingTask != 1)
+                app->cursorx = (int) strlen(app->notes.lines[app->currentNote]->note);
+            app->insertCursorx = 0;
+            app->addingTask = 0;
+            app->editingTask = 0;
+            app->inputMode = 'n';
         }
         else if(app->userInput == KEY_LEFT){
             if(app->inputLength > 0 && app->insertCursorx > 0)
@@ -536,24 +590,29 @@ void inputTask(appData * app){
         else if(app->userInput == KEY_DOWN)
             return;
         else if(app->userInput == ESC && app->inputLength > 1){
-            app->notesAmount += 1;
+            if(app->editingTask == 0)
+                app->notesAmount += 1;
             app->inputLength = 0;
             app->insertCursorx = 0;
             app->addingTask = 0;
+            if(app->editingTask != 0)
+                app->editingTask = 0;
             app->inputMode = 'n';
         }
         else{
             for(int i = app->inputLength; i > app->insertCursorx; i--)
-                app->notes.lines[app->notesAmount]->note[i] = app->notes.lines[app->notesAmount]->note[i - 1];
-            app->notes.lines[app->notesAmount]->note[app->insertCursorx] = app->userInput;
-            app->notes.lines[app->notesAmount]->note[app->inputLength + 1] = '\0';
+                app->notes.lines[note]->note[i] = app->notes.lines[note]->note[i - 1];
+            app->notes.lines[note]->note[app->insertCursorx] = app->userInput;
+            app->notes.lines[note]->note[app->inputLength + 1] = '\0';
             app->inputLength += 1;
             app->insertCursorx += 1;
-            if((app->inputLength > MAXINPUTLENGTH - 1 && app->inputLength > 1) || (app->userInput == ENTER && app->inputLength > 1)){
-                app->notesAmount += 1;
+            if((app->inputLength > MAXINPUTLENGTH - 1 && app->inputLength > 1)){
+                if(app->editingTask == 0)
+                    app->notesAmount += 1;
                 app->inputLength = 0;
                 app->insertCursorx = 0;
                 app->addingTask = 0;
+                app->editingTask = 0;
                 app->inputMode = 'n';
             }
         }
