@@ -150,7 +150,7 @@ void drawScreen(appData * app){
             printResume(app);
             printMainMenu(app);
             printNoiseMenu(app);
-            if(NOTEPAD == 1)
+            if(NOTEPAD == 1 && app->needResume != 1)
                 printNotepadIndicator(app);
             break;
 
