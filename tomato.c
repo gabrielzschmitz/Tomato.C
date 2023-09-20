@@ -87,9 +87,15 @@ void initApp(appData * app){
     app->inputLength = 0;
     app->notesAmount = 0;
     app->inputMode = 'n';
+    app->editingNote = 0;
+    app->editingTask = 0;
     app->addingNote = 0;
     app->addingTask = 0;
     app->currentNote = 0;
+    app->insertCursorx = 0;
+    app->insertCursory = 0;
+    app->cursorx = 0;
+    app->cursory = 0;
 
     /* File variables (defined in the config.mk) */
     if(WORKLOG == 1){
@@ -127,6 +133,8 @@ void drawScreen(appData * app){
             printNotepad(app);
             printNotepadIndicator(app);
             printNoiseMenu(app);
+            if(app->inputMode == 'n')
+                printCursor(app);
             break;
 
         case -1:

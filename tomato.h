@@ -34,12 +34,18 @@ struct notepad{
 /* Defining the app struct */
 typedef struct appData appData;
 struct appData{
+    int insertCursory;
+    int insertCursorx;
+    int cursory;
+    int cursorx;
     notepad notes;
     int currentNote;
     int emptyNotepad;
     int notesAmount;
     int inputLength;
     char inputMode;
+    int editingNote;
+    int editingTask;
     int addingNote;
     int addingTask;
     int currentPID;
@@ -94,6 +100,7 @@ struct appData{
     int beachFrame;
     int bannerFrame;
     int userInput;
+    int lastInput;
     int pausedTimer;
     int cycles;
     int needToLog;
