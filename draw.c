@@ -108,6 +108,18 @@ void printNotes(appData * app){
             mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4) + app->insertCursorx, "▏");
         }
     }
+    else if(app->editingTask == 1){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        if(app->inputLength == 0)
+            mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4), "▏");
+        for(int i = 0; i < app->inputLength; i++){
+            if(i < app->insertCursorx)
+                mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + i, "%c", app->notes.lines[app->currentNote]->note[i]);
+            else
+                mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + i + 1, "%c", app->notes.lines[app->currentNote]->note[i]);
+            mvprintw((app->middley - 9) + app->currentNote, (app->middlex - 17 + 4) + app->insertCursorx, "▏");
+        }
+    }
 }
 
 /* Print noise menu */
