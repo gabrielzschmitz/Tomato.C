@@ -102,11 +102,11 @@ void send_notification(char *title, char *description){
     const char *command[max_command_length];
 
 #ifdef __APPLE__
-    snprintf(command, max_command_length, "osascript -e \'display notification \"%s\" with title \"%s\"\'", title, description);
+    snprintf((char*) command, max_command_length, "osascript -e \'display notification \"%s\" with title \"%s\"\'", title, description);
 #else
-    snprintf(command, max_command_length, "notify-send -t 5000 -a Tomato.C \"%s\" \"%s\" ", title, description);
+    snprintf((char*) command, max_command_length, "notify-send -t 5000 -a Tomato.C \"%s\" \"%s\" ", title, description);
 #endif
-    (void)system(command);
+    (void)system((char*) command);
 }
 
 void play_audio(char *record_path){
@@ -115,7 +115,7 @@ void play_audio(char *record_path){
 
         char *command[max_audio_cmd_length];
 
-        snprintf(command, max_audio_cmd_length, "mpv --no-vid --no-input-terminal --volume=50 %s --really-quiet &", record_path);
-        (void)system(command);
+        snprintf((char*) command, max_audio_cmd_length, "mpv --no-vid --no-input-terminal --volume=50 %s --really-quiet &", record_path);
+        (void)system((char*) command);
     }
 }
