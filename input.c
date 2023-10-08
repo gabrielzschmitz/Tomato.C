@@ -47,17 +47,17 @@ void handleInputs(appData * app){
 
             case '1':
             case 'r':
-                if(app->needResume != 1 && app->editingNote == 0)
+                if(app->needResume != 1 && app->editingNote == 0 && NOISE == 1)
                     toggleNoise(app, 1);
                 break;
             case 'R':
-                if(app->playRainNoise == 1 && app->editingNote == 0){
+                if(app->playRainNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 1;
                     controlVolumeNoise(app, 1, '+');
                 }
                 break;
             case CTRLR:
-                if(app->playRainNoise == 1 && app->editingNote == 0){
+                if(app->playRainNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 1;
                     controlVolumeNoise(app, 1, '-');
                 }
@@ -65,17 +65,17 @@ void handleInputs(appData * app){
 
             case '2':
             case 'f':
-                if(app->needResume != 1 && app->editingNote == 0)
+                if(app->needResume != 1 && app->editingNote == 0 && NOISE == 1)
                     toggleNoise(app, 2);
                 break;
             case 'F':
-                if(app->playFireNoise == 1 && app->editingNote == 0){
+                if(app->playFireNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 2;
                     controlVolumeNoise(app, 2, '+');
                 }
                 break;
             case CTRLF:
-                if(app->playFireNoise == 1 && app->editingNote == 0){
+                if(app->playFireNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 2;
                     controlVolumeNoise(app, 2, '-');
                 }
@@ -83,17 +83,17 @@ void handleInputs(appData * app){
 
             case '3':
             case 'w':
-                if(app->needResume != 1 && app->editingNote == 0)
+                if(app->needResume != 1 && app->editingNote == 0 && NOISE == 1)
                     toggleNoise(app, 3);
                 break;
             case 'W':
-                if(app->playWindNoise == 1 && app->editingNote == 0){
+                if(app->playWindNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 3;
                     controlVolumeNoise(app, 3, '+');
                 }
                 break;
             case CTRLW:
-                if(app->playWindNoise == 1 && app->editingNote == 0){
+                if(app->playWindNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 3;
                     controlVolumeNoise(app, 3, '-');
                 }
@@ -101,17 +101,17 @@ void handleInputs(appData * app){
             
             case '4':
             case 't':
-                if(app->needResume != 1 && app->editingNote == 0)
+                if(app->needResume != 1 && app->editingNote == 0 && NOISE == 1)
                     toggleNoise(app, 4);
                 break;
             case 'T':
-                if(app->playThunderNoise == 1 && app->editingNote == 0){
+                if(app->playThunderNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 4;
                     controlVolumeNoise(app, 4, '+');
                 }
                 break;
             case CTRLT:
-                if(app->playThunderNoise == 1 && app->editingNote == 0){
+                if(app->playThunderNoise == 1 && app->editingNote == 0 && NOISE == 1){
                     app->printVolume = 4;
                     controlVolumeNoise(app, 4, '-');
                 }
@@ -227,7 +227,7 @@ void handleInputs(appData * app){
                     app->lastMode = app->currentMode;
                     app->currentMode = -2;
                 }
-                else if(app->currentMode == 2 && NOTEPAD == 1){
+                else if(app->currentMode == -2 && NOTEPAD == 1){
                     app->currentMode = app->lastMode;
                     app->lastMode = -2;
                 }
@@ -653,57 +653,59 @@ void mouseInput(appData * app, MEVENT event, char key){
         }
 
         /* Toggle on or off noises */
-        if((event.y == 1) && (event.x == 2 || event.x == 3)){
-            if(event.bstate & BUTTON1_PRESSED)
-                toggleNoise(app, 1);
-        }
-        else if((event.y == 2) && (event.x == 2 || event.x == 3)){
-            if(event.bstate & BUTTON1_PRESSED)
-                toggleNoise(app, 2);
-        }
-        else if((event.y == 3) && (event.x == 2 || event.x == 3)){
-            if(event.bstate & BUTTON1_PRESSED)
-                toggleNoise(app, 3);
-        }
-        else if((event.y == 4) && (event.x == 2 || event.x == 3)){
-            if(event.bstate & BUTTON1_PRESSED)
-                toggleNoise(app, 4);
-        }
+        if(NOISE == 1){
+            if((event.y == 1) && (event.x == 2 || event.x == 3)){
+                if(event.bstate & BUTTON1_PRESSED)
+                    toggleNoise(app, 1);
+            }
+            else if((event.y == 2) && (event.x == 2 || event.x == 3)){
+                if(event.bstate & BUTTON1_PRESSED)
+                    toggleNoise(app, 2);
+            }
+            else if((event.y == 3) && (event.x == 2 || event.x == 3)){
+                if(event.bstate & BUTTON1_PRESSED)
+                    toggleNoise(app, 3);
+            }
+            else if((event.y == 4) && (event.x == 2 || event.x == 3)){
+                if(event.bstate & BUTTON1_PRESSED)
+                    toggleNoise(app, 4);
+            }
 
-        /* Noise volume control */
-        if((app->printVolume == 1) && (event.y == 1) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 1, '-');
-        else if((app->printVolume == 1) && (event.y == 1) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 1, '+');
-        if((app->printVolume == 2) && (event.y == 2) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 2, '-');
-        else if((app->printVolume == 2) && (event.y == 2) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 2, '+');
-        if((app->printVolume == 3) && (event.y == 3) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 3, '-');
-        else if((app->printVolume == 3) && (event.y == 3) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 3, '+');
-        if((app->printVolume == 4) && (event.y == 4) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 4, '-');
-        else if((app->printVolume == 4) && (event.y == 4) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
-            controlVolumeNoise(app, 4, '+');
-        if((app->printVolume == 1) && (event.bstate & BUTTON5_PRESSED))
-            controlVolumeNoise(app, 1, '-');
-        else if((app->printVolume == 1) && (event.bstate & BUTTON4_PRESSED))
-            controlVolumeNoise(app, 1, '+');
-        if((app->printVolume == 2) && (event.bstate & BUTTON5_PRESSED))
-            controlVolumeNoise(app, 2, '-');
-        else if((app->printVolume == 2) && (event.bstate & BUTTON4_PRESSED))
-            controlVolumeNoise(app, 2, '+');
-        if((app->printVolume == 3) && (event.bstate & BUTTON5_PRESSED))
-            controlVolumeNoise(app, 3, '-');
-        else if((app->printVolume == 3) && (event.bstate & BUTTON4_PRESSED))
-            controlVolumeNoise(app, 3, '+');
-        if((app->printVolume == 4) && (event.bstate & BUTTON5_PRESSED))
-            controlVolumeNoise(app, 4, '-');
-        else if((app->printVolume == 4) && (event.bstate & BUTTON4_PRESSED))
-            controlVolumeNoise(app, 4, '+');
+            /* Noise volume control */
+            if((app->printVolume == 1) && (event.y == 1) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 1, '-');
+            else if((app->printVolume == 1) && (event.y == 1) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 1, '+');
+            if((app->printVolume == 2) && (event.y == 2) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 2, '-');
+            else if((app->printVolume == 2) && (event.y == 2) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 2, '+');
+            if((app->printVolume == 3) && (event.y == 3) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 3, '-');
+            else if((app->printVolume == 3) && (event.y == 3) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 3, '+');
+            if((app->printVolume == 4) && (event.y == 4) && (event.x == 5) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 4, '-');
+            else if((app->printVolume == 4) && (event.y == 4) && (event.x == 18) && (event.bstate & BUTTON1_PRESSED))
+                controlVolumeNoise(app, 4, '+');
+            if((app->printVolume == 1) && (event.bstate & BUTTON5_PRESSED))
+                controlVolumeNoise(app, 1, '-');
+            else if((app->printVolume == 1) && (event.bstate & BUTTON4_PRESSED))
+                controlVolumeNoise(app, 1, '+');
+            if((app->printVolume == 2) && (event.bstate & BUTTON5_PRESSED))
+                controlVolumeNoise(app, 2, '-');
+            else if((app->printVolume == 2) && (event.bstate & BUTTON4_PRESSED))
+                controlVolumeNoise(app, 2, '+');
+            if((app->printVolume == 3) && (event.bstate & BUTTON5_PRESSED))
+                controlVolumeNoise(app, 3, '-');
+            else if((app->printVolume == 3) && (event.bstate & BUTTON4_PRESSED))
+                controlVolumeNoise(app, 3, '+');
+            if((app->printVolume == 4) && (event.bstate & BUTTON5_PRESSED))
+                controlVolumeNoise(app, 4, '-');
+            else if((app->printVolume == 4) && (event.bstate & BUTTON4_PRESSED))
+                controlVolumeNoise(app, 4, '+');
 
+        }
     }
     if(app->currentMode == 0 && app->needResume == 0){
         if(event.y == (app->middley + 4) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
