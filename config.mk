@@ -8,8 +8,14 @@
 # config.mk
 
 PREFIX  = /usr/local
-APPPREFIX  = $(PREFIX)/share/applications
-LOGPREFIX= .local/share/tomato
+APPPREFIX = $(PREFIX)/share/applications
+LOGPREFIX = .local/share/tomato
+
+# To remove mpv as a dependencie
+# comment this line below,
+# and toggle off the sound and noise
+# at config.h
+MPVTOGGLE = 1
 
 DFLAGS = -D_POSIX_C_SOURCE -DTOMATONOISE=\"$(PREFIX)/bin/tomatonoise\" -DLOGPREFIX=\"$(LOGPREFIX)\" -DLOGFILE=\"$(LOGPREFIX)/tomato.log\" -DTMPFILE=\"$(LOGPREFIX)/tmp.log\" -DTIMERFILE=\"$(LOGPREFIX)/time.log\"
 CPPFLAGS = -I/usr/local/include
@@ -17,8 +23,16 @@ CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable 
 LDFLAGS = -L/usr/local/lib
 
 ifdef __APPLE__
-LDLIBS  = -lncurses -lmpv
+	ifdef MPVTOGGLE
+		LDLIBS  = -lncurses -lmpv
+	else
+		LDLIBS  = -lncurses
+	endif
 else
-LDLIBS  = `pkg-config --libs ncursesw mpv`
+	ifdef MPVTOGGLE
+		LDLIBS  = `pkg-config --libs ncursesw mpv`
+	else
+		LDLIBS  = `pkg-config --libs ncursesw`
+	endif
 endif
 
