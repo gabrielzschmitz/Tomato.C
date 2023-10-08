@@ -9,9 +9,15 @@
 
 include config.mk
 
-all: tomato tomatonoise
+ifdef MPVTOGGLE
+all: tomatonoise tomato
+else
+all: tomato
+endif
 
+ifdef MPVTOGGLE
 tomatonoise: tomatonoise.c
+endif
 
 tomato: tomato.o anim.o draw.o input.o notify.o update.o util.o
 
@@ -23,7 +29,9 @@ draw.o: draw.h
 
 input.o: input.h
 
+ifdef MPVTOGGLE
 notify.o: notify.h
+endif
 
 update.o: update.h
 
@@ -35,7 +43,9 @@ clean:
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f tomato ${DESTDIR}${PREFIX}/bin
+ifdef MPVTOGGLE
 	cp -f tomatonoise ${DESTDIR}${PREFIX}/bin
+endif
 	mkdir -p ${DESTDIR}${APPPREFIX}
 	cp -f tomato.desktop ${DESTDIR}${APPPREFIX}
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato
@@ -45,14 +55,19 @@ install: all
 	sed -i "s|Icon=.*|Icon=${DESTDIR}${PREFIX}/share/tomato/icons/tomato.svg|" tomato.desktop
 	sudo cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
+ifdef MPVTOGGLE
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomatonoise
+endif
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/tomato
+ifdef MPVTOGGLE
 	rm -f ${DESTDIR}${PREFIX}/bin/tomatonoise
+endif
 	rm -rf ${DESTDIR}${PREFIX}/share/tomato
 	rm -f ${DESTDIR}${APPPREFIX}/tomato.desktop
 
 nix-try:
 	nix build
 	./result/bin/tomato
+
