@@ -11,7 +11,9 @@
 #ifndef TOMATO_H_
 #define TOMATO_H_
 #include <ncurses.h>
+#ifdef MPV
 #include <mpv/client.h>
+#endif
 
 /* Defining some limits */
 #define MAXLINES 20
