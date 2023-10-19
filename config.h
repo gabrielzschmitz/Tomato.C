@@ -82,5 +82,10 @@ static const int WORKLOG = 1;
  * will not work */
 static const int TIMERLOG = 1;
 
+/* 1 means notepad log on, 0 off
+ * Note: if you turn it off notepad
+ * will not be saved when you exit */
+static const int NOTEPADLOG = 1;
+
 #endif
 
