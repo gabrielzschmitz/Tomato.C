@@ -357,6 +357,8 @@ void handleInputs(appData * app){
                         app->currentMode = -2;
                     }
                     else if(NOTEPAD == 1){
+                        if(NOTEPADLOG == 1)
+                            writeToNotepad(app);
                         app->currentMode = app->lastMode;
                         app->lastMode = -2;
                     }
