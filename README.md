@@ -1,9 +1,10 @@
-<h1 align="center">
-    <br>
+<p align="center">
     <img src="./media/tomato.gif" alt="tomatowelcome" width="175px">
     <img src="./media/coffee.gif" alt="tomatocoffee" width="175px">
     <img src="./media/machine.gif" alt="tomatomachine" width="175px">
     <img src="./media/beach.gif" alt="tomatobeach" width="175px">
+</p>
+<h1 align="center">
     <br>
     Tomato.C
     <br>
