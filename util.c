@@ -31,7 +31,6 @@ note *createNote(char type){
     note *newNote = (note *)malloc(sizeof(note));
     newNote->note = NULL;
     newNote->type = type;
-    newNote->linesAmount = 1;
     return newNote;
 }
 
@@ -108,7 +107,7 @@ void createLog(appData * app){
     app->logPrefix = logPrefix;
 
     /* Set log file fullpath */
-    char * logFile= NULL;
+    char * logFile = NULL;
     logFile = malloc(homeLen + sizeof(char) + strlen(app->logFile) + 1);
     strcpy(logFile, home);
     strcat(logFile, "/");
@@ -116,7 +115,7 @@ void createLog(appData * app){
     app->logFile = logFile;
 
     /* Set tmp file fullpath */
-    char * tmpFile= NULL;
+    char * tmpFile = NULL;
     tmpFile = malloc(homeLen + sizeof(char) + strlen(app->tmpFile) + 1);
     strcpy(tmpFile, home);
     strcat(tmpFile, "/");
@@ -124,18 +123,26 @@ void createLog(appData * app){
     app->tmpFile = tmpFile;
     
     /* Set timer file fullpath */
-    char * timerFile= NULL;
+    char * timerFile = NULL;
     timerFile = malloc(homeLen + sizeof(char) + strlen(app->timerFile) + 1);
     strcpy(timerFile, home);
     strcat(timerFile, "/");
     strcat(timerFile, app->timerFile);
     app->timerFile = timerFile;
     
+    /* Set notepad file fullpath */
+    char * notepadFile = NULL;
+    notepadFile = malloc(homeLen + sizeof(char) + strlen(app->notepadFile) + 1);
+    strcpy(notepadFile, home);
+    strcat(notepadFile, "/");
+    strcat(notepadFile, app->notepadFile);
+    app->notepadFile = notepadFile;
+    
     /* Create log folder */
     mkdir(app->logPrefix, 0766);
 
     /* Create log file if doesn't exist */
-    FILE *log;
+    FILE * log;
     log = fopen(app->logFile, "r");
     if(log)
         fclose(log);
@@ -280,6 +287,49 @@ void deleteLastLog(appData * app){
     fclose(log);
     fclose(tmp);
     rename(app->tmpFile, app->logFile);
+}
+
+/* Read notes in the notepad log file */
+void readNotepad(appData * app){
+    FILE *log;
+    log = fopen(app->notepadFile, "r");
+    
+    char line[1024];
+    while(fgets(line, sizeof(line), log)){
+        app->notes.lines[app->notesAmount] = createNote('-');
+        app->notes.lines[app->notesAmount]->note = (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
+        char *note = (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
+        if(sscanf(line, "[x] %s", note))
+            app->notes.lines[app->notesAmount]->type = 'x';
+        if(sscanf(line, "[ ] %s", note))
+            app->notes.lines[app->notesAmount]->type = 'o';
+        if(sscanf(line, " -  %s", note))
+            app->notes.lines[app->notesAmount]->type = '-';
+        strcpy(app->notes.lines[app->notesAmount]->note, note);
+        app->notesAmount += 1;
+        app->emptyNotepad = 0;
+    }
+    fclose(log);
+}
+
+/* Write current notes in the notepad log file */
+void writeToNotepad(appData * app){
+    FILE *log;
+    log = fopen(app->notepadFile, "w");
+    
+    int i = 0;
+    while(i < app->notesAmount){
+        if(app->notes.lines[i]->type == '-')
+            fprintf(log, " -  ");
+        else if(app->notes.lines[i]->type == 'o')
+            fprintf(log, "[ ] ");
+        else
+            fprintf(log, "[%c] ", app->notes.lines[i]->type);
+        fprintf(log, "%s\n", app->notes.lines[i]->note);
+        i++;
+    }
+
+    fclose(log);
 }
 
 /* Write current infos in the log file */

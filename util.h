@@ -30,9 +30,11 @@ extern void getWindowSize(appData * );
 /* Log funtions */
 extern void createLog(appData * );
 extern void readLog(appData * );
+extern void readNotepad(appData * );
 extern void setLogVars(appData * );
 extern void deleteLastLog(appData * );
 extern void writeToLog(appData * );
+extern void writeToNotepad(appData * );
 extern void endTimerLog(appData * );
 
 /* Time the pomodoros */
