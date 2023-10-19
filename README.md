@@ -119,6 +119,7 @@ You can change those configs:
 * <b><i>LONGPAUSE</i></b>: 5-60.
 * <b><i>WORKLOG</i></b>: 0/1;
 * <b><i>TIMERLOG</i></b>: 0/1;
+* <b><i>NOTELOG</i></b>: 0/1;
 
 ## ⏰ Time to system bar
 
