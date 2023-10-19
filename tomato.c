@@ -98,18 +98,26 @@ void initApp(appData * app){
     app->cursory = 0;
 
     /* File variables (defined in the config.mk) */
+    app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
+    strcpy(app->logPrefix, LOGPREFIX);
     if(WORKLOG == 1){
-        app->logPrefix = malloc(strlen(LOGPREFIX) + 1);
-        strcpy(app->logPrefix, LOGPREFIX);
         app->logFile = malloc(strlen(LOGFILE) + 1);
         strcpy(app->logFile, LOGFILE);
         app->tmpFile = malloc(strlen(TMPFILE) + 1);
         strcpy(app->tmpFile, TMPFILE);
+    }
+    if(TIMERLOG == 1){
         app->timerFile = malloc(strlen(TIMERFILE) + 1);
         strcpy(app->timerFile, TIMERFILE);
-        createLog(app);
-        readLog(app);
     }
+    if(NOTEPADLOG == 1){
+        app->notepadFile = malloc(strlen(NOTEPADFILE) + 1);
+        strcpy(app->notepadFile, NOTEPADFILE);
+    }
+    createLog(app);
+    readLog(app);
+    if(NOTEPADLOG == 1)
+        readNotepad(app);
 }
 
 /* Update variables */

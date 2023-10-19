@@ -24,7 +24,6 @@ typedef struct note note;
 struct note{
     char *note;
     char type;
-    int linesAmount;
 };
 
 // Defining the Notepad
@@ -78,6 +77,7 @@ struct appData{
     char * logFile;
     char * tmpFile;
     char * timerFile;
+    char * notepadFile;
     int pomodorosLevels;
     int workTimeLevels;
     int shortPauseLevels;
