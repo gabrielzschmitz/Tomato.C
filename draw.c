@@ -24,6 +24,123 @@
 #include <locale.h>
 #include <inttypes.h>
 
+/* Print keybinds */
+void printKeybinds(appData * app, int frame){
+    if(frame == 0){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex - 22),"edit note:              ");
+
+        setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex + 3),"e               ");
+    }
+    else if(frame == 1){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex - 22),"check task:             ");
+        mvprintw((app->middley - 9 ), (app->middlex - 21),"toggle notepad:         ");
+        mvprintw((app->middley - 8 ), (app->middlex - 21),"quit:                   ");
+        mvprintw((app->middley - 7 ), (app->middlex - 21),"add note/task:          ");
+        mvprintw((app->middley - 6 ), (app->middlex - 21),"edit note:              ");
+
+        setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex + 3),"space           ");
+        mvprintw((app->middley - 9 ), (app->middlex + 4),"n               ");
+        mvprintw((app->middley - 8 ), (app->middlex + 4),"q, esc          ");
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"a/A             ");
+        mvprintw((app->middley - 6 ), (app->middlex + 4),"e               ");
+    }
+    else if(frame == 2){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex - 22),"return to main menu:    ");
+        mvprintw((app->middley - 9 ), (app->middlex - 21),"toggle pause:           ");
+        mvprintw((app->middley - 8 ), (app->middlex - 21),"choose option:          ");
+        mvprintw((app->middley - 7 ), (app->middlex - 21),"toggle help page:       ");
+        mvprintw((app->middley - 6 ), (app->middlex - 21),"check task:             ");
+        mvprintw((app->middley - 5 ), (app->middlex - 21),"toggle notepad:         ");
+        mvprintw((app->middley - 4 ), (app->middlex - 21),"quit:                   ");
+        mvprintw((app->middley - 3 ), (app->middlex - 21),"add note/task:          ");
+        mvprintw((app->middley - 2 ), (app->middlex - 21),"edit note:              ");
+        
+        setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex + 3),"ctrl+x          ");
+        mvprintw((app->middley - 9 ), (app->middlex + 4),"p, ctrl+p       ");
+        mvprintw((app->middley - 8 ), (app->middlex + 4),"enter           ");
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley - 6 ), (app->middlex + 4),"space           ");
+        mvprintw((app->middley - 5 ), (app->middlex + 4),"n               ");
+        mvprintw((app->middley - 4 ), (app->middlex + 4),"q, esc          ");
+        mvprintw((app->middley - 3 ), (app->middlex + 4),"a/A             ");
+        mvprintw((app->middley - 2 ), (app->middlex + 4),"e               ");
+    }
+    else if(frame == 3){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex - 22),"decrease noise volume:  ");
+        mvprintw((app->middley - 9 ), (app->middlex - 21),"increase noise volume:  ");
+        mvprintw((app->middley - 8 ), (app->middlex - 21),"manage noise volume:    ");
+        mvprintw((app->middley - 7 ), (app->middlex - 21),"delete note/task:       ");
+        mvprintw((app->middley - 6 ), (app->middlex - 21),"return to main menu:    ");
+        mvprintw((app->middley - 5 ), (app->middlex - 21),"toggle pause:           ");
+        mvprintw((app->middley - 4 ), (app->middlex - 21),"choose option:          ");
+        mvprintw((app->middley - 3 ), (app->middlex - 21),"toggle help page:       ");
+        mvprintw((app->middley - 2 ), (app->middlex - 21),"check task:             ");
+        mvprintw((app->middley - 1 ), (app->middlex - 21),"toggle notepad:         ");
+        mvprintw((app->middley - 0 ), (app->middlex - 21),"quit:                   ");
+        mvprintw((app->middley + 1 ), (app->middlex - 21),"add note/task:          ");
+        mvprintw((app->middley + 2 ), (app->middlex - 21),"edit note:              ");
+        
+        setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 10), (app->middlex + 3),"ctrl+(r f w t)  ");
+        mvprintw((app->middley - 9 ), (app->middlex + 4),"shift+(r f w t) ");
+        mvprintw((app->middley - 8 ), (app->middlex + 4),"scroll          ");
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"d,.ctrl+d       ");
+        mvprintw((app->middley - 6 ), (app->middlex + 4),"ctrl+x          ");
+        mvprintw((app->middley - 5 ), (app->middlex + 4),"p, ctrl+p       ");
+        mvprintw((app->middley - 4 ), (app->middlex + 4),"enter           ");
+        mvprintw((app->middley - 3 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley - 2 ), (app->middlex + 4),"space           ");
+        mvprintw((app->middley - 1 ), (app->middlex + 4),"n               ");
+        mvprintw((app->middley - 0 ), (app->middlex + 4),"q, esc          ");
+        mvprintw((app->middley + 1 ), (app->middlex + 4),"a/A             ");
+        mvprintw((app->middley + 2 ), (app->middlex + 4),"e               ");
+    }
+    else{
+        setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 7 ), (app->middlex - 21),"cancel adding note/task:");
+        mvprintw((app->middley - 6 ), (app->middlex - 21),"toggle noise:           ");
+        mvprintw((app->middley - 5 ), (app->middlex - 21),"move and select:        ");
+        mvprintw((app->middley - 4 ), (app->middlex - 21),"decrease noise volume:  ");
+        mvprintw((app->middley - 3 ), (app->middlex - 21),"increase noise volume:  ");
+        mvprintw((app->middley - 2 ), (app->middlex - 21),"manage noise volume:    ");
+        mvprintw((app->middley - 1 ), (app->middlex - 21),"delete note/task:       ");
+        mvprintw((app->middley - 0 ), (app->middlex - 21),"return to main menu:    ");
+        mvprintw((app->middley + 1 ), (app->middlex - 21),"toggle pause:           ");
+        mvprintw((app->middley + 2 ), (app->middlex - 21),"choose option:          ");
+        mvprintw((app->middley + 3 ), (app->middlex - 21),"toggle help page:       ");
+        mvprintw((app->middley + 4 ), (app->middlex - 21),"check task:             ");
+        mvprintw((app->middley + 5 ), (app->middlex - 21),"toggle notepad:         ");
+        mvprintw((app->middley + 6 ), (app->middlex - 21),"quit:                   ");
+        mvprintw((app->middley + 7 ), (app->middlex - 21),"add note/task:          ");
+        mvprintw((app->middley + 8 ), (app->middlex - 21),"edit note:              ");
+        
+        setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"esc             ");
+        mvprintw((app->middley - 6 ), (app->middlex + 4),"r f w t, 1 2 3 4");
+        mvprintw((app->middley - 5 ), (app->middlex + 4),"arrows, vim keys");
+        mvprintw((app->middley - 4 ), (app->middlex + 4),"ctrl+(r f w t)  ");
+        mvprintw((app->middley - 3 ), (app->middlex + 4),"shift+(r f w t) ");
+        mvprintw((app->middley - 2 ), (app->middlex + 4),"scroll          ");
+        mvprintw((app->middley - 1 ), (app->middlex + 4),"d,.ctrl+d       ");
+        mvprintw((app->middley - 0 ), (app->middlex + 4),"ctrl+x          ");
+        mvprintw((app->middley + 1 ), (app->middlex + 4),"p, ctrl+p       ");
+        mvprintw((app->middley + 2 ), (app->middlex + 4),"enter           ");
+        mvprintw((app->middley + 3 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley + 4 ), (app->middlex + 4),"space           ");
+        mvprintw((app->middley + 5 ), (app->middlex + 4),"n               ");
+        mvprintw((app->middley + 6 ), (app->middlex + 4),"q, esc          ");
+        mvprintw((app->middley + 7 ), (app->middlex + 4),"a/A             ");
+        mvprintw((app->middley + 8 ), (app->middlex + 4),"e               ");
+    }
+}
+
 /* Print cursor */
 void printCursor(appData * app){
     setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
@@ -622,6 +739,23 @@ void printPauseIndicator(appData * app){
     }
 }
 
+/* Print the Help Indicator */
+void printHelpIndicator(appData * app){
+    if(app->currentMode == -3)
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+    else
+        setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    if(strcmp(ICONS, "nerdicons") == 0){
+        mvprintw(1, (app->x - 2) ," ");
+    }
+    else if(strcmp(ICONS, "iconson") == 0){
+        mvprintw(1, (app->x - 2) ,"❓ ");
+    }
+    else{
+        mvprintw(1, (app->x - 2) ,"? ");;
+    }
+}
+
 /* Print the Notepad Indicator */
 void printNotepadIndicator(appData * app){
     if(app->currentMode == -2)
@@ -629,13 +763,13 @@ void printNotepadIndicator(appData * app){
     else
         setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
     if(strcmp(ICONS, "nerdicons") == 0){
-        mvprintw(1, (app->x - 2) ,"󱞂 ");
+        mvprintw(2, (app->x - 2) ,"󱞂 ");
     }
     else if(strcmp(ICONS, "iconson") == 0){
-        mvprintw(1, (app->x - 2) ,"📝 ");
+        mvprintw(2, (app->x - 2) ,"📝 ");
     }
     else{
-        mvprintw(1, (app->x - 2) ,"N ");;
+        mvprintw(2, (app->x - 2) ,"N ");;
     }
 }
 
@@ -662,10 +796,18 @@ void printMainMenu(appData * app){
 
         if(app->menuPos == 3 && app->needResume == 0){
             setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-            mvprintw((app->middley + 6), (app->middlex - 5), "-> leave <-");
+            mvprintw((app->middley + 6), (app->middlex - 7), "-> help menu <-");
         }else{
             setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-            mvprintw((app->middley + 6), (app->middlex - 2), "leave");
+            mvprintw((app->middley + 6), (app->middlex - 4), "help menu");
+        }
+
+        if(app->menuPos == 4 && app->needResume == 0){
+            setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+            mvprintw((app->middley + 7), (app->middlex - 5), "-> leave <-");
+        }else{
+            setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            mvprintw((app->middley + 7), (app->middlex - 2), "leave");
         }
     }
 }

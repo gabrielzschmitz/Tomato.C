@@ -12,6 +12,9 @@
 #define DRAW_H_
 #include <ncurses.h>
 
+/* Print keybinds */
+extern void printKeybinds(appData * , int );
+
 /* Print cursor */
 extern void printCursor(appData * );
 
@@ -29,6 +32,9 @@ extern void printPomodoroCounter(appData * );
 
 /* Print the pause indicator */
 extern void printPauseIndicator(appData * );
+
+/* Print the Help Indicator */
+extern void printHelpIndicator(appData * );
 
 /* Print the Notepad Indicator */
 extern void printNotepadIndicator(appData * );
