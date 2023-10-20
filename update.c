@@ -23,6 +23,27 @@
 #include <time.h>
 #include <locale.h>
 
+/* Mode -3 (Help Page) */
+void updateHelpPage(appData * app){
+    if(app->currentMode == -3){
+        frameTimer(app);
+
+        if(app->runHelpOnce == 1){
+            /* Pergament Animation */
+            if(app->frameTimer == (0 * 1)) app->helpFrame = 0;
+            else if(app->frameTimer == (1 * 1)) app->helpFrame = 1;
+            else if(app->frameTimer == (2 * 1)) app->helpFrame = 2;
+            else if(app->frameTimer == (3 * 1)) app->helpFrame = 3;
+            else if(app->frameTimer == (4 * 1)){
+                app->helpFrame = 4;
+                app->frameTimer = 0;
+                app->runHelpOnce = 0;
+            }
+        }
+
+    }
+}
+
 /* Mode 0 (Main Menu) */
 void updateMainMenu(appData * app){
     if(app->currentMode == 0){
