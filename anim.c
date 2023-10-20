@@ -643,6 +643,149 @@ void printBanner(appData * app){
     }
 }
 
+void printPergament(appData * app){
+    if(app->helpFrame == 0){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 11), (app->middlex - 27),"  ________________________________________________");
+        mvprintw((app->middley - 10), (app->middlex - 27)," / \\                                              \\");
+        mvprintw((app->middley - 9 ), (app->middlex - 27),"|   |                                             |");
+        mvprintw((app->middley - 8 ), (app->middlex - 27)," \\__|                                             /");
+
+        printKeybinds(app, 0);
+
+        mvprintw((app->middley - 7 ), (app->middlex - 27),"    \\     _______________________________________|_____");
+        mvprintw((app->middley - 6 ), (app->middlex - 27),"     \\   /                                            /");
+        mvprintw((app->middley - 5 ), (app->middlex - 27),"      \\_/____________________________________________/");
+    }
+    else if(app->helpFrame == 1){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 11), (app->middlex - 27),"  ________________________________________________");
+        mvprintw((app->middley - 10), (app->middlex - 27)," / \\                                              \\");
+        mvprintw((app->middley - 9 ), (app->middlex - 27),"|   |                                             |");
+        mvprintw((app->middley - 8 ), (app->middlex - 27)," \\__|                                             /");
+        mvprintw((app->middley - 7 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 6 ), (app->middlex - 27),"    |");
+
+        printKeybinds(app, 1);
+
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 7 ), (app->middlex + 20),"  /");
+        mvprintw((app->middley - 6 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 5 ), (app->middlex - 27),"    \\     _______________________________________|_____");
+        mvprintw((app->middley - 4 ), (app->middlex - 27),"     \\   /                                            /");
+        mvprintw((app->middley - 3 ), (app->middlex - 27),"      \\_/____________________________________________/");
+    }
+    else if(app->helpFrame == 2){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 11), (app->middlex - 27),"  ________________________________________________");
+        mvprintw((app->middley - 10), (app->middlex - 27)," / \\                                              \\");
+        mvprintw((app->middley - 9 ), (app->middlex - 27),"|   |                                             |");
+        mvprintw((app->middley - 8 ), (app->middlex - 27)," \\__|                                             /");
+        mvprintw((app->middley - 7 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 6 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 5 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 4 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 3 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 2 ), (app->middlex - 27),"    |");
+
+        printKeybinds(app, 2);
+
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 7 ), (app->middlex + 20),"  /");
+        mvprintw((app->middley - 6 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 5 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 4 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 3 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 2 ), (app->middlex + 20),"|");
+        mvprintw((app->middley - 1 ), (app->middlex - 27),"    \\     ______________________________________|______");
+        mvprintw((app->middley - 0 ), (app->middlex - 27),"     \\   /                                            /");
+        mvprintw((app->middley + 1 ), (app->middlex - 27),"      \\_/____________________________________________/");
+        
+    }
+    else if(app->helpFrame == 3){
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 11), (app->middlex - 27),"  ________________________________________________");
+        mvprintw((app->middley - 10), (app->middlex - 27)," / \\                                              \\");
+        mvprintw((app->middley - 9 ), (app->middlex - 27),"|   |                                             |");
+        mvprintw((app->middley - 8 ), (app->middlex - 27)," \\__|                                             /");
+        mvprintw((app->middley - 7 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 6 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 5 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 4 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 3 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 2 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 1 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 0 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 1 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 2 ), (app->middlex - 27),"    |");
+
+        printKeybinds(app, 3);
+
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 7 ), (app->middlex + 20),"  /");
+        mvprintw((app->middley - 6 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 5 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 4 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 3 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 2 ), (app->middlex + 20),"|");
+        mvprintw((app->middley - 1 ), (app->middlex + 20),"|");
+        mvprintw((app->middley - 0 ), (app->middlex + 20),"|");
+        mvprintw((app->middley + 1 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 2 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 3 ), (app->middlex - 27),"    \\     _______________________________________|_____");
+        mvprintw((app->middley + 4 ), (app->middlex - 27),"     \\   /                                            /");
+        mvprintw((app->middley + 5 ), (app->middlex - 27),"      \\_/____________________________________________/");
+        
+    }else{
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 11), (app->middlex - 27),"  ________________________________________________");
+        mvprintw((app->middley - 10), (app->middlex - 27)," / \\                                              \\");
+        mvprintw((app->middley - 9 ), (app->middlex - 27),"|   |                  HELP PAGE                  |");
+        mvprintw((app->middley - 8 ), (app->middlex - 27)," \\__|                                             /");
+        mvprintw((app->middley - 7 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 6 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 5 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 4 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 3 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 2 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 1 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley - 0 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 1 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 2 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 3 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 4 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 5 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 6 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 7 ), (app->middlex - 27),"    |");
+        mvprintw((app->middley + 8 ), (app->middlex - 27),"    |");
+
+        printKeybinds(app, 4);
+
+        setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw((app->middley - 7 ), (app->middlex + 20),"  /");
+        mvprintw((app->middley - 6 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 5 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 4 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 3 ), (app->middlex + 20)," |");
+        mvprintw((app->middley - 2 ), (app->middlex + 20),"|");
+        mvprintw((app->middley - 1 ), (app->middlex + 20),"|");
+        mvprintw((app->middley - 0 ), (app->middlex + 20),"|");
+        mvprintw((app->middley + 1 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 2 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 3 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 4 ), (app->middlex + 20)," |");
+        mvprintw((app->middley + 5 ), (app->middlex + 20),"  |");
+        mvprintw((app->middley + 6 ), (app->middlex + 20),"  |");
+        mvprintw((app->middley + 7 ), (app->middlex + 20),"   |");
+        mvprintw((app->middley + 8 ), (app->middlex + 20),"   |");
+        mvprintw((app->middley + 9 ), (app->middlex - 27),"    \\     _________________________________________|___");
+        mvprintw((app->middley + 10), (app->middlex - 27),"     \\   /                                            /");
+        mvprintw((app->middley + 11), (app->middlex - 27),"      \\_/____________________________________________/");
+    }
+
+
+}
+
 /* Print the Notepad */
 void printNotepad(appData * app){
     setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);

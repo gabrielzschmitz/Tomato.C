@@ -22,6 +22,7 @@ extern void printMachine(appData * );
 extern void printBeach(appData * );
 extern void printWrench(appData * , int );
 extern void printBanner(appData * );
+extern void printPergament(appData * );
 extern void printNotepad(appData * );
 
 #endif
