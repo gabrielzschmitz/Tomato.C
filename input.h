@@ -16,6 +16,7 @@
 #define BACKSPACE 127
 #define ESC 27
 #define ENTER 10
+#define CTRLH 8
 #define CTRLC 3
 #define CTRLP 16
 #define CTRLX 24

@@ -221,6 +221,24 @@ void handleInputs(appData * app){
                 }
                 break;
 
+            case '?':
+            case CTRLH:
+                if(app->currentMode != -3 && app->needResume != 1){
+                    app->helpFrame = 0;
+                    app->runHelpOnce = 1;
+                    app->helpLastMode = app->currentMode;
+                    app->currentMode = -3;
+                    app->frameTimer = 0;
+                }
+                else if(app->currentMode == -3){
+                    app->currentMode = app->helpLastMode;
+                    app->helpLastMode = -3;
+                    app->helpFrame = 0;
+                    app->runHelpOnce = 1;
+                    app->frameTimer = 0;
+                }
+                break;
+
             case 'N':
             case 'n':
                 if(app->currentMode != -2 && app->needResume != 1 && NOTEPAD == 1){
@@ -351,12 +369,15 @@ void handleInputs(appData * app){
                     printf("Goodbye!\n");
                     exit(EXIT_SUCCESS);
                 }
+                else if(app->currentMode == -3){
+                    app->currentMode = app->helpLastMode;
+                    app->helpLastMode = -3;
+                    app->helpFrame = 0;
+                    app->runHelpOnce = 1;
+                    app->frameTimer = 0;
+                }
                 else if(app->currentMode == -2){
-                    if(app->currentMode != -2 && NOTEPAD == 1){
-                        app->lastMode = app->currentMode;
-                        app->currentMode = -2;
-                    }
-                    else if(NOTEPAD == 1){
+                    if(NOTEPAD == 1){
                         if(NOTEPADLOG == 1)
                             writeToNotepad(app);
                         app->currentMode = app->lastMode;
@@ -641,7 +662,7 @@ void mouseInput(appData * app, MEVENT event, char key){
             app->printVolume = 4;
 
         /* Toggle on or off notepad */
-        if((event.y == 1) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
+        if((event.y == 2) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
             if(event.bstate & BUTTON1_PRESSED){
                 if(app->currentMode != -2){
                     app->lastMode = app->currentMode;
@@ -650,6 +671,25 @@ void mouseInput(appData * app, MEVENT event, char key){
                 else{
                     app->currentMode = app->lastMode;
                     app->lastMode = -2;
+                }
+            }
+        }
+        /* Toggle on or off help page */
+        if((event.y == 1) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
+            if(event.bstate & BUTTON1_PRESSED){
+                if(app->currentMode != -3){
+                    app->helpFrame = 0;
+                    app->runHelpOnce = 1;
+                    app->helpLastMode = app->currentMode;
+                    app->currentMode = -3;
+                    app->frameTimer = 0;
+                }
+                else{
+                    app->currentMode = app->helpLastMode;
+                    app->helpLastMode = -3;
+                    app->helpFrame = 0;
+                    app->runHelpOnce = 1;
+                    app->frameTimer = 0;
                 }
             }
         }
@@ -724,8 +764,15 @@ void mouseInput(appData * app, MEVENT event, char key){
                 mainMenuInput(app, key);
             }
         }
-        else if(event.y == (app->middley + 6) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
+        else if(event.y == (app->middley + 6) && (app->middlex + 4) >= event.x  && event.x >= (app->middlex - 4)){
             app->menuPos = 3;
+            if(event.bstate & BUTTON1_PRESSED){
+                key = 'E';
+                mainMenuInput(app, key);
+            }
+        }
+        else if(event.y == (app->middley + 7) && (app->middlex + 2) >= event.x  && event.x >= (app->middlex - 2)){
+            app->menuPos = 4;
             if(event.bstate & BUTTON1_PRESSED){
                 key = 'E';
                 mainMenuInput(app, key);
@@ -827,6 +874,23 @@ void mainMenuInput(appData * app, char key){
             app->lastMode = app->currentMode;
             app->currentMode = -1;
             app->menuPos = 1;
+        }
+        else if(app->menuPos == 3){
+             if(app->currentMode != -3 && app->needResume != 1){
+                 app->helpFrame = 0;
+                 app->runHelpOnce = 1;
+                 app->helpLastMode = app->currentMode;
+                 app->currentMode = -3;
+                 app->frameTimer = 0;
+             }
+             else if(app->currentMode == -3){
+                 app->currentMode = app->helpLastMode;
+                 app->helpLastMode = -3;
+                 app->helpFrame = 0;
+                 app->runHelpOnce = 1;
+                 app->frameTimer = 0;
+             }
+
         }else{
             printf("\033[?1003l\n");
             killNoise();
@@ -838,7 +902,7 @@ void mainMenuInput(appData * app, char key){
         }
     }
     else if(key == 'D'){
-        if(app->menuPos != 3)
+        if(app->menuPos != 4)
             app->menuPos++;
     }
     else if(key == 'R'){
