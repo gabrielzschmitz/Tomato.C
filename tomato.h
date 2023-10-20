@@ -89,6 +89,8 @@ struct appData{
     int menuPos;
     int pomodoroCounter;
     int lastMode;
+    int helpLastMode;
+    int runHelpOnce;
     int currentMode;
     int needMainMenu;
     int frameTimer;
@@ -101,6 +103,7 @@ struct appData{
     int machineFrame;
     int beachFrame;
     int bannerFrame;
+    int helpFrame;
     int userInput;
     int lastInput;
     int pausedTimer;

@@ -34,6 +34,7 @@ void initApp(appData * app){
     app->logoFrame = 0;
     app->coffeeFrame= 0;
     app->bannerFrame= 0;
+    app->helpFrame= 0;
     app->frameTimer = 0;
     app->framems = 0;
 
@@ -72,6 +73,7 @@ void initApp(appData * app){
     /* Misc variables */
     app->currentPID = getpid();
     app->menuPos = 1;
+    app->helpLastMode = 0;
     app->lastMode = 0;
     app->currentMode = 0;
     app->timer = 0;
@@ -80,6 +82,7 @@ void initApp(appData * app){
     app->needResume = 0;
     app->resume = 0;
     app->runOnce = 1;
+    app->runHelpOnce = 1;
 
     /* Notepad variables */
     createNotepad(&app->notes);
@@ -123,6 +126,7 @@ void initApp(appData * app){
 /* Update variables */
 void doUpdate(appData * app){
     /* Update all the app modes */
+    updateHelpPage(app);
     updateMainMenu(app);
     updateWorkTime(app);
     updateShortPause(app);
@@ -137,9 +141,16 @@ void drawScreen(appData * app){
     erase();
     
     switch(app->currentMode){
+        case -3:
+            printPergament(app);
+            printNotepadIndicator(app);
+            printHelpIndicator(app);
+            printNoiseMenu(app);
+            break;
         case -2:
             printNotepad(app);
             printNotepadIndicator(app);
+            printHelpIndicator(app);
             printNoiseMenu(app);
             if(app->inputMode == 'n')
                 printCursor(app);
@@ -150,6 +161,7 @@ void drawScreen(appData * app){
             printSettings(app);
             printWrench(app, 0);
             printNoiseMenu(app);
+            printHelpIndicator(app);
             if(NOTEPAD == 1)
                 printNotepadIndicator(app);
             break;
@@ -158,8 +170,10 @@ void drawScreen(appData * app){
             printResume(app);
             printMainMenu(app);
             printNoiseMenu(app);
-            if(NOTEPAD == 1 && app->needResume != 1)
+            if(NOTEPAD == 1 && app->needResume != 1){
                 printNotepadIndicator(app);
+                printHelpIndicator(app);
+            }
             break;
 
         case 1:
@@ -168,6 +182,7 @@ void drawScreen(appData * app){
             printCoffee(app);
             printTimer(app);
             printNoiseMenu(app);
+            printHelpIndicator(app);
             if(NOTEPAD == 1)
                 printNotepadIndicator(app);
             break;
@@ -178,6 +193,7 @@ void drawScreen(appData * app){
             printMachine(app);
             printTimer(app);
             printNoiseMenu(app);
+            printHelpIndicator(app);
             if(NOTEPAD == 1)
                 printNotepadIndicator(app);
             break;
@@ -188,6 +204,7 @@ void drawScreen(appData * app){
             printBeach(app);
             printTimer(app);
             printNoiseMenu(app);
+            printHelpIndicator(app);
             if(NOTEPAD == 1)
                 printNotepadIndicator(app);
             break;
