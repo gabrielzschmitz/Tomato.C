@@ -222,7 +222,7 @@ void handleInputs(appData * app){
                 break;
 
             case '?':
-            case CTRLH:
+            case 'H':
                 if(app->currentMode != -3 && app->needResume != 1){
                     app->helpFrame = 0;
                     app->runHelpOnce = 1;
@@ -239,7 +239,6 @@ void handleInputs(appData * app){
                 }
                 break;
 
-            case 'N':
             case 'n':
                 if(app->currentMode != -2 && app->needResume != 1 && NOTEPAD == 1){
                     app->lastMode = app->currentMode;
@@ -271,7 +270,6 @@ void handleInputs(appData * app){
                 break;
 
             case KEY_UP:
-            case 'K':
             case 'k':
                 if(app->currentNote != 0 && app->currentMode == -2)
                     app->currentNote--;
@@ -287,7 +285,6 @@ void handleInputs(appData * app){
                 break;
 
             case KEY_DOWN:
-            case 'J':
             case 'j':
                 if(app->currentNote != app->notesAmount - 1 && app->currentMode == -2 && app->notesAmount != 0)
                     app->currentNote++;
@@ -306,7 +303,6 @@ void handleInputs(appData * app){
                 break;
 
             case KEY_LEFT:
-            case 'H':
             case 'h':
                 key = 'L';
                 if(app->cursorx != 0 && app->currentMode == -2 && app->notesAmount != 0)
@@ -318,7 +314,6 @@ void handleInputs(appData * app){
                 break;
 
             case KEY_RIGHT:
-            case 'L':
             case 'l':
                 key = 'R';
                 if(app->notesAmount != 0)
@@ -333,7 +328,6 @@ void handleInputs(appData * app){
                 break;
 
             case CTRLX:
-            case 'X':
             case 'x':
                 if(app->currentMode != 0){
                     app->frameTimer = 0;
@@ -343,11 +337,14 @@ void handleInputs(appData * app){
                     app->currentMode = 0;
                     app->menuPos = 1;
                     app->pomodoroCounter = 0;
+                    if(WORKLOG == 1)
+                        writeToLog(app);
+                    if(TIMERLOG == 1)
+                        endTimerLog(app);
                 }
                 break;
 
             case CTRLP:
-            case 'P':
             case 'p':
                 if(app->currentMode != 0 && app->currentMode != -1){
                     app->pausedTimer = app->pausedTimer ^ 1;
@@ -356,7 +353,6 @@ void handleInputs(appData * app){
 
             case ESC:
             case CTRLC:
-            case 'Q':
             case 'q':
                 if(app->currentMode == 0){
                     printf("\033[?1003l\n");
