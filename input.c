@@ -886,7 +886,6 @@ void mainMenuInput(appData * app, char key){
                  app->runHelpOnce = 1;
                  app->frameTimer = 0;
              }
-
         }else{
             printf("\033[?1003l\n");
             killNoise();
@@ -916,6 +915,22 @@ void mainMenuInput(appData * app, char key){
             app->lastMode = app->currentMode;
             app->currentMode = -1;
             app->menuPos = 1;
+        }
+        else if(app->menuPos == 3){
+             if(app->currentMode != -3 && app->needResume != 1){
+                 app->helpFrame = 0;
+                 app->runHelpOnce = 1;
+                 app->helpLastMode = app->currentMode;
+                 app->currentMode = -3;
+                 app->frameTimer = 0;
+             }
+             else if(app->currentMode == -3){
+                 app->currentMode = app->helpLastMode;
+                 app->helpLastMode = -3;
+                 app->helpFrame = 0;
+                 app->runHelpOnce = 1;
+                 app->frameTimer = 0;
+             }
         }else{
             printf("\033[?1003l\n");
             killNoise();
