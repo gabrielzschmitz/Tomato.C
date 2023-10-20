@@ -61,10 +61,10 @@ void printKeybinds(appData * app, int frame){
         mvprintw((app->middley - 2 ), (app->middlex - 21),"edit note:              ");
         
         setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
-        mvprintw((app->middley - 10), (app->middlex + 3),"ctrl+x          ");
+        mvprintw((app->middley - 10), (app->middlex + 3),"ctrl+x, esc, q  ");
         mvprintw((app->middley - 9 ), (app->middlex + 4),"p, ctrl+p       ");
         mvprintw((app->middley - 8 ), (app->middlex + 4),"enter           ");
-        mvprintw((app->middley - 7 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"?, H            ");
         mvprintw((app->middley - 6 ), (app->middlex + 4),"space           ");
         mvprintw((app->middley - 5 ), (app->middlex + 4),"n               ");
         mvprintw((app->middley - 4 ), (app->middlex + 4),"q, esc          ");
@@ -91,11 +91,11 @@ void printKeybinds(appData * app, int frame){
         mvprintw((app->middley - 10), (app->middlex + 3),"ctrl+(r f w t)  ");
         mvprintw((app->middley - 9 ), (app->middlex + 4),"shift+(r f w t) ");
         mvprintw((app->middley - 8 ), (app->middlex + 4),"scroll          ");
-        mvprintw((app->middley - 7 ), (app->middlex + 4),"d,.ctrl+d       ");
-        mvprintw((app->middley - 6 ), (app->middlex + 4),"ctrl+x          ");
+        mvprintw((app->middley - 7 ), (app->middlex + 4),"dd, D, ctrl+d   ");
+        mvprintw((app->middley - 6 ), (app->middlex + 4),"ctrl+x, esc, q  ");
         mvprintw((app->middley - 5 ), (app->middlex + 4),"p, ctrl+p       ");
         mvprintw((app->middley - 4 ), (app->middlex + 4),"enter           ");
-        mvprintw((app->middley - 3 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley - 3 ), (app->middlex + 4),"?, H            ");
         mvprintw((app->middley - 2 ), (app->middlex + 4),"space           ");
         mvprintw((app->middley - 1 ), (app->middlex + 4),"n               ");
         mvprintw((app->middley - 0 ), (app->middlex + 4),"q, esc          ");
@@ -128,11 +128,11 @@ void printKeybinds(appData * app, int frame){
         mvprintw((app->middley - 4 ), (app->middlex + 4),"ctrl+(r f w t)  ");
         mvprintw((app->middley - 3 ), (app->middlex + 4),"shift+(r f w t) ");
         mvprintw((app->middley - 2 ), (app->middlex + 4),"scroll          ");
-        mvprintw((app->middley - 1 ), (app->middlex + 4),"d,.ctrl+d       ");
-        mvprintw((app->middley - 0 ), (app->middlex + 4),"ctrl+x          ");
+        mvprintw((app->middley - 1 ), (app->middlex + 4),"dd, D, ctrl+d   ");
+        mvprintw((app->middley - 0 ), (app->middlex + 4),"ctrl+x, esc, q  ");
         mvprintw((app->middley + 1 ), (app->middlex + 4),"p, ctrl+p       ");
         mvprintw((app->middley + 2 ), (app->middlex + 4),"enter           ");
-        mvprintw((app->middley + 3 ), (app->middlex + 4),"?, ctrl+h       ");
+        mvprintw((app->middley + 3 ), (app->middlex + 4),"?, H            ");
         mvprintw((app->middley + 4 ), (app->middlex + 4),"space           ");
         mvprintw((app->middley + 5 ), (app->middlex + 4),"n               ");
         mvprintw((app->middley + 6 ), (app->middlex + 4),"q, esc          ");
