@@ -293,6 +293,11 @@ void deleteLastLog(appData * app){
 void readNotepad(appData * app){
     FILE *log;
     log = fopen(app->notepadFile, "r");
+    if(!log){
+        log = fopen(app->logFile, "w");
+        fclose(log);
+        return;
+    }
     
     char line[1024];
     while(fgets(line, sizeof(line), log)){
