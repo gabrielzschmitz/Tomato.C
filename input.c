@@ -226,7 +226,8 @@ void handleInputs(appData * app){
                 if(app->currentMode != -3 && app->needResume != 1){
                     app->helpFrame = 0;
                     app->runHelpOnce = 1;
-                    app->helpLastMode = app->currentMode;
+                    if(app->currentMode != -2)
+                        app->helpLastMode = app->currentMode;
                     app->currentMode = -3;
                     app->frameTimer = 0;
                 }
@@ -241,7 +242,8 @@ void handleInputs(appData * app){
 
             case 'n':
                 if(app->currentMode != -2 && app->needResume != 1 && NOTEPAD == 1){
-                    app->lastMode = app->currentMode;
+                    if(app->currentMode != -3)
+                        app->lastMode = app->currentMode;
                     app->currentMode = -2;
                 }
                 else if(app->currentMode == -2 && NOTEPAD == 1){
@@ -661,7 +663,8 @@ void mouseInput(appData * app, MEVENT event, char key){
         if((event.y == 2) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
             if(event.bstate & BUTTON1_PRESSED){
                 if(app->currentMode != -2){
-                    app->lastMode = app->currentMode;
+                    if(app->currentMode != -3)
+                        app->lastMode = app->currentMode;
                     app->currentMode = -2;
                 }
                 else{
@@ -676,11 +679,11 @@ void mouseInput(appData * app, MEVENT event, char key){
                 if(app->currentMode != -3){
                     app->helpFrame = 0;
                     app->runHelpOnce = 1;
-                    app->helpLastMode = app->currentMode;
+                    if(app->currentMode != -2)
+                        app->helpLastMode = app->currentMode;
                     app->currentMode = -3;
                     app->frameTimer = 0;
-                }
-                else{
+                }else{
                     app->currentMode = app->helpLastMode;
                     app->helpLastMode = -3;
                     app->helpFrame = 0;
