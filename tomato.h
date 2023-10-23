@@ -91,6 +91,7 @@ struct appData{
     int lastMode;
     int helpLastMode;
     int runHelpOnce;
+    int runNotepadOnce;
     int currentMode;
     int needMainMenu;
     int frameTimer;
@@ -104,6 +105,7 @@ struct appData{
     int beachFrame;
     int bannerFrame;
     int helpFrame;
+    int notepadFrame;
     int userInput;
     int lastInput;
     int pausedTimer;

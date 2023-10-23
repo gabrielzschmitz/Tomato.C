@@ -35,6 +35,7 @@ void initApp(appData * app){
     app->coffeeFrame= 0;
     app->bannerFrame= 0;
     app->helpFrame= 0;
+    app->notepadFrame= 0;
     app->frameTimer = 0;
     app->framems = 0;
 
@@ -83,6 +84,7 @@ void initApp(appData * app){
     app->resume = 0;
     app->runOnce = 1;
     app->runHelpOnce = 1;
+    app->runNotepadOnce = 1;
 
     /* Notepad variables */
     createNotepad(&app->notes);
@@ -126,11 +128,18 @@ void initApp(appData * app){
 /* Update variables */
 void doUpdate(appData * app){
     /* Update all the app modes */
-    updateHelpPage(app);
-    updateMainMenu(app);
-    updateWorkTime(app);
-    updateShortPause(app);
-    updateLongPause(app);
+    if(app->currentMode == -3)
+        updateHelpPage(app);
+    else if(app->currentMode == -2)
+        updateNotepad(app);
+    else if(app->currentMode == 0)
+        updateMainMenu(app);
+    else if(app->currentMode == 1)
+        updateWorkTime(app);
+    else if(app->currentMode == 2)
+        updateShortPause(app);
+    else if(app->currentMode == 3)
+        updateLongPause(app);
 
     /* Get X and Y window size */
     getWindowSize(app);
@@ -152,7 +161,7 @@ void drawScreen(appData * app){
             printNotepadIndicator(app);
             printHelpIndicator(app);
             printNoiseMenu(app);
-            if(app->inputMode == 'n')
+            if(app->inputMode == 'n' && app->notepadFrame == 6)
                 printCursor(app);
             break;
 
