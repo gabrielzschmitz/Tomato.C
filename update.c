@@ -23,167 +23,152 @@
 #include <time.h>
 #include <locale.h>
 
+/* Mode -2 (Help Page) */
+void updateNotepad(appData * app){
+    frameTimer(app);
+    if(app->runNotepadOnce == 1){
+        /* Notepad Animation */
+        app->notepadFrame = app->frameTimer;
+        if(app->frameTimer >= 6){
+            app->notepadFrame = 6;
+            app->frameTimer = 0;
+            app->runNotepadOnce = 0;
+        }
+    }
+}
+
 /* Mode -3 (Help Page) */
 void updateHelpPage(appData * app){
-    if(app->currentMode == -3){
-        frameTimer(app);
-
-        if(app->runHelpOnce == 1){
-            /* Pergament Animation */
-            if(app->frameTimer == (0 * 1)) app->helpFrame = 0;
-            else if(app->frameTimer == (1 * 1)) app->helpFrame = 1;
-            else if(app->frameTimer == (2 * 1)) app->helpFrame = 2;
-            else if(app->frameTimer == (3 * 1)) app->helpFrame = 3;
-            else if(app->frameTimer == (4 * 1)){
-                app->helpFrame = 4;
-                app->frameTimer = 0;
-                app->runHelpOnce = 0;
-            }
+    frameTimer(app);
+    if(app->runHelpOnce == 1){
+        /* Pergament Animation */
+        app->helpFrame = app->frameTimer;
+        if(app->frameTimer >= 4){
+            app->helpFrame = 4;
+            app->frameTimer = 0;
+            app->runHelpOnce = 0;
         }
-
     }
 }
 
 /* Mode 0 (Main Menu) */
 void updateMainMenu(appData * app){
-    if(app->currentMode == 0){
-        app->pausedTimer = 0;
-        frameTimer(app);
+    app->pausedTimer = 0;
+    frameTimer(app);
 
-        if(app->needResume == 0){
-            /* Tomato Animation */
-            if(app->frameTimer == (1 * 8)) app->logoFrame = 1;
-            else if(app->frameTimer == (2 * 8)) app->logoFrame = 2;
-            else if(app->frameTimer == (3 * 8)) app->logoFrame = 3;
-            else if(app->frameTimer == (4 * 8)) app->logoFrame = 4;
-            else if(app->frameTimer == (5 * 8)) app->logoFrame = 5;
-            else if(app->frameTimer == (6 * 8)) app->logoFrame = 6;
-            else if(app->frameTimer == (7 * 8)) app->logoFrame = 7;
-            else if(app->frameTimer == (8 * 8)){
-                app->logoFrame = 0;
-                app->frameTimer = 0;
-            }
-        }else{
-            if(app->runOnce == 1){
-                /* Banner Animation */
-                if(app->frameTimer == (0 * 1)) app->bannerFrame = 0;
-                else if(app->frameTimer == (1 * 1)) app->bannerFrame = 1;
-                else if(app->frameTimer == (2 * 1)) app->bannerFrame = 2;
-                else if(app->frameTimer == (3 * 1)){
-                    app->bannerFrame = 3;
-                    app->frameTimer = 0;
-                    app->runOnce = 0;
-                }
-            }
+    if(app->needResume == 0){
+        /* Tomato Animation */
+        app->logoFrame = (app->frameTimer / 8) % 8;
+        if(app->frameTimer == (8 * 8)){
+            app->logoFrame = 0;
+            app->frameTimer = 0;
+        }
+    }else if(app->runOnce == 1){
+        /* Banner Animation */
+        app->bannerFrame = app->frameTimer % 4;
+        if(app->frameTimer == (3 * 1)){
+            app->bannerFrame = 3;
+            app->frameTimer = 0;
+            app->runOnce = 0;
         }
     }
 }
 
 /* Mode 1 (Work Time) */
 void updateWorkTime(appData * app){
-    if(app->currentMode == 1){
-        if(app->runOnce == 1 && app->pausedTimer == 0){
-            notify("worktime");
-            app->runOnce = 0;
-        }
+    if(app->runOnce == 1 && app->pausedTimer == 0){
+        notify("worktime");
+        app->runOnce = 0;
+    }
 
-        timer(app);
-        frameTimer(app);
-        if(app->timer <= 0){
-            if(app->autostartWork == 0 && app->pausedTimer == 0){
-                app->pausedTimer = 1;
-                notify("autostartwork");
-            }
-            else if(app->pomodoroCounter == app->pomodoros){
+    timer(app);
+    frameTimer(app);
+    if(app->timer <= 0){
+        if(app->autostartWork == 0 && app->pausedTimer == 0){
+            app->pausedTimer = 1;
+            notify("autostartwork");
+        }else{
+            if(app->pomodoroCounter == app->pomodoros){
                 app->timer = app->longPause;
-                app->frameTimer = 0;
-                app->lastMode = app->currentMode;
                 app->currentMode = 3;
-                app->pomodoroCounter = app->pomodoros;
-                app->runOnce = 1;
             }else{
                 app->timer = app->shortPause;
-                app->frameTimer = 0;
-                app->lastMode = app->currentMode;
                 app->currentMode = 2;
-                app->runOnce = 1;
             }
-        }
-
-        /* Coffee Animation */
-        if(app->frameTimer == (3 * 8)) app->coffeeFrame = 1;
-        else if(app->frameTimer == (6 * 8)){
-            app->coffeeFrame = 0;
             app->frameTimer = 0;
+            app->lastMode = app->currentMode;
+            app->runOnce = 1;
         }
+    }
+
+    /* Coffee Animation */
+    if(app->frameTimer == (3 * 8)) app->coffeeFrame = 1;
+    else if(app->frameTimer == (6 * 8)){
+        app->coffeeFrame = 0;
+        app->frameTimer = 0;
     }
 }
 
 /* Mode 2 (Short Pause) */
 void updateShortPause(appData * app){
-    if(app->currentMode == 2){
-        if(app->runOnce == 1 && app->pausedTimer == 0){
-            notify("shortpause");
-            app->runOnce = 0;
-        }
+    if(app->runOnce == 1 && app->pausedTimer == 0){
+        notify("shortpause");
+        app->runOnce = 0;
+    }
 
-        timer(app);
-        frameTimer(app);
-        if(app->timer <= 0){
-            if(app->autostartPause == 0 && app->pausedTimer == 0){
-                app->pausedTimer = 1;
-                notify("autostartpause");
-            }
-            else{
-                app->timer = app->workTime;
-                app->frameTimer = 0;
-                app->lastMode = app->currentMode;
-                app->currentMode = 1;
-                app->pomodoroCounter = app->pomodoroCounter + 1;
-                app->runOnce = 1;
-            }
-        }
-
-        /* Machine Animation */
-        if(app->frameTimer == (2 * 8)) app->machineFrame = 1;
-        else if(app->frameTimer == (4 * 8)) app->machineFrame = 2;
-        else if(app->frameTimer == (6 * 8)){
-            app->machineFrame = 0;
+    timer(app);
+    frameTimer(app);
+    if(app->timer <= 0){
+        if(app->autostartPause == 0 && app->pausedTimer == 0){
+            app->pausedTimer = 1;
+            notify("autostartpause");
+        }else{
+            app->timer = app->workTime;
             app->frameTimer = 0;
+            app->lastMode = app->currentMode;
+            app->currentMode = 1;
+            app->pomodoroCounter += 1;
+            app->runOnce = 1;
         }
+    }
+
+    /* Machine Animation */
+    if(app->frameTimer == (2 * 8)) app->machineFrame = 1;
+    else if(app->frameTimer == (4 * 8)) app->machineFrame = 2;
+    else if(app->frameTimer == (6 * 8)){
+        app->machineFrame = 0;
+        app->frameTimer = 0;
     }
 }
 
 /* Mode 3 (Long Pause) */
 void updateLongPause(appData * app){
-    if(app->currentMode == 3){
-        if(app->runOnce == 1 && app->pausedTimer == 0){
-            notify("longpause");
-            app->runOnce = 0;
-        }
+    if(app->runOnce == 1 && app->pausedTimer == 0){
+        notify("longpause");
+        app->runOnce = 0;
+    }
 
-        timer(app);
-        frameTimer(app);
-        if(app->timer <= 0 && app->pausedTimer == 0){
-            app->lastMode = app->currentMode;
-            app->currentMode = 0;
-            app->cycles++;
-            app->needToLog = 1;
-            if(WORKLOG == 1)
-                writeToLog(app);
-            app->needToLog = 0;
-            app->pomodoroCounter = 0;
-            if(TIMERLOG == 1)
-                endTimerLog(app);
-            notify("end");
-        }
-        
-        /* Beach Animation */
-        if(app->frameTimer == (3 * 8)) app->beachFrame = 1;
-        else if(app->frameTimer == (6 * 8)){
-            app->beachFrame = 0;
-            app->frameTimer = 0;
-        }
+    timer(app);
+    frameTimer(app);
+    if(app->timer <= 0 && app->pausedTimer == 0){
+        app->lastMode = app->currentMode;
+        app->currentMode = 0;
+        app->cycles += 1;
+        app->needToLog = 1;
+        if(WORKLOG == 1)
+            writeToLog(app);
+        app->needToLog = 0;
+        app->pomodoroCounter = 0;
+        if(TIMERLOG == 1)
+            endTimerLog(app);
+        notify("end");
+    }
+
+    /* Beach Animation */
+    if(app->frameTimer == (3 * 8)) app->beachFrame = 1;
+    else if(app->frameTimer == (6 * 8)){
+        app->beachFrame = 0;
+        app->frameTimer = 0;
     }
 }
 
