@@ -242,13 +242,19 @@ void handleInputs(appData * app){
 
             case 'n':
                 if(app->currentMode != -2 && app->needResume != 1 && NOTEPAD == 1){
+                    app->runNotepadOnce = 1;
+                    app->notepadFrame = 0;
                     if(app->currentMode != -3)
                         app->lastMode = app->currentMode;
                     app->currentMode = -2;
+                    app->frameTimer = 0;
                 }
                 else if(app->currentMode == -2 && NOTEPAD == 1){
+                    app->runNotepadOnce = 1;
+                    app->notepadFrame = 0;
                     app->currentMode = app->lastMode;
                     app->lastMode = -2;
+                    app->frameTimer = 0;
                 }
                 break;
 
@@ -376,10 +382,13 @@ void handleInputs(appData * app){
                 }
                 else if(app->currentMode == -2){
                     if(NOTEPAD == 1){
+                        app->runNotepadOnce = 1;
+                        app->notepadFrame = 0;
                         if(NOTEPADLOG == 1)
                             writeToNotepad(app);
                         app->currentMode = app->lastMode;
                         app->lastMode = -2;
+                        app->frameTimer = 0;
                     }
                 }
                 else{
@@ -663,13 +672,19 @@ void mouseInput(appData * app, MEVENT event, char key){
         if((event.y == 2) && (event.x == app->x - 2 || event.x == app->x - 1) && app->needResume != 1 && NOTEPAD == 1){
             if(event.bstate & BUTTON1_PRESSED){
                 if(app->currentMode != -2){
+                    app->runNotepadOnce = 1;
+                    app->notepadFrame = 0;
                     if(app->currentMode != -3)
                         app->lastMode = app->currentMode;
                     app->currentMode = -2;
+                    app->frameTimer = 0;
                 }
                 else{
+                    app->runNotepadOnce = 1;
+                    app->notepadFrame = 0;
                     app->currentMode = app->lastMode;
                     app->lastMode = -2;
+                    app->frameTimer = 0;
                 }
             }
         }
