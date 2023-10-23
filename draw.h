@@ -18,6 +18,9 @@ extern void printKeybinds(appData * , int );
 /* Print cursor */
 extern void printCursor(appData * );
 
+/* Print part of the notes */
+extern void printPartialNotes(appData * , int );
+
 /* Print notes */
 extern void printNotes(appData * );
 

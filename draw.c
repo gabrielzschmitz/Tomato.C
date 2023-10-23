@@ -150,6 +150,44 @@ void printCursor(appData * app){
         mvprintw((app->middley - 9) + app->cursory, (app->middlex - 17 + 4) + app->cursorx, "█");
 }
 
+/* Print part of the notes */
+void printPartialNotes(appData * app, int max){
+    if(app->emptyNotepad != 1 && app->notesAmount >= max){
+        for(int i = max; i < app->notesAmount; i++){
+            if(i == app->currentNote)
+                setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+            else
+                setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+
+            if(app->notes.lines[i]->type == '-'){
+                mvprintw((app->middley - 9) + i, (app->middlex - 17+ 1), "%c", app->notes.lines[i]->type);
+                for(int j = 0; j < (int) strlen(app->notes.lines[i]->note); j++){
+                    if(j < app->cursorx || i != app->currentNote)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else if(app->addingNote == 1 || app->addingTask == 1)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j + 1, "%c", app->notes.lines[i]->note[j]);
+                }
+            }
+            else{
+                if(app->notes.lines[i]->type == 'x')
+                    mvprintw((app->middley - 9) + i, (app->middlex - 17), "[X]");
+                else
+                    mvprintw((app->middley - 9) + i, (app->middlex - 17), "[ ]");
+                for(int j = 0; j < (int) strlen(app->notes.lines[i]->note); j++){
+                    if(j < app->cursorx || i != app->currentNote)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else if(app->addingNote == 1 || app->addingTask == 1)
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j, "%c", app->notes.lines[i]->note[j]);
+                    else
+                        mvprintw((app->middley - 9) + i, (app->middlex - 17 + 4) + j + 1, "%c", app->notes.lines[i]->note[j]);
+                }
+            }
+        }
+    }
+}
+
 /* Print notes */
 void printNotes(appData * app){
     if(app->emptyNotepad != 1){
