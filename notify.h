@@ -18,4 +18,3 @@ extern void send_notification(char *, char *);
 extern void play_audio(char *);
 
 #endif
-
