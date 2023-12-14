@@ -1,11 +1,11 @@
 /*
-//         .             .              .		    
-//         |             |              |           .	    
-// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,  
-// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /   
-// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
-//  ,|							    
-//  `'							    
+//         .             .              .
+//         |             |              |           .
+// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,
+// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /
+// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'
+//  ,|
+//  `'
 // input.h
 */
 #ifndef INPUT_H_
@@ -26,21 +26,20 @@
 #define CTRLT 20
 
 /* Input note */
-extern void inputNote(appData * , int );
+extern void inputNote(appData*, int);
 /* Input task */
-extern void inputTask(appData * , int );
+extern void inputTask(appData*, int);
 
 /* Handle user input and app state */
-extern void handleInputs(appData * );
+extern void handleInputs(appData*);
 /* Handle mouse input */
-extern void mouseInput(appData * , MEVENT , char );
+extern void mouseInput(appData*, MEVENT);
 
 /* Handle input at the main menu */
-extern void mainMenuInput(appData * , char );
+extern void mainMenuInput(appData*, char);
 /* Handle input at the settings menu */
-extern void settingsInput(appData * , char );
+extern void settingsInput(appData*, char);
 /* Handle input at the resume menu */
-extern void resumeInput(appData * , char );
+extern void resumeInput(appData*, char);
 
 #endif
-
