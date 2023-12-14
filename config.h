@@ -1,33 +1,33 @@
 /*
-//         .             .              .		    
-//         |             |              |           .	    
-// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,  
-// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /   
-// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'  
-//  ,|							    
-//  `'							    
+//         .             .              .
+//         |             |              |           .
+// ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,
+// | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /
+// `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'
+//  ,|
+//  `'
 //  config.h
 */
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
-/* 1 if you're in WSL, 0 if not 
+/* 1 if you're in WSL, 0 if not
  * Note: you'll need wsl-notify-send
- * for the notifications and the 
+ * for the notifications and the
  * notifications sounds and white noises
  * will not work */
 static const int WSL = 0;
 
 /* iconsoff - iconson - nerdicons
- * Note: you'll need a patched 
+ * Note: you'll need a patched
  * nerdicons for that option */
-static const char * ICONS = "nerdicons";
+static const char* ICONS = "nerdicons";
 
-/* 1 means you'll be asked to continue 
+/* 1 means you'll be asked to continue
  * after each work cycle, 0 means not */
 static const int AUTOSTARTWORK = 1;
 
-/* 1 means you'll be asked to continue 
+/* 1 means you'll be asked to continue
  * after each pause, 0 means not */
 static const int AUTOSTARTPAUSE = 1;
 
@@ -35,7 +35,7 @@ static const int AUTOSTARTPAUSE = 1;
  * Note: you'll need libnotify if you're at linux*/
 static const int NOTIFY = 1;
 
-/* 1 means notification sound on, 0 off 
+/* 1 means notification sound on, 0 off
  * Note: you'll need mpv */
 static const int SOUND = 1;
 
@@ -88,4 +88,3 @@ static const int TIMERLOG = 1;
 static const int NOTEPADLOG = 1;
 
 #endif
-
