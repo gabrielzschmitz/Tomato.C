@@ -851,7 +851,7 @@ void printHelpIndicator(appData* app) {
     setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
 
   if (strcmp(ICONS, "nerdicons") == 0)
-    mvprintw(1, (app->x - 2), " ");
+    mvprintw(1, (app->x - 2), "  ");
   else if (strcmp(ICONS, "iconson") == 0)
     mvprintw(1, (app->x - 2), "❓ ");
   else
