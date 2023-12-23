@@ -365,6 +365,7 @@ void handleInputs(appData *app) {
       case ESC:
       case CTRLC:
       case 'q':
+        if (getch() != -1) break;
         if (app->currentMode == 0) {
           printf("\033[?1003l\n");
           killNoise();
