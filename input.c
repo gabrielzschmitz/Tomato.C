@@ -8,23 +8,21 @@
 //  `'
 // input.c
 */
-#include "tomato.h"
-#include "anim.h"
-#include "draw.h"
 #include "input.h"
-#include "notify.h"
-#include "update.h"
-#include "util.h"
-#include "config.h"
+
+#include <locale.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <locale.h>
-#include <unistd.h>
 #include <sys/types.h>
-#include <inttypes.h>
+#include <time.h>
+#include <unistd.h>
+
+#include "config.h"
+#include "notify.h"
+#include "tomato.h"
+#include "util.h"
 
 /* Handle user input and app state */
 void handleInputs(appData *app) {
@@ -204,7 +202,7 @@ void handleInputs(appData *app) {
           app->inputMode = 'i';
           app->notes.lines[app->notesAmount] = createNote('o');
           app->notes.lines[app->notesAmount]->note =
-              (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
+            (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
           app->notes.lines[app->notesAmount]->note[0] = '\0';
           app->emptyNotepad = 0;
         }
@@ -217,7 +215,7 @@ void handleInputs(appData *app) {
           app->inputMode = 'i';
           app->notes.lines[app->notesAmount] = createNote('-');
           app->notes.lines[app->notesAmount]->note =
-              (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
+            (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
           app->notes.lines[app->notesAmount]->note[0] = '\0';
           app->emptyNotepad = 0;
         }
@@ -329,7 +327,7 @@ void handleInputs(appData *app) {
         key = 'R';
         if (app->notesAmount != 0)
           if (app->cursorx <=
-                  ((int)strlen(app->notes.lines[app->cursory]->note) - 1) &&
+                ((int)strlen(app->notes.lines[app->cursory]->note) - 1) &&
               app->currentMode == -2)
             app->cursorx++;
         if (app->currentMode == 0 && app->needResume == 0)
@@ -490,7 +488,7 @@ void inputNote(appData *app, int note) {
       app->inputLength = 0;
       app->cursorx = app->insertCursorx;
       if (app->cursorx >
-              (int)strlen(app->notes.lines[app->currentNote]->note) &&
+            (int)strlen(app->notes.lines[app->currentNote]->note) &&
           app->editingNote != 1)
         app->cursorx = (int)strlen(app->notes.lines[app->currentNote]->note);
       app->insertCursorx = 0;
@@ -589,7 +587,7 @@ void inputTask(appData *app, int note) {
       app->inputLength = 0;
       app->cursorx = app->insertCursorx;
       if (app->cursorx >
-              (int)strlen(app->notes.lines[app->currentNote]->note) &&
+            (int)strlen(app->notes.lines[app->currentNote]->note) &&
           app->editingTask != 1)
         app->cursorx = (int)strlen(app->notes.lines[app->currentNote]->note);
       app->insertCursorx = 0;
