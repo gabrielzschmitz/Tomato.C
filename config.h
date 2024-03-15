@@ -33,11 +33,11 @@ static const int AUTOSTARTPAUSE = 1;
 
 /* 1 means notifications on, 0 off
  * Note: you'll need libnotify if you're at linux*/
-static const int NOTIFY = 1;
+static const int NOTIFY = 0;
 
 /* 1 means notification sound on, 0 off
  * Note: you'll need mpv */
-static const int SOUND = 1;
+static const int SOUND = 0;
 
 /* 1 means noises on, 0 off
  * Note: you'll need mpv */
