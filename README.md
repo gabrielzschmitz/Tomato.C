@@ -168,7 +168,7 @@ ARCH LINUX
 $ sudo pacman -S base-devel ncurses mpv pkgconf libnotify
 
 UBUNTU
-$ sudo apt install build-essential libncurses5-dev libncursesw5-dev mpv pkg-config libnotify4
+$ sudo apt install build-essential libncurses5-dev libncursesw5-dev libmpv-dev mpv pkg-config libnotify4
 
 FEDORA
 $ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
@@ -250,4 +250,3 @@ Feel free to contribute to the project, the only requirement is to follow the **
 ## 📜 License
 
 This software is licensed under the [GPL-3](./LICENSE) license.
-
