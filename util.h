@@ -12,6 +12,8 @@
 #define UTIL_H_
 #include <ncurses.h>
 
+#include "tomato.h"
+
 /* Defining the colors pallete size */
 #define PALLETE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 

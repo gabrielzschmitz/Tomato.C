@@ -8,23 +8,21 @@
 //  `'
 // util.c
 */
-#include "tomato.h"
-#include "anim.h"
-#include "draw.h"
-#include "input.h"
-#include "notify.h"
-#include "update.h"
 #include "util.h"
-#include "config.h"
+
+#include <inttypes.h>
+#include <locale.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <locale.h>
-#include <unistd.h>
 #include <sys/stat.h>
-#include <inttypes.h>
+#include <time.h>
+#include <unistd.h>
+
+#include "config.h"
+#include "notify.h"
+#include "tomato.h"
 
 /* Function to create a new note */
 note *createNote(char type) {
@@ -195,7 +193,7 @@ void readLog(appData *app) {
   /* Get last line of the log file */
   fseek(log, 0, SEEK_SET);
   char lastline[1024] = {
-      0,
+    0,
   };
   while (fgets(lastline, 1024, log) != NULL) { /* Just to get the last line */
   }
@@ -229,7 +227,7 @@ void setLogVars(appData *app) {
   /* Get last line of the log file */
   fseek(log, 0, SEEK_SET);
   char lastline[1024] = {
-      0,
+    0,
   };
   int lastlineIndex = 0;
   /* Just to get the last line and count lines */
@@ -273,7 +271,7 @@ void deleteLastLog(appData *app) {
   FILE *log;
   log = fopen(app->logFile, "r");
   char lastline[1024] = {
-      0,
+    0,
   };
   int lastlineIndex = 0;
   while (fgets(lastline, 1024, log) != NULL) {
@@ -311,7 +309,7 @@ void readNotepad(appData *app) {
   while (fgets(line, sizeof(line), log)) {
     app->notes.lines[app->notesAmount] = createNote('-');
     app->notes.lines[app->notesAmount]->note =
-        (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
+      (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
     char *note = (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
     if (sscanf(line, "[x] %s", note))
       app->notes.lines[app->notesAmount]->type = 'x';
@@ -427,8 +425,8 @@ void timer(appData *app) {
       if (app->timerms >= app->sfps) {
         app->timerms = 0;
         /* Debug */
-        // app->timer = app->timer - 60;
-        app->timer = app->timer - 1;
+        app->timer = app->timer - 60;
+        // app->timer = app->timer - 1;
       }
     }
   }
@@ -455,7 +453,7 @@ int printTimerLog(const char *path) {
   FILE *log;
   log = fopen(path, "r");
   char timer[32] = {
-      0,
+    0,
   };
 
   if (!log) {
@@ -492,8 +490,8 @@ void toggleNoise(appData *app, int noise) {
       app->playRainNoise = 1;
       if (app->runRainOnce == 0) {
         char *rainnoisecmd[] = {
-            "/usr/local/share/tomato/sounds/ambience-rain.wav", app->rainVolume,
-            "tomato noise rain", NULL};
+          "/usr/local/share/tomato/sounds/ambience-rain.wav", app->rainVolume,
+          "tomato noise rain", NULL};
         app->rainNoisePID = fork();
         app->runRainOnce = 1;
         if (app->rainNoisePID == 0) execv(TOMATONOISE, rainnoisecmd);
@@ -515,8 +513,8 @@ void toggleNoise(appData *app, int noise) {
       app->playFireNoise = 1;
       if (app->runFireOnce == 0) {
         char *firenoisecmd[] = {
-            "/usr/local/share/tomato/sounds/ambience-fire.wav", app->fireVolume,
-            "tomato noise fire", NULL};
+          "/usr/local/share/tomato/sounds/ambience-fire.wav", app->fireVolume,
+          "tomato noise fire", NULL};
         app->fireNoisePID = fork();
         app->runFireOnce = 1;
         if (app->fireNoisePID == 0) execv(TOMATONOISE, firenoisecmd);
@@ -538,8 +536,8 @@ void toggleNoise(appData *app, int noise) {
       app->playWindNoise = 1;
       if (app->runWindOnce == 0) {
         char *windnoisecmd[] = {
-            "/usr/local/share/tomato/sounds/ambience-wind.wav", app->windVolume,
-            "tomato noise wind", NULL};
+          "/usr/local/share/tomato/sounds/ambience-wind.wav", app->windVolume,
+          "tomato noise wind", NULL};
         app->windNoisePID = fork();
         app->runWindOnce = 1;
         if (app->windNoisePID == 0) execv(TOMATONOISE, windnoisecmd);
@@ -561,8 +559,8 @@ void toggleNoise(appData *app, int noise) {
       app->playThunderNoise = 1;
       if (app->runThunderOnce == 0) {
         char *thundernoisecmd[] = {
-            "/usr/local/share/tomato/sounds/ambience-thunder.wav",
-            app->thunderVolume, "tomato noise thunder", NULL};
+          "/usr/local/share/tomato/sounds/ambience-thunder.wav",
+          app->thunderVolume, "tomato noise thunder", NULL};
         app->thunderNoisePID = fork();
         app->runThunderOnce = 1;
         if (app->thunderNoisePID == 0) execv(TOMATONOISE, thundernoisecmd);
