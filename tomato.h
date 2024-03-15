@@ -16,7 +16,7 @@
 #endif
 
 /* Defining some limits */
-#define MAXLINES 20
+#define MAXLINES       20
 #define MAXINPUTLENGTH 32
 
 // Defining the notes struct
