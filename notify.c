@@ -8,20 +8,14 @@
 //  `'
 // notify.c
 */
-#include "tomato.h"
-#include "anim.h"
-#include "draw.h"
-#include "input.h"
 #include "notify.h"
-#include "update.h"
-#include "util.h"
-#include "config.h"
+
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <locale.h>
+
+#include "config.h"
 
 /* Send a notification with sound */
 void notify(const char *message) {
