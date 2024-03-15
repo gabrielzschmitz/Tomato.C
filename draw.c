@@ -8,21 +8,20 @@
 //  `'
 // draw.c
 */
-#include "tomato.h"
-#include "anim.h"
 #include "draw.h"
-#include "input.h"
-#include "notify.h"
-#include "update.h"
-#include "util.h"
-#include "config.h"
+
+#include <inttypes.h>
+#include <locale.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <locale.h>
-#include <inttypes.h>
+
+#include "anim.h"
+#include "config.h"
+#include "tomato.h"
+#include "util.h"
 
 /* Print keybinds */
 void printKeybinds(appData* app, int frame) {

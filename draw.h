@@ -12,6 +12,8 @@
 #define DRAW_H_
 #include <ncurses.h>
 
+#include "tomato.h"
+
 /* Print keybinds */
 extern void printKeybinds(appData*, int);
 
