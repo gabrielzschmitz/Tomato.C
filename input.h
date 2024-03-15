@@ -20,6 +20,7 @@
 #define ENTER     10
 #define CTRLC     3
 #define CTRLP     16
+#define CTRLS     19
 #define CTRLX     24
 #define CTRLD     4
 #define CTRLR     18

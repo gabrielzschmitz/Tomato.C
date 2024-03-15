@@ -360,6 +360,13 @@ void handleInputs(appData *app) {
         }
         break;
 
+      case CTRLS:
+      case 's':
+        if (app->currentMode != 0 && app->currentMode != -1) {
+          app->timer = 0;
+        }
+        break;
+
       case ESC:
       case CTRLC:
       case 'q':
@@ -854,8 +861,8 @@ void mouseInput(appData *app, MEVENT event) {
     }
   }
   if (app->currentMode != 0 && app->currentMode != -1) {
-    if (event.y == (app->middley - 7) && (app->middlex - 10) >= event.x &&
-        event.x >= (app->middlex - 11)) {
+    if (event.y == (app->middley - 7) && (app->middlex - 8) >= event.x &&
+        event.x >= (app->middlex - 9)) {
       if (event.bstate & BUTTON1_PRESSED)
         app->pausedTimer = app->pausedTimer ^ 1;
     }
