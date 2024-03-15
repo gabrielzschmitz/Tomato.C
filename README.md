@@ -77,6 +77,7 @@ Use the following <b>keys</b> to <b>control</b> the application:
 * <b><i>ENTER:</i></b> To select;
 * <b><i>CTRL+X:</i></b> To return to the main menu wherever you are;
 * <b><i>P or CTRL+P:</i></b> To toggle pause;
+* <b><i>S or CTRL+S:</i></b> To Skip a section;
 * <b><i>ESC or Q:</i></b> To quit;
 * <b><i>N:</i></b> To toggle notepad;
 * <b><i>A/a:</i></b> To add note/task;
