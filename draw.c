@@ -127,56 +127,58 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley + 2), (app->middlex + 4), "e               ");
   } else {
     setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
-    mvprintw((app->middley - 7), (app->middlex - 21),
-             "cancel adding note/task:");
+    mvprintw((app->middley - 7), (app->middlex - 21), "skip section:");
     mvprintw((app->middley - 6), (app->middlex - 21),
-             "toggle noise:           ");
+             "cancel adding note/task:");
     mvprintw((app->middley - 5), (app->middlex - 21),
-             "move and select:        ");
+             "toggle noise:           ");
     mvprintw((app->middley - 4), (app->middlex - 21),
-             "decrease noise volume:  ");
+             "move and select:        ");
     mvprintw((app->middley - 3), (app->middlex - 21),
-             "increase noise volume:  ");
+             "decrease noise volume:  ");
     mvprintw((app->middley - 2), (app->middlex - 21),
-             "manage noise volume:    ");
+             "increase noise volume:  ");
     mvprintw((app->middley - 1), (app->middlex - 21),
-             "delete note/task:       ");
+             "manage noise volume:    ");
     mvprintw((app->middley - 0), (app->middlex - 21),
-             "return to main menu:    ");
+             "delete note/task:       ");
     mvprintw((app->middley + 1), (app->middlex - 21),
-             "toggle pause:           ");
+             "return to main menu:    ");
     mvprintw((app->middley + 2), (app->middlex - 21),
-             "choose option:          ");
+             "toggle pause:           ");
     mvprintw((app->middley + 3), (app->middlex - 21),
-             "toggle help page:       ");
+             "choose option:          ");
     mvprintw((app->middley + 4), (app->middlex - 21),
-             "check task:             ");
+             "toggle help page:       ");
     mvprintw((app->middley + 5), (app->middlex - 21),
-             "toggle notepad:         ");
+             "check task:             ");
     mvprintw((app->middley + 6), (app->middlex - 21),
-             "quit:                   ");
+             "toggle notepad:         ");
     mvprintw((app->middley + 7), (app->middlex - 21),
-             "add note/task:          ");
+             "quit:                   ");
     mvprintw((app->middley + 8), (app->middlex - 21),
+             "add note/task:          ");
+    mvprintw((app->middley + 9), (app->middlex - 21),
              "edit note:              ");
 
     setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
-    mvprintw((app->middley - 7), (app->middlex + 4), "esc             ");
-    mvprintw((app->middley - 6), (app->middlex + 4), "r f w t, 1 2 3 4");
-    mvprintw((app->middley - 5), (app->middlex + 4), "arrows, vim keys");
-    mvprintw((app->middley - 4), (app->middlex + 4), "ctrl+(r f w t)  ");
-    mvprintw((app->middley - 3), (app->middlex + 4), "shift+(r f w t) ");
-    mvprintw((app->middley - 2), (app->middlex + 4), "scroll          ");
-    mvprintw((app->middley - 1), (app->middlex + 4), "dd, D, ctrl+d   ");
-    mvprintw((app->middley - 0), (app->middlex + 4), "ctrl+x, esc, q  ");
-    mvprintw((app->middley + 1), (app->middlex + 4), "p, ctrl+p       ");
-    mvprintw((app->middley + 2), (app->middlex + 4), "enter           ");
-    mvprintw((app->middley + 3), (app->middlex + 4), "?, H            ");
-    mvprintw((app->middley + 4), (app->middlex + 4), "space           ");
-    mvprintw((app->middley + 5), (app->middlex + 4), "n               ");
-    mvprintw((app->middley + 6), (app->middlex + 4), "q, esc          ");
-    mvprintw((app->middley + 7), (app->middlex + 4), "a/A             ");
-    mvprintw((app->middley + 8), (app->middlex + 4), "e               ");
+    mvprintw((app->middley - 7), (app->middlex + 4), "s, ctrl+s       ");
+    mvprintw((app->middley - 6), (app->middlex + 4), "esc             ");
+    mvprintw((app->middley - 5), (app->middlex + 4), "r f w t, 1 2 3 4");
+    mvprintw((app->middley - 4), (app->middlex + 4), "arrows, vim keys");
+    mvprintw((app->middley - 3), (app->middlex + 4), "ctrl+(r f w t)  ");
+    mvprintw((app->middley - 2), (app->middlex + 4), "shift+(r f w t) ");
+    mvprintw((app->middley - 1), (app->middlex + 4), "scroll          ");
+    mvprintw((app->middley - 0), (app->middlex + 4), "dd, D, ctrl+d   ");
+    mvprintw((app->middley + 1), (app->middlex + 4), "ctrl+x, esc, q  ");
+    mvprintw((app->middley + 2), (app->middlex + 4), "p, ctrl+p       ");
+    mvprintw((app->middley + 3), (app->middlex + 4), "enter           ");
+    mvprintw((app->middley + 4), (app->middlex + 4), "?, H            ");
+    mvprintw((app->middley + 5), (app->middlex + 4), "space           ");
+    mvprintw((app->middley + 6), (app->middlex + 4), "n               ");
+    mvprintw((app->middley + 7), (app->middlex + 4), "q, esc          ");
+    mvprintw((app->middley + 8), (app->middlex + 4), "a/A             ");
+    mvprintw((app->middley + 9), (app->middlex + 4), "e               ");
   }
 }
 
