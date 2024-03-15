@@ -487,6 +487,7 @@ void printPergament(appData* app) {
     "    |                                            |      ",
     "    |                                             |     ",
     "    |                                             |     ",
+    "    |                                             |     ",
     "    \\     _________________________________________|___",
     "     \\   /                                            /",
     "      \\_/____________________________________________/ "};
@@ -520,7 +521,7 @@ void printPergament(appData* app) {
     printKeybinds(app, 3);
   } else {
     frameIndex = 7 + 9 + 13 + 17;
-    for (int i = 0; i < 23; i++) {
+    for (int i = 0; i < 24; i++) {
       mvprintw(starty + i, startx, "%s", pergamentFrames[frameIndex + i]);
     }
     printKeybinds(app, 4);
