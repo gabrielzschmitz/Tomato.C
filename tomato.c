@@ -188,6 +188,7 @@ void drawScreen(appData *app) {
     case 1:
       printPomodoroCounter(app);
       printPauseIndicator(app);
+      printSkipperIndicator(app);
       printCoffee(app);
       printTimer(app);
       printNoiseMenu(app);
@@ -198,6 +199,7 @@ void drawScreen(appData *app) {
     case 2:
       printPomodoroCounter(app);
       printPauseIndicator(app);
+      printSkipperIndicator(app);
       printMachine(app);
       printTimer(app);
       printNoiseMenu(app);
@@ -208,6 +210,7 @@ void drawScreen(appData *app) {
     case 3:
       printPomodoroCounter(app);
       printPauseIndicator(app);
+      printSkipperIndicator(app);
       printBeach(app);
       printTimer(app);
       printNoiseMenu(app);
