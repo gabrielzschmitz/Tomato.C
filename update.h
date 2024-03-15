@@ -12,6 +12,8 @@
 #define UPDATE_H_
 #include <ncurses.h>
 
+#include "tomato.h"
+
 /* Update modes */
 extern void updateMainMenu(appData *);
 extern void updateWorkTime(appData *);
