@@ -38,6 +38,9 @@ extern void printPomodoroCounter(appData*);
 /* Print the pause indicator */
 extern void printPauseIndicator(appData*);
 
+/* Print the skipper indicator */
+void printSkipperIndicator(appData*);
+
 /* Print the Help Indicator */
 extern void printHelpIndicator(appData*);
 

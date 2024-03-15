@@ -835,11 +835,29 @@ void printPauseIndicator(appData* app) {
   setColor(textColor, COLOR_BLACK, A_BOLD);
 
   if (strcmp(ICONS, "nerdicons") == 0)
-    mvprintw(app->middley - 7, app->middlex - 11, "󰏤 ");
+    mvprintw(app->middley - 7, app->middlex - 9, "󰏤 ");
   else if (strcmp(ICONS, "iconson") == 0)
-    mvprintw(app->middley - 7, app->middlex - 11, "⏸️ ");
+    mvprintw(app->middley - 7, app->middlex - 9, "⏸️ ");
   else
-    mvprintw(app->middley - 7, app->middlex - 11, "P ");
+    mvprintw(app->middley - 7, app->middlex - 9, "P ");
+}
+
+/* Print the skipper indicator */
+void printSkipperIndicator(appData* app) {
+  int textColor = COLOR_BLACK;
+
+  if (app->currentMode == 1)
+    textColor = COLOR_MAGENTA;
+  else if (app->currentMode == 2 || app->currentMode == 3)
+    textColor = COLOR_CYAN;
+  setColor(textColor, COLOR_BLACK, A_BOLD);
+
+  if (strcmp(ICONS, "nerdicons") == 0)
+    mvprintw(app->middley - 7, app->middlex - 11, "󰒬 ");
+  else if (strcmp(ICONS, "iconson") == 0)
+    mvprintw(app->middley - 7, app->middlex - 11, "⏭️ ");
+  else
+    mvprintw(app->middley - 7, app->middlex - 11, "S ");
 }
 
 /* Print the Help Indicator */
