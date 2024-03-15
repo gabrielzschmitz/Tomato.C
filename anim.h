@@ -12,6 +12,8 @@
 #define ANIM_H_
 #include <ncurses.h>
 
+#include "tomato.h"
+
 /* Time the animations frames */
 extern void frameTimer(appData*);
 
