@@ -1,0 +1,20 @@
+name: Build test
+on:
+  - push
+  - pull_request
+jobs:
+  ubuntu-build-test:
+    name: Build project (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config \
+            libncurses5-dev libncursesw5-dev libmpv-dev mpv libnotify4
+      - name: Compiles project
+        run: |
+          sudo make install
+        run: |
