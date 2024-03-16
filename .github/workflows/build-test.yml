@@ -28,7 +28,9 @@ jobs:
         uses: melusina-org/setup-macports@v1.1.2
       - name: Install build dependencies
         run: |
-          brew install gcc && sudo port install ncurses mpv
+          brew install gcc
+          sudo port install ncurses
+          sudo port install mpv-legacy +libmpv
       - name: Compile project
         run: |
           sudo make install
