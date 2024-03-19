@@ -9,10 +9,10 @@
 
 UNAME_S := $(shell uname -s)
 
-ifeq ($(UNAME_S),Darwin)
-    PREFIX  = /opt/local
-else
+ifeq ($(UNAME_S),Linux)
     PREFIX  = /usr/local
+else
+    PREFIX  = /opt/local
 endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
