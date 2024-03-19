@@ -1,10 +1,10 @@
-#         .             .              .		  
-#         |             |              |           .	  
-# ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_, 
-# | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /  
-# `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"' 
-#  ,|							  
-#  `'							  
+#         .             .              .
+#         |             |              |           .
+# ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,
+# | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /
+# `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'
+#  ,|
+#  `'
 # config.mk
 
 PREFIX  = /usr/local
@@ -17,7 +17,7 @@ LOGPREFIX = .local/share/tomato
 # at config.h
 MPVTOGGLE = 1
 
-DFLAGS = -D_POSIX_C_SOURCE -DTOMATONOISE=\"$(PREFIX)/bin/tomatonoise\" -DLOGPREFIX=\"$(LOGPREFIX)\" -DLOGFILE=\"$(LOGPREFIX)/tomato.log\" -DTMPFILE=\"$(LOGPREFIX)/tmp.log\" -DTIMERFILE=\"$(LOGPREFIX)/time.log\" -DNOTEPADFILE=\"$(LOGPREFIX)/notepad.log\"
+DFLAGS = -D_ISOC99_SOURCE -DTOMATONOISE=\"$(PREFIX)/bin/tomatonoise\" -DLOGPREFIX=\"$(LOGPREFIX)\" -DLOGFILE=\"$(LOGPREFIX)/tomato.log\" -DTMPFILE=\"$(LOGPREFIX)/tmp.log\" -DTIMERFILE=\"$(LOGPREFIX)/time.log\" -DNOTEPADFILE=\"$(LOGPREFIX)/notepad.log\"
 CPPFLAGS = -I/usr/local/include
 CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable -Os ${DFLAGS}
 LDFLAGS = -L/usr/local/lib
@@ -35,4 +35,3 @@ else
 		LDLIBS  = `pkg-config --libs ncursesw`
 	endif
 endif
-
