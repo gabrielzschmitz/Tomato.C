@@ -175,7 +175,7 @@ FEDORA
 $ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
 
 MACOS (MacPorts needed)
-$ brew install gcc && sudo port install ncurses mpv
+$ brew install gcc && sudo port install ncurses && sudo port intall mpv +libmpv
 ```
 
 <b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
