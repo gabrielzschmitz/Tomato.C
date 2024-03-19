@@ -1,10 +1,10 @@
-#         .             .              .		  
-#         |             |              |           .	  
-# ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_, 
-# | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /  
-# `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"' 
-#  ,|							  
-#  `'							  
+#         .             .              .
+#         |             |              |           .
+# ,-. ,-. |-. ,-. . ,-. |  ,_, ,-. ,-. |-. ,-,-. . |- ,_,
+# | | ,-| | | |   | |-' |   /  `-. |   | | | | | | |   /
+# `-| `-^ ^-' '   ' `-' `' '"' `-' `-' ' ' ' ' ' ' `' '"'
+#  ,|
+#  `'
 # Makefile
 
 include config.mk
@@ -52,7 +52,11 @@ endif
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/sounds
 	mkdir -p ${DESTDIR}${PREFIX}/share/tomato/icons
 	cp -rf sounds ${DESTDIR}${PREFIX}/share/tomato/
-	sed -i "s|Icon=.*|Icon=${DESTDIR}${PREFIX}/share/tomato/icons/tomato.svg|" tomato.desktop
+	if [ "${PREFIX}" = "/opt/local" ]; then \
+					sed -i "" "s|Icon=.*|Icon=${DESTDIR}${PREFIX}/share/tomato/icons/tomato.svg|" tomato.desktop; \
+	    else \
+					sed -i "s|Icon=.*|Icon=${DESTDIR}${PREFIX}/share/tomato/icons/tomato.svg|" tomato.desktop; \
+	    fi
 	sudo cp -f icons/tomato.svg ${DESTDIR}${PREFIX}/share/tomato/icons
 	chmod 755 ${DESTDIR}${PREFIX}/bin/tomato
 ifdef MPVTOGGLE
@@ -70,4 +74,3 @@ endif
 nix-try:
 	nix build
 	./result/bin/tomato
-
