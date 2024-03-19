@@ -7,10 +7,12 @@
 #  `'
 # config.mk
 
-ifdef __APPLE__
-	PREFIX  = /opt/local
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+		PREFIX  = /opt/local
 else
-	PREFIX  = /usr/local
+		PREFIX  = /usr/local
 endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
@@ -26,16 +28,16 @@ CPPFLAGS = -I/usr/local/include
 CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable -Os ${DFLAGS}
 LDFLAGS = -L/usr/local/lib
 
-ifdef __APPLE__
-	ifdef MPVTOGGLE
-		LDLIBS  = -lncurses -lmpv
-	else
-		LDLIBS  = -lncurses
-	endif
+ifeq ($(UNAME_S),Darwin)
+		ifdef MPVTOGGLE
+			LDLIBS  = -lncurses -lmpv
+		else
+			LDLIBS  = -lncurses
+		endif
 else
-	ifdef MPVTOGGLE
-		LDLIBS  = `pkg-config --libs ncursesw mpv`
-	else
-		LDLIBS  = `pkg-config --libs ncursesw`
-	endif
+		ifdef MPVTOGGLE
+			LDLIBS  = `pkg-config --libs ncursesw mpv`
+		else
+			LDLIBS  = `pkg-config --libs ncursesw`
+		endif
 endif
