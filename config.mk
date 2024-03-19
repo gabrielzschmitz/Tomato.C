@@ -7,7 +7,11 @@
 #  `'
 # config.mk
 
-PREFIX  = /usr/local
+ifdef __APPLE__
+	PREFIX  = /opt/local
+else
+	PREFIX  = /usr/local
+endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
 
