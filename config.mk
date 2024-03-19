@@ -10,9 +10,9 @@
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
-		PREFIX  = /opt/local
+    PREFIX  = /opt/local
 else
-		PREFIX  = /usr/local
+    PREFIX  = /usr/local
 endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
@@ -29,15 +29,15 @@ CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable 
 LDFLAGS = -L/usr/local/lib
 
 ifeq ($(UNAME_S),Darwin)
-		ifdef MPVTOGGLE
-			LDLIBS  = -lncurses -lmpv
-		else
-			LDLIBS  = -lncurses
-		endif
+    ifdef MPVTOGGLE
+        LDLIBS  = -lncurses -lmpv
+    else
+        LDLIBS  = -lncurses
+    endif
 else
-		ifdef MPVTOGGLE
-			LDLIBS  = `pkg-config --libs ncursesw mpv`
-		else
-			LDLIBS  = `pkg-config --libs ncursesw`
-		endif
+    ifdef MPVTOGGLE
+        LDLIBS  = `pkg-config --libs ncursesw mpv`
+    else
+        LDLIBS  = `pkg-config --libs ncursesw`
+    endif
 endif
