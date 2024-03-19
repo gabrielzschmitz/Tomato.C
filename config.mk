@@ -7,12 +7,12 @@
 #  `'
 # config.mk
 
-UNAME_S := $(shell uname -s)
+OS := $(shell uname)
 
-ifeq ($(UNAME_S),Linux)
-    PREFIX  = /usr/local
-else
+ifeq ($(OS),Darwin)
     PREFIX  = /opt/local
+else
+    PREFIX  = /usr/local
 endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
@@ -28,7 +28,7 @@ CPPFLAGS = -I/usr/local/include
 CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable -Os ${DFLAGS}
 LDFLAGS = -L/usr/local/lib
 
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(OS),Darwin)
     ifdef MPVTOGGLE
         LDLIBS  = -lncurses -lmpv
     else
