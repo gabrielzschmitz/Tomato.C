@@ -865,7 +865,7 @@ void printSkipperIndicator(appData* app) {
 /* Print the Help Indicator */
 void printHelpIndicator(appData* app) {
   if (app->currentMode == -3)
-    setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+    setColor(COLOR_RED, COLOR_BLACK, A_BOLD);
   else
     setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
@@ -881,7 +881,7 @@ void printHelpIndicator(appData* app) {
 /* Print the Notepad Indicator */
 void printNotepadIndicator(appData* app) {
   if (app->currentMode == -2)
-    setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+    setColor(COLOR_YELLOW, COLOR_BLACK, A_BOLD);
   else
     setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
