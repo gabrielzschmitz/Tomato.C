@@ -714,7 +714,7 @@ void printNotepad(appData* app) {
   int startx;
   int starty;
   int frameIndex;
-  setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+  setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
   if (app->notepadFrame == 0) {
     startx = app->middlex - 18;
     starty = app->middley - 11;
