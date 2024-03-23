@@ -30,7 +30,7 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley - 10), (app->middlex - 22),
              "edit note:              ");
 
-    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
     mvprintw((app->middley - 10), (app->middlex + 3), "e               ");
   } else if (frame == 1) {
     setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
@@ -45,7 +45,7 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley - 6), (app->middlex - 21),
              "edit note:              ");
 
-    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
     mvprintw((app->middley - 10), (app->middlex + 3), "space           ");
     mvprintw((app->middley - 9), (app->middlex + 4), "n               ");
     mvprintw((app->middley - 8), (app->middlex + 4), "q, esc          ");
@@ -72,7 +72,7 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley - 2), (app->middlex - 21),
              "edit note:              ");
 
-    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
     mvprintw((app->middley - 10), (app->middlex + 3), "ctrl+x, esc, q  ");
     mvprintw((app->middley - 9), (app->middlex + 4), "p, ctrl+p       ");
     mvprintw((app->middley - 8), (app->middlex + 4), "enter           ");
@@ -111,7 +111,7 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley + 2), (app->middlex - 21),
              "edit note:              ");
 
-    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
     mvprintw((app->middley - 10), (app->middlex + 3), "ctrl+(r f w t)  ");
     mvprintw((app->middley - 9), (app->middlex + 4), "shift+(r f w t) ");
     mvprintw((app->middley - 8), (app->middlex + 4), "scroll          ");
@@ -161,7 +161,7 @@ void printKeybinds(appData* app, int frame) {
     mvprintw((app->middley + 9), (app->middlex - 21),
              "edit note:              ");
 
-    setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
     mvprintw((app->middley - 7), (app->middlex + 4), "s, ctrl+s       ");
     mvprintw((app->middley - 6), (app->middlex + 4), "esc             ");
     mvprintw((app->middley - 5), (app->middlex + 4), "r f w t, 1 2 3 4");
@@ -199,9 +199,9 @@ void printPartialNotes(appData* app, int max) {
     if (app->emptyNotepad == 1) return;
 
     if (i == app->currentNote)
-      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
     else
-      setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
     int row = app->middley - 9 + i;
     int col = app->middlex - 17;
@@ -229,9 +229,9 @@ void printNotes(appData* app) {
   if (app->emptyNotepad == 1) return;
   for (int i = 0; i < app->notesAmount; i++) {
     if (i == app->currentNote)
-      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
     else
-      setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
     int row = app->middley - 9 + i;
     int col = app->middlex - 17;
@@ -253,7 +253,7 @@ void printNotes(appData* app) {
     }
   }
 
-  setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+  setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
   if (app->addingNote == 1) {
     if (app->inputLength == 0)
       mvprintw((app->middley - 9) + app->notesAmount, (app->middlex - 17 + 4),
@@ -332,7 +332,7 @@ void printNotes(appData* app) {
 void printNoiseMenu(appData* app) {
   if (NOISE == 1) {
     if (app->playNoise == 0 && app->needResume != 1) {
-      setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
       if (strcmp(ICONS, "nerdicons") == 0) {
         mvprintw(1, 2, "󰖖 ");
         mvprintw(2, 2, "󰈸 ");
@@ -800,7 +800,7 @@ void printResume(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 1), (app->middlex - 15), "-> YES <-");
     } else {
-      setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
       mvprintw((app->middley + 1), (app->middlex - 15), "   YES   ");
     }
 
@@ -808,7 +808,7 @@ void printResume(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 1), (app->middlex + 7), "-> NO <-");
     } else {
-      setColor(COLOR_BLACK, COLOR_BLACK, A_NORMAL);
+      setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
       mvprintw((app->middley + 1), (app->middlex + 7), "   NO   ");
     }
   }
@@ -867,7 +867,7 @@ void printHelpIndicator(appData* app) {
   if (app->currentMode == -3)
     setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
   else
-    setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
   if (strcmp(ICONS, "nerdicons") == 0)
     mvprintw(1, (app->x - 2), "  ");
@@ -883,7 +883,7 @@ void printNotepadIndicator(appData* app) {
   if (app->currentMode == -2)
     setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
   else
-    setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+    setColor(COLOR_WHITE, COLOR_BLACK, A_NORMAL);
 
   if (strcmp(ICONS, "nerdicons") == 0)
     mvprintw(2, (app->x - 2), "󱞂 ");
