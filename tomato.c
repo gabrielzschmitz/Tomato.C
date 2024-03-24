@@ -35,6 +35,7 @@ void initApp(appData *app) {
   /* Animation variables */
   app->logoFrame = 0;
   app->coffeeFrame = 0;
+  app->machineFrame = 0;
   app->bannerFrame = 0;
   app->helpFrame = 0;
   app->notepadFrame = 0;
