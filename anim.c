@@ -209,7 +209,7 @@ void printCoffee(appData* app) {
   int startx = app->middlex - 3;
   int starty = app->middley - 2;
   int frameIndex = app->coffeeFrame * 6;
-  int lineColor[6] = {COLOR_BLACK, COLOR_BLACK, COLOR_WHITE,
+  int lineColor[6] = {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE,
                       COLOR_WHITE, COLOR_WHITE, COLOR_WHITE};
 
   for (int i = 0; i < 6; i++) {
@@ -358,7 +358,7 @@ void printWrench(appData* app, int flip) {
     starty = app->middley - 9;
   }
 
-  setColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
+  setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
   for (int i = 0; i < 5; i++) {
     mvprintw(starty + i, startx, "%s", wrenchFrames[i]);
   }
