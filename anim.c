@@ -24,7 +24,8 @@ void frameTimer(appData* app) {
   const clock_t sec = 60 * CLOCKS_PER_SEC;
   clock_t currentTime = clock();
   const clock_t time = currentTime + sec;
-  if (currentTime < time && !app->pausedTimer) {
+  if (currentTime < time && (!app->pausedTimer || (app->currentMode == -2 ||
+                                                   app->currentMode == -3))) {
     app->framems++;
     if (app->framems >= app->sfps) {
       app->framems = 0;
