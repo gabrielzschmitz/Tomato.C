@@ -311,11 +311,11 @@ void readNotepad(appData *app) {
     app->notes.lines[app->notesAmount]->note =
       (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
     char *note = (char *)malloc(sizeof(char) * MAXINPUTLENGTH + 1);
-    if (sscanf(line, "[x] %s", note))
+    if (sscanf(line, "[x] %[^\n]", note))
       app->notes.lines[app->notesAmount]->type = 'x';
-    if (sscanf(line, "[ ] %s", note))
+    else if (sscanf(line, "[ ] %[^\n]", note))
       app->notes.lines[app->notesAmount]->type = 'o';
-    if (sscanf(line, " -  %s", note))
+    else if (sscanf(line, " -  %[^\n]", note))
       app->notes.lines[app->notesAmount]->type = '-';
     strcpy(app->notes.lines[app->notesAmount]->note, note);
     app->notesAmount += 1;
