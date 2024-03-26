@@ -19,8 +19,10 @@
 
 /* Function to create a new note */
 extern note* createNote(char);
-/* Function to create a new notepad */
-extern notepad* createNotepad(notepad*);
+/* Function to free allocated memory for notepad */
+extern void deallocateNotepad(appData *app);
+/* Function to free allocated memory for file names */
+extern void deallocateFileNames(appData *app);
 
 /* Initialize screen with some little configs */
 extern void initScreen(void);

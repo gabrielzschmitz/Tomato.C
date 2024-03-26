@@ -374,6 +374,8 @@ void handleInputs(appData *app) {
           if (WORKLOG == 1) writeToLog(app);
           if (TIMERLOG == 1) endTimerLog(app);
           endwin();
+          deallocateNotepad(app);
+          deallocateFileNames(app);
           printf("Goodbye!\n");
           exit(EXIT_SUCCESS);
         } else if (app->currentMode == -3) {
@@ -905,6 +907,8 @@ void mainMenuInput(appData *app, char key) {
       killNoise();
       if (TIMERLOG == 1) endTimerLog(app);
       endwin();
+      deallocateNotepad(app);
+      deallocateFileNames(app);
       printf("Goodbye!\n");
       exit(EXIT_SUCCESS);
     }
@@ -941,6 +945,8 @@ void mainMenuInput(appData *app, char key) {
       killNoise();
       if (TIMERLOG == 1) endTimerLog(app);
       endwin();
+      deallocateNotepad(app);
+      deallocateFileNames(app);
       printf("Goodbye!\n");
       exit(EXIT_SUCCESS);
     }
