@@ -32,10 +32,27 @@ note *createNote(char type) {
   return newNote;
 }
 
-/* Function to create a new notepad */
-notepad *createNotepad(notepad *notes) {
-  notes = (notepad *)malloc(sizeof(notepad));
-  return notes;
+/* Function to free allocated memory for notepad */
+void deallocateNotepad(appData *app) {
+    for(int i = 0; i < app->notesAmount; i++) {
+        free(app->notes.lines[i]->note);
+        free(app->notes.lines[i]);
+    }
+}
+
+/* Function to free allocated memory for file names */
+void deallocateFileNames(appData *app) {
+  free(app->logPrefix);
+  if (WORKLOG == 1) {
+   free(app->logFile);
+   free(app->tmpFile);
+  }
+  if (TIMERLOG == 1) {
+    free(app->timerFile);
+  }
+  if (NOTEPADLOG == 1) {
+    free(app->notepadFile);
+  }
 }
 
 /* Initialize screen with colors, enabled keyboard and another little configs */
@@ -101,6 +118,7 @@ void createLog(appData *app) {
   strcpy(logPrefix, home);
   strcat(logPrefix, "/");
   strcat(logPrefix, app->logPrefix);
+  free(app->logPrefix); // Deallocates memmory allocated at appInit() -- tomato.c
   app->logPrefix = logPrefix;
 
   /* Set log file fullpath */
@@ -109,6 +127,7 @@ void createLog(appData *app) {
   strcpy(logFile, home);
   strcat(logFile, "/");
   strcat(logFile, app->logFile);
+  free(app->logFile); // Deallocates memmory allocated at appInit() -- tomato.c
   app->logFile = logFile;
 
   /* Set tmp file fullpath */
@@ -117,6 +136,7 @@ void createLog(appData *app) {
   strcpy(tmpFile, home);
   strcat(tmpFile, "/");
   strcat(tmpFile, app->tmpFile);
+  free(app->tmpFile); // Deallocates memmory allocated at appInit() -- tomato.c
   app->tmpFile = tmpFile;
 
   /* Set timer file fullpath */
@@ -125,6 +145,7 @@ void createLog(appData *app) {
   strcpy(timerFile, home);
   strcat(timerFile, "/");
   strcat(timerFile, app->timerFile);
+  free(app->timerFile); // Deallocates memmory allocated at appInit() -- tomato.c
   app->timerFile = timerFile;
 
   /* Set notepad file fullpath */
@@ -133,6 +154,7 @@ void createLog(appData *app) {
   strcpy(notepadFile, home);
   strcat(notepadFile, "/");
   strcat(notepadFile, app->notepadFile);
+  free(app->notepadFile); // Deallocates memmory allocated at appInit() -- tomato.c
   app->notepadFile = notepadFile;
 
   /* Create log folder */
@@ -318,6 +340,7 @@ void readNotepad(appData *app) {
     else if (sscanf(line, " -  %[^\n]", note))
       app->notes.lines[app->notesAmount]->type = '-';
     strcpy(app->notes.lines[app->notesAmount]->note, note);
+    free(note);
     app->notesAmount += 1;
     app->emptyNotepad = 0;
   }
@@ -479,6 +502,9 @@ int tomatoTimer(const char *timerFile) {
 
   /* Print the timer file content */
   int status = printTimerLog(path);
+
+  /* Free Path */
+  free(path);
 
   /* Return exit status */
   return status;

@@ -90,7 +90,6 @@ void initApp(appData *app) {
   app->runNotepadOnce = 1;
 
   /* Notepad variables */
-  createNotepad(&app->notes);
   app->emptyNotepad = 1;
   app->inputLength = 0;
   app->notesAmount = 0;
@@ -230,6 +229,7 @@ int main(int argc, char *argv[]) {
     char *timerFile = malloc(strlen(TIMERFILE) + 1);
     strcpy(timerFile, TIMERFILE);
     int status = tomatoTimer(timerFile);
+    free(timerFile);
     return status;
   } else if (argc == 2 && !strcmp("-t", argv[1]) && TIMERLOG != 1) {
     printf("enable timer log to use [-t]");
