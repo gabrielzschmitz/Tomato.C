@@ -205,6 +205,7 @@ void updateLongPause(appData* app) {
     app->pomodoroCounter = 0;
     if (TIMERLOG == 1) endTimerLog(app);
     notify("end");
+    app->timer = 0;
   }
 
   /* Beach Animation */
