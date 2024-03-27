@@ -237,6 +237,7 @@ $ sudo make install
 * [X] Current Time to file
 * [X] Add white noise functionality
 * [X] Implement simple note taking
+* [ ] Implement a simple work hours history (maybe like git commits)
 
 ## 🤝 Contribute
 
