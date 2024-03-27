@@ -1009,7 +1009,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex + 0), "[%02d minutes]",
                app->workTime / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "");
         fprintf(time, " ");
       }
@@ -1018,7 +1018,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex + 1), "[%02d minutes]",
                app->workTime / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "⏸️ ");
         fprintf(time, "🍅 ");
       }
@@ -1027,7 +1027,8 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex - 1), "[%02d minutes]",
                app->workTime / (60 * 8));
-      if (TIMERLOG == 1 && app->pausedTimer == 1) fprintf(time, "P ");
+      if (TIMERLOG == 1 && app->pausedTimer == 1 && TIMERLOGICONS == 1)
+        fprintf(time, "P ");
     }
   } else if (mode == 2) {
     setColor(COLOR_CYAN, COLOR_BLACK, A_BOLD);
@@ -1036,7 +1037,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex - 1), "[%02d minutes]",
                app->shortPause / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "");
         fprintf(time, " ");
       }
@@ -1045,7 +1046,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex - 1), "[%02d minutes]",
                app->shortPause / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "⏸️ ");
         fprintf(time, "☕ ");
       }
@@ -1063,7 +1064,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex + 1), "[%02d minutes]",
                app->longPause / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "");
         fprintf(time, " ");
       }
@@ -1072,7 +1073,7 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex + 2), "[%02d minutes]",
                app->longPause / (60 * 8));
-      if (TIMERLOG == 1) {
+      if (TIMERLOG == 1 && TIMERLOGICONS == 1) {
         if (app->pausedTimer == 1) fprintf(time, "⏸️ ");
         fprintf(time, "🌴 ");
       }
@@ -1081,7 +1082,8 @@ void printTimer(appData* app) {
       setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
       mvprintw((app->middley + 6), (app->middlex + 0), "[%02d minutes]",
                app->longPause / (60 * 8));
-      if (TIMERLOG == 1 && app->pausedTimer == 1) fprintf(time, "P ");
+      if (TIMERLOG == 1 && app->pausedTimer == 1 && TIMERLOGICONS == 1)
+        fprintf(time, "P ");
     }
   }
   setColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
