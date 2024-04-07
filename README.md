@@ -172,7 +172,7 @@ UBUNTU
 $ sudo apt install build-essential libncurses5-dev libncursesw5-dev libmpv-dev mpv pkg-config libnotify4
 
 FEDORA
-$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv pkgconf libnotify
+$ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv-devel pkgconf libnotify
 
 MACOS (MacPorts needed)
 $ brew install gcc && sudo port install ncurses && sudo port intall mpv +libmpv
