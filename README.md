@@ -51,7 +51,7 @@ The technique basically consists of using a timer to break down work into <b>int
 
 ## 🚀 How to Use
 
-<b>Note</b>: <b>Never!</b> Run the app with admin privilages.
+<b>Note</b>: <b>Never!</b> Run the app with admin privileges.
 Just <b>type it</b> in the <b>terminal</b>:
 
 ```shell
@@ -130,7 +130,7 @@ You can change those configs:
 
 Using of the <i>-t</i> flag you can pretty much do anything you want with the output.
 
-For exemple, if you're using polybar, you can use it to get the time of your current pomodoro cycle to the bar.
+For example, if you're using polybar, you can use it to get the time of your current pomodoro cycle to the bar.
 Just include the module at your polybar config:
 
 ```
@@ -175,10 +175,10 @@ FEDORA
 $ sudo dnf groupinstall 'Development Tools' && sudo dnf install ncurses-devel mpv-devel pkgconf libnotify
 
 MACOS (MacPorts needed)
-$ brew install gcc && sudo port install ncurses && sudo port intall mpv +libmpv
+$ brew install gcc && sudo port install ncurses && sudo port install mpv +libmpv
 ```
 
-<b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Saddly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
+<b>Note</b>: if you're using <b>WSL</b>, install [wsl-notify-send](https://github.com/stuartleeks/wsl-notify-send) to get the notifications and then toggle it in the config.h. Sadly [mpv](https://mpv.io/) don't work at WSL, so there's not custom sounds.
 
 ## 💾 How to Install
 
