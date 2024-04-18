@@ -95,7 +95,7 @@ You can configure the following settings at run time:
 * <b><i>Pomodoros Amount</i></b>;
 * <b><i>Work Time</i></b>;
 * <b><i>Short Pause Time</i></b>;
-* <b><i>Long Pause Time</i></b>.
+* <b><i>Long Pause Time</i></b>;
 * <b><i>Noises Volume</i></b>.
 
 And change the default configurations editing the [config.h](https://github.com/gabrielzschmitz/Tomato.C/blob/master/config.h), then `sudo make install` to take effect.
@@ -119,7 +119,7 @@ You can change those configs:
 * <b><i>POMODOROS</i></b>: 1-8;
 * <b><i>WORKTIME</i></b>: 5-50;
 * <b><i>SHORTPAUSE</i></b>: 1-10;
-* <b><i>LONGPAUSE</i></b>: 5-60.
+* <b><i>LONGPAUSE</i></b>: 5-60;
 * <b><i>WORKLOG</i></b>: 0/1;
 * <b><i>TIMERLOG</i></b>: 0/1;
 * <b><i>NOTELOG</i></b>: 0/1;
