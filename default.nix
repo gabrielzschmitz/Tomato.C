@@ -7,7 +7,7 @@
 #  `'
 # default.nix
 {
-  pkgconfig,
+  pkg-config,
   libnotify,
   gnumake,
   ncurses,
@@ -40,7 +40,7 @@ stdenv.mkDerivation {
   '';
 
   nativeBuildInputs = [
-    pkgconfig
+    pkg-config
     gnumake
     ncurses
     which
@@ -72,6 +72,6 @@ stdenv.mkDerivation {
     description = "A pomodoro timer written in pure C.";
     homepage = "https://github.com/gabrielzschmitz/Tomato.C";
     license = licenses.gpl3Plus;
-    maintainers = with maintainers; [luisnquin];
+    maintainers = with maintainers; [luisnquin CarlosCraveiro];
   };
 }

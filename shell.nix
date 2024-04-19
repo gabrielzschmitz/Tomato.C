@@ -3,7 +3,7 @@
 with pkgs;
   mkShell {
     buildInputs = [
-      pkgconfig
+      pkg-config
       gnumake
       ncurses
       which
