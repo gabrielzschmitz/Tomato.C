@@ -1,0 +1,9 @@
+*.gif
+*.md
+*.o
+.vscode/
+media/
+LICENSE
+tomato
+tomatonoise
+**/result

@@ -1,0 +1,25 @@
+# Directories
+PREFIX = /usr/local
+APPPREFIX = $(PREFIX)/share/applications
+DATAPREFIX = .local/share/tomato
+INCLUDES = -I$(PREFIX)/include
+LIBDIR = -L$(PREFIX)/lib
+
+# Combine flags
+CPPFLAGS += $(INCLUDES) $(DEPFLAGS)
+LDFLAGS += $(LIBDIR)
+ifdef __APPLE__
+LDLIBS = -lncurses -lm
+else
+LDLIBS = $(shell pkg-config --libs ncursesw) -lm
+endif
+
+# Dependency flags
+DEPFLAGS = -MD
+
+# Compiler and flags
+CC = tcc
+TCCFLAGS = -Wwrite-strings
+GCCFLAGS = -Wextra
+DFLAGS = -DDATADIR=\"$(DATAPREFIX)\"
+CFLAGS = -std=c99 $(TCCFLAGS) -Wall -pedantic -O3 $(DFLAGS)
