@@ -3,6 +3,7 @@
 #include <ncurses.h>
 
 #include "anim.h"
+#include "config.h"
 #include "tomato.h"
 
 /* Update variables */
@@ -45,14 +46,14 @@ void GetScreenSize(AppData *app) {
 void UpdateMainMenu(AppData *app) {
   FrameTimer(&app->milliseconds, &app->frame_seconds);
 
-  /* Tomato Animation */
-  Sprite *sprites = &app->sprites[MAIN_MENU];
-  int frame_count = sprites->frame_count;
-  int final_frame = frame_count * frame_count;
-  app->sprites[0].current_frame =
-    (app->frame_seconds / app->sprites[0].frame_count);
-  if (app->sprites[0].current_frame > app->sprites[0].frame_count) {
-    app->sprites[0].current_frame = 0;
-    app->frame_seconds = app->sprites[0].frame_count - 1;
+  if (ANIMATIONS) {
+    /* Tomato Animation */
+    Rollfilm *animation = app->animations[MAIN_MENU];
+    Frame *frames = animation->frames;
+    if (frames != NULL && app->frame_seconds == animation->frame_count) {
+      animation->frames = frames->next;
+      animation->current_frame = frames->id;
+      app->frame_seconds = 0;
+    }
   }
 }

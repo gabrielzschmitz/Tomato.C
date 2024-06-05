@@ -2,6 +2,8 @@
 #define CONFIG_H_
 
 /* Visual Settings ---------------------------------------------------------- */
+/* 1 if you want animations, 0 if not (default: 1) */
+static const int ANIMATIONS = 1;
 /* ascii - emojis - nerd-icons (default: nerd-icons)
  * Note: you'll need a patched nerdicons for that option */
 static const char* ICONS = "nerd-icons";

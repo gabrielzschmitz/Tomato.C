@@ -1,15 +1,10 @@
 #include "init.h"
 
-#include <ncurses.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include "anim.h"
 #include "tomato.h"
 
 /* Initialize ncurses screen and configure settings */
-ErrorType InitScreen(void) {
-  ErrorType status = NO_ERROR;
+void InitScreen(void) {
 #ifdef XCURSES
   Xinitscr(argc, argv);
 #else
@@ -43,14 +38,10 @@ ErrorType InitScreen(void) {
   nodelay(stdscr, TRUE);
   /* Enable keypad mode for extended keyboard input */
   keypad(stdscr, TRUE);
-
-  return status;
 }
 
 /* Initialize variables */
 ErrorType InitApp(AppData* app) {
-  ErrorType status = NO_ERROR;
-
   app->screen_width = 0;
   app->screen_height = 0;
 
@@ -60,11 +51,25 @@ ErrorType InitApp(AppData* app) {
   app->running = true;
 
   const char* main_menu_sprites_file = "../sprites/mainmenu.asc";
-  DeserializeSprite(main_menu_sprites_file, &app->sprites[0]);
-  app->sprites[0].current_frame = 0;
+  app->animations[MAIN_MENU] = DeserializeSprites(main_menu_sprites_file);
+  if (app->animations[MAIN_MENU] == NULL) return MALLOC_ERROR;
 
   app->milliseconds = 0;
-  app->frame_seconds = app->sprites[0].frame_count - 1;
+  app->frame_seconds = 0;
 
-  return status;
+  return NO_ERROR;
+}
+
+/* End ncurses screen and delete default window and screen */
+ErrorType EndScreen(void) {
+  int err = endwin();
+  if (err == ERR) return WINDOW_DELETION_ERROR;
+
+  err = delwin(stdscr);
+  if (err == ERR) return WINDOW_DELETION_ERROR;
+
+  extern SCREEN* SP;
+  delscreen(SP);
+
+  return NO_ERROR;
 }

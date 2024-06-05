@@ -18,8 +18,8 @@ endif
 DEPFLAGS = -MD
 
 # Compiler and flags
-CC = tcc
+CC = gcc
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\"
-CFLAGS = -std=c99 $(TCCFLAGS) -Wall -pedantic -O3 $(DFLAGS)
+CFLAGS = -std=c99 -g $(GCCFLAGS) -Wall -pedantic -O3 $(DFLAGS)

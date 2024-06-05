@@ -4,9 +4,12 @@
 #include "tomato.h"
 
 /* Initialize ncurses screen and configure settings */
-ErrorType InitScreen(void);
+void InitScreen(void);
 
 /* Initialize variables */
 ErrorType InitApp(AppData *app);
+
+/* End ncurses screen and delete default window and screen */
+ErrorType EndScreen(void);
 
 #endif /* INIT_H_ */
