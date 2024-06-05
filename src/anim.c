@@ -1,10 +1,12 @@
 #include "anim.h"
 
+#include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "tomato.h"
+#include "util.h"
 
 /* Increments animation frames based on real-life seconds */
 void FrameTimer(double* milliseconds, int* frame_seconds) {
@@ -439,6 +441,7 @@ void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
   Frame* current_frame = rollfilm->frames;
   FrameRow* current_row = current_frame->rows;
   int y = start_y;
+  int color = NO_COLOR;
 
   // Loop through each row in the current frame
   while (current_row != NULL) {
@@ -447,6 +450,10 @@ void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
 
     // Loop through each token in the current row and print it
     while (current_token != NULL) {
+      if (color != current_token->color && current_token->color != NO_COLOR) {
+        color = current_token->color;
+        SetColor(color, COLOR_BLACK, A_BOLD);
+      }
       mvprintw(y, x, "%s", current_token->token);
       x += current_token->length;
       current_token = current_token->next;
