@@ -4,6 +4,7 @@
 
 #include "anim.h"
 #include "tomato.h"
+#include "util.h"
 
 /* Print at screen */
 ErrorType DrawScreen(AppData* app) {
@@ -12,8 +13,10 @@ ErrorType DrawScreen(AppData* app) {
 
   switch (app->current_mode) {
     case MAIN_MENU:
-      mvprintw(0, 0, "%02d", app->frame_seconds);
-      DrawCurrentFrame(app->animations[MAIN_MENU], 1, 2);
+      DrawCurrentFrame(app->animations[MAIN_MENU], 0, 0);
+      SetColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+      mvprintw(9, 3, "%02d - %02lf", app->frame_seconds,
+               app->frame_milliseconds);
       break;
     default:
       break;

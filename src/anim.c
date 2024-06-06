@@ -9,16 +9,12 @@
 #include "util.h"
 
 /* Increments animation frames based on real-life seconds */
-void FrameTimer(double* milliseconds, int* frame_seconds) {
-  const clock_t sec = 60 * CLOCKS_PER_SEC;
-  clock_t current_time = clock();
-  const clock_t final_time = current_time + sec;
-  if (final_time > current_time) {
-    *milliseconds = *milliseconds + 1;
-    if (*milliseconds >= REAL_SECONDS) {
-      *milliseconds = 0;
-      *frame_seconds += 1;
-    }
+void FrameTimer(int* frame_second, double* milliseconds) {
+  *milliseconds += REAL_SECOND;
+
+  if (*milliseconds >= 1000.0) {
+    *milliseconds = 0.0;
+    (*frame_second)++;
   }
 }
 
@@ -219,22 +215,21 @@ Rollfilm* DeserializeSprites(const char* filename) {
 }
 
 /* Parses the frame height from a line. */
-static int ParseFrameSize(const char* line, int* frame_count,
-                          int* frame_height) {
+int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
   return sscanf(line, "%*[^/]/%d/%d", frame_count, frame_height) != 2 ? -1 : 0;
 }
 
 /* Checks if the line contains icons. */
-static int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
+int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
 
 /* Checks if the line is a separator. */
-static int IsSeparatorLine(const char* line) {
+int IsSeparatorLine(const char* line) {
   return strstr(line, SEPARATOR) != NULL;
 }
 
 /* Processes a line of frame data and updates the current row. */
-static int ProcessFrameLine(const char* line, FrameRow** current_row,
-                            int* line_color, int* line_width) {
+int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
+                     int* line_width) {
   FrameToken* line_token = DeserializeFrameLine(line, line_color);
   if (line_token == NULL) {
     return -1;
@@ -260,8 +255,7 @@ static int ProcessFrameLine(const char* line, FrameRow** current_row,
 }
 
 /* Links a new frame to the current frame and updates the frame ID. */
-static void LinkNewFrame(Frame** current_frame, FrameRow* head_row,
-                         int frame_id) {
+void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
   Frame* new_frame = CreateFrame();
   if (new_frame == NULL) {
     return;
@@ -316,20 +310,18 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
       src += length + 3;
       current_token->length += length;
     } else if (*src == '\\' && *(src + 1) == 'c') {
-      if (current_token->prev != NULL) {
-        FrameToken* prev = current_token;
-        FrameToken* current = CreateToken();
-        if (current == NULL) {
-          FreeTokens(head);
-          return NULL;
-        }
-        FrameToken* next = NULL;
-        prev->next = current;
-        current->prev = prev;
-        current->next = next;
-        current_token = current;
-      }
       src += HandleColor(src, color);
+
+      // Create a new token for the new color
+      FrameToken* new_token = CreateToken();
+      if (new_token == NULL) {
+        FreeTokens(head);
+        return NULL;
+      }
+
+      current_token->next = new_token;
+      new_token->prev = current_token;
+      current_token = new_token;
       current_token->color = *color;
     } else {
       if (current_token->color == NO_COLOR) current_token->color = *color;
@@ -393,43 +385,9 @@ int HandleUnicode(const char* src, char** dest) {
 /* Handles a color code in a line */
 int HandleColor(const char* src, int* dest) {
   int color_code = src[2] - '0';
-  if (color_code < 0 || color_code > MAX_COLOR_PAIRS) return 3;
+  if (color_code < 0 || color_code > PALETTE_SIZE) return 3;
   *dest = color_code;
   return 3;
-}
-
-/* Prints all frames from a Rollfilm */
-void PrintAllFrames(Rollfilm* rollfilm) {
-  if (rollfilm == NULL) {
-    printf("Rollfilm is NULL\n");
-    return;
-  }
-
-  Frame* head_frame = rollfilm->frames;
-  if (head_frame == NULL) {
-    printf("No frames in the Rollfilm\n");
-    return;
-  }
-
-  printf("Rollfilm height: %d\n", rollfilm->frame_width);
-  Frame* current_frame = head_frame;
-  do {
-    printf("Frame ID: %d | Frame Width: %d\n", current_frame->id,
-           current_frame->width);
-
-    FrameRow* current_row = current_frame->rows;
-    while (current_row != NULL) {
-      FrameToken* current_token = current_row->tokens;
-      while (current_token != NULL) {
-        printf("%d:%s\n", current_token->color, current_token->token);
-        current_token = current_token->next;
-      }
-
-      current_row = current_row->next;
-    }
-
-    current_frame = current_frame->next;
-  } while (current_frame != head_frame);
 }
 
 /* Draws the current frame of the Rollfilm at the specified coordinates */
@@ -452,7 +410,7 @@ void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
     while (current_token != NULL) {
       if (color != current_token->color && current_token->color != NO_COLOR) {
         color = current_token->color;
-        SetColor(color, COLOR_BLACK, A_BOLD);
+        SetColor(color, NO_COLOR, A_BOLD);
       }
       mvprintw(y, x, "%s", current_token->token);
       x += current_token->length;

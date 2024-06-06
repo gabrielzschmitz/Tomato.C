@@ -42,7 +42,7 @@ struct Rollfilm {
 };
 
 /* Increments animation frames based on real-life seconds */
-void FrameTimer(double* milliseconds, int* frame_seconds);
+void FrameTimer(int* frame_second, double* milliseconds);
 
 /* Creates a new Rollfilm with N frames of height M */
 Rollfilm* CreateRollfilm(int N, int M);
@@ -78,23 +78,21 @@ void FreeToken(FrameToken* token);
 Rollfilm* DeserializeSprites(const char* filename);
 
 /* Parses the frame height from a line. */
-static int ParseFrameSize(const char* line, int* frame_count,
-                          int* frame_height);
+int ParseFrameSize(const char* line, int* frame_count, int* frame_height);
 
 /* Checks if the line contains icons. */
-static int IsIconsLine(const char* line);
+int IsIconsLine(const char* line);
 
 /* Checks if the line is a separator. */
-static int IsSeparatorLine(const char* line);
+int IsSeparatorLine(const char* line);
 
 /* Processes a line of frame data and updates the current row. */
-static int ProcessFrameLine(const char* line, FrameRow** current_row,
-                            int* line_color, int* line_width);
+int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
+                     int* line_width);
 
 /* Links a new frame to the current frame and updates the frame ID, maintaining
  * a circular linked list. */
-static void LinkNewFrame(Frame** current_frame, FrameRow* head_row,
-                         int frame_id);
+void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id);
 
 /* Returns the widest frame from a rollfilm */
 int GetWidestFrame(Rollfilm* rollfilm);

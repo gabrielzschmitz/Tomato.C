@@ -40,10 +40,9 @@ typedef enum { NORMAL, INSERT, COMMAND } InputMode;
 /* Defining the app struct */
 typedef struct AppData AppData;
 struct AppData {
-  double milliseconds;
-  int frame_seconds;
   Rollfilm *animations[MAX_ANIMATIONS];
-  float delta_time;
+  double frame_milliseconds;
+  int frame_seconds;
 
   int screen_width;
   int screen_height;

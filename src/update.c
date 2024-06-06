@@ -44,16 +44,16 @@ void GetScreenSize(AppData *app) {
 
 /* Update MAIN_MENU */
 void UpdateMainMenu(AppData *app) {
-  FrameTimer(&app->milliseconds, &app->frame_seconds);
+  FrameTimer(&app->frame_seconds, &app->frame_milliseconds);
 
   if (ANIMATIONS) {
     /* Tomato Animation */
     Rollfilm *animation = app->animations[MAIN_MENU];
     Frame *frames = animation->frames;
-    if (frames != NULL && app->frame_seconds == animation->frame_count) {
+    if (frames != NULL && app->frame_seconds != frames->id) {
       animation->frames = frames->next;
       animation->current_frame = frames->id;
-      app->frame_seconds = 0;
     }
+    if (app->frame_seconds == animation->frame_count) app->frame_seconds = 0;
   }
 }

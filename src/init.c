@@ -60,8 +60,8 @@ ErrorType InitApp(AppData* app) {
   app->animations[MAIN_MENU] = DeserializeSprites(main_menu_sprites_file);
   if (app->animations[MAIN_MENU] == NULL) return MALLOC_ERROR;
 
-  app->milliseconds = 0;
   app->frame_seconds = 0;
+  app->frame_milliseconds = 0.0;
 
   return NO_ERROR;
 }

@@ -3,7 +3,6 @@
 #include <locale.h>
 #include <ncurses.h>
 #include <stdio.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "anim.h"
@@ -28,24 +27,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Main app loop */
-  clock_t last_time = clock();
-  float frame_time = 1000.0f / FPS;
   while (app.running) {
-    clock_t current_time = clock();
-    float delta_time = (float)(current_time - last_time) / CLOCKS_PER_SEC;
-    last_time = current_time;
-    if (delta_time < frame_time / 1000.0f) {
-      int sleep_time =
-        (int)(frame_time -
-              delta_time *
-                1000.0f);  // Convert frame_time and delta_time to milliseconds
-      napms(sleep_time);   // Sleep using napms
-      current_time = clock();  // Update current time after sleeping
-      delta_time = (float)(current_time - last_time) / CLOCKS_PER_SEC;
-      last_time = current_time;
-    }
-    app.delta_time = delta_time;
-
     ErrorType update_app = UpdateApp(&app);
     if (update_app != NO_ERROR) {
       endwin();
@@ -66,6 +48,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error drawing screen: %d\n", draw_screen);
       return draw_screen;
     }
+
+    napms(1000 / FPS);
   }
   ErrorType end_screen = EndScreen();
   if (end_screen != NO_ERROR) {
