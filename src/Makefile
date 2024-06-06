@@ -8,6 +8,9 @@ OBJS = $(SRCS:.c=.o)
 
 all: tomato
 
+clean-all: all
+	rm -rf *.o *.d
+
 tomato: $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
