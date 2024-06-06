@@ -8,12 +8,11 @@
 #include "anim.h"
 #include "config.h"
 
-#define PALLETE_SIZE    (COLOR_WHITE - COLOR_BLACK + 1)
-#define MAX_COLOR_PAIRS 8
-#define NO_COLOR        -1
-#define MAX_ANIMATIONS  6
-#define BGTRANSPARENCY  1
-#define REAL_SECONDS    sqrt(FPS)
+#define PALETTE_SIZE   (COLOR_WHITE - COLOR_BLACK + 1)
+#define NO_COLOR       -1
+#define MAX_ANIMATIONS 6
+#define BGTRANSPARENCY 1
+#define REAL_SECOND    1000.0 / FPS
 
 /* Defining error handling enum */
 typedef enum {

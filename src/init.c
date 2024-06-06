@@ -1,5 +1,7 @@
 #include "init.h"
 
+#include <ncurses.h>
+
 #include "anim.h"
 #include "tomato.h"
 
@@ -12,17 +14,21 @@ void InitScreen(void) {
 #endif
   if (has_colors()) {
     if (BGTRANSPARENCY == 1) use_default_colors();
-    int realbg;
-    int bg = 0, fg = 0;
     start_color();
-    for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++)
-      for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++) {
-        if (BGTRANSPARENCY == 1)
-          realbg = -1;
-        else
-          realbg = bg;
-        init_pair(bg * PALLETE_SIZE + fg + 1, fg, realbg);
+
+    // Initialize pairs with both foreground and background colors
+    for (int bg = 0; bg < PALETTE_SIZE; bg++) {
+      for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+        int pair_number = (bg * PALETTE_SIZE) + fg + 1;
+        init_pair(pair_number, fg, bg);
       }
+    }
+
+    // Initialize pairs with foreground colors and transparent background
+    for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+      int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
+      init_pair(pair_number, fg, -1);
+    }
   }
   /* Disable echoing user input */
   noecho();
