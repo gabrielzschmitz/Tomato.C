@@ -3,6 +3,7 @@
 #include <ncurses.h>
 
 #include "anim.h"
+#include "config.h"
 #include "tomato.h"
 #include "util.h"
 
@@ -11,12 +12,16 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
+  Rollfilm* animation = NULL;
   switch (app->current_mode) {
     case MAIN_MENU:
-      DrawCurrentFrame(app->animations[MAIN_MENU], 0, 0);
-      SetColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
-      mvprintw(9, 3, "%02d - %02lf", app->frame_seconds,
-               app->frame_milliseconds);
+      if (ANIMATIONS) {
+        animation = app->animations[MAIN_MENU];
+        animation->render(animation, 0, 0);
+        SetColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
+        mvprintw(9, 4, "%02d - %08.4lf", app->frame_seconds,
+                 app->frame_milliseconds);
+      }
       break;
     default:
       break;

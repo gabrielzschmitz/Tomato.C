@@ -28,6 +28,8 @@ Rollfilm* CreateRollfilm(int N, int M) {
   film->frame_width = 0;
   film->current_frame = 0;
   film->frames = NULL;
+  film->render = RenderCurrentFrame;
+  film->update = UpdateAnimation;
 
   return film;
 }
@@ -390,8 +392,8 @@ int HandleColor(const char* src, int* dest) {
   return 3;
 }
 
-/* Draws the current frame of the Rollfilm at the specified coordinates */
-void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
+/* Render the current frame of the Rollfilm at the specified coordinates */
+void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
   if (rollfilm == NULL || rollfilm->frames == NULL) {
     return;
   }
@@ -420,4 +422,17 @@ void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
     current_row = current_row->next;
     y++;
   }
+}
+
+/* Updates the current frame of the Rollfilm to be next frame */
+void UpdateAnimation(Rollfilm* rollfilm, int* seconds, double* milliseconds) {
+  FrameTimer(seconds, milliseconds);
+
+  /* Tomato Animation */
+  Frame* frames = rollfilm->frames;
+  if (frames != NULL && *seconds != frames->id) {
+    rollfilm->frames = frames->next;
+    rollfilm->current_frame = frames->id;
+  }
+  if (*seconds == rollfilm->frame_count) *seconds = 0;
 }

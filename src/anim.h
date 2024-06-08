@@ -3,8 +3,18 @@
 
 #define MAX_FRAME_WIDTH 120
 
-/* Structure for storing frame tokens with color information */
+/* Animation specific structs */
 typedef struct FrameToken FrameToken;
+typedef struct FrameRow FrameRow;
+typedef struct Frame Frame;
+typedef struct Rollfilm Rollfilm;
+
+/* Animation specific functions */
+typedef void (*AnimationUpdate)(struct Rollfilm*, int* seconds,
+                                double* milliseconds);
+typedef void (*AnimationRender)(struct Rollfilm*, int start_y, int start_x);
+
+/* Structure for storing frame tokens with color information */
 struct FrameToken {
   FrameToken* next; /* Pointer to the next token in the list */
   FrameToken* prev; /* Pointer to the previous token in the list */
@@ -14,7 +24,6 @@ struct FrameToken {
 };
 
 /* Structure for storing a row of frame tokens */
-typedef struct FrameRow FrameRow;
 struct FrameRow {
   FrameRow* next;     /* Pointer to the next row in the list */
   FrameRow* prev;     /* Pointer to the previous row in the list */
@@ -22,7 +31,6 @@ struct FrameRow {
 };
 
 /* Structure for storing an animation frame */
-typedef struct Frame Frame;
 struct Frame {
   Frame* next;    /* Pointer to the next frame in the circular list */
   Frame* prev;    /* Pointer to the previous frame in the circular list */
@@ -32,13 +40,14 @@ struct Frame {
 };
 
 /* Structure for storing an animation (Rollfilm) */
-typedef struct Rollfilm Rollfilm;
 struct Rollfilm {
-  Frame* frames;     /* Pointer to the circular linked list of frames */
-  int current_frame; /* Index of the current frame */
-  int frame_count;   /* Total number of frames */
-  int frame_height;  /* Height of each frame */
-  int frame_width;   /* Width of the largest frame */
+  Frame* frames;          /* Pointer to the circular linked list of frames */
+  int current_frame;      /* Index of the current frame */
+  int frame_count;        /* Total number of frames */
+  int frame_height;       /* Height of each frame */
+  int frame_width;        /* Width of the largest frame */
+  AnimationUpdate update; /* Function pointer for animation update logic */
+  AnimationRender render; /* Function pointer for animation render logic */
 };
 
 /* Increments animation frames based on real-life seconds */
@@ -106,10 +115,10 @@ int HandleUnicode(const char* src, char** dest);
 /* Handles a color code in a line */
 int HandleColor(const char* src, int* dest);
 
-/* Prints all frames from a Rollfilm */
-void PrintAllFrames(Rollfilm* rollfilm);
+/* Render the current frame of the Rollfilm at the specified coordinates */
+void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
 
-/* Draws the current frame of the Rollfilm at the specified coordinates */
-void DrawCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
+/* Updates the current frame of the Rollfilm to be next frame */
+void UpdateAnimation(Rollfilm* rollfilm, int* seconds, double* milliseconds);
 
 #endif /* ANIM_H */
