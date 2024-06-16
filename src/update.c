@@ -18,19 +18,6 @@ ErrorType UpdateApp(AppData *app) {
       break;
   }
 
-  /* Update all the app modes */
-  // if (app->currentMode == -3)
-  //   updateHelpPage(app);
-  // else if (app->currentMode == -2)
-  //   updateNotepad(app);
-  // if (app->current_mode == MAIN_MENU) UpdateMainMenu(app);
-  // else if (app->currentMode == 1)
-  //   updateWorkTime(app);
-  // else if (app->currentMode == 2)
-  //   updateShortPause(app);
-  // else if (app->currentMode == 3)
-  //   updateLongPause(app);
-
   /* Get X and Y window size */
   GetScreenSize(app);
 
@@ -47,6 +34,6 @@ void UpdateMainMenu(AppData *app) {
   /* Tomato Animation */
   if (ANIMATIONS) {
     Rollfilm *animation = app->animations[MAIN_MENU];
-    animation->update(animation, &app->frame_seconds, &app->frame_milliseconds);
+    animation->update(animation);
   }
 }

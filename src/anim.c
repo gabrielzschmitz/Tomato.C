@@ -1,6 +1,7 @@
 #include "anim.h"
 
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -8,14 +9,13 @@
 #include "tomato.h"
 #include "util.h"
 
-/* Increments animation frames based on real-life seconds */
-void FrameTimer(int* frame_second, double* milliseconds) {
-  *milliseconds += REAL_SECOND;
-
-  if (*milliseconds >= 1000.0) {
-    *milliseconds = 0.0;
-    (*frame_second)++;
-  }
+/* Function to get the current time in milliseconds */
+double GetCurrentTimeMS() {
+  struct timespec current_time;
+  clock_gettime(CLOCK_MONOTONIC, &current_time);
+  double ms =
+    (current_time.tv_sec * 1000.0) + (current_time.tv_nsec / 1000000.0);
+  return ms;
 }
 
 /* Creates a new Rollfilm with N frames of height M */
@@ -23,10 +23,11 @@ Rollfilm* CreateRollfilm(int N, int M) {
   Rollfilm* film = (Rollfilm*)malloc(sizeof(Rollfilm));
   if (film == NULL) return NULL;
 
+  film->delta_frame_ms = GetCurrentTimeMS();
+  film->current_frame = 0;
   film->frame_count = N;
   film->frame_height = M;
   film->frame_width = 0;
-  film->current_frame = 0;
   film->frames = NULL;
   film->render = RenderCurrentFrame;
   film->update = UpdateAnimation;
@@ -46,7 +47,6 @@ Frame* CreateFrame() {
   Frame* newFrame = (Frame*)malloc(sizeof(Frame));
   if (newFrame == NULL) return NULL;
   newFrame->next = NULL;
-  newFrame->prev = NULL;
   newFrame->rows = NULL;
   newFrame->width = 0;
   newFrame->id = 0;
@@ -78,7 +78,6 @@ FrameRow* CreateRow() {
   FrameRow* newRow = (FrameRow*)malloc(sizeof(FrameRow));
   if (newRow == NULL) return NULL;
   newRow->next = NULL;
-  newRow->prev = NULL;
   newRow->tokens = NULL;
   return newRow;
 }
@@ -99,7 +98,6 @@ FrameToken* CreateToken() {
   FrameToken* newToken = (FrameToken*)malloc(sizeof(FrameToken));
   if (newToken == NULL) return NULL;
   newToken->next = NULL;
-  newToken->prev = NULL;
   newToken->token = (char*)calloc(MAX_FRAME_WIDTH, sizeof(char));
   if (newToken->token == NULL) {
     free(newToken);
@@ -143,39 +141,32 @@ Rollfilm* DeserializeSprites(const char* filename) {
   int line_color = NO_COLOR;
   int read = 0;
   int line_width = 0;
+  double seconds_multiplier = 0.0;
 
   while (fgets(line, sizeof(line), file) != NULL) {
-    if (IsIconsLine(line)) {
-      int frame_count, frame_height;
-      read = 1;
-      if (ParseFrameSize(line, &frame_count, &frame_height) != 0) {
-        fclose(file);
-        return NULL;
-      }
-      rollfilm = CreateRollfilm(frame_count, frame_height);
-      if (rollfilm == NULL) {
-        fclose(file);
-        return NULL;
-      }
-      head_frame = CreateFrame();
-      if (head_frame == NULL) {
-        FreeRollfilm(rollfilm);
-        fclose(file);
-        return NULL;
-      }
-      current_frame = head_frame;
-      current_frame->id = current_frame_id;
-      head_row = CreateRow();
-      if (head_row == NULL) {
-        FreeRollfilm(rollfilm);
-        fclose(file);
-        return NULL;
-      }
-      current_row = head_row;
-    } else if (IsSeparatorLine(line) && read) {
-      read = 0;
+    if (IsSeparatorLine(line) && read) {
       break;
+    } else if (IsIconsLine(line)) {
+      if (ProcessIconsLine(line, &read, &rollfilm, &head_frame, &current_frame,
+                           &head_row, &current_row, &current_frame_id,
+                           file) != 0) {
+        return NULL;
+      }
     } else if (read) {
+      if (lines_read == 0) {
+        if (ParseFrameTime(line, &seconds_multiplier) != 0) {
+          FreeRollfilm(rollfilm);
+          fclose(file);
+          return NULL;
+        }
+        if (fgets(line, sizeof(line), file) == NULL) {
+          FreeRollfilm(rollfilm);
+          fclose(file);
+          return NULL;
+        }
+        current_frame->seconds_multiplier = seconds_multiplier;
+      } else if (lines_read >= rollfilm->frame_count * rollfilm->frame_height)
+        break;
       if (ProcessFrameLine(line, &current_row, &line_color, &line_width) != 0) {
         FreeRollfilm(rollfilm);
         fclose(file);
@@ -195,9 +186,96 @@ Rollfilm* DeserializeSprites(const char* filename) {
         }
         current_row = head_row;
         line_color = NO_COLOR;
+        if (current_frame_id < rollfilm->frame_count) {
+          if (fgets(line, sizeof(line), file) == NULL) {
+            FreeRollfilm(rollfilm);
+            fclose(file);
+            return NULL;
+          }
+          if (ParseFrameTime(line, &seconds_multiplier) != 0) {
+            FreeRollfilm(rollfilm);
+            fclose(file);
+            return NULL;
+          }
+          current_frame->seconds_multiplier = seconds_multiplier;
+        }
       }
     }
   }
+
+  return CleanupAndReturn(file, rollfilm, head_frame, current_frame, head_row,
+                          line_width);
+}
+
+/* Process the line containing icons */
+int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
+                     Frame** head_frame, Frame** current_frame,
+                     FrameRow** head_row, FrameRow** current_row,
+                     int* current_frame_id, FILE* file) {
+  int frame_count, frame_height;
+  *read = 1;
+  if (ParseFrameSize(line, &frame_count, &frame_height) != 0) {
+    fclose(file);
+    return -1;
+  }
+  *rollfilm = CreateRollfilm(frame_count, frame_height);
+  if (*rollfilm == NULL) {
+    fclose(file);
+    return -1;
+  }
+  *head_frame = CreateFrame();
+  if (*head_frame == NULL) {
+    FreeRollfilm(*rollfilm);
+    fclose(file);
+    return -1;
+  }
+  *current_frame = *head_frame;
+  (*current_frame)->id = *current_frame_id;
+  *head_row = CreateRow();
+  if (*head_row == NULL) {
+    FreeRollfilm(*rollfilm);
+    fclose(file);
+    return -1;
+  }
+  *current_row = *head_row;
+  return 0;
+}
+
+/* Process the content of the frame */
+int ProcessFrameContent(char* line, int* lines_read, Rollfilm* rollfilm,
+                        Frame** current_frame, FrameRow** current_row,
+                        int* line_color, int* line_width,
+                        double* seconds_multiplier, FILE* file) {
+  if (*lines_read == 0) {
+    if (ParseFrameTime(line, seconds_multiplier) != 0) {
+      FreeRollfilm(rollfilm);
+      fclose(file);
+      return -1;
+    }
+    if (fgets(line, MAX_FRAME_WIDTH, file) == NULL) {
+      FreeRollfilm(rollfilm);
+      fclose(file);
+      return -1;
+    }
+    (*current_frame)->seconds_multiplier = *seconds_multiplier;
+  } else if (*lines_read >= rollfilm->frame_count * rollfilm->frame_height) {
+    return -1;
+  }
+
+  if (ProcessFrameLine(line, current_row, line_color, line_width) != 0) {
+    FreeRollfilm(rollfilm);
+    fclose(file);
+    return -1;
+  }
+
+  (*lines_read)++;
+  return 0;
+}
+
+/* Cleanup and finalize the Rollfilm structure */
+Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
+                           Frame* current_frame, FrameRow* head_row,
+                           int line_width) {
   fclose(file);
 
   if (current_frame != NULL) {
@@ -209,7 +287,6 @@ Rollfilm* DeserializeSprites(const char* filename) {
   if (head_frame != NULL && current_frame != NULL &&
       current_frame != head_frame) {
     current_frame->next = head_frame;
-    head_frame->prev = current_frame;
   }
   rollfilm->frame_width = GetWidestFrame(rollfilm);
 
@@ -218,7 +295,8 @@ Rollfilm* DeserializeSprites(const char* filename) {
 
 /* Parses the frame height from a line. */
 int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
-  return sscanf(line, "%*[^/]/%d/%d", frame_count, frame_height) != 2 ? -1 : 0;
+  return sscanf(line, "%*[^/]/%dc/%dh", frame_count, frame_height) != 2 ? -1
+                                                                        : 0;
 }
 
 /* Checks if the line contains icons. */
@@ -226,7 +304,18 @@ int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
 
 /* Checks if the line is a separator. */
 int IsSeparatorLine(const char* line) {
-  return strstr(line, SEPARATOR) != NULL;
+  // Check if the line length matches the separator length
+  if (strlen(line) != strlen(SEPARATOR)) {
+    return 0;
+  }
+
+  // Compare the line with the separator
+  return strcmp(line, SEPARATOR) == 0;
+}
+
+/* Parses the frame height from a line. */
+int ParseFrameTime(const char* line, double* frame_time) {
+  return sscanf(line, "%lfs", frame_time) != 1 ? -1 : 0;
 }
 
 /* Processes a line of frame data and updates the current row. */
@@ -251,7 +340,6 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
     return -1;
   }
   (*current_row)->next = new_row;
-  new_row->prev = *current_row;
   *current_row = new_row;
   return 0;
 }
@@ -263,16 +351,13 @@ void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
     return;
   }
   (*current_frame)->rows = head_row;
-  new_frame->prev = *current_frame;
   new_frame->id = frame_id;
 
   if ((*current_frame)->next == NULL) {
     new_frame->next = *current_frame;
     (*current_frame)->next = new_frame;
-    new_frame->prev = *current_frame;
   } else {
     new_frame->next = (*current_frame)->next;
-    (*current_frame)->next->prev = new_frame;
     (*current_frame)->next = new_frame;
   }
 
@@ -322,7 +407,6 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
       }
 
       current_token->next = new_token;
-      new_token->prev = current_token;
       current_token = new_token;
       current_token->color = *color;
     } else {
@@ -425,14 +509,15 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
 }
 
 /* Updates the current frame of the Rollfilm to be next frame */
-void UpdateAnimation(Rollfilm* rollfilm, int* seconds, double* milliseconds) {
-  FrameTimer(seconds, milliseconds);
+void UpdateAnimation(Rollfilm* rollfilm) {
+  double current_time = GetCurrentTimeMS();
+  double delta_time = current_time - rollfilm->delta_frame_ms;
 
-  /* Tomato Animation */
-  Frame* frames = rollfilm->frames;
-  if (frames != NULL && *seconds != frames->id) {
-    rollfilm->frames = frames->next;
-    rollfilm->current_frame = frames->id;
+  // Update the frame if a second has passed
+  if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
+    rollfilm->delta_frame_ms = current_time;
+    rollfilm->frames = rollfilm->frames->next;
+    rollfilm->current_frame =
+      (rollfilm->current_frame + 1) % rollfilm->frame_count;
   }
-  if (*seconds == rollfilm->frame_count) *seconds = 0;
 }

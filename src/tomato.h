@@ -12,7 +12,7 @@
 #define NO_COLOR       -1
 #define MAX_ANIMATIONS 6
 #define BGTRANSPARENCY 1
-#define REAL_SECOND    1000.0 / FPS
+#define FPMS           1000.0 / FPS
 
 /* Defining error handling enum */
 typedef enum {
@@ -41,8 +41,6 @@ typedef enum { NORMAL, INSERT, COMMAND } InputMode;
 typedef struct AppData AppData;
 struct AppData {
   Rollfilm *animations[MAX_ANIMATIONS];
-  double frame_milliseconds;
-  int frame_seconds;
 
   int screen_width;
   int screen_height;

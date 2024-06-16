@@ -60,9 +60,6 @@ ErrorType InitApp(AppData* app) {
   app->animations[MAIN_MENU] = DeserializeSprites(main_menu_sprites_file);
   if (app->animations[MAIN_MENU] == NULL) return MALLOC_ERROR;
 
-  app->frame_seconds = 0;
-  app->frame_milliseconds = 0.0;
-
   return NO_ERROR;
 }
 
@@ -77,5 +74,11 @@ ErrorType EndScreen(void) {
   extern SCREEN* SP;
   delscreen(SP);
 
+  return NO_ERROR;
+}
+
+/* End/Free variables */
+ErrorType EndApp(AppData* app) {
+  FreeRollfilm(app->animations[MAIN_MENU]);
   return NO_ERROR;
 }
