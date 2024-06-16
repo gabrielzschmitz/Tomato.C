@@ -7,9 +7,12 @@
 void InitScreen(void);
 
 /* Initialize variables */
-ErrorType InitApp(AppData *app);
+ErrorType InitApp(AppData* app);
 
 /* End ncurses screen and delete default window and screen */
 ErrorType EndScreen(void);
+
+/* End/Free variables */
+ErrorType EndApp(AppData* app);
 
 #endif /* INIT_H_ */

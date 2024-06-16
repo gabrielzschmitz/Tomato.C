@@ -49,15 +49,14 @@ int main(int argc, char *argv[]) {
       return draw_screen;
     }
 
-    napms(1000 / FPS);
+    napms(FPMS);
   }
   ErrorType end_screen = EndScreen();
   if (end_screen != NO_ERROR) {
     fprintf(stderr, "Error ending app screen: %d\n", end_screen);
     return end_screen;
   }
-
-  FreeRollfilm(app.animations[MAIN_MENU]);
+  EndApp(&app);
 
   printf("Goodbye!\n");
 
