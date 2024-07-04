@@ -494,10 +494,13 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
 
     // Loop through each token in the current row and print it
     while (current_token != NULL) {
+      // Only set the color if it changes
       if (color != current_token->color && current_token->color != NO_COLOR) {
         color = current_token->color;
         SetColor(color, NO_COLOR, A_BOLD);
       }
+
+      // Print the token without spaces
       mvprintw(y, x, "%s", current_token->token);
       x += current_token->length;
       current_token = current_token->next;
@@ -506,6 +509,9 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
     current_row = current_row->next;
     y++;
   }
+
+  // Reset color to default after rendering
+  SetColor(NO_COLOR, NO_COLOR, A_NORMAL);
 }
 
 /* Updates the current frame of the Rollfilm to be next frame */
