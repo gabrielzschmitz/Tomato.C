@@ -8,11 +8,14 @@ OBJS = $(SRCS:.c=.o)
 
 all: tomato
 
-clean-all: all
-	rm -rf $(SRCDIR)/*.o $(SRCDIR)/*.d
-
 tomato: $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
+
+clean:
+	rm -rf tomato $(SRCDIR)/*.o $(SRCDIR)/*.d
+
+clean-all: all
+	rm -rf $(SRCDIR)/*.o $(SRCDIR)/*.d
 
 # desktop_file:
 # 	mkdir -p ${DESTDIR}${APPPREFIX}
@@ -30,6 +33,3 @@ tomato: $(OBJS)
 # uninstall:
 # 	rm -f ${DESTDIR}${PREFIX}/bin/tomato/
 # 	rm -rf ${DESTDIR}${PREFIX}/share/tomato/
-
-clean:
-	rm -rf tomato $(SRCDIR)/*.o $(SRCDIR)/*.d
