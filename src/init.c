@@ -3,7 +3,10 @@
 #include <ncurses.h>
 
 #include "anim.h"
+#include "bar.h"
 #include "tomato.h"
+#include "ui.h"
+#include "util.h"
 
 /* Initialize ncurses screen and configure settings */
 void InitScreen(void) {
@@ -13,7 +16,7 @@ void InitScreen(void) {
   initscr();
 #endif
   if (has_colors()) {
-    if (BGTRANSPARENCY == 1) use_default_colors();
+    if (BG_TRANSPARENCY == 1) use_default_colors();
     start_color();
 
     // Initialize pairs with both foreground and background colors
@@ -48,17 +51,58 @@ void InitScreen(void) {
 
 /* Initialize variables */
 ErrorType InitApp(AppData* app) {
-  app->screen_width = 0;
-  app->screen_height = 0;
+  ErrorType status = NO_ERROR;
+  if (!CheckConfigIconType()) return INVALID_CONFIG;
+
+  app->screen = CreateScreen();
+  if (app->screen == NULL) return MALLOC_ERROR;
+
+  status = InitStatusBar(app);
+  if (status != NO_ERROR) return status;
 
   app->user_input = -1;
-  app->current_mode = MAIN_MENU;
+  app->block_input = false;
+  app->current_scene = MAIN_MENU;
 
+  app->is_paused = false;
   app->running = true;
 
-  const char* main_menu_sprites_file = "../sprites/mainmenu.asc";
-  app->animations[MAIN_MENU] = DeserializeSprites(main_menu_sprites_file);
-  if (app->animations[MAIN_MENU] == NULL) return MALLOC_ERROR;
+  status = InitAnimations(app);
+  if (status != NO_ERROR) return status;
+
+  return status;
+}
+
+/* Function to initialize the status bar */
+ErrorType InitStatusBar(AppData* app) {
+  StatusBarPosition position = BOTTOM;
+  if (STATUS_BAR_POSITION) position = TOP;
+
+  app->status_bar = CreateStatusBar(position);
+  if (app->status_bar == NULL) return MALLOC_ERROR;
+
+  AddStatusBarModule(app->status_bar, LEFT, InputModeModule);
+  AddStatusBarModule(app->status_bar, LEFT, RealTimeModule);
+  AddStatusBarModule(app->status_bar, RIGHT, SceneModule);
+
+  app->status_bar->right_modules =
+    InvertModulesOrder(app->status_bar->right_modules);
+
+  return NO_ERROR;
+}
+
+/* Initialize animations from sprites */
+ErrorType InitAnimations(AppData* app) {
+  const char* animation_files[MAX_ANIMATIONS] = {
+    "sprites/mainmenu.asc",  "sprites/worktime.asc", "sprites/shortpause.asc",
+    "sprites/longpause.asc", "sprites/notes.asc",    "sprites/help.asc",
+    "sprites/continue.asc"};
+
+  for (int i = 0; i < MAX_ANIMATIONS; ++i) {
+    app->animations[i] = DeserializeSprites(animation_files[i]);
+    if (app->animations[i] == NULL) return ANIMATION_DESERIALIZATION_ERROR;
+  }
+  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
 
   return NO_ERROR;
 }
@@ -79,6 +123,23 @@ ErrorType EndScreen(void) {
 
 /* End/Free variables */
 ErrorType EndApp(AppData* app) {
-  FreeRollfilm(app->animations[MAIN_MENU]);
+  for (int i = 0; i < MAX_ANIMATIONS; i++) {
+    FreeRollfilm(app->animations[i]);
+    app->animations[i] = NULL;
+  }
+  FreeStatusBar(app->status_bar);
+  FreeScreen(app->screen);
   return NO_ERROR;
+}
+
+/* Init a Border struct with the config values */
+Border InitBorder() {
+  Border border;
+  border.top_left = BORDER_CHARS[0];     /* "┏" */
+  border.top_right = BORDER_CHARS[1];    /* "┓" */
+  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
+  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
+  border.horizontal = BORDER_CHARS[4];   /* "━" */
+  border.vertical = BORDER_CHARS[5];     /* "┃" */
+  return border;
 }

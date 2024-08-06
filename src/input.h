@@ -6,4 +6,7 @@
 /* Handle user input and app state */
 ErrorType HandleInputs(AppData *app);
 
+/* Update animation mode */
+void ChangeDebugAnimation(AppData *app, int step);
+
 #endif /* INPUT_H_ */

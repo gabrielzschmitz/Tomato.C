@@ -5,14 +5,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "anim.h"
-#include "config.h"
 #include "draw.h"
 #include "init.h"
 #include "input.h"
 #include "update.h"
 
-int main(int argc, char *argv[]) {
+int main(void) {
   /* Enable emojis */
   setlocale(LC_CTYPE, "");
 
