@@ -1,5 +1,5 @@
 # Directories
-SRCDIR = src
+SRCDIR = ../src
 PREFIX = /usr/local
 APPPREFIX = $(PREFIX)/share/applications
 DATAPREFIX = .local/share/tomato
