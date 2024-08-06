@@ -2,6 +2,7 @@
 
 #include <ncurses.h>
 #include <string.h>
+#include <time.h>
 
 #include "tomato.h"
 

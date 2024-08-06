@@ -2,7 +2,6 @@
 #define ANIM_H_
 
 #include <stdio.h>
-#include <time.h>
 
 #define MAX_FRAME_WIDTH 120
 

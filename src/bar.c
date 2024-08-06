@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../config.h"
 #include "tomato.h"
 
 /* Function to create and allocate a StatusBarModule */

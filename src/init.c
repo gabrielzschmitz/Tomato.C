@@ -94,9 +94,10 @@ ErrorType InitStatusBar(AppData* app) {
 /* Initialize animations from sprites */
 ErrorType InitAnimations(AppData* app) {
   const char* animation_files[MAX_ANIMATIONS] = {
-    "sprites/mainmenu.asc",  "sprites/worktime.asc", "sprites/shortpause.asc",
-    "sprites/longpause.asc", "sprites/notes.asc",    "sprites/help.asc",
-    "sprites/continue.asc"};
+    "./sprites/mainmenu.asc",   "./sprites/worktime.asc",
+    "./sprites/shortpause.asc", "./sprites/longpause.asc",
+    "./sprites/notes.asc",      "./sprites/help.asc",
+    "./sprites/continue.asc"};
 
   for (int i = 0; i < MAX_ANIMATIONS; ++i) {
     app->animations[i] = DeserializeSprites(animation_files[i]);

@@ -2,7 +2,6 @@
 
 #include <ncurses.h>
 
-#include "../config.h"
 #include "anim.h"
 #include "tomato.h"
 #include "ui.h"

@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../config.h"
 #include "tomato.h"
 #include "util.h"
 

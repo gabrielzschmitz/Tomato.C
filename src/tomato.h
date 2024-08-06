@@ -5,8 +5,8 @@
 #include <ncurses.h>
 #include <stdbool.h>
 
-#include "../config.h"
 #include "bar.h"
+#include "config.h"
 
 #define PALETTE_SIZE   (COLOR_WHITE - COLOR_BLACK + 1)
 #define NO_COLOR       -1
