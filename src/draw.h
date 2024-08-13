@@ -6,6 +6,9 @@
 /* Print at screen */
 ErrorType DrawScreen(AppData* app);
 
+/* Check and Render Screen Size */
+bool CheckScreenSize(AppData* app);
+
 /* Show debug info and render a animation */
 void DebugAnimation(Panel panel, Rollfilm* animation, Vector2D offset);
 

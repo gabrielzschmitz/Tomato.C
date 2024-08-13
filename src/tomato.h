@@ -47,14 +47,14 @@ typedef enum { NORMAL, INSERT, VISUAL } InputMode;
 
 /* Defining the app struct */
 struct AppData {
-  struct Rollfilm *animations[MAX_ANIMATIONS];
-
   struct Screen *screen;
   struct StatusBar *status_bar;
+
+  InputMode input_mode;
   int user_input;
   bool block_input;
 
-  SceneType current_scene;
+  struct Rollfilm *animations[MAX_ANIMATIONS];
   bool is_paused;
   bool running;
 };

@@ -15,72 +15,79 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
-  Panel current_panel = app->screen->panels[app->screen->current_panel];
+  if (!CheckScreenSize(app)) return status;
 
-  if (app->screen->size.width < app->screen->min_panel_size.width ||
-      app->screen->size.height < app->screen->min_panel_size.height) {
-    app->block_input = true;
-    RenderScreenSizeError(app->screen, current_panel);
-    refresh();
-    return status;
-  } else {
-    app->block_input = false;
-  }
-
-  if (ANIMATIONS) {
-    Rollfilm* animation = NULL;
-
-    switch (app->current_scene) {
-      case MAIN_MENU:
-        animation = app->animations[MAIN_MENU];
-        break;
-      case WORK_TIME:
-        animation = app->animations[WORK_TIME];
-        break;
-      case SHORT_PAUSE:
-        animation = app->animations[SHORT_PAUSE];
-        break;
-      case LONG_PAUSE:
-        animation = app->animations[LONG_PAUSE];
-        break;
-      case NOTES:
-        animation = app->animations[NOTES];
-        break;
-      case HELP:
-        animation = app->animations[HELP];
-        break;
-      case CONTINUE:
-        animation = app->animations[CONTINUE];
-        break;
-      default:
-        break;
-    }
-    if (DEBUG) DebugAnimation(current_panel, animation, (Vector2D){0, 0});
-  }
   Border border = InitBorder();
   for (int i = 0; i < MAX_PANELS; i++) {
-    if (app->screen->current_panel == i)
-      SetColor(FOCUSED_PANEL_COLOR, NO_COLOR, A_BOLD);
-    else
-      SetColor(UNFOCUSED_PANEL_COLOR, NO_COLOR, A_NORMAL);
+    Panel* current_panel = &app->screen->panels[i];
 
-    RenderPanelBorder(app->screen->panels[i], border);
+    if (ANIMATIONS) {
+      Rollfilm* animation = NULL;
+      switch (current_panel->scene_history->present) {
+        case MAIN_MENU:
+          animation = app->animations[MAIN_MENU];
+          break;
+        case WORK_TIME:
+          animation = app->animations[WORK_TIME];
+          break;
+        case SHORT_PAUSE:
+          animation = app->animations[SHORT_PAUSE];
+          break;
+        case LONG_PAUSE:
+          animation = app->animations[LONG_PAUSE];
+          break;
+        case NOTES:
+          animation = app->animations[NOTES];
+          break;
+        case HELP:
+          animation = app->animations[HELP];
+          break;
+        case CONTINUE:
+          animation = app->animations[CONTINUE];
+          break;
+        default:
+          break;
+      }
+      if (DEBUG && current_panel->visible)
+        DebugAnimation(*current_panel, animation, (Vector2D){0, 0});
+    }
+
+    SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
+                                               : UNFOCUSED_PANEL_COLOR,
+             NO_COLOR, (app->screen->current_panel == i) ? A_BOLD : A_NORMAL);
+    RenderPanelBorder(*current_panel, border);
   }
+
   RenderStatusBar(app->status_bar, app->screen);
 
-  SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
   if (DEBUG) {
-    mvprintw(current_panel.position.y, current_panel.position.x,
-             "%02dM - %dP - %02dWx%02dH", app->current_scene, app->is_paused,
-             current_panel.size.width, current_panel.size.height);
-    mvprintw(current_panel.position.y, current_panel.position.x + 20, "%dx%d",
+    SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
+    Panel* current_panel = &app->screen->panels[app->screen->current_panel];
+    mvprintw(current_panel->position.y, current_panel->position.x,
+             "%02dM - %dP - %02dWx%02dH", current_panel->scene_history->present,
+             app->is_paused, current_panel->size.width,
+             current_panel->size.height);
+    mvprintw(current_panel->position.y, current_panel->position.x + 20, "%dx%d",
              app->screen->min_panel_size.width,
              app->screen->min_panel_size.height);
   }
 
   refresh();
-
   return status;
+}
+
+/* Check and Render Screen Size */
+bool CheckScreenSize(AppData* app) {
+  if (app->screen->size.width < app->screen->min_panel_size.width ||
+      app->screen->size.height < app->screen->min_panel_size.height) {
+    app->block_input = true;
+    RenderScreenSizeError(app->screen,
+                          app->screen->panels[app->screen->current_panel]);
+    refresh();
+    return false;
+  }
+  app->block_input = false;
+  return true;
 }
 
 /* Show debug info and render a animation */

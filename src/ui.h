@@ -63,7 +63,10 @@ void FreeScreen(Screen *screen);
 /* Create a screen struct with the current screen size and MAX_PANELS */
 Panel CreatePanel(Dimensions size, Vector2D position);
 
-/* Create a screen struct with MAX_PANELS in horizontal rows */
+/* Function to free the memory of a panel */
+void FreePanel(Panel *panel);
+
+/* Render a border in a given panel */
 void RenderPanelBorder(Panel panel, Border border);
 
 /* Update panels from a given screen */
@@ -81,5 +84,29 @@ void RenderAnimationAtPanelCenter(Panel panel, Rollfilm animation,
 
 /* Render screen size error */
 void RenderScreenSizeError(Screen *screen, Panel panel);
+
+/* Function to push a scene onto a stack */
+void PushHistory(HistoryNode **stack, int scene);
+
+/* Function to pop a scene from a stack */
+int PopHistory(HistoryNode **stack);
+
+/* Function to clear a stack */
+void ClearStack(HistoryNode **stack);
+
+/* Function to create and initialize a new history */
+History *CreateHistory();
+
+/* Function to free the memory of a history */
+void FreeHistory(History *history);
+
+/* Function to perform undo operation */
+void UndoHistory(History *history);
+
+/* Function to perform redo operation */
+void RedoHistory(History *history);
+
+/* Function to perform do operation */
+void ExecuteHistory(History *history, int new_scene);
 
 #endif /* UI_H_ */

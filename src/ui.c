@@ -37,6 +37,9 @@ Screen *CreateScreen() {
 /* Free all memory associated with a Screen struct */
 void FreeScreen(Screen *screen) {
   if (screen == NULL) return;
+
+  for (int i = 0; i < MAX_PANELS; i++) FreePanel(&screen->panels[i]);
+
   free(screen);
 }
 
@@ -48,12 +51,18 @@ Panel CreatePanel(Dimensions size, Vector2D position) {
   panel.size = size;
   panel.visible = true;
   panel.position = position;
-  panel.scene_history = NULL;
+  panel.scene_history = CreateHistory();
 
   return panel;
 }
 
-/* Render a border at a given panel */
+/* Function to free the memory of a panel */
+void FreePanel(Panel *panel) {
+  if (panel == NULL) return;
+  FreeHistory(panel->scene_history);
+}
+
+/* Render a border in a given panel */
 void RenderPanelBorder(Panel panel, Border border) {
   if (!panel.visible) return;
   int x, y;
@@ -191,4 +200,91 @@ void RenderScreenSizeError(Screen *screen, Panel panel) {
            screen->min_panel_size.width, screen->min_panel_size.height);
   RenderAtPanelCenter(panel, content, (Vector2D){0, 1});
   free(content);
+}
+
+/* Function to push a scene onto a stack */
+void PushHistory(HistoryNode **stack, int scene) {
+  HistoryNode *new_node = (HistoryNode *)malloc(sizeof(HistoryNode));
+  if (new_node == NULL) {
+    fprintf(stderr, "Memory allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  new_node->scene = scene;
+  new_node->next = *stack;
+  *stack = new_node;
+}
+
+/* Function to pop a scene from a stack */
+int PopHistory(HistoryNode **stack) {
+  if (*stack == NULL) {
+    fprintf(stderr, "Stack underflow\n");
+    exit(EXIT_FAILURE);
+  }
+  HistoryNode *temp = *stack;
+  int scene = temp->scene;
+  *stack = temp->next;
+  free(temp);
+  return scene;
+}
+
+/* Function to clear a stack */
+void ClearStack(HistoryNode **stack) {
+  while (*stack != NULL) PopHistory(stack);
+}
+
+/* Function to create and initialize a new history */
+History *CreateHistory() {
+  History *history = (History *)malloc(sizeof(History));
+  if (history == NULL) {
+    fprintf(stderr, "Memory allocation failed\n");
+    return NULL;
+  }
+  history->future_stack = NULL;
+  history->past_stack = NULL;
+  history->present = -1;
+  return history;
+}
+
+/* Function to free the memory of a history */
+void FreeHistory(History *history) {
+  if (history == NULL) return;
+
+  ClearStack(&history->future_stack);
+  ClearStack(&history->past_stack);
+
+  free(history);
+}
+
+/* Function to perform undo operation */
+void UndoHistory(History *history) {
+  if (history->past_stack == NULL) {
+    printf("No scenes in past stack to undo.\n");
+    return;
+  }
+
+  PushHistory(&history->future_stack, history->present);
+
+  history->present = PopHistory(&history->past_stack);
+}
+
+/* Function to perform redo operation */
+void RedoHistory(History *history) {
+  if (history->future_stack == NULL) {
+    printf("No scenes in future stack to redo.\n");
+    return;
+  }
+
+  PushHistory(&history->past_stack, history->present);
+
+  history->present = PopHistory(&history->future_stack);
+}
+
+/* Function to perform do operation */
+void ExecuteHistory(History *history, int new_scene) {
+  if (history->present >= 0)
+    PushHistory(&history->past_stack, history->present);
+
+  history->present = new_scene;
+
+  ClearStack(&history->future_stack);
 }

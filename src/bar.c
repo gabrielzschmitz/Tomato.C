@@ -336,7 +336,8 @@ void SceneModule(AppData *app, StatusBarModule *module, Panel *panel) {
   IconType icon_type = GetConfigIconType();
   const char *icon;
 
-  switch (app->current_scene) {
+  Panel current_panel = app->screen->panels[app->screen->current_panel];
+  switch (current_panel.scene_history->present) {
     case MAIN_MENU:
       icon = (char *)MAIN_MENU_ICONS[icon_type];
       color = COLOR_MAGENTA;

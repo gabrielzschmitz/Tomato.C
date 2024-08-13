@@ -12,33 +12,37 @@ ErrorType UpdateApp(AppData *app) {
 
   UpdateScreen(app->screen);
 
-  Panel current_panel = app->screen->panels[app->screen->current_panel];
+  Panel *current_panel = &app->screen->panels[app->screen->current_panel];
 
-  UpdateStatusBar(app, app->status_bar, &current_panel);
-  switch (app->current_scene) {
-    case MAIN_MENU:
-      UpdateMainMenu(app);
-      break;
-    case WORK_TIME:
-      UpdateWorkTime(app);
-      break;
-    case SHORT_PAUSE:
-      UpdateShortPause(app);
-      break;
-    case LONG_PAUSE:
-      UpdateLongPause(app);
-      break;
-    case NOTES:
-      UpdateNotes(app);
-      break;
-    case HELP:
-      UpdateHelp(app);
-      break;
-    case CONTINUE:
-      UpdateContinue(app);
-      break;
-    default:
-      break;
+  UpdateStatusBar(app, app->status_bar, current_panel);
+  for (int i = 0; i < MAX_PANELS; i++) {
+    current_panel = &app->screen->panels[i];
+
+    switch (current_panel->scene_history->present) {
+      case MAIN_MENU:
+        UpdateMainMenu(app);
+        break;
+      case WORK_TIME:
+        UpdateWorkTime(app);
+        break;
+      case SHORT_PAUSE:
+        UpdateShortPause(app);
+        break;
+      case LONG_PAUSE:
+        UpdateLongPause(app);
+        break;
+      case NOTES:
+        UpdateNotes(app);
+        break;
+      case HELP:
+        UpdateHelp(app);
+        break;
+      case CONTINUE:
+        UpdateContinue(app);
+        break;
+      default:
+        break;
+    }
   }
 
   return status;

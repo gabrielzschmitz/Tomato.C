@@ -62,8 +62,10 @@ ErrorType InitApp(AppData* app) {
 
   app->user_input = -1;
   app->block_input = false;
-  app->current_scene = MAIN_MENU;
+  app->input_mode = NORMAL;
 
+  ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
+  ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
   app->is_paused = false;
   app->running = true;
 
