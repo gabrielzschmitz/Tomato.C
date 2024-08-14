@@ -10,7 +10,7 @@
 #include "util.h"
 
 /* Function to get the current time in milliseconds */
-double GetCurrentTimeMS() {
+double GetCurrentTimeMS(void) {
   struct timespec current_time;
   clock_gettime(CLOCK_MONOTONIC, &current_time);
   double ms =
@@ -28,6 +28,7 @@ Rollfilm* CreateRollfilm(int N, int M) {
   film->frame_count = N;
   film->frame_height = M;
   film->frame_width = 0;
+  film->loop = true;
   film->frames = NULL;
   film->render = RenderCurrentFrame;
   film->update = UpdateAnimation;
@@ -43,7 +44,7 @@ void FreeRollfilm(Rollfilm* rollfilm) {
 }
 
 /* Creates a new frame */
-Frame* CreateFrame() {
+Frame* CreateFrame(void) {
   Frame* newFrame = (Frame*)malloc(sizeof(Frame));
   if (newFrame == NULL) return NULL;
   newFrame->next = NULL;
@@ -74,7 +75,7 @@ void FreeFrame(Frame* frame) {
 }
 
 /* Creates a new frame row */
-FrameRow* CreateRow() {
+FrameRow* CreateRow(void) {
   FrameRow* newRow = (FrameRow*)malloc(sizeof(FrameRow));
   if (newRow == NULL) return NULL;
   newRow->next = NULL;
@@ -94,7 +95,7 @@ void FreeRows(FrameRow* rows) {
 }
 
 /* Creates a new frame token */
-FrameToken* CreateToken() {
+FrameToken* CreateToken(void) {
   FrameToken* newToken = (FrameToken*)malloc(sizeof(FrameToken));
   if (newToken == NULL) return NULL;
   newToken->next = NULL;
@@ -258,9 +259,8 @@ int ProcessFrameContent(char* line, int* lines_read, Rollfilm* rollfilm,
       return -1;
     }
     (*current_frame)->seconds_multiplier = *seconds_multiplier;
-  } else if (*lines_read >= rollfilm->frame_count * rollfilm->frame_height) {
+  } else if (*lines_read >= rollfilm->frame_count * rollfilm->frame_height)
     return -1;
-  }
 
   if (ProcessFrameLine(line, current_row, line_color, line_width) != 0) {
     FreeRollfilm(rollfilm);
@@ -285,9 +285,8 @@ Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
   rollfilm->frames = head_frame;
 
   if (head_frame != NULL && current_frame != NULL &&
-      current_frame != head_frame) {
+      current_frame != head_frame)
     current_frame->next = head_frame;
-  }
   rollfilm->frame_width = GetWidestFrame(rollfilm);
 
   return rollfilm;
@@ -304,12 +303,7 @@ int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
 
 /* Checks if the line is a separator. */
 int IsSeparatorLine(const char* line) {
-  // Check if the line length matches the separator length
-  if (strlen(line) != strlen(SEPARATOR)) {
-    return 0;
-  }
-
-  // Compare the line with the separator
+  if (strlen(line) != strlen(SEPARATOR)) return 0;
   return strcmp(line, SEPARATOR) == 0;
 }
 
@@ -399,7 +393,6 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
     } else if (*src == '\\' && *(src + 1) == 'c') {
       src += HandleColor(src, color);
 
-      // Create a new token for the new color
       FrameToken* new_token = CreateToken();
       if (new_token == NULL) {
         FreeTokens(head);
@@ -425,19 +418,19 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
 
 /* Handles a UTF-8 character in a line */
 int HandleUnicode(const char* src, char** dest) {
-  // Create a buffer to store the UTF-8 character (max 4 bytes for UTF-8 + 1 for
-  // null terminator)
+  /* Create a buffer to store the UTF-8 character
+   * (max 4 bytes for UTF-8 + 1 for null terminator) */
   char utf8_char[5] = {0};
 
-  // Extract the 4 hexadecimal digits from the source string
+  /* Extract the 4 hexadecimal digits from the source string */
   char utf_char[5];
   strncpy(utf_char, src + 2, 4);
   utf_char[4] = '\0';
 
-  // Convert the hexadecimal digits to an integer
+  /* Convert the hexadecimal digits to an integer */
   int unicode_value = (int)strtol(utf_char, NULL, 16);
 
-  // Determine the UTF-8 encoding
+  /* Determine the UTF-8 encoding */
   int utf8_length = 0;
   if (unicode_value < 0x80) {
     utf8_char[0] = (char)unicode_value;
@@ -459,12 +452,12 @@ int HandleUnicode(const char* src, char** dest) {
     utf8_length = 4;
   }
 
-  // Append the UTF-8 character to the destination string
+  /* Append the UTF-8 character to the destination string */
   size_t dest_len = strlen(*dest);
   for (int i = 0; i < utf8_length; ++i) (*dest)[dest_len + i] = utf8_char[i];
   (*dest)[dest_len + utf8_length] = '\0';
 
-  // Return the number of characters processed
+  /* Return the number of characters processed */
   return utf8_length;
 }
 
@@ -487,20 +480,16 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
   int y = start_y;
   int color = NO_COLOR;
 
-  // Loop through each row in the current frame
   while (current_row != NULL) {
     FrameToken* current_token = current_row->tokens;
     int x = start_x;
 
-    // Loop through each token in the current row and print it
     while (current_token != NULL) {
-      // Only set the color if it changes
       if (color != current_token->color && current_token->color != NO_COLOR) {
         color = current_token->color;
         SetColor(color, NO_COLOR, A_BOLD);
       }
 
-      // Print the token without spaces
       mvprintw(y, x, "%s", current_token->token);
       x += current_token->length;
       current_token = current_token->next;
@@ -509,21 +498,28 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
     current_row = current_row->next;
     y++;
   }
-
-  // Reset color to default after rendering
-  SetColor(NO_COLOR, NO_COLOR, A_NORMAL);
 }
 
 /* Updates the current frame of the Rollfilm to be next frame */
 void UpdateAnimation(Rollfilm* rollfilm) {
+  if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
+    return;
   double current_time = GetCurrentTimeMS();
   double delta_time = current_time - rollfilm->delta_frame_ms;
 
-  // Update the frame if a second has passed
   if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
     rollfilm->delta_frame_ms = current_time;
     rollfilm->frames = rollfilm->frames->next;
     rollfilm->current_frame =
       (rollfilm->current_frame + 1) % rollfilm->frame_count;
+  }
+}
+
+/* Updates the loop variable of a given list of Rollfilms */
+void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
+                       size_t list_size, bool loop) {
+  for (size_t i = 0; i < list_size; i++) {
+    int index = list_to_update[i];
+    film[index]->loop = loop;
   }
 }

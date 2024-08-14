@@ -1,6 +1,7 @@
 #ifndef ANIM_H_
 #define ANIM_H_
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #define MAX_FRAME_WIDTH 120
@@ -43,6 +44,7 @@ struct Rollfilm {
   Frame* frames;          /* Pointer to the circular linked list of frames */
   double delta_frame_ms;  /* Elapsed time in milliseconds since last frame */
   int current_frame;      /* Index of the current frame */
+  bool loop;              /* Flag to loop or not the animation */
   int frame_count;        /* Total number of frames */
   int frame_height;       /* Height of each frame */
   int frame_width;        /* Width of the largest frame */
@@ -51,7 +53,7 @@ struct Rollfilm {
 };
 
 /* Function to get the current time in milliseconds */
-double GetCurrentTimeMS();
+double GetCurrentTimeMS(void);
 
 /* Increments animation frames based on real-life seconds */
 void FrameTimer(int* frame_second, double* milliseconds);
@@ -63,7 +65,7 @@ Rollfilm* CreateRollfilm(int N, int M);
 void FreeRollfilm(Rollfilm* rollfilm);
 
 /* Creates a new frame */
-Frame* CreateFrame();
+Frame* CreateFrame(void);
 
 /* Frees all frames in a circular linked list */
 void FreeFrames(Frame* frames);
@@ -72,13 +74,13 @@ void FreeFrames(Frame* frames);
 void FreeFrame(Frame* frame);
 
 /* Creates a new frame row */
-FrameRow* CreateRow();
+FrameRow* CreateRow(void);
 
 /* Frees all rows in a frame */
 void FreeRows(FrameRow* rows);
 
 /* Creates a new frame token */
-FrameToken* CreateToken();
+FrameToken* CreateToken(void);
 
 /* Frees all tokens in a linked list */
 void FreeTokens(FrameToken* tokens);
@@ -137,5 +139,9 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
 
 /* Updates the current frame of the Rollfilm to be next frame */
 void UpdateAnimation(Rollfilm* rollfilm);
+
+/* Updates the loop variable of a given list of Rollfilms */
+void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
+                       size_t list_size, bool loop);
 
 #endif /* ANIM_H */

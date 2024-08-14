@@ -9,6 +9,9 @@ void InitScreen(void);
 /* Initialize variables */
 ErrorType InitApp(AppData* app);
 
+/* Function to initialize the app menus */
+ErrorType InitMenus(AppData* app);
+
 /* Function to initialize the status bar */
 ErrorType InitStatusBar(AppData* app);
 
@@ -22,6 +25,6 @@ ErrorType EndScreen(void);
 ErrorType EndApp(AppData* app);
 
 /* Init a Border struct with the config values */
-Border InitBorder();
+Border InitBorder(void);
 
 #endif /* INIT_H_ */

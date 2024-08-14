@@ -26,6 +26,11 @@ ErrorType DrawScreen(AppData* app) {
       switch (current_panel->scene_history->present) {
         case MAIN_MENU:
           animation = app->animations[MAIN_MENU];
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
+
+          PrintMenuAtCenter(current_panel, app->menus[0],
+                            (Vector2D){0, animation->frame_height / 2 + 2}, 0);
           break;
         case WORK_TIME:
           animation = app->animations[WORK_TIME];
@@ -38,6 +43,8 @@ ErrorType DrawScreen(AppData* app) {
           break;
         case NOTES:
           animation = app->animations[NOTES];
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
           break;
         case HELP:
           animation = app->animations[HELP];
@@ -48,8 +55,8 @@ ErrorType DrawScreen(AppData* app) {
         default:
           break;
       }
-      if (DEBUG && current_panel->visible)
-        DebugAnimation(*current_panel, animation, (Vector2D){0, 0});
+      // if (DEBUG && current_panel->visible)
+      //   DebugAnimation(current_panel, animation, (Vector2D){0, 0});
     }
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
@@ -82,7 +89,7 @@ bool CheckScreenSize(AppData* app) {
       app->screen->size.height < app->screen->min_panel_size.height) {
     app->block_input = true;
     RenderScreenSizeError(app->screen,
-                          app->screen->panels[app->screen->current_panel]);
+                          &app->screen->panels[app->screen->current_panel]);
     refresh();
     return false;
   }
@@ -91,13 +98,13 @@ bool CheckScreenSize(AppData* app) {
 }
 
 /* Show debug info and render a animation */
-void DebugAnimation(Panel panel, Rollfilm* animation, Vector2D offset) {
+void DebugAnimation(Panel* panel, Rollfilm* animation, Vector2D offset) {
   const int DEBUG_INFO_WIDTH = 23;
   if (animation) {
-    RenderAnimationAtPanelCenter(panel, *animation, offset);
+    RenderAnimationAtPanelCenter(panel, animation, offset);
 
-    int panel_center_x = panel.position.x + panel.size.width / 2;
-    int panel_center_y = panel.position.y + panel.size.height / 2;
+    int panel_center_x = panel->position.x + panel->size.width / 2;
+    int panel_center_y = panel->position.y + panel->size.height / 2;
 
     int frame_x = panel_center_x - animation->frame_width / 2 + offset.x;
     int frame_y = panel_center_y - animation->frame_height / 2 + offset.y;

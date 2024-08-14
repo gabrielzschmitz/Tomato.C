@@ -10,6 +10,6 @@ ErrorType DrawScreen(AppData* app);
 bool CheckScreenSize(AppData* app);
 
 /* Show debug info and render a animation */
-void DebugAnimation(Panel panel, Rollfilm* animation, Vector2D offset);
+void DebugAnimation(Panel* panel, Rollfilm* animation, Vector2D offset);
 
 #endif /* DRAW_H_ */
