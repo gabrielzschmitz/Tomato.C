@@ -9,8 +9,8 @@
 #include "util.h"
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
-Screen *CreateScreen(void) {
-  Screen *screen = (Screen *)malloc(sizeof(Screen));
+Screen* CreateScreen(void) {
+  Screen* screen = (Screen*)malloc(sizeof(Screen));
   if (screen == NULL) return NULL;
 
   getmaxyx(stdscr, screen->size.height, screen->size.width);
@@ -35,10 +35,11 @@ Screen *CreateScreen(void) {
 }
 
 /* Free all memory associated with a Screen struct */
-void FreeScreen(Screen *screen) {
+void FreeScreen(Screen* screen) {
   if (screen == NULL) return;
 
-  for (int i = 0; i < MAX_PANELS; i++) FreePanel(&screen->panels[i]);
+  for (int i = 0; i < MAX_PANELS; i++)
+    FreePanel(&screen->panels[i]);
 
   free(screen);
 }
@@ -57,7 +58,7 @@ Panel CreatePanel(Dimensions size, Vector2D position) {
 }
 
 /* Function to free the memory of a panel */
-void FreePanel(Panel *panel) {
+void FreePanel(Panel* panel) {
   if (panel == NULL) return;
   FreeHistory(panel->scene_history);
 }
@@ -93,7 +94,7 @@ void RenderPanelBorder(Panel panel, Border border) {
 }
 
 /* Update panels from a given screen */
-void UpdateScreen(Screen *screen) {
+void UpdateScreen(Screen* screen) {
   getmaxyx(stdscr, screen->size.height, screen->size.width);
 
   int panels_width = screen->size.width / MAX_PANELS;
@@ -117,7 +118,8 @@ void UpdateScreen(Screen *screen) {
       UpdatePanel(&screen->panels[i], panel_dimensions, panel_position);
     }
   } else {
-    for (int i = 0; i < MAX_PANELS; i++) screen->panels[i].visible = false;
+    for (int i = 0; i < MAX_PANELS; i++)
+      screen->panels[i].visible = false;
 
     // Display only the current panel
     int current_panel = screen->current_panel;
@@ -139,13 +141,13 @@ void UpdateScreen(Screen *screen) {
 }
 
 /* Update panel dimensions and position */
-void UpdatePanel(Panel *panel, Dimensions size, Vector2D position) {
+void UpdatePanel(Panel* panel, Dimensions size, Vector2D position) {
   panel->size = size;
   panel->position = position;
 }
 
 /* Render content at panel center */
-void RenderAtPanelCenter(Panel *panel, const char *content, Vector2D offset) {
+void RenderAtPanelCenter(Panel* panel, const char* content, Vector2D offset) {
   int panel_center_x = panel->position.x + panel->size.width / 2;
   int panel_center_y = panel->position.y + panel->size.height / 2;
 
@@ -156,22 +158,22 @@ void RenderAtPanelCenter(Panel *panel, const char *content, Vector2D offset) {
 }
 
 /* Render animation at panel center */
-void RenderAnimationAtPanelCenter(Panel *panel, Rollfilm *animation,
+void RenderAnimationAtPanelCenter(Panel* panel, Rollfilm* animation,
                                   Vector2D offset) {
+  if (animation->render == NULL) return;
+
   int panel_center_x = panel->position.x + panel->size.width / 2;
   int panel_center_y = panel->position.y + panel->size.height / 2;
 
   int frame_x = panel_center_x - animation->frame_width / 2 + offset.x;
   int frame_y = panel_center_y - animation->frame_height / 2 + offset.y;
 
-  if (animation->render != NULL) {
-    animation->render(animation, frame_y, frame_x);
-  }
+  animation->render(animation, frame_y, frame_x);
 }
 
 /* Render screen size error */
-void RenderScreenSizeError(Screen *screen, Panel *panel) {
-  char *content;
+void RenderScreenSizeError(Screen* screen, Panel* panel) {
+  char* content;
   int required_length;
 
   SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
@@ -181,7 +183,7 @@ void RenderScreenSizeError(Screen *screen, Panel *panel) {
   required_length = snprintf(NULL, 0, "Width = %2d Height = %2d",
                              screen->size.width, screen->size.height) +
                     1;
-  content = (char *)malloc(required_length);
+  content = (char*)malloc(required_length);
   snprintf(content, required_length, "Width = %2d Height = %2d",
            screen->size.width, screen->size.height);
   RenderAtPanelCenter(panel, content, (Vector2D){0, -1});
@@ -195,7 +197,7 @@ void RenderScreenSizeError(Screen *screen, Panel *panel) {
     snprintf(NULL, 0, "Width = %2d Height = %2d", screen->min_panel_size.width,
              screen->min_panel_size.height) +
     1;
-  content = (char *)malloc(required_length);
+  content = (char*)malloc(required_length);
   snprintf(content, required_length, "Width = %2d Height = %2d",
            screen->min_panel_size.width, screen->min_panel_size.height);
   RenderAtPanelCenter(panel, content, (Vector2D){0, 1});
@@ -203,8 +205,8 @@ void RenderScreenSizeError(Screen *screen, Panel *panel) {
 }
 
 /* Function to push a scene onto a stack */
-void PushHistory(HistoryNode **stack, int scene) {
-  HistoryNode *new_node = (HistoryNode *)malloc(sizeof(HistoryNode));
+void PushHistory(HistoryNode** stack, int scene) {
+  HistoryNode* new_node = (HistoryNode*)malloc(sizeof(HistoryNode));
   if (new_node == NULL) {
     fprintf(stderr, "Memory allocation failed\n");
     exit(EXIT_FAILURE);
@@ -215,12 +217,12 @@ void PushHistory(HistoryNode **stack, int scene) {
 }
 
 /* Function to pop a scene from a stack */
-int PopHistory(HistoryNode **stack) {
+int PopHistory(HistoryNode** stack) {
   if (*stack == NULL) {
     fprintf(stderr, "Stack underflow\n");
     exit(EXIT_FAILURE);
   }
-  HistoryNode *temp = *stack;
+  HistoryNode* temp = *stack;
   int scene = temp->scene;
   *stack = temp->next;
   free(temp);
@@ -228,13 +230,14 @@ int PopHistory(HistoryNode **stack) {
 }
 
 /* Function to clear a stack */
-void ClearStack(HistoryNode **stack) {
-  while (*stack != NULL) PopHistory(stack);
+void ClearStack(HistoryNode** stack) {
+  while (*stack != NULL)
+    PopHistory(stack);
 }
 
 /* Function to create and initialize a new history */
-History *CreateHistory(void) {
-  History *history = (History *)malloc(sizeof(History));
+History* CreateHistory(void) {
+  History* history = (History*)malloc(sizeof(History));
   if (history == NULL) {
     fprintf(stderr, "Memory allocation failed\n");
     return NULL;
@@ -246,7 +249,7 @@ History *CreateHistory(void) {
 }
 
 /* Function to free the memory of a history */
-void FreeHistory(History *history) {
+void FreeHistory(History* history) {
   if (history == NULL) return;
 
   ClearStack(&history->future_stack);
@@ -256,7 +259,7 @@ void FreeHistory(History *history) {
 }
 
 /* Function to perform undo operation */
-void UndoHistory(History *history) {
+void UndoHistory(History* history) {
   if (history->past_stack == NULL) {
     printf("No scenes in past stack to undo.\n");
     return;
@@ -268,7 +271,7 @@ void UndoHistory(History *history) {
 }
 
 /* Function to perform redo operation */
-void RedoHistory(History *history) {
+void RedoHistory(History* history) {
   if (history->future_stack == NULL) {
     printf("No scenes in future stack to redo.\n");
     return;
@@ -280,7 +283,7 @@ void RedoHistory(History *history) {
 }
 
 /* Function to perform do operation */
-void ExecuteHistory(History *history, int new_scene) {
+void ExecuteHistory(History* history, int new_scene) {
   if (history->present >= 0)
     PushHistory(&history->past_stack, history->present);
 
@@ -290,7 +293,7 @@ void ExecuteHistory(History *history, int new_scene) {
 }
 
 /* Print a given menu at the center of the screen + offset */
-void PrintMenuAtCenter(Panel *panel, Menu *menu, Vector2D offset,
+void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing) {
   for (int i = 0; i < menu->item_count; i++) {
     if (i == menu->selected_item) {
@@ -314,13 +317,13 @@ void PrintMenuAtCenter(Panel *panel, Menu *menu, Vector2D offset,
 }
 
 /* Function to initialize a menu and return a pointer to it */
-Menu *CreateMenu(const char *items[], int num_items, int focused_color,
-                 int unfocused_color, const char *select_style_left,
-                 const char *select_style_right) {
-  Menu *menu = malloc(sizeof(struct Menu));
+Menu* CreateMenu(const char* items[], int num_items, int focused_color,
+                 int unfocused_color, const char* select_style_left,
+                 const char* select_style_right) {
+  Menu* menu = malloc(sizeof(struct Menu));
   if (menu == NULL) return NULL;
 
-  menu->items = malloc(num_items * sizeof(char *));
+  menu->items = malloc(num_items * sizeof(char*));
   if (menu->items == NULL) {
     free(menu);
     return NULL;
@@ -329,7 +332,8 @@ Menu *CreateMenu(const char *items[], int num_items, int focused_color,
   for (int i = 0; i < num_items; i++) {
     menu->items[i] = strdup(items[i]);
     if (menu->items[i] == NULL) {
-      for (int j = 0; j < i; ++j) free((char *)menu->items[j]);
+      for (int j = 0; j < i; ++j)
+        free((char*)menu->items[j]);
       free(menu->items);
       free(menu);
       return NULL;
@@ -347,15 +351,16 @@ Menu *CreateMenu(const char *items[], int num_items, int focused_color,
 }
 
 /* Function to free the memory allocated for the menu */
-void FreeMenu(Menu *menu) {
+void FreeMenu(Menu* menu) {
   if (menu == NULL) return;
-  for (int i = 0; i < menu->item_count; i++) free((char *)menu->items[i]);
+  for (int i = 0; i < menu->item_count; i++)
+    free((char*)menu->items[i]);
   free(menu->items);
   free(menu);
 }
 
 /* Function to change the selected item in the menu */
-void ChangeSelectedItem(Menu *menu, int direction) {
+void ChangeSelectedItem(Menu* menu, int direction) {
   if (direction == -1)
     menu->selected_item =
       (menu->selected_item - 1 + menu->item_count) % menu->item_count;

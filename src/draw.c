@@ -20,6 +20,7 @@ ErrorType DrawScreen(AppData* app) {
   Border border = InitBorder();
   for (int i = 0; i < MAX_PANELS; i++) {
     Panel* current_panel = &app->screen->panels[i];
+    if (!current_panel->visible) continue;
 
     if (ANIMATIONS) {
       Rollfilm* animation = NULL;
@@ -28,32 +29,20 @@ ErrorType DrawScreen(AppData* app) {
           animation = app->animations[MAIN_MENU];
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
-
           PrintMenuAtCenter(current_panel, app->menus[0],
                             (Vector2D){0, animation->frame_height / 2 + 2}, 0);
           break;
-        case WORK_TIME:
-          animation = app->animations[WORK_TIME];
-          break;
-        case SHORT_PAUSE:
-          animation = app->animations[SHORT_PAUSE];
-          break;
-        case LONG_PAUSE:
-          animation = app->animations[LONG_PAUSE];
-          break;
+        case WORK_TIME: animation = app->animations[WORK_TIME]; break;
+        case SHORT_PAUSE: animation = app->animations[SHORT_PAUSE]; break;
+        case LONG_PAUSE: animation = app->animations[LONG_PAUSE]; break;
         case NOTES:
           animation = app->animations[NOTES];
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
           break;
-        case HELP:
-          animation = app->animations[HELP];
-          break;
-        case CONTINUE:
-          animation = app->animations[CONTINUE];
-          break;
-        default:
-          break;
+        case HELP: animation = app->animations[HELP]; break;
+        case CONTINUE: animation = app->animations[CONTINUE]; break;
+        default: break;
       }
       // if (DEBUG && current_panel->visible)
       //   DebugAnimation(current_panel, animation, (Vector2D){0, 0});
@@ -61,7 +50,7 @@ ErrorType DrawScreen(AppData* app) {
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
                                                : UNFOCUSED_PANEL_COLOR,
-             NO_COLOR, (app->screen->current_panel == i) ? A_BOLD : A_NORMAL);
+             NO_COLOR, A_NORMAL);
     RenderPanelBorder(*current_panel, border);
   }
 
