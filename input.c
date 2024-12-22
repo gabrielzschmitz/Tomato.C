@@ -27,7 +27,7 @@
 /* Handle user input and app state */
 void handleInputs(appData *app) {
   // Setting delay for ESC key
-  ESCDELAY = 25;
+  set_escdelay(25);
 
   MEVENT event;
   if (app->userInput != -1 && app->userInput != app->lastInput)
