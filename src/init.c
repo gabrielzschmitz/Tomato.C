@@ -64,6 +64,7 @@ ErrorType InitApp(AppData* app) {
   if (status != NO_ERROR) return status;
 
   app->user_input = -1;
+  app->last_input = -1;
   app->block_input = false;
 
   ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
