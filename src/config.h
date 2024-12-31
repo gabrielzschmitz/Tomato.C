@@ -6,7 +6,7 @@
 static const int ANIMATIONS = 1;
 /* nerd-icons - emojis - ascii (default: nerd-icons)
  * Note: you'll need a patched nerdicons for that option */
-static const char *ICONS = "nerd-icons";
+static const char* ICONS = "nerd-icons";
 /* 1 if you want transparent background, 0 if not (default: 1)
  * Note: you'll need a terminal already transparent */
 static const int BG_TRANSPARENCY = 1;
@@ -22,32 +22,32 @@ static const int FOCUSED_PANEL_COLOR = 1;
 /* UI Settings -------------------------------------------------------------- */
 /* Note: icons need to follow this pattern: nerd-icons - emojis - ascii */
 /* Noise Icons */
-static const char *RAIN_ICONS[3] = {"󰖖", "☔", "R"};
-static const char *FIRE_ICONS[3] = {"󰈸", "🔥", "F"};
-static const char *WIND_ICONS[3] = {"󰖝", "🍃", "W"};
-static const char *THUNDER_ICONS[3] = {"󱐋", "⚡", "T"};
-static const char *PLUS_VOLUME_ICONS[3] = {"", "➕", "+"};
-static const char *MINUS_VOLUME_ICONS[3] = {"", "➖", "-"};
-static const char *ACTIVE_VOLUME_BAR_ICONS[3] = {"█", "█", "█"};
-static const char *INACTIVE_VOLUME_BAR_ICONS[3] = {"▒", "▒", "▒"};
+static const char* RAIN_ICONS[3] = {"󰖖", "☔", "R"};
+static const char* FIRE_ICONS[3] = {"󰈸", "🔥", "F"};
+static const char* WIND_ICONS[3] = {"󰖝", "🍃", "W"};
+static const char* THUNDER_ICONS[3] = {"󱐋", "⚡", "T"};
+static const char* PLUS_VOLUME_ICONS[3] = {"", "➕", "+"};
+static const char* MINUS_VOLUME_ICONS[3] = {"", "➖", "-"};
+static const char* ACTIVE_VOLUME_BAR_ICONS[3] = {"█", "█", "█"};
+static const char* INACTIVE_VOLUME_BAR_ICONS[3] = {"▒", "▒", "▒"};
 /* Pomodoro Icons */
-static const char *MAIN_MENU_ICONS[3] = {"󰍜", "🧾", ""};
-static const char *WORK_ICONS[3] = {"", "🍅", ""};
-static const char *SHORT_PAUSE_ICONS[3] = {"", "☕", ""};
-static const char *LONG_PAUSE_ICONS[3] = {"", "🌴", ""};
-static const char *NOTES_ICONS[3] = {"", "📝", ""};
-static const char *HELP_ICONS[3] = {"", "⁉️", ""};
-static const char *CONTINUE_ICONS[3] = {"", "⏯️", ""};
+static const char* MAIN_MENU_ICONS[3] = {"󰍜", "🧾", ""};
+static const char* WORK_ICONS[3] = {"", "🍅", ""};
+static const char* SHORT_PAUSE_ICONS[3] = {"", "☕", ""};
+static const char* LONG_PAUSE_ICONS[3] = {"", "🌴", ""};
+static const char* NOTES_ICONS[3] = {"", "📝", ""};
+static const char* HELP_ICONS[3] = {"", "⁉️", ""};
+static const char* CONTINUE_ICONS[3] = {"", "⏯️", ""};
 /* Input Icons */
-static const char *NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
-static const char *INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
-static const char *VISUAL_MODE_ICONS[3] = {"󰕢", "🔲", ""};
-static const char *REAL_TIME_MODULE_ICONS[3] = {"", "🕘", ""};
-static const char *VISUAL_CURSOR_ICON = "█";
-static const char *INSERT_CURSOR_ICON = "▏";
+static const char* NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
+static const char* INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
+static const char* VISUAL_MODE_ICONS[3] = {"󰕢", "🔲", ""};
+static const char* REAL_TIME_MODULE_ICONS[3] = {"", "🕘", ""};
+static const char* VISUAL_CURSOR_ICON = "█";
+static const char* INSERT_CURSOR_ICON = "▏";
 /* Misc Icons */
-static const char *BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
-static const char *PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
+static const char* BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
+static const char* PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
 
 /* Pomodoro Settings -------------------------------------------------------- */
 /* amount of pomodoros from 1 to 8 (default: 4) */
@@ -107,7 +107,7 @@ static const int AUTOSTART_PAUSE = 1;
 static const int WSL = 0;
 /* string used in the sprites to separate the types of sprites
  * Note: just tweak if strictly necessary */
-static const char *SEPARATOR =
+static const char* SEPARATOR =
   "---------------------------------------------------------------------------";
 /* sets the fps app runs (default: 120) */
 static const int FPS = 120;

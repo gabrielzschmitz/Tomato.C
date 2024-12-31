@@ -15,15 +15,14 @@ void SetColor(short int fg, short int bg, chtype attr) {
 
   if (bg == NO_COLOR && BG_TRANSPARENCY)
     color = COLOR_PAIR((fg + 1) + (PALETTE_SIZE * PALETTE_SIZE));
-  else
-    color = COLOR_PAIR((bg * PALETTE_SIZE) + fg + 1);
+  else color = COLOR_PAIR((bg * PALETTE_SIZE) + fg + 1);
 
   color |= attr;
   attrset(color);
 }
 
 /* Get the widest and tallest animation */
-Dimensions GetWidestAndTallestAnimation(AppData *app) {
+Dimensions GetWidestAndTallestAnimation(AppData* app) {
   int widest = 0;
   int tallest = 0;
 
@@ -39,32 +38,25 @@ Dimensions GetWidestAndTallestAnimation(AppData *app) {
 
 /* Check if the IconType from the config.h is valid */
 bool CheckConfigIconType() {
-  if (strcmp(ICONS, "nerd-icons") == 0)
-    return true;
-  else if (strcmp(ICONS, "emojis") == 0)
-    return true;
-  else if (strcmp(ICONS, "ascii") == 0)
-    return true;
-  else
-    return false;
+  if (strcmp(ICONS, "nerd-icons") == 0) return true;
+  else if (strcmp(ICONS, "emojis") == 0) return true;
+  else if (strcmp(ICONS, "ascii") == 0) return true;
+  else return false;
 }
 
 /* Get the IconType from the config.h */
 IconType GetConfigIconType() {
   IconType type;
-  if (strcmp(ICONS, "nerd-icons") == 0)
-    type = NERD_ICONS;
-  else if (strcmp(ICONS, "emojis") == 0)
-    type = EMOJIS;
-  else if (strcmp(ICONS, "ascii") == 0)
-    type = ASCII;
+  if (strcmp(ICONS, "nerd-icons") == 0) type = NERD_ICONS;
+  else if (strcmp(ICONS, "emojis") == 0) type = EMOJIS;
+  else if (strcmp(ICONS, "ascii") == 0) type = ASCII;
   return type;
 }
 
 /* Helper function to count UTF-16 characters */
-int UTF16CharCount(const char *str) {
+int UTF16CharCount(const char* str) {
   int count = 0;
-  const unsigned char *s = (const unsigned char *)str;
+  const unsigned char* s = (const unsigned char*)str;
 
   while (*s) {
     if ((*s & 0x80) == 0) {
@@ -87,9 +79,9 @@ int UTF16CharCount(const char *str) {
 
 /* Helper function to calculate the number of UTF-16 characters that fit within
  * the maximum width */
-int UTF16CharFitWidth(const char *str, int max_width, int *byte_count) {
+int UTF16CharFitWidth(const char* str, int max_width, int* byte_count) {
   int char_count = 0;
-  const char *s = str;
+  const char* s = str;
   *byte_count = 0;
 
   while (*s && char_count < max_width) {
@@ -116,8 +108,8 @@ int UTF16CharFitWidth(const char *str, int max_width, int *byte_count) {
 }
 
 /* Helper function to get the current time as a string */
-void GetCurrentTime(char *buffer, size_t buffer_size) {
+void GetCurrentTime(char* buffer, size_t buffer_size) {
   time_t now = time(NULL);
-  struct tm *tm_info = localtime(&now);
+  struct tm* tm_info = localtime(&now);
   strftime(buffer, buffer_size, "%H:%M", tm_info);
 }

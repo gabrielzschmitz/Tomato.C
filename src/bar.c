@@ -7,11 +7,11 @@
 #include "tomato.h"
 
 /* Function to create and allocate a StatusBarModule */
-StatusBarModule *CreateStatusBarModule(StatusBarModulePosition position,
-                                       char *content, int fg_color,
+StatusBarModule* CreateStatusBarModule(StatusBarModulePosition position,
+                                       char* content, int fg_color,
                                        int bg_color, ModuleUpdate update) {
-  StatusBarModule *new_widget =
-    (StatusBarModule *)malloc(sizeof(StatusBarModule));
+  StatusBarModule* new_widget =
+    (StatusBarModule*)malloc(sizeof(StatusBarModule));
   if (new_widget == NULL) return NULL;
 
   new_widget->fg_color = fg_color;
@@ -23,7 +23,7 @@ StatusBarModule *CreateStatusBarModule(StatusBarModulePosition position,
 
   if (content != NULL) {
     new_widget->content_length = strlen(content);
-    new_widget->content = (char *)malloc(new_widget->content_length + 1);
+    new_widget->content = (char*)malloc(new_widget->content_length + 1);
     if (new_widget->content == NULL) {
       free(new_widget);
       return NULL;
@@ -39,37 +39,30 @@ StatusBarModule *CreateStatusBarModule(StatusBarModulePosition position,
 }
 
 /* Function to add a StatusBarModule to the end of the linked list by values */
-void AddStatusBarModule(StatusBar *status_bar, StatusBarModulePosition position,
+void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
                         ModuleUpdate update) {
   if (status_bar == NULL) return;
 
-  char *default_content = "default_content";
+  char* default_content = "default_content";
   int default_fg_color = COLOR_WHITE;
   int default_bg_color = COLOR_BLACK;
 
-  StatusBarModule *new_widget = CreateStatusBarModule(
+  StatusBarModule* new_widget = CreateStatusBarModule(
     position, default_content, default_fg_color, default_bg_color, update);
   if (new_widget == NULL) return;
 
-  StatusBarModule **modules_root;
+  StatusBarModule** modules_root;
   switch (position) {
-    case LEFT:
-      modules_root = &status_bar->left_modules;
-      break;
-    case RIGHT:
-      modules_root = &status_bar->right_modules;
-      break;
-    case CENTER:
-      modules_root = &status_bar->center_modules;
-      break;
-    default:
-      return;
+    case LEFT: modules_root = &status_bar->left_modules; break;
+    case RIGHT: modules_root = &status_bar->right_modules; break;
+    case CENTER: modules_root = &status_bar->center_modules; break;
+    default: return;
   }
 
   if (*modules_root == NULL) {
     *modules_root = new_widget;
   } else {
-    StatusBarModule *current = *modules_root;
+    StatusBarModule* current = *modules_root;
     while (current->next != NULL) {
       new_widget->id++;
       current = current->next;
@@ -80,16 +73,16 @@ void AddStatusBarModule(StatusBar *status_bar, StatusBarModulePosition position,
 }
 
 /* Function to free a StatusBarModule */
-void FreeStatusBarModule(StatusBarModule *widget) {
+void FreeStatusBarModule(StatusBarModule* widget) {
   if (widget == NULL) return;
   if (widget->content != NULL) free(widget->content);
   free(widget);
 }
 
 /* Function to free a linked list of StatusBarModule modules */
-void FreeStatusBarModules(StatusBarModule *module) {
-  StatusBarModule *current = module;
-  StatusBarModule *next;
+void FreeStatusBarModules(StatusBarModule* module) {
+  StatusBarModule* current = module;
+  StatusBarModule* next;
 
   while (current) {
     next = current->next;
@@ -99,8 +92,8 @@ void FreeStatusBarModules(StatusBarModule *module) {
 }
 
 /* Function to create and allocate a StatusBar */
-StatusBar *CreateStatusBar(StatusBarPosition position) {
-  StatusBar *bar = (StatusBar *)malloc(sizeof(StatusBar));
+StatusBar* CreateStatusBar(StatusBarPosition position) {
+  StatusBar* bar = (StatusBar*)malloc(sizeof(StatusBar));
   if (bar == NULL) return NULL;
 
   bar->position = position;
@@ -112,7 +105,7 @@ StatusBar *CreateStatusBar(StatusBarPosition position) {
 }
 
 /* Function to free a StatusBar */
-void FreeStatusBar(StatusBar *bar) {
+void FreeStatusBar(StatusBar* bar) {
   if (bar == NULL) return;
 
   FreeStatusBarModules(bar->left_modules);
@@ -122,7 +115,7 @@ void FreeStatusBar(StatusBar *bar) {
   free(bar);
 }
 
-void RenderStatusBarModule(const StatusBarModule *module, int start_y,
+void RenderStatusBarModule(const StatusBarModule* module, int start_y,
                            int start_x, int max_width) {
   if (module == NULL || module->content == NULL) return;
 
@@ -151,7 +144,7 @@ void RenderStatusBarModule(const StatusBarModule *module, int start_y,
   }
 }
 
-void RenderStatusBar(const StatusBar *status_bar, const Screen *screen) {
+void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
   if (status_bar == NULL || screen == NULL) return;
 
   int bar_width = screen->size.width;
@@ -159,10 +152,11 @@ void RenderStatusBar(const StatusBar *status_bar, const Screen *screen) {
 
   /* Fill background */
   SetColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
-  for (int i = 0; i < bar_width; i++) mvprintw(bar_y, i, " ");
+  for (int i = 0; i < bar_width; i++)
+    mvprintw(bar_y, i, " ");
 
   /* Render LEFT modules */
-  StatusBarModule *current = status_bar->left_modules;
+  StatusBarModule* current = status_bar->left_modules;
   int x_offset = 0;
   while (current != NULL) {
     RenderStatusBarModule(current, bar_y, x_offset,
@@ -205,17 +199,17 @@ void RenderStatusBar(const StatusBar *status_bar, const Screen *screen) {
 }
 
 /* Update status bar module */
-void UpdateStatusBarModule(AppData *app, StatusBarModule *module,
-                           Panel *current_panel) {
+void UpdateStatusBarModule(AppData* app, StatusBarModule* module,
+                           Panel* current_panel) {
   if (module && module->update) module->update(app, module, current_panel);
 }
 
 /* Update status bar */
-void UpdateStatusBar(AppData *app, StatusBar *status_bar,
-                     Panel *current_panel) {
+void UpdateStatusBar(AppData* app, StatusBar* status_bar,
+                     Panel* current_panel) {
   if (status_bar == NULL || current_panel == NULL) return;
 
-  StatusBarModule *current;
+  StatusBarModule* current;
 
   // Update LEFT modules
   current = status_bar->left_modules;
@@ -240,10 +234,10 @@ void UpdateStatusBar(AppData *app, StatusBar *status_bar,
 }
 
 /* Inverts the order of a linked list of StatusBarModule */
-StatusBarModule *InvertModulesOrder(StatusBarModule *module) {
-  StatusBarModule *prev = NULL;
-  StatusBarModule *current = module;
-  StatusBarModule *next = NULL;
+StatusBarModule* InvertModulesOrder(StatusBarModule* module) {
+  StatusBarModule* prev = NULL;
+  StatusBarModule* current = module;
+  StatusBarModule* next = NULL;
 
   while (current != NULL) {
     next = current->next; /* Store next node */
@@ -256,29 +250,29 @@ StatusBarModule *InvertModulesOrder(StatusBarModule *module) {
 }
 
 /* Input mode module to status bar */
-void InputModeModule(AppData *app, StatusBarModule *module, Panel *panel) {
+void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   (void)app;
   if (module == NULL || panel == NULL) return;
 
   IconType icon_type = GetConfigIconType();
-  char *mode = "NORMAL";
-  char *icon = "";
+  char* mode = "NORMAL";
+  char* icon = "";
   int color = COLOR_BLUE;
 
   switch (panel->mode) {
     case NORMAL:
       mode = "NORMAL";
-      icon = (char *)NORMAL_MODE_ICONS[icon_type];
+      icon = (char*)NORMAL_MODE_ICONS[icon_type];
       color = COLOR_BLUE;
       break;
     case INSERT:
       mode = "INSERT";
-      icon = (char *)INSERT_MODE_ICONS[icon_type];
+      icon = (char*)INSERT_MODE_ICONS[icon_type];
       color = COLOR_GREEN;
       break;
     case VISUAL:
       mode = "VISUAL";
-      icon = (char *)VISUAL_MODE_ICONS[icon_type];
+      icon = (char*)VISUAL_MODE_ICONS[icon_type];
       color = COLOR_YELLOW;
       break;
     default:
@@ -303,12 +297,12 @@ void InputModeModule(AppData *app, StatusBarModule *module, Panel *panel) {
 }
 
 /* Real-time module for status bar */
-void RealTimeModule(AppData *app, StatusBarModule *module, Panel *panel) {
+void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   (void)app;
   if (module == NULL || panel == NULL) return;
 
   IconType icon_type = GetConfigIconType();
-  const char *icon = (char *)REAL_TIME_MODULE_ICONS[icon_type];
+  const char* icon = (char*)REAL_TIME_MODULE_ICONS[icon_type];
 
   int color = COLOR_CYAN;
   char current_time[6]; /* "HH:MM" + null terminator */
@@ -328,48 +322,48 @@ void RealTimeModule(AppData *app, StatusBarModule *module, Panel *panel) {
 }
 
 /* Current scene module for status bar */
-void SceneModule(AppData *app, StatusBarModule *module, Panel *panel) {
+void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
   int color = COLOR_BLACK;
-  char *content = "";
+  char* content = "";
   IconType icon_type = GetConfigIconType();
-  const char *icon;
+  const char* icon;
 
   Panel current_panel = app->screen->panels[app->screen->current_panel];
   switch (current_panel.scene_history->present) {
     case MAIN_MENU:
-      icon = (char *)MAIN_MENU_ICONS[icon_type];
+      icon = (char*)MAIN_MENU_ICONS[icon_type];
       color = COLOR_MAGENTA;
       content = "MAIN MENU";
       break;
     case WORK_TIME:
-      icon = (char *)WORK_ICONS[icon_type];
+      icon = (char*)WORK_ICONS[icon_type];
       color = COLOR_RED;
       content = "WORK TIME";
       break;
     case SHORT_PAUSE:
-      icon = (char *)SHORT_PAUSE_ICONS[icon_type];
+      icon = (char*)SHORT_PAUSE_ICONS[icon_type];
       color = COLOR_BLUE;
       content = "SHORT PAUSE";
       break;
     case LONG_PAUSE:
-      icon = (char *)LONG_PAUSE_ICONS[icon_type];
+      icon = (char*)LONG_PAUSE_ICONS[icon_type];
       color = COLOR_CYAN;
       content = "LONG PAUSE";
       break;
     case NOTES:
-      icon = (char *)NOTES_ICONS[icon_type];
+      icon = (char*)NOTES_ICONS[icon_type];
       color = COLOR_YELLOW;
       content = "NOTES";
       break;
     case HELP:
-      icon = (char *)HELP_ICONS[icon_type];
+      icon = (char*)HELP_ICONS[icon_type];
       color = COLOR_RED;
       content = "HELP";
       break;
     case CONTINUE:
-      icon = (char *)CONTINUE_ICONS[icon_type];
+      icon = (char*)CONTINUE_ICONS[icon_type];
       color = COLOR_WHITE;
       content = "CONTINUE";
       break;
