@@ -2,7 +2,7 @@
 
 # Function to display usage instructions
 usage() {
-  echo "Usage: $0 [debug] [no-move] [no-clean] [verbose] [target=<target_name>] [output-dir=<dir>] [clean]"
+  echo "Usage: $0 [debug] [no-move] [verbose] [output-dir=<dir>]"
   echo "  debug: Enable debug mode (set DEBUG=1)"
   echo "  no-move: Skip moving the 'tomato' executable to the project root"
   echo "  verbose: Enable verbose output during the build"
