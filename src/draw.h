@@ -1,6 +1,7 @@
 #ifndef DRAW_H_
 #define DRAW_H_
 
+#include "error.h"
 #include "tomato.h"
 
 /* Print at screen */

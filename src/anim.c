@@ -7,7 +7,6 @@
 #include <time.h>
 
 #include "tomato.h"
-#include "util.h"
 
 /* Function to get the current time in milliseconds */
 double GetCurrentTimeMS(void) {

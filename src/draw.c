@@ -3,12 +3,7 @@
 #include <ncurses.h>
 #include <stdio.h>
 
-#include "anim.h"
-#include "bar.h"
 #include "init.h"
-#include "tomato.h"
-#include "ui.h"
-#include "util.h"
 
 /* Print at screen */
 ErrorType DrawScreen(AppData* app) {

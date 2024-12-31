@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "draw.h"
+#include "error.h"
 #include "init.h"
 #include "input.h"
 #include "update.h"
@@ -20,7 +21,7 @@ int main(void) {
   ErrorType init_app = InitApp(&app);
   if (init_app != NO_ERROR) {
     endwin();
-    fprintf(stderr, "Error initializing app variables: %d\n", init_app);
+    LogError("Initializing app variables", init_app);
     return init_app;
   }
 
@@ -29,21 +30,21 @@ int main(void) {
     ErrorType update_app = UpdateApp(&app);
     if (update_app != NO_ERROR) {
       endwin();
-      fprintf(stderr, "Error updating app: %d\n", update_app);
+      LogError("Updating app", update_app);
       return update_app;
     }
 
     ErrorType handling_input = HandleInputs(&app);
     if (handling_input != NO_ERROR) {
       endwin();
-      fprintf(stderr, "Error handling input: %d\n", handling_input);
+      LogError("Handling input", handling_input);
       return handling_input;
     }
 
     ErrorType draw_screen = DrawScreen(&app);
     if (draw_screen != NO_ERROR) {
       endwin();
-      fprintf(stderr, "Error drawing screen: %d\n", draw_screen);
+      LogError("Drawing screen", draw_screen);
       return draw_screen;
     }
 
@@ -51,7 +52,7 @@ int main(void) {
   }
   ErrorType end_screen = EndScreen();
   if (end_screen != NO_ERROR) {
-    fprintf(stderr, "Error ending app screen: %d\n", end_screen);
+    LogError("Ending app screen", end_screen);
     return end_screen;
   }
   EndApp(&app);

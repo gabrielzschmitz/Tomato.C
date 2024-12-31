@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "tomato.h"
-#include "util.h"
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
 Screen* CreateScreen(void) {

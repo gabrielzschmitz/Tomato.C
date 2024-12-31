@@ -2,8 +2,6 @@
 
 #include <ncurses.h>
 
-#include "tomato.h"
-
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key) {
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);

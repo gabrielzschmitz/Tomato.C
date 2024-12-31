@@ -1,6 +1,7 @@
 #ifndef INIT_H_
 #define INIT_H_
 
+#include "error.h"
 #include "tomato.h"
 
 /* Initialize ncurses screen and configure settings */

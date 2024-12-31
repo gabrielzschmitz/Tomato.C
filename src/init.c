@@ -2,12 +2,6 @@
 
 #include <ncurses.h>
 
-#include "anim.h"
-#include "bar.h"
-#include "tomato.h"
-#include "ui.h"
-#include "util.h"
-
 /* Initialize ncurses screen and configure settings */
 void InitScreen(void) {
 #ifdef XCURSES

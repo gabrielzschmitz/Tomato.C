@@ -1,6 +1,7 @@
 #ifndef INPUT_H_
 #define INPUT_H_
 
+#include "error.h"
 #include "tomato.h"
 
 /* Struct to map a key to a function */

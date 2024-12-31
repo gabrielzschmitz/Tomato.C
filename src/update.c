@@ -2,10 +2,6 @@
 
 #include <ncurses.h>
 
-#include "anim.h"
-#include "tomato.h"
-#include "ui.h"
-
 /* Update variables */
 ErrorType UpdateApp(AppData* app) {
   ErrorType status = NO_ERROR;
