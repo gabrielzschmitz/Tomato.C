@@ -12,6 +12,7 @@ const char* GetErrorMessage(ErrorType error) {
     case MALLOC_ERROR: return "Memory allocation error";
     case INVALID_INPUT: return "Invalid input";
     case INVALID_CONFIG: return "Invalid configuration";
+    case ERROR_EXECUTING_SELECTED_ACTION: return "Error during execution of selected action";
     case TOO_SMALL_SCREEN: return "Screen size is too small";
     default: return "Unknown error";
   }
