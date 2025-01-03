@@ -397,7 +397,7 @@ void handleInputs(appData *app) {
           if (WORKLOG == 1) writeToLog(app);
           if (TIMERLOG == 1) endTimerLog(app);
           app->menuPos = 1;
-          app->runOnce = 1;
+          app->runOnce = 0;
           app->pausedTimer = 0;
           app->currentMode = 0;
           app->frameTimer = 0;
