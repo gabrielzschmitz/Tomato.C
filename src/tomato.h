@@ -44,6 +44,7 @@ struct AppData {
   struct Screen* screen;
   struct StatusBar* status_bar;
   struct Menu* menus[MAX_MENUS];
+  int current_menu;
 
   int user_input;
   int last_input;

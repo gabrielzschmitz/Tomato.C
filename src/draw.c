@@ -4,11 +4,16 @@
 #include <stdio.h>
 
 #include "init.h"
+#include "input.h"
+#include "ui.h"
 
 /* Print at screen */
 ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
+
+  if (IsKeyAssignedToAction(app->last_input, QuitApp))
+    RenderQuitConfirmation(app);
 
   if (!CheckScreenSize(app)) return status;
 
@@ -17,31 +22,43 @@ ErrorType DrawScreen(AppData* app) {
     Panel* current_panel = &app->screen->panels[i];
     if (!current_panel->visible) continue;
 
-    if (ANIMATIONS) {
-      Rollfilm* animation = NULL;
-      switch (current_panel->scene_history->present) {
-        case MAIN_MENU:
+    Rollfilm* animation = NULL;
+    switch (current_panel->scene_history->present) {
+      case MAIN_MENU:
+        if (ANIMATIONS) {
           animation = app->animations[MAIN_MENU];
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
-          PrintMenuAtCenter(current_panel, app->menus[0],
-                            (Vector2D){0, animation->frame_height / 2 + 2}, 0);
-          break;
-        case WORK_TIME: animation = app->animations[WORK_TIME]; break;
-        case SHORT_PAUSE: animation = app->animations[SHORT_PAUSE]; break;
-        case LONG_PAUSE: animation = app->animations[LONG_PAUSE]; break;
-        case NOTES:
+        }
+        PrintMenuAtCenter(current_panel, app->menus[0],
+                          (Vector2D){0, animation->frame_height / 2 + 2}, 0);
+        break;
+      case WORK_TIME:
+        if (ANIMATIONS) animation = app->animations[WORK_TIME];
+        break;
+      case SHORT_PAUSE:
+        if (ANIMATIONS) animation = app->animations[SHORT_PAUSE];
+        break;
+      case LONG_PAUSE:
+        if (ANIMATIONS) animation = app->animations[LONG_PAUSE];
+        break;
+      case NOTES:
+        if (ANIMATIONS) {
           animation = app->animations[NOTES];
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
-          break;
-        case HELP: animation = app->animations[HELP]; break;
-        case CONTINUE: animation = app->animations[CONTINUE]; break;
-        default: break;
-      }
-      // if (DEBUG && current_panel->visible)
-      //   DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+        }
+        break;
+      case HELP:
+        if (ANIMATIONS) animation = app->animations[HELP];
+        break;
+      case CONTINUE:
+        if (ANIMATIONS) animation = app->animations[CONTINUE];
+        break;
+      default: break;
     }
+    if (DEBUG && current_panel->visible)
+      mvprintw(1, 2, "%c/%c", app->user_input, app->last_input);
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
                                                : UNFOCUSED_PANEL_COLOR,
@@ -50,6 +67,9 @@ ErrorType DrawScreen(AppData* app) {
   }
 
   RenderStatusBar(app->status_bar, app->screen);
+
+  if (IsKeyAssignedToAction(app->last_input, QuitApp))
+    RenderQuitConfirmation(app);
 
   if (DEBUG) {
     SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);

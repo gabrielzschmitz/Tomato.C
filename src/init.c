@@ -1,4 +1,5 @@
 #include "init.h"
+#include "input.h"
 
 #include <ncurses.h>
 
@@ -54,6 +55,7 @@ ErrorType InitApp(AppData* app) {
   status = InitStatusBar(app);
   if (status != NO_ERROR) return status;
 
+  app->current_menu = -1;
   status = InitMenus(app);
   if (status != NO_ERROR) return status;
 
@@ -75,24 +77,31 @@ ErrorType InitApp(AppData* app) {
 /* Function to initialize the app menus */
 ErrorType InitMenus(AppData* app) {
   /* MAIN_MENU */
-  const char* main_menu_items[] = {"start", "preferences", "help menu",
-                                   "leave"};
-  size_t main_menu_items_size =
-    sizeof(main_menu_items) / sizeof(main_menu_items[0]);
-  Menu* main_menu_menu = CreateMenu(main_menu_items, main_menu_items_size,
+  const int n_mainmenu = 4;
+  MenuItem main_menu_items[4] = {
+      {"start", NULL},
+      {"preferences", NULL},
+      {"help menu", NULL},
+      {"leave", ForcefullyQuitApp}};
+
+  Menu* main_menu_menu = CreateMenu(main_menu_items, 4,
                                     COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
   if (main_menu_menu == NULL) return MALLOC_ERROR;
-  app->menus[0] = main_menu_menu;
+  app->menus[MAIN_MENU_MENU] = main_menu_menu;
+  app->current_menu = MAIN_MENU_MENU;
 
   /* PREFERENCES */
-  const char* preferences_items[] = {"pomodoros", "work time", "short pause",
-                                     "long pause"};
-  size_t preferences_items_size =
-    sizeof(preferences_items) / sizeof(preferences_items[0]);
-  Menu* preferences_menu = CreateMenu(preferences_items, preferences_items_size,
+  const int n_preferences = 4;
+  MenuItem preferences_items[4] = {
+      {"pomodoros", NULL},
+      {"work time", NULL},
+      {"short pause", NULL},
+      {"long pause", NULL}};
+
+  Menu* preferences_menu = CreateMenu(preferences_items, n_preferences,
                                       COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
   if (preferences_menu == NULL) return MALLOC_ERROR;
-  app->menus[1] = preferences_menu;
+  app->menus[PREFERENCES_MENU] = preferences_menu;
 
   return NO_ERROR;
 }

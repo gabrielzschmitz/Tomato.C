@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "error.h"
+#include "input.h"
 #include "tomato.h"
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
@@ -90,6 +92,23 @@ void RenderPanelBorder(Panel panel, Border border) {
     mvprintw(y, panel.position.x, "%s", border.vertical);
     mvprintw(y, panel.position.x + panel.size.width - 1, "%s", border.vertical);
   }
+}
+
+/* Render a confirmation message at the bottom center of the screen */
+void RenderQuitConfirmation(AppData* app) {
+  char message[32];
+  char key[4];
+
+  if (app->last_input == ESC) strcpy(key, "ESC");
+  else sprintf(key, "%c", app->last_input);
+
+  snprintf(message, sizeof(message), "Press '%s' again to exit", key);
+  int message_length = strlen(message);
+  int x = (app->screen->size.width - message_length) / 2;
+  int y = app->screen->size.height - 3;
+
+  SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
+  mvprintw(y, x, "%s", message);
 }
 
 /* Update panels from a given screen */
@@ -295,44 +314,53 @@ void ExecuteHistory(History* history, int new_scene) {
 void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing) {
   for (int i = 0; i < menu->item_count; i++) {
+    const char* item_label = menu->items[i].label;
+
     if (i == menu->selected_item) {
       SetColor(menu->focused_color, NO_COLOR, A_BOLD);
 
       size_t left_len = strlen(menu->select_style_left);
-      size_t item_len = strlen(menu->items[i]);
+      size_t item_len = strlen(item_label);
       size_t right_len = strlen(menu->select_style_right);
       size_t full_text_size = left_len + item_len + right_len + 1;
 
-      char full_text[full_text_size];
-      snprintf(full_text, sizeof(full_text), "%s%s%s", menu->select_style_left,
-               menu->items[i], menu->select_style_right);
-      RenderAtPanelCenter(panel, full_text, offset);
+      char* full_text = malloc(full_text_size);
+      if (full_text) {
+        snprintf(full_text, full_text_size, "%s%s%s", menu->select_style_left,
+                 item_label, menu->select_style_right);
+        RenderAtPanelCenter(panel, full_text, offset);
+        free(full_text);
+      } else {
+        RenderAtPanelCenter(panel, item_label, offset);
+      }
     } else {
       SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
-      RenderAtPanelCenter(panel, menu->items[i], offset);
+      RenderAtPanelCenter(panel, item_label, offset);
     }
+
     offset.y += line_spacing + 1;
   }
 }
 
 /* Function to initialize a menu and return a pointer to it */
-Menu* CreateMenu(const char* items[], int num_items, int focused_color,
+Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
                  int unfocused_color, const char* select_style_left,
                  const char* select_style_right) {
   Menu* menu = malloc(sizeof(struct Menu));
   if (menu == NULL) return NULL;
 
-  menu->items = malloc(num_items * sizeof(char*));
+  menu->items = malloc(num_items * sizeof(MenuItem));
   if (menu->items == NULL) {
     free(menu);
     return NULL;
   }
 
   for (int i = 0; i < num_items; i++) {
-    menu->items[i] = strdup(items[i]);
-    if (menu->items[i] == NULL) {
+    menu->items[i].label = strdup(items[i].label);
+    menu->items[i].action = items[i].action;
+    if (menu->items[i].label == NULL) {
       for (int j = 0; j < i; ++j)
-        free((char*)menu->items[j]);
+        free((char*)menu->items[j].label);
       free(menu->items);
       free(menu);
       return NULL;
@@ -352,10 +380,12 @@ Menu* CreateMenu(const char* items[], int num_items, int focused_color,
 /* Function to free the memory allocated for the menu */
 void FreeMenu(Menu* menu) {
   if (menu == NULL) return;
+
   for (int i = 0; i < menu->item_count; i++)
-    free((char*)menu->items[i]);
+    free((char*)menu->items[i].label);
+
   free(menu->items);
-  free(menu);
+  free(menu);       
 }
 
 /* Function to change the selected item in the menu */

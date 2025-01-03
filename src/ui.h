@@ -13,10 +13,22 @@ typedef struct Panel Panel;
 typedef struct History History;
 typedef struct HistoryNode HistoryNode;
 typedef struct Menu Menu;
+typedef struct MenuItem MenuItem;
+
+/* Forward declaration of AppData */
+typedef struct AppData AppData;
+/* Define a type for menu item action functions */
+typedef void (*MenuAction)(AppData* app);
+
+/* Structure for a menu item with a label and an associated action */
+struct MenuItem {
+  const char* label;     /* Label for the menu item */
+  MenuAction action;     /* Function pointer for the action */
+};
 
 /* Structure for managing a menu and its items */
 struct Menu {
-  const char** items;  /* Array of pointers to menu item strings */
+  MenuItem* items;        /* Array of menu items */
   int selected_item;   /* Index of the currently selected item */
   int focused_color;   /* Color code for the focused (selected) item */
   int unfocused_color; /* Color code for the unfocused (deselected) items */
@@ -24,6 +36,17 @@ struct Menu {
   const char* select_style_right; /* String for the right style selected item */
   int item_count;                 /* Number of items in the menu */
 };
+
+typedef enum {
+  MAIN_MENU_MENU,
+  PREFERENCES_MENU,
+  WORK_TIME_MENU,
+  SHORT_PAUSE_MENU,
+  LONG_PAUSE_MENU,
+  NOTES_MENU,
+  HELP_MENU,
+  CONTINUE_MENU,
+} MenuType;
 
 /* Structure for storing a single history node */
 struct HistoryNode {
@@ -81,6 +104,9 @@ void FreePanel(Panel* panel);
 /* Render a border in a given panel */
 void RenderPanelBorder(Panel panel, Border border);
 
+/* Render a confirmation message at the bottom center of the screen */
+void RenderQuitConfirmation(AppData* app);
+
 /* Update panels from a given screen */
 void UpdateScreen(Screen* screen);
 
@@ -126,7 +152,7 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing);
 
 /* Function to initialize a menu and return a pointer to it */
-Menu* CreateMenu(const char* items[], int num_items, int focused_color,
+Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
                  int unfocused_color, const char* select_style_left,
                  const char* select_style_right);
 

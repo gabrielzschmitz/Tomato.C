@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "tomato.h"
+#include "ui.h"
 
 /* Struct to map a key to a function */
 typedef struct {
@@ -31,6 +32,9 @@ void ProcessKeyInput(AppData* app, int key);
 /* Handle user input and app state */
 ErrorType HandleInputs(AppData* app);
 
+/* Check if the given key is assigned to the specified action function */
+int IsKeyAssignedToAction(int key, void (*action)(AppData*));
+
 /* Switch to next panel */
 void NextPanel(AppData* app);
 
@@ -52,6 +56,12 @@ void ChangeDebugAnimation(AppData* app, int step);
 /* Quit the program */
 void QuitApp(AppData* app);
 
+/* Quit the program forcefully */
+void ForcefullyQuitApp(AppData* app);
+
+/* Function to execute the action of the selected menu item */
+void ExecuteMenuAction(AppData* app);
+
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
   {' ', NextPanel, NORMAL},
@@ -59,8 +69,9 @@ static const KeyFunction keys[] = {
   {'k', SelectPreviousItem, NORMAL},
   {'p', TogglePause, NORMAL},
   {'q', QuitApp, NORMAL},
-  {ESC, QuitApp, NORMAL},
+  {ESC, QuitApp, NORMAL | VISUAL},
   {'m', ChangeMode, NORMAL | INSERT | VISUAL},
+  {ENTER, ExecuteMenuAction, NORMAL},
 };
 
 #endif /* INPUT_H_ */

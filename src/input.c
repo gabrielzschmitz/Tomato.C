@@ -1,4 +1,5 @@
 #include "input.h"
+#include "draw.h"
 
 #include <ncurses.h>
 
@@ -23,11 +24,23 @@ ErrorType HandleInputs(AppData* app) {
   if (app->user_input != -1) app->last_input = app->user_input;
   app->user_input = getch();
 
-  if (!app->block_input) ProcessKeyInput(app, app->user_input);
+  if (!CheckScreenSize(app)) {
+    if (IsKeyAssignedToAction(app->user_input, QuitApp))
+      ProcessKeyInput(app, app->user_input);
+    else app->user_input = -1;
+  } else if (!app->block_input) ProcessKeyInput(app, app->user_input);
 
   flushinp();
 
   return status;
+}
+
+/* Check if the given key is assigned to the specified action function */
+int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
+  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  for (size_t i = 0; i < numKeyFunctions; i++)
+    if (keys[i].key == key && keys[i].action == action) return 1;
+  return 0;
 }
 
 /* Switch to next panel */
@@ -72,7 +85,23 @@ void ChangeDebugAnimation(AppData* app, int step) {
 
 /* Quit the program */
 void QuitApp(AppData* app) {
-  int* mode = &app->screen->panels[app->screen->current_panel].mode;
-  if (app->user_input == app->last_input && *mode != INSERT)
+  if (app->user_input == app->last_input)
     app->running = false;
+}
+
+/* Quit the program forcefully */
+void ForcefullyQuitApp(AppData* app) {
+  app->running = false;
+}
+
+/* Function to execute the action of the selected menu item */
+void ExecuteMenuAction(AppData* app) {
+  if (app->current_menu == -1) return;
+
+  Menu* current_menu = app->menus[app->current_menu];
+  int selected_index = current_menu->selected_item;
+  MenuAction action = current_menu->items[selected_index].action;
+
+  if (action) 
+    action(app);
 }
