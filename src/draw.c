@@ -68,8 +68,9 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (IsKeyAssignedToAction(app->last_input, QuitApp))
-    RenderQuitConfirmation(app);
+  if (app->popup_dialog != NULL)
+    if(app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
+      RenderQuitConfirmation(app);
 
   if (DEBUG) {
     SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);

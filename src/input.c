@@ -1,5 +1,6 @@
 #include "input.h"
 #include "draw.h"
+#include "ui.h"
 
 #include <ncurses.h>
 
@@ -45,11 +46,16 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
 
 /* Switch to next panel */
 void NextPanel(AppData* app) {
+  if(app->popup_dialog != NULL) return;
   app->screen->current_panel = (app->screen->current_panel + 1) % MAX_PANELS;
 }
 
 /* Select next menu item */
 void SelectNextItem(AppData* app) {
+  if(app->popup_dialog != NULL){
+    ChangeSelectedItem(&app->popup_dialog->menu, 1);
+    return;
+  }
   if (app->screen->panels[app->screen->current_panel].scene_history->present ==
       MAIN_MENU)
     ChangeSelectedItem(app->menus[0], 1);
@@ -57,6 +63,10 @@ void SelectNextItem(AppData* app) {
 
 /* Select previous menu item */
 void SelectPreviousItem(AppData* app) {
+  if(app->popup_dialog != NULL){
+    ChangeSelectedItem(&app->popup_dialog->menu, -1);
+    return;
+  }
   if (app->screen->panels[app->screen->current_panel].scene_history->present ==
       MAIN_MENU)
     ChangeSelectedItem(app->menus[0], -1);
@@ -64,11 +74,13 @@ void SelectPreviousItem(AppData* app) {
 
 /* Toggle pause */
 void TogglePause(AppData* app) {
+  if(app->popup_dialog != NULL) return;
   app->is_paused = !app->is_paused;
 }
 
 /* Change the input mode */
 void ChangeMode(AppData* app) {
+  if(app->popup_dialog != NULL) return;
   int* mode = &app->screen->panels[app->screen->current_panel].mode;
 
   if (*mode == VISUAL) *mode = NORMAL;
@@ -77,6 +89,7 @@ void ChangeMode(AppData* app) {
 
 /* Update animation mode */
 void ChangeDebugAnimation(AppData* app, int step) {
+  if(app->popup_dialog != NULL) return;
   int* present =
     &app->screen->panels[app->screen->current_panel].scene_history->present;
 
@@ -94,9 +107,25 @@ void ForcefullyQuitApp(AppData* app) {
   app->running = false;
 }
 
+/* Close the popup dialog */
+void ClosePopup(AppData* app) {
+  if(app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
+
+  app->popup_dialog = NULL;
+}
+
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app) {
   if (app->current_menu == -1) return;
+  if(app->popup_dialog != NULL){
+    Menu* current_menu = &app->popup_dialog->menu;
+    int selected_index = current_menu->selected_item;
+    MenuAction action = current_menu->items[selected_index].action;
+
+    if (action) 
+      action(app);
+    return;
+  }
 
   Menu* current_menu = app->menus[app->current_menu];
   int selected_index = current_menu->selected_item;

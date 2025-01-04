@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
-#include "input.h"
 #include "tomato.h"
+#include "util.h"
+#include "init.h"
+#include "input.h"
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
 Screen* CreateScreen(void) {
@@ -94,21 +95,59 @@ void RenderPanelBorder(Panel panel, Border border) {
   }
 }
 
-/* Render a confirmation message at the bottom center of the screen */
+/* Render a border for a FloatingDialog */
+void RenderFloatingDialogBorder(FloatingDialog* dialog) {
+  if (!dialog || !dialog->visible) return;
+
+  int x = dialog->position.x;
+  int y = dialog->position.y;
+  int width = dialog->size.width;
+  int height = dialog->size.height;
+
+  // Draw top border
+  mvprintw(y, x, "%s", dialog->border.top_left);
+  for (int i = 1; i < width - 1; i++) 
+    mvprintw(y, x + i, "%s", dialog->border.horizontal);
+  mvprintw(y, x + width - 1, "%s", dialog->border.top_right);
+
+  // Draw bottom border
+  mvprintw(y + height - 1, x, "%s", dialog->border.bottom_left);
+  for (int i = 1; i < width - 1; i++)
+    mvprintw(y + height - 1, x + i, "%s", dialog->border.horizontal);
+  mvprintw(y + height - 1, x + width - 1, "%s", dialog->border.bottom_right);
+
+  // Draw vertical borders
+  for (int i = 1; i < height - 1; i++) {
+    mvprintw(y + i, x, "%s", dialog->border.vertical);
+    mvprintw(y + i, x + width - 1, "%s", dialog->border.vertical);
+  }
+}
+
+/* Render a confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app) {
-  char message[32];
-  char key[4];
+    if (app->popup_dialog == NULL) {
+        // Create the popup dialog if it doesn't exist
+        const char* message = "Are you sure you want to quit?";
+        MenuItem menu_items[] = {
+            {"Confirm", ForcefullyQuitApp},
+            {"Cancel", ClosePopup}  
+        };
+        Menu menu = {
+            .items = menu_items,
+            .selected_item = 0,
+            .focused_color = COLOR_WHITE,
+            .unfocused_color = COLOR_WHITE,
+            .select_style_left = "[",
+            .select_style_right = "]",
+            .item_count = sizeof(menu_items) / sizeof(MenuItem)
+        };
+        Border border = InitBorder();
 
-  if (app->last_input == ESC) strcpy(key, "ESC");
-  else sprintf(key, "%c", app->last_input);
+        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu, message, border);
+    }
 
-  snprintf(message, sizeof(message), "Press '%s' again to exit", key);
-  int message_length = strlen(message);
-  int x = (app->screen->size.width - message_length) / 2;
-  int y = app->screen->size.height - 3;
-
-  SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
-  mvprintw(y, x, "%s", message);
+    // Render the popup dialog
+    RenderFloatingDialog(app->popup_dialog);
 }
 
 /* Update panels from a given screen */
@@ -342,10 +381,62 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
   }
 }
 
+/* Print a given menu side by side with offset and spacing */
+void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing, int
+    container_width) {
+  if(!container_width % 2 == 0)
+    container_width += 1;
+  int total_width = 0;
+
+  // Calculate the total width of the menu items
+  for (int i = 0; i < menu->item_count; i++) {
+    total_width += strlen(menu->items[i].label) +
+                   strlen(menu->select_style_left) +
+                   strlen(menu->select_style_right);
+    if (i < menu->item_count - 1) total_width += spacing;
+  }
+
+  // Adjust the initial x-offset to center the menu
+  offset.x += (container_width - total_width) / 2;
+
+  // Render each menu item
+  for (int i = 0; i < menu->item_count; i++) {
+    const char* item_label = menu->items[i].label;
+
+    if (i == menu->selected_item) {
+      SetColor(menu->focused_color, NO_COLOR, A_BOLD);
+
+      size_t left_len = strlen(menu->select_style_left);
+      size_t item_len = strlen(item_label);
+      size_t right_len = strlen(menu->select_style_right);
+      size_t full_text_size = left_len + item_len + right_len + 1;
+
+      char* full_text = malloc(full_text_size);
+      if (full_text) {
+        snprintf(full_text, full_text_size, "%s%s%s", menu->select_style_left,
+                 item_label, menu->select_style_right);
+        mvprintw(offset.y, offset.x, "%s", full_text);
+        free(full_text);
+      } else {
+        mvprintw(offset.y, offset.x, "%s", item_label);
+      }
+    } else {
+      SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
+      mvprintw(offset.y, offset.x, "%s", item_label);
+    }
+
+    // Move the offset horizontally to the right for the next menu item
+    offset.x += strlen(item_label) +
+                strlen(menu->select_style_left) +
+                strlen(menu->select_style_right) +
+                spacing;
+  }
+}
+
 /* Function to initialize a menu and return a pointer to it */
 Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
-                 int unfocused_color, const char* select_style_left,
-                 const char* select_style_right) {
+    int unfocused_color, const char* select_style_left,
+    const char* select_style_right) {
   Menu* menu = malloc(sizeof(struct Menu));
   if (menu == NULL) return NULL;
 
@@ -395,4 +486,117 @@ void ChangeSelectedItem(Menu* menu, int direction) {
       (menu->selected_item - 1 + menu->item_count) % menu->item_count;
   else if (direction == 1)
     menu->selected_item = (menu->selected_item + 1) % menu->item_count;
+}
+
+/* Create a new FloatingDialog */
+FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size, Border
+    border, Menu menu, const char* message) {
+  FloatingDialog* dialog = (FloatingDialog*)malloc(sizeof(FloatingDialog));
+  if (!dialog) return NULL;
+
+  dialog->size = size;
+  dialog->position = position;
+  dialog->border = border;
+
+  // Deep copy the menu
+  dialog->menu.item_count = menu.item_count;
+  dialog->menu.selected_item = menu.selected_item;
+  dialog->menu.focused_color = menu.focused_color;
+  dialog->menu.unfocused_color = menu.unfocused_color;
+  dialog->menu.select_style_left = strdup(menu.select_style_left);
+  dialog->menu.select_style_right = strdup(menu.select_style_right);
+
+  dialog->menu.items = (MenuItem*)malloc(menu.item_count * sizeof(MenuItem));
+  if (!dialog->menu.items) {
+    free(dialog);
+    return NULL;
+  }
+
+  for (int i = 0; i < menu.item_count; i++) {
+    dialog->menu.items[i].label = strdup(menu.items[i].label);
+    dialog->menu.items[i].action = menu.items[i].action;
+  }
+
+  dialog->message = strdup(message);
+  dialog->visible = true;
+
+  return dialog;
+}
+
+/* Free all memory of a FloatingDialog */
+void FreeFloatingDialog(FloatingDialog* dialog) {
+  if (!dialog) return;
+
+  // Free menu items
+  for (int i = 0; i < dialog->menu.item_count; i++) {
+    free((char*)dialog->menu.items[i].label); // Cast to `char*` for `const char*`
+  }
+  free(dialog->menu.items);
+
+  // Free menu styles
+  free((char*)dialog->menu.select_style_left);
+  free((char*)dialog->menu.select_style_right);
+
+  // Free message
+  free(dialog->message);
+
+  // Free the dialog itself
+  free(dialog);
+}
+
+/* Render a FloatingDialog using ncurses */
+void RenderFloatingDialog(FloatingDialog* dialog) {
+  if (!dialog || !dialog->visible) return;
+
+  int x = dialog->position.x;
+  int y = dialog->position.y;
+  int width = dialog->size.width;
+  int height = dialog->size.height;
+
+  /* Draw borders */
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  RenderFloatingDialogBorder(dialog);
+
+  /* Draw background */
+  for (int i = 1; i < height - 1; i++) 
+    for (int j = 1; j < width - 1; j++) mvprintw(y + i, x + j, " ");
+
+  /* Print message */
+  int msg_x = x + 2;
+  int msg_y = y + 1;
+  mvprintw(msg_y, msg_x, "%s", dialog->message);
+
+  /* Render menu */
+  Vector2D menu_offset = {x, y + 3};
+  int menu_spacing = 4;
+  PrintMenuSideBySide(&dialog->menu, menu_offset, menu_spacing, width);
+}
+
+/* Create a FloatingDialog centered on the screen */
+FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
+    char* message, Border border) {
+  const int padding = 4;
+  const int msg_len = strlen(message);
+  int menu_width = 0;
+
+  for (int i = 0; i < menu.item_count; i++) {
+    int label_len = strlen(menu.items[i].label);
+    menu_width = Max(menu_width, label_len);
+    menu_width += padding;
+  }
+
+  int width = Max(msg_len, menu_width) + padding;
+  int height = menu.item_count + padding;
+
+  Vector2D position = {
+    .x = (screen->size.width - width) / 2,
+    .y = (screen->size.height - height) / 2
+  };
+
+  Dimensions size = {
+    .width = width,
+    .height = height
+  };
+
+  return CreateFloatingDialog(position, size, border, menu, message);
 }

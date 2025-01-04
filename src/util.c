@@ -113,3 +113,8 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
   struct tm* tm_info = localtime(&now);
   strftime(buffer, buffer_size, "%H:%M", tm_info);
 }
+
+/* Returns which int is larger */
+int Max(int a, int b){
+  return a > b ? a : b;
+}

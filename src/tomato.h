@@ -7,6 +7,7 @@
 
 #include "bar.h"
 #include "config.h"
+#include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 #define NO_COLOR -1
@@ -44,6 +45,7 @@ struct AppData {
   struct Screen* screen;
   struct StatusBar* status_bar;
   struct Menu* menus[MAX_MENUS];
+  struct FloatingDialog* popup_dialog;
   int current_menu;
 
   int user_input;

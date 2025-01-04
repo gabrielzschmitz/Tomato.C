@@ -14,6 +14,7 @@ typedef struct History History;
 typedef struct HistoryNode HistoryNode;
 typedef struct Menu Menu;
 typedef struct MenuItem MenuItem;
+typedef struct FloatingDialog FloatingDialog;
 
 /* Forward declaration of AppData */
 typedef struct AppData AppData;
@@ -89,6 +90,16 @@ struct Border {
   const char* vertical;     /* Character for the vertical border line */
 };
 
+/* Structure for representing a floating dialog box */
+struct FloatingDialog {
+  Dimensions size;    /* Dimensions of the dialog (width and height) */
+  Vector2D position;  /* Position of the dialog on the screen */
+  Border border;      /* Border style for the dialog */
+  Menu menu;          /* Menu within the dialog */
+  char* message;      /* Message displayed in the dialog */
+  bool visible;       /* Visibility status of the dialog */
+};
+
 /* Create a screen struct with MAX_PANELS in horizontal rows */
 Screen* CreateScreen(void);
 
@@ -103,6 +114,9 @@ void FreePanel(Panel* panel);
 
 /* Render a border in a given panel */
 void RenderPanelBorder(Panel panel, Border border);
+
+/* Render a border for a FloatingDialog */
+void RenderFloatingDialogBorder(FloatingDialog* dialog);
 
 /* Render a confirmation message at the bottom center of the screen */
 void RenderQuitConfirmation(AppData* app);
@@ -151,6 +165,10 @@ void ExecuteHistory(History* history, int new_scene);
 void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing);
 
+/* Print a given menu side by side with offset and spacing */
+void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing, int
+    container_width);
+
 /* Function to initialize a menu and return a pointer to it */
 Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
                  int unfocused_color, const char* select_style_left,
@@ -161,5 +179,19 @@ void FreeMenu(Menu* menu);
 
 /* Function to change the selected item in the menu */
 void ChangeSelectedItem(Menu* menu, int direction);
+
+/* Create a new FloatingDialog */
+FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size, Border
+    border, Menu menu, const char* message);
+
+/* Free all memory of a FloatingDialog */
+void FreeFloatingDialog(FloatingDialog* dialog);
+
+/* Render a FloatingDialog using ncurses */
+void RenderFloatingDialog(FloatingDialog* dialog);
+
+/* Create a FloatingDialog centered on the screen */
+FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
+    char* message, Border border);
 
 #endif /* UI_H_ */

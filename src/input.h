@@ -59,6 +59,9 @@ void QuitApp(AppData* app);
 /* Quit the program forcefully */
 void ForcefullyQuitApp(AppData* app);
 
+/* Close the popup dialog */
+void ClosePopup(AppData* app);
+
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app);
 
@@ -67,6 +70,8 @@ static const KeyFunction keys[] = {
   {' ', NextPanel, NORMAL},
   {'j', SelectNextItem, NORMAL},
   {'k', SelectPreviousItem, NORMAL},
+  {'l', SelectNextItem, NORMAL},
+  {'h', SelectPreviousItem, NORMAL},
   {'p', TogglePause, NORMAL},
   {'q', QuitApp, NORMAL},
   {ESC, QuitApp, NORMAL | VISUAL},

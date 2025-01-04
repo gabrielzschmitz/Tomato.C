@@ -46,4 +46,7 @@ int UTF16CharFitWidth(const char* str, int max_width, int* byte_count);
 /* Helper function to get the current time as a string */
 void GetCurrentTime(char* buffer, size_t buffer_size);
 
+/* Returns which int is larger */
+int Max(int a, int b);
+
 #endif /* UTIL_H_ */

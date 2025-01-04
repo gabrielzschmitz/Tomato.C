@@ -1,5 +1,6 @@
 #include "init.h"
 #include "input.h"
+#include "ui.h"
 
 #include <ncurses.h>
 
@@ -70,6 +71,8 @@ ErrorType InitApp(AppData* app) {
 
   status = InitAnimations(app);
   if (status != NO_ERROR) return status;
+
+  app->popup_dialog = NULL;
 
   return status;
 }
@@ -169,6 +172,7 @@ ErrorType EndApp(AppData* app) {
     FreeMenu(app->menus[i]);
     app->menus[i] = NULL;
   }
+  FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
   FreeScreen(app->screen);
   return NO_ERROR;
