@@ -57,8 +57,9 @@ ErrorType DrawScreen(AppData* app) {
         break;
       default: break;
     }
-    if (DEBUG && current_panel->visible)
-      mvprintw(1, 2, "%c/%c", app->user_input, app->last_input);
+    if (DEBUG && current_panel->visible){
+      mvprintw(1, 2, "%c/%c - %dcm", app->user_input, app->last_input, app->current_menu);
+    }
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
                                                : UNFOCUSED_PANEL_COLOR,

@@ -48,6 +48,8 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
 void NextPanel(AppData* app) {
   if(app->popup_dialog != NULL) return;
   app->screen->current_panel = (app->screen->current_panel + 1) % MAX_PANELS;
+  app->current_menu =
+    app->screen->panels[app->screen->current_panel].menu_index;
 }
 
 /* Select next menu item */
@@ -116,7 +118,6 @@ void ClosePopup(AppData* app) {
 
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app) {
-  if (app->current_menu == -1) return;
   if(app->popup_dialog != NULL){
     Menu* current_menu = &app->popup_dialog->menu;
     int selected_index = current_menu->selected_item;
@@ -126,6 +127,7 @@ void ExecuteMenuAction(AppData* app) {
       action(app);
     return;
   }
+  if (app->current_menu == -1) return;
 
   Menu* current_menu = app->menus[app->current_menu];
   int selected_index = current_menu->selected_item;

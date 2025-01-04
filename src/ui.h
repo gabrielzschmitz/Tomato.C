@@ -68,6 +68,7 @@ struct Panel {
   Dimensions size;        /* Dimensions of the panel */
   Vector2D position;      /* Position of the panel on the screen */
   int mode;               /* Mode or state of the panel */
+  int menu_index;         /* Menu index of the current panel */
   bool visible;           /* Visibility status of the panel */
 };
 

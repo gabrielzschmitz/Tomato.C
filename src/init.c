@@ -66,6 +66,8 @@ ErrorType InitApp(AppData* app) {
 
   ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
   ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
+  app->screen->panels[0].menu_index = MAIN_MENU_MENU;
+  app->screen->panels[1].menu_index = -1;
   app->is_paused = false;
   app->running = true;
 
