@@ -640,7 +640,7 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
   }
 
   snprintf(cycle_info, sizeof(cycle_info), "%02d/%02d",
-      app->pomodoro_data.current_cycle, app->pomodoro_data.total_cycles);
+      app->pomodoro_data.current_cycle + 1, app->pomodoro_data.total_cycles);
   snprintf(message, sizeof(message), "%s %s", icon, status_text);
   snprintf(total_time, sizeof(total_time), "[%d minutes]", duration);
 
