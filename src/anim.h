@@ -52,9 +52,6 @@ struct Rollfilm {
   AnimationRender render; /* Function pointer for animation render logic */
 };
 
-/* Function to get the current time in milliseconds */
-double GetCurrentTimeMS(void);
-
 /* Increments animation frames based on real-life seconds */
 void FrameTimer(int* frame_second, double* milliseconds);
 

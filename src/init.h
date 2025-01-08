@@ -19,13 +19,16 @@ ErrorType InitStatusBar(AppData* app);
 /* Initialize animations from sprites */
 ErrorType InitAnimations(AppData* app);
 
+/* Init a Border struct with the config values */
+Border InitBorder(void);
+
+/* Function to initialize the pomodoro data */
+ErrorType InitPomodoroData(AppData* app);
+
 /* End ncurses screen and delete default window and screen */
 ErrorType EndScreen(void);
 
 /* End/Free variables */
 ErrorType EndApp(AppData* app);
-
-/* Init a Border struct with the config values */
-Border InitBorder(void);
 
 #endif /* INIT_H_ */

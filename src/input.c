@@ -1,6 +1,8 @@
 #include "input.h"
 #include "draw.h"
+#include "tomato.h"
 #include "ui.h"
+#include "util.h"
 
 #include <ncurses.h>
 
@@ -114,6 +116,15 @@ void ClosePopup(AppData* app) {
   if(app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
 
   app->popup_dialog = NULL;
+}
+
+/* Start pomodoro cycle */
+void StartPomodoro(AppData* app) {
+  ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
+  app->screen->panels[0].menu_index = -1;
+  app->pomodoro_data.current_step = WORK_TIME;
+  app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+  app->pomodoro_data.current_step_time = 0;
 }
 
 /* Function to execute the action of the selected menu item */

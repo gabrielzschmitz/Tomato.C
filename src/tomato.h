@@ -40,6 +40,18 @@ typedef enum {
   VISUAL = 1 << 2,
 } InputMode;
 
+/* Defining the PomodoroConfig struct */
+typedef struct {
+  int total_cycles;       /* Total Pomodoro cycles configured */
+  int work_time;          /* Work time duration (minutes) */
+  int short_pause_time;   /* Short pause duration (minutes) */
+  int long_pause_time;    /* Long pause duration (minutes) */
+  int current_cycle;      /* Current Pomodoro cycle */
+  int current_step;       /* Current step (work, short pause, etc.) */
+  int current_step_time;  /* Time in the current step (seconds) */
+  double delta_time_ms;   /* Elapsed time in milliseconds since last frame */
+} PomodoroData;
+
 /* Defining the app struct */
 struct AppData {
   struct Screen* screen;
@@ -55,6 +67,8 @@ struct AppData {
   struct Rollfilm* animations[MAX_ANIMATIONS];
   bool is_paused;
   bool running;
+
+  PomodoroData pomodoro_data;
 };
 
 #endif /* TOMATO_H_ */

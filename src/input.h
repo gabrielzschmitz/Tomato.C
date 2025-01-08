@@ -62,6 +62,9 @@ void ForcefullyQuitApp(AppData* app);
 /* Close the popup dialog */
 void ClosePopup(AppData* app);
 
+/* Start pomodoro cycle */
+void StartPomodoro(AppData* app);
+
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app);
 

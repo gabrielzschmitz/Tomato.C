@@ -195,4 +195,8 @@ void RenderFloatingDialog(FloatingDialog* dialog);
 FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
     char* message, Border border);
 
+/* Render a pomodoro status */
+void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D
+    anim_pos);
+
 #endif /* UI_H_ */

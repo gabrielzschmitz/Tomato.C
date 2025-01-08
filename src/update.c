@@ -1,6 +1,8 @@
 #include "update.h"
 
 #include <ncurses.h>
+#include "bar.h"
+#include "util.h"
 
 /* Update variables */
 ErrorType UpdateApp(AppData* app) {
@@ -45,6 +47,7 @@ void UpdateWorkTime(AppData* app) {
     Rollfilm* animation = app->animations[WORK_TIME];
     animation->update(animation);
   }
+  UpdatePomodoroTime(app);
 }
 
 /* Update SHORT_PAUSE */
@@ -89,5 +92,16 @@ void UpdateContinue(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[CONTINUE];
     animation->update(animation);
+  }
+}
+
+/* Update pomodoro data time */
+void UpdatePomodoroTime(AppData* app){
+  double current_time = GetCurrentTimeMS();
+  double delta_time = current_time - app->pomodoro_data.delta_time_ms;
+
+  if(delta_time >= 1000.0){
+    app->pomodoro_data.delta_time_ms = current_time;
+    app->pomodoro_data.current_step_time += 1;
   }
 }

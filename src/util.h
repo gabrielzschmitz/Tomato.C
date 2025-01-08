@@ -49,4 +49,10 @@ void GetCurrentTime(char* buffer, size_t buffer_size);
 /* Returns which int is larger */
 int Max(int a, int b);
 
+/* Function to get the current time in milliseconds */
+double GetCurrentTimeMS(void);
+
+/* Convert elapsed seconds and total time in minutes to a time string */
+char* FormatRemainingTime(int elapsed_seconds, int total_minutes);
+
 #endif /* UTIL_H_ */

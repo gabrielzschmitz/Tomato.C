@@ -31,4 +31,7 @@ void UpdateHelp(AppData* app);
 /* Update CONTINUE */
 void UpdateContinue(AppData* app);
 
+/* Update pomodoro data time */
+void UpdatePomodoroTime(AppData* app);
+
 #endif /* UPDATE_H_ */

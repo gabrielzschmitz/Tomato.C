@@ -1,6 +1,9 @@
 #include "init.h"
+#include "config.h"
+#include "error.h"
 #include "input.h"
 #include "ui.h"
+#include "util.h"
 
 #include <ncurses.h>
 
@@ -60,22 +63,23 @@ ErrorType InitApp(AppData* app) {
   status = InitMenus(app);
   if (status != NO_ERROR) return status;
 
-  app->user_input = -1;
-  app->last_input = -1;
-  app->block_input = false;
+  status = InitAnimations(app);
+  if (status != NO_ERROR) return status;
 
   ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
   ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
   app->screen->panels[0].menu_index = MAIN_MENU_MENU;
   app->screen->panels[1].menu_index = -1;
   app->is_paused = false;
-  app->running = true;
-
-  status = InitAnimations(app);
-  if (status != NO_ERROR) return status;
-
   app->popup_dialog = NULL;
 
+  app->user_input = -1;
+  app->last_input = -1;
+  app->block_input = false;
+
+  status = InitPomodoroData(app);
+  if (status != NO_ERROR) return status;
+  app->running = true;
   return status;
 }
 
@@ -84,7 +88,7 @@ ErrorType InitMenus(AppData* app) {
   /* MAIN_MENU */
   const int n_mainmenu = 4;
   MenuItem main_menu_items[4] = {
-      {"start", NULL},
+      {"start", StartPomodoro},
       {"preferences", NULL},
       {"help menu", NULL},
       {"leave", ForcefullyQuitApp}};
@@ -150,6 +154,32 @@ ErrorType InitAnimations(AppData* app) {
   return NO_ERROR;
 }
 
+/* Init a Border struct with the config values */
+Border InitBorder(void) {
+  Border border;
+  border.top_left = BORDER_CHARS[0];     /* "┏" */
+  border.top_right = BORDER_CHARS[1];    /* "┓" */
+  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
+  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
+  border.horizontal = BORDER_CHARS[4];   /* "━" */
+  border.vertical = BORDER_CHARS[5];     /* "┃" */
+  return border;
+}
+
+/* Function to initialize the pomodoro data */
+ErrorType InitPomodoroData(AppData* app) {
+  app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
+  app->pomodoro_data.work_time = WORKTIME_TIME;
+  app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
+  app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;
+  app->pomodoro_data.current_cycle = 0;
+  app->pomodoro_data.current_step = MAIN_MENU;
+  app->pomodoro_data.current_step_time = 0;
+  app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+
+  return NO_ERROR;
+}
+
 /* End ncurses screen and delete default window and screen */
 ErrorType EndScreen(void) {
   int err = endwin();
@@ -178,16 +208,4 @@ ErrorType EndApp(AppData* app) {
   FreeStatusBar(app->status_bar);
   FreeScreen(app->screen);
   return NO_ERROR;
-}
-
-/* Init a Border struct with the config values */
-Border InitBorder(void) {
-  Border border;
-  border.top_left = BORDER_CHARS[0];     /* "┏" */
-  border.top_right = BORDER_CHARS[1];    /* "┓" */
-  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
-  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
-  border.horizontal = BORDER_CHARS[4];   /* "━" */
-  border.vertical = BORDER_CHARS[5];     /* "┃" */
-  return border;
 }

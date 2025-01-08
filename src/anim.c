@@ -7,15 +7,7 @@
 #include <time.h>
 
 #include "tomato.h"
-
-/* Function to get the current time in milliseconds */
-double GetCurrentTimeMS(void) {
-  struct timespec current_time;
-  clock_gettime(CLOCK_MONOTONIC, &current_time);
-  double ms =
-    (current_time.tv_sec * 1000.0) + (current_time.tv_nsec / 1000000.0);
-  return ms;
-}
+#include "util.h"
 
 /* Creates a new Rollfilm with N frames of height M */
 Rollfilm* CreateRollfilm(int N, int M) {

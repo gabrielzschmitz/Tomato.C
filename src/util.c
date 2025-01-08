@@ -1,6 +1,7 @@
 #include "util.h"
 
 #include <ncurses.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -117,4 +118,34 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
 /* Returns which int is larger */
 int Max(int a, int b){
   return a > b ? a : b;
+}
+
+/* Function to get the current time in milliseconds */
+double GetCurrentTimeMS(void) {
+  const double SECONDS_TO_MILLISECONDS = 1000.0;
+  const double NANOSECONDS_TO_MILLISECONDS = 1.0 / 1000000.0;
+
+  struct timespec current_time;
+  clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+  double ms = (current_time.tv_sec * SECONDS_TO_MILLISECONDS) +
+              (current_time.tv_nsec * NANOSECONDS_TO_MILLISECONDS);
+  return ms;
+}
+
+/* Convert elapsed seconds and total time in minutes to a time string */
+char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
+  int total_seconds = total_minutes * 60;
+  int remaining_seconds = total_seconds - elapsed_seconds;
+
+  if (remaining_seconds < 0) remaining_seconds = 0; // Avoid negative values
+
+  int minutes = remaining_seconds / 60;
+  int seconds = remaining_seconds % 60;
+
+  char* time_string = (char*)malloc(16);
+  if (!time_string) return NULL;
+
+  snprintf(time_string, 16, "%02d:%02d", minutes, seconds);
+  return time_string;
 }

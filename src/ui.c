@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "tomato.h"
 #include "util.h"
 #include "init.h"
@@ -137,8 +138,8 @@ void RenderQuitConfirmation(AppData* app) {
             .selected_item = 0,
             .focused_color = COLOR_WHITE,
             .unfocused_color = COLOR_WHITE,
-            .select_style_left = "[",
-            .select_style_right = "]",
+            .select_style_left = "<",
+            .select_style_right = ">",
             .item_count = sizeof(menu_items) / sizeof(MenuItem)
         };
         Border border = InitBorder();
@@ -599,4 +600,63 @@ FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
   };
 
   return CreateFloatingDialog(position, size, border, menu, message);
+}
+
+/* Render a pomodoro status */
+void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos) {
+  int step = app->pomodoro_data.current_step;
+  int icon_type = GetConfigIconType();
+  const char *icon, *status_text;
+  int color, duration;
+  char message[64];
+  char total_time[32];
+
+  // Determine the properties based on the step
+  switch (step) {
+    case WORK_TIME:
+      color = COLOR_MAGENTA;
+      icon = WORK_ICONS[icon_type];
+      if(icon_type == ASCII)
+        status_text = "Pomodoro  ";
+      else
+        status_text = "Pomodoro";
+      duration = app->pomodoro_data.work_time;
+      break;
+    case SHORT_PAUSE:
+      color = COLOR_CYAN;
+      icon = SHORT_PAUSE_ICONS[icon_type];
+      status_text = "Pause";
+      duration = app->pomodoro_data.short_pause_time;
+      break;
+    case LONG_PAUSE:
+      color = COLOR_CYAN;
+      icon = LONG_PAUSE_ICONS[icon_type];
+      status_text = "Long pause";
+      duration = app->pomodoro_data.long_pause_time;
+      break;
+    default:
+      return;
+  }
+
+  snprintf(message, sizeof(message), "%s %s", icon, status_text);
+  snprintf(total_time, sizeof(total_time), "[%d minutes]", duration);
+
+  // Calculate centered positions
+  int total_width = strlen(message) + strlen(total_time);
+  int start_x = anim_pos.x + (anim_size.width - total_width) / 2;
+  int render_y = anim_pos.y + anim_size.height + 1;
+
+  // Render the message and total_time side by side
+  SetColor(color, NO_COLOR, A_BOLD);
+  mvprintw(render_y, start_x, "%s", message);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(render_y, start_x + strlen(message) - 1, "%s", total_time);
+
+  // Render the current_time centered below message and total_time
+  char *current_time = FormatRemainingTime(app->pomodoro_data.current_step_time,
+      duration);
+  int current_time_width = strlen(current_time);
+  int time_start_x = start_x + (total_width - current_time_width) / 2;
+  mvprintw(render_y + 1, time_start_x, "%s", current_time);
+  free(current_time);
 }

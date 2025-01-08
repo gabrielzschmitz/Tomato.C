@@ -5,6 +5,7 @@
 
 #include "init.h"
 #include "input.h"
+#include "tomato.h"
 #include "ui.h"
 
 /* Print at screen */
@@ -34,7 +35,22 @@ ErrorType DrawScreen(AppData* app) {
                           (Vector2D){0, animation->frame_height / 2 + 2}, 0);
         break;
       case WORK_TIME:
-        if (ANIMATIONS) animation = app->animations[WORK_TIME];
+        if (ANIMATIONS) {
+          animation = app->animations[WORK_TIME];
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
+        }
+        Vector2D position = {
+          .x = current_panel->position.x + (current_panel->size.width -
+              animation->frame_width) / 2,
+          .y = current_panel->position.y + (current_panel->size.height -
+              animation->frame_height) / 2
+        };
+        Dimensions size = {
+          .width = animation->frame_width,
+          .height = animation->frame_height
+        };
+        RenderPomodoroStatus(app, size, position);
         break;
       case SHORT_PAUSE:
         if (ANIMATIONS) animation = app->animations[SHORT_PAUSE];
