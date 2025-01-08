@@ -48,6 +48,7 @@ static const char* INSERT_CURSOR_ICON = "▏";
 /* Misc Icons */
 static const char* BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
 static const char* PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
+static const char* SKIP_ICONS[3] = {"󰒬", "⏭️", "S"};
 
 /* Pomodoro Settings -------------------------------------------------------- */
 /* amount of pomodoros from 1 to 8 (default: 4) */

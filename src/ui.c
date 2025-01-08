@@ -610,6 +610,7 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
   int color, duration;
   char message[64];
   char total_time[32];
+  char cycle_info[16];
 
   // Determine the properties based on the step
   switch (step) {
@@ -638,6 +639,8 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
       return;
   }
 
+  snprintf(cycle_info, sizeof(cycle_info), "%02d/%02d",
+      app->pomodoro_data.current_cycle, app->pomodoro_data.total_cycles);
   snprintf(message, sizeof(message), "%s %s", icon, status_text);
   snprintf(total_time, sizeof(total_time), "[%d minutes]", duration);
 
@@ -645,6 +648,13 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
   int total_width = strlen(message) + strlen(total_time);
   int start_x = anim_pos.x + (anim_size.width - total_width) / 2;
   int render_y = anim_pos.y + anim_size.height + 1;
+  int start_x_above = start_x + strlen(message) + 1 + strlen(cycle_info);
+  int render_y_above = anim_pos.y - anim_size.height - 1;
+
+  // Render the cycle info and controls above the animation
+  SetColor(color, NO_COLOR, A_BOLD);
+  mvprintw(render_y_above, start_x_above, "%s", cycle_info);
+  RenderPomodoroControls(app, (Vector2D){start_x, render_y_above});
 
   // Render the message and total_time side by side
   SetColor(color, NO_COLOR, A_BOLD);
@@ -659,4 +669,27 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
   int time_start_x = start_x + (total_width - current_time_width) / 2;
   mvprintw(render_y + 1, time_start_x, "%s", current_time);
   free(current_time);
+}
+
+/* Render a pomodoro controllers */
+void RenderPomodoroControls(AppData* app, Vector2D pos){
+  int step = app->pomodoro_data.current_step;
+  int icon_type = GetConfigIconType();
+  const char *skip_icon = SKIP_ICONS[icon_type];
+  const char *pause_icon = PAUSE_ICONS[icon_type];
+  int color;
+
+  if (step == WORK_TIME) color = COLOR_MAGENTA;
+  else if (step == SHORT_PAUSE || step == LONG_PAUSE) color = COLOR_CYAN;
+  else return;
+
+  SetColor(color, NO_COLOR, A_BOLD);
+  mvprintw(pos.y, pos.x, "%s ", skip_icon);
+  int skip_length = strlen(skip_icon);
+  if (icon_type == NERD_ICONS) skip_length--;
+  else if (icon_type == EMOJIS) skip_length -= 2;
+  else if (icon_type == ASCII) skip_length++;
+
+  SetColor(app->is_paused ? color : COLOR_BLACK, NO_COLOR, A_BOLD);
+  mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);
 }

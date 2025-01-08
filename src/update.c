@@ -47,7 +47,7 @@ void UpdateWorkTime(AppData* app) {
     Rollfilm* animation = app->animations[WORK_TIME];
     animation->update(animation);
   }
-  UpdatePomodoroTime(app);
+  if(!app->is_paused) UpdatePomodoroTime(app);
 }
 
 /* Update SHORT_PAUSE */
