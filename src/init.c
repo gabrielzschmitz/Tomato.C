@@ -2,6 +2,7 @@
 #include "config.h"
 #include "error.h"
 #include "input.h"
+#include "tomato.h"
 #include "ui.h"
 #include "util.h"
 
@@ -168,7 +169,10 @@ Border InitBorder(void) {
 
 /* Function to initialize the pomodoro data */
 ErrorType InitPomodoroData(AppData* app) {
-  app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
+  if(DEBUG)
+    app->pomodoro_data.total_cycles = 2;
+  else
+    app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
   app->pomodoro_data.work_time = WORKTIME_TIME;
   app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
   app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;

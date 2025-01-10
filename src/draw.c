@@ -3,10 +3,12 @@
 #include <ncurses.h>
 #include <stdio.h>
 
+#include "error.h"
 #include "init.h"
 #include "input.h"
 #include "tomato.h"
 #include "ui.h"
+#include "util.h"
 
 /* Print at screen */
 ErrorType DrawScreen(AppData* app) {
@@ -16,6 +18,9 @@ ErrorType DrawScreen(AppData* app) {
   if (IsKeyAssignedToAction(app->last_input, QuitApp))
     RenderQuitConfirmation(app);
 
+  if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep))
+    RenderSkipConfirmation(app);
+
   if (!CheckScreenSize(app)) return status;
 
   Border border = InitBorder();
@@ -24,6 +29,21 @@ ErrorType DrawScreen(AppData* app) {
     if (!current_panel->visible) continue;
 
     Rollfilm* animation = NULL;
+
+    int indices[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
+    int largest_index = FindLargestRollfilm(app->animations, indices, 3);
+    if (largest_index == -1) return ANIMATION_EQUAL_NULL;
+    Dimensions size = {
+      .width = app->animations[largest_index]->frame_width,
+      .height = app->animations[largest_index]->frame_height
+    };
+    Vector2D position = {
+      .x = current_panel->position.x + (current_panel->size.width -
+          app->animations[largest_index]->frame_width) / 2,
+      .y = current_panel->position.y + (current_panel->size.height -
+          app->animations[largest_index]->frame_height) / 2
+    };
+
     switch (current_panel->scene_history->present) {
       case MAIN_MENU:
         if (ANIMATIONS) {
@@ -40,23 +60,23 @@ ErrorType DrawScreen(AppData* app) {
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
         }
-        Vector2D position = {
-          .x = current_panel->position.x + (current_panel->size.width -
-              animation->frame_width) / 2,
-          .y = current_panel->position.y + (current_panel->size.height -
-              animation->frame_height) / 2
-        };
-        Dimensions size = {
-          .width = animation->frame_width,
-          .height = animation->frame_height
-        };
         RenderPomodoroStatus(app, size, position);
         break;
       case SHORT_PAUSE:
-        if (ANIMATIONS) animation = app->animations[SHORT_PAUSE];
+        if (ANIMATIONS) {
+          animation = app->animations[SHORT_PAUSE];
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
+        }
+        RenderPomodoroStatus(app, size, position);
         break;
       case LONG_PAUSE:
-        if (ANIMATIONS) animation = app->animations[LONG_PAUSE];
+        if (ANIMATIONS) {
+          animation = app->animations[LONG_PAUSE];
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
+        }
+        RenderPomodoroStatus(app, size, position);
         break;
       case NOTES:
         if (ANIMATIONS) {
@@ -85,9 +105,13 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (app->popup_dialog != NULL)
+  if (app->popup_dialog != NULL){
     if(app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
       RenderQuitConfirmation(app);
+    else if(app->popup_dialog->menu.items[0].action ==
+        ForcefullySkipPomodoroStep)
+      RenderSkipConfirmation(app);
+  }
 
   if (DEBUG) {
     SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);

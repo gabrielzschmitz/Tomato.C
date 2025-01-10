@@ -1,6 +1,7 @@
 #ifndef INPUT_H_
 #define INPUT_H_
 
+#include <ncurses.h>
 #include "error.h"
 #include "tomato.h"
 #include "ui.h"
@@ -65,16 +66,25 @@ void ClosePopup(AppData* app);
 /* Start pomodoro cycle */
 void StartPomodoro(AppData* app);
 
+/* Skip pomodoro step */
+void SkipPomodoroStep(AppData* app);
+
+/* Forcefully skip pomodoro step */
+void ForcefullySkipPomodoroStep(AppData* app);
+
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app);
 
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
   {' ', NextPanel, NORMAL},
+  {KEY_DOWN, SelectNextItem, NORMAL},
+  {KEY_UP, SelectPreviousItem, NORMAL},
   {'j', SelectNextItem, NORMAL},
   {'k', SelectPreviousItem, NORMAL},
   {'l', SelectNextItem, NORMAL},
   {'h', SelectPreviousItem, NORMAL},
+  {'s', SkipPomodoroStep, NORMAL},
   {'p', TogglePause, NORMAL},
   {'q', QuitApp, NORMAL},
   {ESC, QuitApp, NORMAL | VISUAL},

@@ -37,6 +37,12 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
   return (Dimensions){widest, tallest};
 }
 
+/* Flush input */
+void ResetInput(AppData* app) {
+  app->last_input = -1;
+  app->user_input = -1;
+}
+
 /* Check if the IconType from the config.h is valid */
 bool CheckConfigIconType() {
   if (strcmp(ICONS, "nerd-icons") == 0) return true;
@@ -138,7 +144,7 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
   int total_seconds = total_minutes * 60;
   int remaining_seconds = total_seconds - elapsed_seconds;
 
-  if (remaining_seconds < 0) remaining_seconds = 0; // Avoid negative values
+  if (remaining_seconds < 0) remaining_seconds = 0;
 
   int minutes = remaining_seconds / 60;
   int seconds = remaining_seconds % 60;
@@ -148,4 +154,13 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
 
   snprintf(time_string, 16, "%02d:%02d", minutes, seconds);
   return time_string;
+}
+
+/* Check if a pomodoro step has ended */
+bool StepEnded(int elapsed_seconds, int total_minutes){
+  int total_seconds = total_minutes * 60;
+  int remaining_seconds = total_seconds - elapsed_seconds;
+
+  if (remaining_seconds <= 0) return true;
+  return false;
 }

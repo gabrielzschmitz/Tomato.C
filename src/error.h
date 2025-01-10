@@ -12,6 +12,7 @@ typedef enum {
   INVALID_CONFIG, /* Critical: Invalid configuration (prevents app start) */
   WINDOW_CREATION_ERROR,           /* Severe: Error during window creation */
   ANIMATION_DESERIALIZATION_ERROR, /* Severe: Error during animation deserialization */
+  ANIMATION_EQUAL_NULL, /* Severe: Animation rollfilm is NULL after deserialization */
 
   /* Input and user interaction errors */
   INVALID_INPUT,    /* Moderate: Invalid user input */

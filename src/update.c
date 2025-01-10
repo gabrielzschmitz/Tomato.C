@@ -2,6 +2,8 @@
 
 #include <ncurses.h>
 #include "bar.h"
+#include "tomato.h"
+#include "ui.h"
 #include "util.h"
 
 /* Update variables */
@@ -48,6 +50,23 @@ void UpdateWorkTime(AppData* app) {
     animation->update(animation);
   }
   if(!app->is_paused) UpdatePomodoroTime(app);
+  if(StepEnded(app->pomodoro_data.current_step_time,
+        app->pomodoro_data.work_time)){
+    if(app->pomodoro_data.current_cycle >= app->pomodoro_data.total_cycles - 1){
+      ExecuteHistory(app->screen->panels[0].scene_history, LONG_PAUSE);
+      app->screen->panels[0].menu_index = -1;
+      app->pomodoro_data.current_step = LONG_PAUSE;
+      app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+      app->pomodoro_data.current_step_time = 0;
+    } else{
+      ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
+      app->screen->panels[0].menu_index = -1;
+      app->pomodoro_data.current_step = SHORT_PAUSE;
+      app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+      app->pomodoro_data.current_step_time = 0;
+    }
+  }
+
 }
 
 /* Update SHORT_PAUSE */
@@ -57,6 +76,16 @@ void UpdateShortPause(AppData* app) {
     Rollfilm* animation = app->animations[SHORT_PAUSE];
     animation->update(animation);
   }
+  if(!app->is_paused) UpdatePomodoroTime(app);
+  if(StepEnded(app->pomodoro_data.current_step_time,
+        app->pomodoro_data.short_pause_time)){
+    ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
+    app->screen->panels[0].menu_index = -1;
+    app->pomodoro_data.current_step = WORK_TIME;
+    app->pomodoro_data.current_cycle += 1;
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+    app->pomodoro_data.current_step_time = 0;
+  }
 }
 
 /* Update LONG_PAUSE */
@@ -65,6 +94,16 @@ void UpdateLongPause(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[LONG_PAUSE];
     animation->update(animation);
+  }
+  if(!app->is_paused) UpdatePomodoroTime(app);
+  if(StepEnded(app->pomodoro_data.current_step_time,
+        app->pomodoro_data.long_pause_time)){
+    ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
+    app->screen->panels[0].menu_index = MAIN_MENU_MENU;
+    app->pomodoro_data.current_step = MAIN_MENU;
+    app->pomodoro_data.current_cycle = 0;
+    app->pomodoro_data.current_step_time = 0;
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
   }
 }
 
@@ -100,7 +139,9 @@ void UpdatePomodoroTime(AppData* app){
   double current_time = GetCurrentTimeMS();
   double delta_time = current_time - app->pomodoro_data.delta_time_ms;
 
-  if(delta_time >= 1000.0){
+  int speed_multiplier = 1;
+  if(DEBUG) speed_multiplier = 1/100;
+  if(delta_time >= 1000.0 * speed_multiplier){
     app->pomodoro_data.delta_time_ms = current_time;
     app->pomodoro_data.current_step_time += 1;
   }

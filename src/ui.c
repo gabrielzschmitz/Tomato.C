@@ -124,7 +124,7 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog) {
   }
 }
 
-/* Render a confirmation message at the center of the screen */
+/* Render a quit confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app) {
     if (app->popup_dialog == NULL) {
         // Create the popup dialog if it doesn't exist
@@ -144,10 +144,37 @@ void RenderQuitConfirmation(AppData* app) {
         };
         Border border = InitBorder();
 
-        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu, message, border);
+        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu,
+            message, border);
     }
 
-    // Render the popup dialog
+    RenderFloatingDialog(app->popup_dialog);
+}
+
+/* Render a skip confirmation message at the center of the screen */
+void RenderSkipConfirmation(AppData* app) {
+    if (app->popup_dialog == NULL) {
+        // Create the popup dialog if it doesn't exist
+        const char* message = "Are you sure you want to skip this pomodoro step?";
+        MenuItem menu_items[] = {
+            {"Confirm", ForcefullySkipPomodoroStep},
+            {"Cancel", ClosePopup}  
+        };
+        Menu menu = {
+            .items = menu_items,
+            .selected_item = 0,
+            .focused_color = COLOR_WHITE,
+            .unfocused_color = COLOR_WHITE,
+            .select_style_left = "<",
+            .select_style_right = ">",
+            .item_count = sizeof(menu_items) / sizeof(MenuItem)
+        };
+        Border border = InitBorder();
+
+        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu,
+            message, border);
+    }
+
     RenderFloatingDialog(app->popup_dialog);
 }
 
@@ -646,10 +673,10 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
 
   // Calculate centered positions
   int total_width = strlen(message) + strlen(total_time);
-  int start_x = anim_pos.x + (anim_size.width - total_width) / 2;
+  int start_x = anim_pos.x + (anim_size.width - total_width) / 2 + 1;
   int render_y = anim_pos.y + anim_size.height + 1;
   int start_x_above = start_x + strlen(message) + 1 + strlen(cycle_info);
-  int render_y_above = anim_pos.y - anim_size.height - 1;
+  int render_y_above = anim_pos.y - 1;
 
   // Render the cycle info and controls above the animation
   SetColor(color, NO_COLOR, A_BOLD);

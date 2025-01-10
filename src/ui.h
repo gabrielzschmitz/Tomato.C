@@ -119,8 +119,11 @@ void RenderPanelBorder(Panel panel, Border border);
 /* Render a border for a FloatingDialog */
 void RenderFloatingDialogBorder(FloatingDialog* dialog);
 
-/* Render a confirmation message at the bottom center of the screen */
+/* Render a quit confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app);
+
+/* Render a skip confirmation message at the center of the screen */
+void RenderSkipConfirmation(AppData* app);
 
 /* Update panels from a given screen */
 void UpdateScreen(Screen* screen);

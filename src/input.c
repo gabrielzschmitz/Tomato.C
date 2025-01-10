@@ -127,6 +127,55 @@ void StartPomodoro(AppData* app) {
   app->pomodoro_data.current_step_time = 0;
 }
 
+/* Skip pomodoro step */
+void SkipPomodoroStep(AppData* app) {
+  if (app->user_input != app->last_input) return;
+
+  int step = app->pomodoro_data.current_step;
+  int duration;
+
+  switch (step) {
+    case WORK_TIME:
+      duration = app->pomodoro_data.work_time;
+      break;
+    case SHORT_PAUSE:
+      duration = app->pomodoro_data.short_pause_time;
+      break;
+    case LONG_PAUSE:
+      duration = app->pomodoro_data.long_pause_time;
+      break;
+    default:
+      return;
+  }
+
+  app->pomodoro_data.current_step_time = duration * 60;
+  ResetInput(app);
+}
+
+/* Forcefully skip pomodoro step */
+void ForcefullySkipPomodoroStep(AppData* app) {
+  int step = app->pomodoro_data.current_step;
+  int duration;
+
+  switch (step) {
+    case WORK_TIME:
+      duration = app->pomodoro_data.work_time;
+      break;
+    case SHORT_PAUSE:
+      duration = app->pomodoro_data.short_pause_time;
+      break;
+    case LONG_PAUSE:
+      duration = app->pomodoro_data.long_pause_time;
+      break;
+    default:
+      return;
+  }
+
+  app->pomodoro_data.current_step_time = duration * 60;
+  ResetInput(app);
+  ClosePopup(app);
+}
+
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app) {
   if(app->popup_dialog != NULL){

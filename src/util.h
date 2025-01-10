@@ -30,6 +30,9 @@ void SetColor(short int fg, short int bg, chtype attr);
 /* Get the widest and tallest animation */
 Dimensions GetWidestAndTallestAnimation(AppData* app);
 
+/* Flush input */
+void ResetInput(AppData* app);
+
 /* Check if the ICON_TYPE from the config.h is valid */
 bool CheckConfigIconType();
 
@@ -54,5 +57,8 @@ double GetCurrentTimeMS(void);
 
 /* Convert elapsed seconds and total time in minutes to a time string */
 char* FormatRemainingTime(int elapsed_seconds, int total_minutes);
+
+/* Check if a pomodoro step has ended */
+bool StepEnded(int elapsed_seconds, int total_minutes);
 
 #endif /* UTIL_H_ */
