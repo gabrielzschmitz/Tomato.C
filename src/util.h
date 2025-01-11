@@ -61,4 +61,7 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes);
 /* Check if a pomodoro step has ended */
 bool StepEnded(int elapsed_seconds, int total_minutes);
 
+/* Check if current_step is in the array */
+bool IsCurrentStepInList(const int *array, size_t array_size, int current_step);
+
 #endif /* UTIL_H_ */

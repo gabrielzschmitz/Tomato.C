@@ -164,3 +164,11 @@ bool StepEnded(int elapsed_seconds, int total_minutes){
   if (remaining_seconds <= 0) return true;
   return false;
 }
+
+/* Check if current_step is in the array */
+bool IsCurrentStepInList(const int *array, size_t array_size, int current_step) {
+  for (size_t i = 0; i < array_size; i++)
+    if (array[i] == current_step)
+      return true;
+  return false;
+}

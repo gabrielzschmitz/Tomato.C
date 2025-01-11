@@ -18,7 +18,10 @@ ErrorType DrawScreen(AppData* app) {
   if (IsKeyAssignedToAction(app->last_input, QuitApp))
     RenderQuitConfirmation(app);
 
-  if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep))
+  int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
+  size_t steps_count = sizeof(steps) / sizeof(steps[0]);
+  if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep) &&
+      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step))
     RenderSkipConfirmation(app);
 
   if (!CheckScreenSize(app)) return status;
