@@ -48,7 +48,7 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
 
 /* Switch to next panel */
 void NextPanel(AppData* app) {
-  if(app->popup_dialog != NULL) return;
+  if (app->popup_dialog != NULL) return;
   app->screen->current_panel = (app->screen->current_panel + 1) % MAX_PANELS;
   app->current_menu =
     app->screen->panels[app->screen->current_panel].menu_index;
@@ -56,7 +56,7 @@ void NextPanel(AppData* app) {
 
 /* Select next menu item */
 void SelectNextItem(AppData* app) {
-  if(app->popup_dialog != NULL){
+  if (app->popup_dialog != NULL) {
     ChangeSelectedItem(&app->popup_dialog->menu, 1);
     return;
   }
@@ -67,7 +67,7 @@ void SelectNextItem(AppData* app) {
 
 /* Select previous menu item */
 void SelectPreviousItem(AppData* app) {
-  if(app->popup_dialog != NULL){
+  if (app->popup_dialog != NULL) {
     ChangeSelectedItem(&app->popup_dialog->menu, -1);
     return;
   }
@@ -78,13 +78,13 @@ void SelectPreviousItem(AppData* app) {
 
 /* Toggle pause */
 void TogglePause(AppData* app) {
-  if(app->popup_dialog != NULL) return;
+  if (app->popup_dialog != NULL) return;
   app->is_paused = !app->is_paused;
 }
 
 /* Change the input mode */
 void ChangeMode(AppData* app) {
-  if(app->popup_dialog != NULL) return;
+  if (app->popup_dialog != NULL) return;
   int* mode = &app->screen->panels[app->screen->current_panel].mode;
 
   if (*mode == VISUAL) *mode = NORMAL;
@@ -93,7 +93,7 @@ void ChangeMode(AppData* app) {
 
 /* Update animation mode */
 void ChangeDebugAnimation(AppData* app, int step) {
-  if(app->popup_dialog != NULL) return;
+  if (app->popup_dialog != NULL) return;
   int* present =
     &app->screen->panels[app->screen->current_panel].scene_history->present;
 
@@ -102,8 +102,7 @@ void ChangeDebugAnimation(AppData* app, int step) {
 
 /* Quit the program */
 void QuitApp(AppData* app) {
-  if (app->user_input == app->last_input)
-    app->running = false;
+  if (app->user_input == app->last_input) app->running = false;
 }
 
 /* Quit the program forcefully */
@@ -113,7 +112,7 @@ void ForcefullyQuitApp(AppData* app) {
 
 /* Close the popup dialog */
 void ClosePopup(AppData* app) {
-  if(app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
+  if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
 
   app->popup_dialog = NULL;
 }
@@ -135,17 +134,10 @@ void SkipPomodoroStep(AppData* app) {
   int duration;
 
   switch (step) {
-    case WORK_TIME:
-      duration = app->pomodoro_data.work_time;
-      break;
-    case SHORT_PAUSE:
-      duration = app->pomodoro_data.short_pause_time;
-      break;
-    case LONG_PAUSE:
-      duration = app->pomodoro_data.long_pause_time;
-      break;
-    default:
-      return;
+    case WORK_TIME: duration = app->pomodoro_data.work_time; break;
+    case SHORT_PAUSE: duration = app->pomodoro_data.short_pause_time; break;
+    case LONG_PAUSE: duration = app->pomodoro_data.long_pause_time; break;
+    default: return;
   }
 
   app->pomodoro_data.current_step_time = duration * 60;
@@ -158,17 +150,10 @@ void ForcefullySkipPomodoroStep(AppData* app) {
   int duration;
 
   switch (step) {
-    case WORK_TIME:
-      duration = app->pomodoro_data.work_time;
-      break;
-    case SHORT_PAUSE:
-      duration = app->pomodoro_data.short_pause_time;
-      break;
-    case LONG_PAUSE:
-      duration = app->pomodoro_data.long_pause_time;
-      break;
-    default:
-      return;
+    case WORK_TIME: duration = app->pomodoro_data.work_time; break;
+    case SHORT_PAUSE: duration = app->pomodoro_data.short_pause_time; break;
+    case LONG_PAUSE: duration = app->pomodoro_data.long_pause_time; break;
+    default: return;
   }
 
   app->pomodoro_data.current_step_time = duration * 60;
@@ -178,13 +163,12 @@ void ForcefullySkipPomodoroStep(AppData* app) {
 
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app) {
-  if(app->popup_dialog != NULL){
+  if (app->popup_dialog != NULL) {
     Menu* current_menu = &app->popup_dialog->menu;
     int selected_index = current_menu->selected_item;
     MenuAction action = current_menu->items[selected_index].action;
 
-    if (action) 
-      action(app);
+    if (action) action(app);
     return;
   }
   if (app->current_menu == -1) return;
@@ -193,6 +177,5 @@ void ExecuteMenuAction(AppData* app) {
   int selected_index = current_menu->selected_item;
   MenuAction action = current_menu->items[selected_index].action;
 
-  if (action) 
-    action(app);
+  if (action) action(app);
 }

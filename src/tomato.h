@@ -42,14 +42,15 @@ typedef enum {
 
 /* Defining the PomodoroConfig struct */
 typedef struct {
-  int total_cycles;       /* Total Pomodoro cycles configured */
-  int current_cycle;      /* Current Pomodoro cycle */
-  int work_time;          /* Work time duration (minutes) */
-  int short_pause_time;   /* Short pause duration (minutes) */
-  int long_pause_time;    /* Long pause duration (minutes) */
-  int current_step;       /* Current step (work, short pause, etc.) */
-  int current_step_time;  /* Time in the current step (seconds) */
-  double delta_time_ms;   /* Elapsed time in milliseconds since last frame */
+  int total_cycles;      /* Total Pomodoro cycles configured */
+  int current_cycle;     /* Current Pomodoro cycle */
+  int work_time;         /* Work time duration (minutes) */
+  int short_pause_time;  /* Short pause duration (minutes) */
+  int long_pause_time;   /* Long pause duration (minutes) */
+  int current_step;      /* Current step (work, short pause, etc.) */
+  int current_step_time; /* Time in the current step (seconds) */
+  int last_step_time;    /* Time in the last step (seconds) */
+  double delta_time_ms;  /* Elapsed time in milliseconds since last frame */
 } PomodoroData;
 
 /* Defining the app struct */

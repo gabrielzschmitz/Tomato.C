@@ -88,25 +88,23 @@ ErrorType InitApp(AppData* app) {
 ErrorType InitMenus(AppData* app) {
   /* MAIN_MENU */
   const int n_mainmenu = 4;
-  MenuItem main_menu_items[4] = {
-      {"start", StartPomodoro},
-      {"preferences", NULL},
-      {"help menu", NULL},
-      {"leave", ForcefullyQuitApp}};
+  MenuItem main_menu_items[4] = {{"start", StartPomodoro},
+                                 {"preferences", NULL},
+                                 {"help menu", NULL},
+                                 {"leave", ForcefullyQuitApp}};
 
-  Menu* main_menu_menu = CreateMenu(main_menu_items, 4,
-                                    COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
+  Menu* main_menu_menu =
+    CreateMenu(main_menu_items, 4, COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
   if (main_menu_menu == NULL) return MALLOC_ERROR;
   app->menus[MAIN_MENU_MENU] = main_menu_menu;
   app->current_menu = MAIN_MENU_MENU;
 
   /* PREFERENCES */
   const int n_preferences = 4;
-  MenuItem preferences_items[4] = {
-      {"pomodoros", NULL},
-      {"work time", NULL},
-      {"short pause", NULL},
-      {"long pause", NULL}};
+  MenuItem preferences_items[4] = {{"pomodoros", NULL},
+                                   {"work time", NULL},
+                                   {"short pause", NULL},
+                                   {"long pause", NULL}};
 
   Menu* preferences_menu = CreateMenu(preferences_items, n_preferences,
                                       COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
@@ -169,15 +167,14 @@ Border InitBorder(void) {
 
 /* Function to initialize the pomodoro data */
 ErrorType InitPomodoroData(AppData* app) {
-  if(DEBUG)
-    app->pomodoro_data.total_cycles = 2;
-  else
-    app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
+  if (DEBUG) app->pomodoro_data.total_cycles = 2;
+  else app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
   app->pomodoro_data.work_time = WORKTIME_TIME;
   app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
   app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;
   app->pomodoro_data.current_cycle = 0;
   app->pomodoro_data.current_step = MAIN_MENU;
+  app->pomodoro_data.last_step_time = -1;
   app->pomodoro_data.current_step_time = 0;
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
 

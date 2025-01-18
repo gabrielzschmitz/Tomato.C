@@ -1,9 +1,15 @@
 #include "util.h"
 
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "tomato.h"
 
@@ -11,7 +17,7 @@
 void SetColor(short int fg, short int bg, chtype attr) {
   chtype color;
 
-  // Handle background color when BGTRANSPARENCY is disabled
+  /* Handle background color when BGTRANSPARENCY is disabled */
   if (!BG_TRANSPARENCY && bg == NO_COLOR) bg = COLOR_BLACK;
 
   if (bg == NO_COLOR && BG_TRANSPARENCY)
@@ -122,7 +128,7 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
 }
 
 /* Returns which int is larger */
-int Max(int a, int b){
+int Max(int a, int b) {
   return a > b ? a : b;
 }
 
@@ -157,7 +163,7 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
 }
 
 /* Check if a pomodoro step has ended */
-bool StepEnded(int elapsed_seconds, int total_minutes){
+bool StepEnded(int elapsed_seconds, int total_minutes) {
   int total_seconds = total_minutes * 60;
   int remaining_seconds = total_seconds - elapsed_seconds;
 
@@ -166,9 +172,9 @@ bool StepEnded(int elapsed_seconds, int total_minutes){
 }
 
 /* Check if current_step is in the array */
-bool IsCurrentStepInList(const int *array, size_t array_size, int current_step) {
+bool IsCurrentStepInList(const int* array, size_t array_size,
+                         int current_step) {
   for (size_t i = 0; i < array_size; i++)
-    if (array[i] == current_step)
-      return true;
+    if (array[i] == current_step) return true;
   return false;
 }

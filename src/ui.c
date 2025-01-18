@@ -6,10 +6,10 @@
 #include <string.h>
 
 #include "config.h"
-#include "tomato.h"
-#include "util.h"
 #include "init.h"
 #include "input.h"
+#include "tomato.h"
+#include "util.h"
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
 Screen* CreateScreen(void) {
@@ -107,7 +107,7 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog) {
 
   // Draw top border
   mvprintw(y, x, "%s", dialog->border.top_left);
-  for (int i = 1; i < width - 1; i++) 
+  for (int i = 1; i < width - 1; i++)
     mvprintw(y, x + i, "%s", dialog->border.horizontal);
   mvprintw(y, x + width - 1, "%s", dialog->border.top_right);
 
@@ -126,56 +126,48 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog) {
 
 /* Render a quit confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app) {
-    if (app->popup_dialog == NULL) {
-        // Create the popup dialog if it doesn't exist
-        const char* message = "Are you sure you want to quit?";
-        MenuItem menu_items[] = {
-            {"Confirm", ForcefullyQuitApp},
-            {"Cancel", ClosePopup}  
-        };
-        Menu menu = {
-            .items = menu_items,
-            .selected_item = 0,
-            .focused_color = COLOR_WHITE,
-            .unfocused_color = COLOR_WHITE,
-            .select_style_left = "<",
-            .select_style_right = ">",
-            .item_count = sizeof(menu_items) / sizeof(MenuItem)
-        };
-        Border border = InitBorder();
+  if (app->popup_dialog == NULL) {
+    // Create the popup dialog if it doesn't exist
+    const char* message = "Are you sure you want to quit?";
+    MenuItem menu_items[] = {{"Confirm", ForcefullyQuitApp},
+                             {"Cancel", ClosePopup}};
+    Menu menu = {.items = menu_items,
+                 .selected_item = 0,
+                 .focused_color = COLOR_WHITE,
+                 .unfocused_color = COLOR_WHITE,
+                 .select_style_left = "<",
+                 .select_style_right = ">",
+                 .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+    Border border = InitBorder();
 
-        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu,
-            message, border);
-    }
+    app->popup_dialog =
+      CreateCenterFloatingDialog(app->screen, menu, message, border);
+  }
 
-    RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app->popup_dialog);
 }
 
 /* Render a skip confirmation message at the center of the screen */
 void RenderSkipConfirmation(AppData* app) {
-    if (app->popup_dialog == NULL) {
-        // Create the popup dialog if it doesn't exist
-        const char* message = "Are you sure you want to skip this pomodoro step?";
-        MenuItem menu_items[] = {
-            {"Confirm", ForcefullySkipPomodoroStep},
-            {"Cancel", ClosePopup}  
-        };
-        Menu menu = {
-            .items = menu_items,
-            .selected_item = 0,
-            .focused_color = COLOR_WHITE,
-            .unfocused_color = COLOR_WHITE,
-            .select_style_left = "<",
-            .select_style_right = ">",
-            .item_count = sizeof(menu_items) / sizeof(MenuItem)
-        };
-        Border border = InitBorder();
+  if (app->popup_dialog == NULL) {
+    // Create the popup dialog if it doesn't exist
+    const char* message = "Are you sure you want to skip this pomodoro step?";
+    MenuItem menu_items[] = {{"Confirm", ForcefullySkipPomodoroStep},
+                             {"Cancel", ClosePopup}};
+    Menu menu = {.items = menu_items,
+                 .selected_item = 0,
+                 .focused_color = COLOR_WHITE,
+                 .unfocused_color = COLOR_WHITE,
+                 .select_style_left = "<",
+                 .select_style_right = ">",
+                 .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+    Border border = InitBorder();
 
-        app->popup_dialog = CreateCenterFloatingDialog(app->screen, menu,
-            message, border);
-    }
+    app->popup_dialog =
+      CreateCenterFloatingDialog(app->screen, menu, message, border);
+  }
 
-    RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app->popup_dialog);
 }
 
 /* Update panels from a given screen */
@@ -410,10 +402,9 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
 }
 
 /* Print a given menu side by side with offset and spacing */
-void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing, int
-    container_width) {
-  if(!container_width % 2 == 0)
-    container_width += 1;
+void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
+                         int container_width) {
+  if (!container_width % 2 == 0) container_width += 1;
   int total_width = 0;
 
   // Calculate the total width of the menu items
@@ -454,17 +445,15 @@ void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing, int
     }
 
     // Move the offset horizontally to the right for the next menu item
-    offset.x += strlen(item_label) +
-                strlen(menu->select_style_left) +
-                strlen(menu->select_style_right) +
-                spacing;
+    offset.x += strlen(item_label) + strlen(menu->select_style_left) +
+                strlen(menu->select_style_right) + spacing;
   }
 }
 
 /* Function to initialize a menu and return a pointer to it */
 Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
-    int unfocused_color, const char* select_style_left,
-    const char* select_style_right) {
+                 int unfocused_color, const char* select_style_left,
+                 const char* select_style_right) {
   Menu* menu = malloc(sizeof(struct Menu));
   if (menu == NULL) return NULL;
 
@@ -504,7 +493,7 @@ void FreeMenu(Menu* menu) {
     free((char*)menu->items[i].label);
 
   free(menu->items);
-  free(menu);       
+  free(menu);
 }
 
 /* Function to change the selected item in the menu */
@@ -517,8 +506,9 @@ void ChangeSelectedItem(Menu* menu, int direction) {
 }
 
 /* Create a new FloatingDialog */
-FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size, Border
-    border, Menu menu, const char* message) {
+FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
+                                     Border border, Menu menu,
+                                     const char* message) {
   FloatingDialog* dialog = (FloatingDialog*)malloc(sizeof(FloatingDialog));
   if (!dialog) return NULL;
 
@@ -557,7 +547,8 @@ void FreeFloatingDialog(FloatingDialog* dialog) {
 
   // Free menu items
   for (int i = 0; i < dialog->menu.item_count; i++) {
-    free((char*)dialog->menu.items[i].label); // Cast to `char*` for `const char*`
+    free(
+      (char*)dialog->menu.items[i].label);  // Cast to `char*` for `const char*`
   }
   free(dialog->menu.items);
 
@@ -586,8 +577,9 @@ void RenderFloatingDialog(FloatingDialog* dialog) {
   RenderFloatingDialogBorder(dialog);
 
   /* Draw background */
-  for (int i = 1; i < height - 1; i++) 
-    for (int j = 1; j < width - 1; j++) mvprintw(y + i, x + j, " ");
+  for (int i = 1; i < height - 1; i++)
+    for (int j = 1; j < width - 1; j++)
+      mvprintw(y + i, x + j, " ");
 
   /* Print message */
   int msg_x = x + 2;
@@ -601,8 +593,8 @@ void RenderFloatingDialog(FloatingDialog* dialog) {
 }
 
 /* Create a FloatingDialog centered on the screen */
-FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
-    char* message, Border border) {
+FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu,
+                                           const char* message, Border border) {
   const int padding = 4;
   const int msg_len = strlen(message);
   int menu_width = 0;
@@ -616,21 +608,17 @@ FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
   int width = Max(msg_len, menu_width) + padding;
   int height = menu.item_count + padding;
 
-  Vector2D position = {
-    .x = (screen->size.width - width) / 2,
-    .y = (screen->size.height - height) / 2
-  };
+  Vector2D position = {.x = (screen->size.width - width) / 2,
+                       .y = (screen->size.height - height) / 2};
 
-  Dimensions size = {
-    .width = width,
-    .height = height
-  };
+  Dimensions size = {.width = width, .height = height};
 
   return CreateFloatingDialog(position, size, border, menu, message);
 }
 
 /* Render a pomodoro status */
-void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos) {
+void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
+                          Vector2D anim_pos) {
   int step = app->pomodoro_data.current_step;
   int icon_type = GetConfigIconType();
   const char *icon, *status_text;
@@ -644,10 +632,8 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
     case WORK_TIME:
       color = COLOR_MAGENTA;
       icon = WORK_ICONS[icon_type];
-      if(icon_type == ASCII)
-        status_text = "Pomodoro  ";
-      else
-        status_text = "Pomodoro";
+      if (icon_type == ASCII) status_text = "Pomodoro  ";
+      else status_text = "Pomodoro";
       duration = app->pomodoro_data.work_time;
       break;
     case SHORT_PAUSE:
@@ -662,12 +648,12 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
       status_text = "Long pause";
       duration = app->pomodoro_data.long_pause_time;
       break;
-    default:
-      return;
+    default: return;
   }
 
   snprintf(cycle_info, sizeof(cycle_info), "%02d/%02d",
-      app->pomodoro_data.current_cycle + 1, app->pomodoro_data.total_cycles);
+           app->pomodoro_data.current_cycle + 1,
+           app->pomodoro_data.total_cycles);
   snprintf(message, sizeof(message), "%s %s", icon, status_text);
   snprintf(total_time, sizeof(total_time), "[%d minutes]", duration);
 
@@ -690,8 +676,8 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
   mvprintw(render_y, start_x + strlen(message) - 1, "%s", total_time);
 
   // Render the current_time centered below message and total_time
-  char *current_time = FormatRemainingTime(app->pomodoro_data.current_step_time,
-      duration);
+  char* current_time =
+    FormatRemainingTime(app->pomodoro_data.current_step_time, duration);
   int current_time_width = strlen(current_time);
   int time_start_x = start_x + (total_width - current_time_width) / 2;
   mvprintw(render_y + 1, time_start_x, "%s", current_time);
@@ -699,11 +685,11 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D anim_pos)
 }
 
 /* Render a pomodoro controllers */
-void RenderPomodoroControls(AppData* app, Vector2D pos){
+void RenderPomodoroControls(AppData* app, Vector2D pos) {
   int step = app->pomodoro_data.current_step;
   int icon_type = GetConfigIconType();
-  const char *skip_icon = SKIP_ICONS[icon_type];
-  const char *pause_icon = PAUSE_ICONS[icon_type];
+  const char* skip_icon = SKIP_ICONS[icon_type];
+  const char* pause_icon = PAUSE_ICONS[icon_type];
   int color;
 
   if (step == WORK_TIME) color = COLOR_MAGENTA;

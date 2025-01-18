@@ -507,7 +507,8 @@ void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
 }
 
 /* Finds the Rollfilm with the largest width and height among specified indices */
-int FindLargestRollfilm(Rollfilm* animations[], int* indices, int indices_count) {
+int FindLargestRollfilm(Rollfilm* animations[], int* indices,
+                        int indices_count) {
   if (!animations || !indices || indices_count <= 0) return -1;
 
   int max_index = 1;
@@ -518,10 +519,9 @@ int FindLargestRollfilm(Rollfilm* animations[], int* indices, int indices_count)
     int index = indices[i];
     Rollfilm* rf = animations[index];
 
-    if (rf == NULL)
-      continue;
+    if (rf == NULL) continue;
 
-    if (rf->frame_height > max_height || 
+    if (rf->frame_height > max_height ||
         (rf->frame_height == max_height && rf->frame_width > max_width)) {
       max_width = rf->frame_width;
       max_height = rf->frame_height;

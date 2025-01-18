@@ -2,10 +2,12 @@
 
 #include <ncurses.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "error.h"
 #include "init.h"
 #include "input.h"
+#include "log.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -36,16 +38,16 @@ ErrorType DrawScreen(AppData* app) {
     int indices[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
     int largest_index = FindLargestRollfilm(app->animations, indices, 3);
     if (largest_index == -1) return ANIMATION_EQUAL_NULL;
-    Dimensions size = {
-      .width = app->animations[largest_index]->frame_width,
-      .height = app->animations[largest_index]->frame_height
-    };
-    Vector2D position = {
-      .x = current_panel->position.x + (current_panel->size.width -
-          app->animations[largest_index]->frame_width) / 2,
-      .y = current_panel->position.y + (current_panel->size.height -
-          app->animations[largest_index]->frame_height) / 2
-    };
+    Dimensions size = {.width = app->animations[largest_index]->frame_width,
+                       .height = app->animations[largest_index]->frame_height};
+    Vector2D position = {.x = current_panel->position.x +
+                              (current_panel->size.width -
+                               app->animations[largest_index]->frame_width) /
+                                2,
+                         .y = current_panel->position.y +
+                              (current_panel->size.height -
+                               app->animations[largest_index]->frame_height) /
+                                2};
 
     switch (current_panel->scene_history->present) {
       case MAIN_MENU:
@@ -98,7 +100,7 @@ ErrorType DrawScreen(AppData* app) {
     }
     if (DEBUG && current_panel->visible)
       mvprintw(1, 2, "%c/%c - %dcm", app->user_input, app->last_input,
-          app->current_menu);
+               app->current_menu);
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
                                                : UNFOCUSED_PANEL_COLOR,
@@ -108,11 +110,11 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (app->popup_dialog != NULL){
-    if(app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
+  if (app->popup_dialog != NULL) {
+    if (app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
       RenderQuitConfirmation(app);
-    else if(app->popup_dialog->menu.items[0].action ==
-        ForcefullySkipPomodoroStep)
+    else if (app->popup_dialog->menu.items[0].action ==
+             ForcefullySkipPomodoroStep)
       RenderSkipConfirmation(app);
   }
 

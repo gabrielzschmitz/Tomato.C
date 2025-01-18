@@ -23,13 +23,13 @@ typedef void (*MenuAction)(AppData* app);
 
 /* Structure for a menu item with a label and an associated action */
 struct MenuItem {
-  const char* label;     /* Label for the menu item */
-  MenuAction action;     /* Function pointer for the action */
+  const char* label; /* Label for the menu item */
+  MenuAction action; /* Function pointer for the action */
 };
 
 /* Structure for managing a menu and its items */
 struct Menu {
-  MenuItem* items;        /* Array of menu items */
+  MenuItem* items;     /* Array of menu items */
   int selected_item;   /* Index of the currently selected item */
   int focused_color;   /* Color code for the focused (selected) item */
   int unfocused_color; /* Color code for the unfocused (deselected) items */
@@ -93,12 +93,12 @@ struct Border {
 
 /* Structure for representing a floating dialog box */
 struct FloatingDialog {
-  Dimensions size;    /* Dimensions of the dialog (width and height) */
-  Vector2D position;  /* Position of the dialog on the screen */
-  Border border;      /* Border style for the dialog */
-  Menu menu;          /* Menu within the dialog */
-  char* message;      /* Message displayed in the dialog */
-  bool visible;       /* Visibility status of the dialog */
+  Dimensions size;   /* Dimensions of the dialog (width and height) */
+  Vector2D position; /* Position of the dialog on the screen */
+  Border border;     /* Border style for the dialog */
+  Menu menu;         /* Menu within the dialog */
+  char* message;     /* Message displayed in the dialog */
+  bool visible;      /* Visibility status of the dialog */
 };
 
 /* Create a screen struct with MAX_PANELS in horizontal rows */
@@ -170,8 +170,8 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing);
 
 /* Print a given menu side by side with offset and spacing */
-void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing, int
-    container_width);
+void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
+                         int container_width);
 
 /* Function to initialize a menu and return a pointer to it */
 Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
@@ -185,8 +185,9 @@ void FreeMenu(Menu* menu);
 void ChangeSelectedItem(Menu* menu, int direction);
 
 /* Create a new FloatingDialog */
-FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size, Border
-    border, Menu menu, const char* message);
+FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
+                                     Border border, Menu menu,
+                                     const char* message);
 
 /* Free all memory of a FloatingDialog */
 void FreeFloatingDialog(FloatingDialog* dialog);
@@ -195,12 +196,12 @@ void FreeFloatingDialog(FloatingDialog* dialog);
 void RenderFloatingDialog(FloatingDialog* dialog);
 
 /* Create a FloatingDialog centered on the screen */
-FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu, const
-    char* message, Border border);
+FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu,
+                                           const char* message, Border border);
 
 /* Render a pomodoro status */
-void RenderPomodoroStatus(AppData* app, Dimensions anim_size, Vector2D
-    anim_pos);
+void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
+                          Vector2D anim_pos);
 
 /* Render a pomodoro controllers */
 void RenderPomodoroControls(AppData* app, Vector2D pos);

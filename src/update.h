@@ -34,4 +34,7 @@ void UpdateContinue(AppData* app);
 /* Update pomodoro data time */
 void UpdatePomodoroTime(AppData* app);
 
+/* Update timer log socket */
+void UpdateTimerLog(AppData* app, const int* steps, const size_t steps_count);
+
 #endif /* UPDATE_H_ */

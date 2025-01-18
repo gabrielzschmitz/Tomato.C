@@ -1,7 +1,10 @@
 #include "update.h"
 
 #include <ncurses.h>
+#include <stdlib.h>
+
 #include "bar.h"
+#include "log.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -30,6 +33,10 @@ ErrorType UpdateApp(AppData* app) {
     }
   }
 
+  const int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
+  const size_t steps_count = sizeof(steps) / sizeof(steps[0]);
+  UpdateTimerLog(app, steps, steps_count);
+
   return status;
 }
 
@@ -49,16 +56,17 @@ void UpdateWorkTime(AppData* app) {
     Rollfilm* animation = app->animations[WORK_TIME];
     animation->update(animation);
   }
-  if(!app->is_paused) UpdatePomodoroTime(app);
-  if(StepEnded(app->pomodoro_data.current_step_time,
-        app->pomodoro_data.work_time)){
-    if(app->pomodoro_data.current_cycle >= app->pomodoro_data.total_cycles - 1){
+  if (!app->is_paused) UpdatePomodoroTime(app);
+  if (StepEnded(app->pomodoro_data.current_step_time,
+                app->pomodoro_data.work_time)) {
+    if (app->pomodoro_data.current_cycle >=
+        app->pomodoro_data.total_cycles - 1) {
       ExecuteHistory(app->screen->panels[0].scene_history, LONG_PAUSE);
       app->screen->panels[0].menu_index = -1;
       app->pomodoro_data.current_step = LONG_PAUSE;
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
-    } else{
+    } else {
       ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
       app->screen->panels[0].menu_index = -1;
       app->pomodoro_data.current_step = SHORT_PAUSE;
@@ -66,7 +74,6 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step_time = 0;
     }
   }
-
 }
 
 /* Update SHORT_PAUSE */
@@ -76,9 +83,9 @@ void UpdateShortPause(AppData* app) {
     Rollfilm* animation = app->animations[SHORT_PAUSE];
     animation->update(animation);
   }
-  if(!app->is_paused) UpdatePomodoroTime(app);
-  if(StepEnded(app->pomodoro_data.current_step_time,
-        app->pomodoro_data.short_pause_time)){
+  if (!app->is_paused) UpdatePomodoroTime(app);
+  if (StepEnded(app->pomodoro_data.current_step_time,
+                app->pomodoro_data.short_pause_time)) {
     ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
     app->screen->panels[0].menu_index = -1;
     app->pomodoro_data.current_step = WORK_TIME;
@@ -95,9 +102,9 @@ void UpdateLongPause(AppData* app) {
     Rollfilm* animation = app->animations[LONG_PAUSE];
     animation->update(animation);
   }
-  if(!app->is_paused) UpdatePomodoroTime(app);
-  if(StepEnded(app->pomodoro_data.current_step_time,
-        app->pomodoro_data.long_pause_time)){
+  if (!app->is_paused) UpdatePomodoroTime(app);
+  if (StepEnded(app->pomodoro_data.current_step_time,
+                app->pomodoro_data.long_pause_time)) {
     ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
     app->screen->panels[0].menu_index = MAIN_MENU_MENU;
     app->pomodoro_data.current_step = MAIN_MENU;
@@ -135,14 +142,27 @@ void UpdateContinue(AppData* app) {
 }
 
 /* Update pomodoro data time */
-void UpdatePomodoroTime(AppData* app){
+void UpdatePomodoroTime(AppData* app) {
   double current_time = GetCurrentTimeMS();
   double delta_time = current_time - app->pomodoro_data.delta_time_ms;
 
   int speed_multiplier = 1;
-  if(DEBUG) speed_multiplier = 1/100;
-  if(delta_time >= 1000.0 * speed_multiplier){
+  if (DEBUG) speed_multiplier = 100;
+  if (delta_time >= 1000.0 / speed_multiplier) {
     app->pomodoro_data.delta_time_ms = current_time;
     app->pomodoro_data.current_step_time += 1;
+    if (app->pomodoro_data.current_step_time ==
+        app->pomodoro_data.last_step_time + 10)
+      app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
+  }
+}
+
+/* Update timer log socket */
+void UpdateTimerLog(AppData* app, const int* steps, const size_t steps_count) {
+  if (IsCurrentStepInList(steps, steps_count,
+                          app->pomodoro_data.current_step)) {
+    char* time_string = FormatTimerLog(app->pomodoro_data, app->is_paused);
+    SetTimerLog(TIMER_FILE, time_string);
+    free(time_string);
   }
 }
