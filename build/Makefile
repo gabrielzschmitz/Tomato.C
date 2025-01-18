@@ -1,7 +1,7 @@
 include config.mk
 
 # Macros for source files and object files
-SRCS = $(SRCDIR)/tomato.c $(SRCDIR)/anim.c $(SRCDIR)/bar.c $(SRCDIR)/draw.c $(SRCDIR)/error.c $(SRCDIR)/init.c $(SRCDIR)/input.c $(SRCDIR)/update.c $(SRCDIR)/ui.c $(SRCDIR)/util.c
+SRCS = $(SRCDIR)/tomato.c $(SRCDIR)/anim.c $(SRCDIR)/bar.c $(SRCDIR)/draw.c $(SRCDIR)/error.c $(SRCDIR)/init.c $(SRCDIR)/input.c $(SRCDIR)/log.c $(SRCDIR)/update.c $(SRCDIR)/ui.c $(SRCDIR)/util.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean clean-all install uninstall desktop_file
