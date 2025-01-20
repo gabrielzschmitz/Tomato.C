@@ -43,7 +43,7 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
                         ModuleUpdate update) {
   if (status_bar == NULL) return;
 
-  char* default_content = "default_content";
+  char* default_content = (char*)"default_content";
   int default_fg_color = COLOR_WHITE;
   int default_bg_color = COLOR_BLACK;
 
@@ -255,29 +255,29 @@ void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
   IconType icon_type = GetConfigIconType();
-  char* mode = "NORMAL";
-  char* icon = "";
+  char* mode = (char*)"NORMAL";
+  char* icon = (char*)"";
   int color = COLOR_BLUE;
 
   switch (panel->mode) {
     case NORMAL:
-      mode = "NORMAL";
+      mode = (char*)"NORMAL";
       icon = (char*)NORMAL_MODE_ICONS[icon_type];
       color = COLOR_BLUE;
       break;
     case INSERT:
-      mode = "INSERT";
+      mode = (char*)"INSERT";
       icon = (char*)INSERT_MODE_ICONS[icon_type];
       color = COLOR_GREEN;
       break;
     case VISUAL:
-      mode = "VISUAL";
+      mode = (char*)"VISUAL";
       icon = (char*)VISUAL_MODE_ICONS[icon_type];
       color = COLOR_YELLOW;
       break;
     default:
-      mode = "UNKNOWN";
-      icon = "?";
+      mode = (char*)"UNKNOWN";
+      icon = (char*)"?";
       color = COLOR_RED;
       break;
   }
@@ -326,7 +326,7 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
   int color = COLOR_BLACK;
-  char* content = "";
+  char* content = (char*)"";
   IconType icon_type = GetConfigIconType();
   const char* icon;
 
@@ -335,40 +335,40 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
     case MAIN_MENU:
       icon = (char*)MAIN_MENU_ICONS[icon_type];
       color = COLOR_MAGENTA;
-      content = "MAIN MENU";
+      content = (char*)"MAIN MENU";
       break;
     case WORK_TIME:
       icon = (char*)WORK_ICONS[icon_type];
       color = COLOR_RED;
-      content = "WORK TIME";
+      content = (char*)"WORK TIME";
       break;
     case SHORT_PAUSE:
       icon = (char*)SHORT_PAUSE_ICONS[icon_type];
       color = COLOR_BLUE;
-      content = "SHORT PAUSE";
+      content = (char*)"SHORT PAUSE";
       break;
     case LONG_PAUSE:
       icon = (char*)LONG_PAUSE_ICONS[icon_type];
       color = COLOR_CYAN;
-      content = "LONG PAUSE";
+      content = (char*)"LONG PAUSE";
       break;
     case NOTES:
       icon = (char*)NOTES_ICONS[icon_type];
       color = COLOR_YELLOW;
-      content = "NOTES";
+      content = (char*)"NOTES";
       break;
     case HELP:
       icon = (char*)HELP_ICONS[icon_type];
       color = COLOR_RED;
-      content = "HELP";
+      content = (char*)"HELP";
       break;
     case CONTINUE:
       icon = (char*)CONTINUE_ICONS[icon_type];
       color = COLOR_WHITE;
-      content = "CONTINUE";
+      content = (char*)"CONTINUE";
       break;
     default:
-      icon = "?";
+      icon = (char*)"?";
       color = COLOR_RED;
       break;
   }
