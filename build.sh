@@ -47,11 +47,38 @@ done
 MAKE_TARGET="clean-all"
 cd build
 
-# Run the make command with the appropriate DEBUG, VERBOSE, and TARGET values
-if [ -n "$VERBOSE" ]; then
-  make DEBUG=$DEBUG $MAKE_TARGET V=1
+# Check if bear is installed
+if command -v bear >/dev/null 2>&1; then
+  BEAR_INSTALLED=1
 else
-  make DEBUG=$DEBUG $MAKE_TARGET
+  BEAR_INSTALLED=0
+fi
+
+# Run the make command with the appropriate DEBUG, VERBOSE, and TARGET values
+if [ "$DEBUG" -eq 1 ]; then
+  if [ "$BEAR_INSTALLED" -eq 1 ]; then
+    if [ -n "$VERBOSE" ]; then
+      bear -- make DEBUG=$DEBUG $MAKE_TARGET V=1
+    else
+      bear -- make DEBUG=$DEBUG $MAKE_TARGET
+    fi
+    if [ -f "compile_commands.json" ]; then
+      mv compile_commands.json ..
+    fi
+  else
+    echo "Bear not installed. Proceeding without it."
+    if [ -n "$VERBOSE" ]; then
+      make DEBUG=$DEBUG $MAKE_TARGET V=1
+    else
+      make DEBUG=$DEBUG $MAKE_TARGET
+    fi
+  fi
+else
+  if [ -n "$VERBOSE" ]; then
+    make DEBUG=$DEBUG $MAKE_TARGET V=1
+  else
+    make DEBUG=$DEBUG $MAKE_TARGET
+  fi
 fi
 
 # Move the executable to the specified directory if no-move is not set

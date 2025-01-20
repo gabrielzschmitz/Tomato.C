@@ -6,4 +6,6 @@ media/
 LICENSE
 tomato
 tomatonoise
+compile_commands.json
+.cache/
 **/result
