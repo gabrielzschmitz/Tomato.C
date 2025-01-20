@@ -80,9 +80,6 @@ static const int WIND_VOLUME = 50;
 static const int THUNDER_VOLUME = 50;
 
 /* Logging Settings --------------------------------------------------------- */
-/* the port to couple the log sockets, incrementing this as needed
- * (defualt: 8080) */
-static const int LOG_PORT = 8080;
 /* 1 means timer log on, 0 off (default: 1)
  * Note: if you turn it off "$tomato -t" will not work */
 static const int TIMER_LOG = 1;
