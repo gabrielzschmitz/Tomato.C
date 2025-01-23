@@ -9,8 +9,11 @@ const char* GetErrorMessage(ErrorType error) {
 
       /* Memory and resource allocation errors */
     case MALLOC_ERROR: return "Memory allocation error";
-    case FORK_ERROR:
-      return "Fork creation error";
+    case NULL_POINTER_ERROR: return "NULL pointer error";
+    case FORK_ERROR: return "Fork creation error";
+    case PTHREAD_CREATION_ERROR: return "Pthread creation error";
+    case PTHREAD_DETACH_ERROR:
+      return "Pthread detach error";
 
       /* Initialization errors */
     case INVALID_CONFIG: return "Invalid configuration";
@@ -23,6 +26,7 @@ const char* GetErrorMessage(ErrorType error) {
 
       /* Input and user interaction errors */
     case INVALID_INPUT: return "Invalid input";
+    case INVALID_ARGUMENT_ERROR: return "Invalid argument";
     case TOO_SMALL_SCREEN: return "Screen size is too small";
     case ERROR_EXECUTING_SELECTED_ACTION:
       return "Error during execution of selected action";
@@ -50,6 +54,11 @@ const char* GetErrorMessage(ErrorType error) {
     case SOCKET_WRITE_ERROR: return "Socket write failed";
     case SOCKET_CLOSE_ERROR: return "Socket close failed";
     case UNLINK_ERROR: return "Unlinking socket path failed";
+
+    /* Notification-related errors */
+    case NOTIFICATION_SEND_ERROR: return "Failed to send notification";
+    case AUDIO_PLAYBACK_ERROR: return "Failed to play audio";
+
     default: return "Unknown error";
   }
 }

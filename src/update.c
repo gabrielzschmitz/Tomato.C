@@ -5,6 +5,7 @@
 
 #include "bar.h"
 #include "log.h"
+#include "notify.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -66,12 +67,24 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step = LONG_PAUSE;
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
+      Notification notification = {
+        .title = " Long Pause Break",
+        .description = "You have some time to chill",
+        .audio_path = "./sounds/pausenotify.mp3",
+      };
+      Notify(&notification);
     } else {
       ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
       app->screen->panels[0].menu_index = -1;
       app->pomodoro_data.current_step = SHORT_PAUSE;
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
+      Notification notification = {
+        .title = " Pause Break",
+        .description = "You have some time to chill",
+        .audio_path = "./sounds/pausenotify.mp3",
+      };
+      Notify(&notification);
     }
   }
 }
@@ -92,6 +105,12 @@ void UpdateShortPause(AppData* app) {
     app->pomodoro_data.current_cycle += 1;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     app->pomodoro_data.current_step_time = 0;
+    Notification notification = {
+      .title = " Work!",
+      .description = "You need to focus",
+      .audio_path = "./sounds/dfltnotify.mp3",
+    };
+    Notify(&notification);
   }
 }
 
@@ -111,6 +130,12 @@ void UpdateLongPause(AppData* app) {
     app->pomodoro_data.current_cycle = 0;
     app->pomodoro_data.current_step_time = 0;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+    Notification notification = {
+      .title = " End of Pomodoro Cycle",
+      .description = "Feel free to start another!",
+      .audio_path = "./sounds/endnotify.mp3",
+    };
+    Notify(&notification);
   }
 }
 

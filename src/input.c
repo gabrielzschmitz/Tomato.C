@@ -1,5 +1,7 @@
 #include "input.h"
+
 #include "draw.h"
+#include "notify.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -124,6 +126,13 @@ void StartPomodoro(AppData* app) {
   app->pomodoro_data.current_step = WORK_TIME;
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
   app->pomodoro_data.current_step_time = 0;
+
+  Notification notification = {
+    .title = " Work!",
+    .description = "You need to focus",
+    .audio_path = "./sounds/dfltnotify.mp3",
+  };
+  Notify(&notification);
 }
 
 /* Skip pomodoro step */
@@ -141,7 +150,6 @@ void SkipPomodoroStep(AppData* app) {
   }
 
   app->pomodoro_data.current_step_time = duration * 60;
-  ResetInput(app);
 }
 
 /* Forcefully skip pomodoro step */
@@ -157,8 +165,6 @@ void ForcefullySkipPomodoroStep(AppData* app) {
   }
 
   app->pomodoro_data.current_step_time = duration * 60;
-  ResetInput(app);
-  ClosePopup(app);
 }
 
 /* Function to execute the action of the selected menu item */
@@ -169,6 +175,8 @@ void ExecuteMenuAction(AppData* app) {
     MenuAction action = current_menu->items[selected_index].action;
 
     if (action) action(app);
+    ResetInput(app);
+    ClosePopup(app);
     return;
   }
   if (app->current_menu == -1) return;
@@ -178,4 +186,5 @@ void ExecuteMenuAction(AppData* app) {
   MenuAction action = current_menu->items[selected_index].action;
 
   if (action) action(app);
+  ResetInput(app);
 }

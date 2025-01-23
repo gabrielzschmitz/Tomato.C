@@ -49,6 +49,7 @@ static const char* INSERT_CURSOR_ICON = "▏";
 static const char* BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
 static const char* PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
 static const char* SKIP_ICONS[3] = {"󰒬", "⏭️", "S"};
+static const char* HISTORY_ICONS[6] = {"▢", "◫", "☒", "▤", "▦", "■"};
 
 /* Pomodoro Settings -------------------------------------------------------- */
 /* amount of pomodoros from 1 to 8 (default: 4) */
@@ -63,10 +64,12 @@ static const int LONG_PAUSE_TIME = 30;
 /* Notification Settings ---------------------------------------------------- */
 /* 1 means notifications on, 0 off (default: 1)
  * Note: you'll need libnotify if you're at linux */
-static const int NOTIFY = 1;
+static const int NOTIFICATIONS = 1;
 /* 1 means notification sound on, 0 off (default: 1)
  * Note: you'll need mpv */
-static const int SOUND = 1;
+static const int NOTIFICATIONS_SOUND = 1;
+/* volume for the notification sounds in percentage from 0.0 to 1.0 */
+static const float NOTIFICATIONS_SOUND_VOLUME = 0.5;
 
 /* Noise Settings ----------------------------------------------------------- */
 /* 1 means noises on, 0 off (default: 1)

@@ -6,8 +6,11 @@ typedef enum {
   NO_ERROR, /* No error, default state */
 
   /* Memory and resource allocation errors */
-  MALLOC_ERROR, /* Critical: Memory allocation failure */
-  FORK_ERROR,   /* Critical: Fork creation failure */
+  MALLOC_ERROR,           /* Critical: Memory allocation failure */
+  NULL_POINTER_ERROR,     /* Critical: Null pointer at function */
+  FORK_ERROR,             /* Critical: Fork creation failure */
+  PTHREAD_CREATION_ERROR, /* Critical: Pthread creation failure */
+  PTHREAD_DETACH_ERROR,   /* Critical: Pthread detach failure */
 
   /* Initialization errors */
   INVALID_CONFIG, /* Critical: Invalid configuration (prevents app start) */
@@ -17,8 +20,9 @@ typedef enum {
   ANIMATION_EQUAL_NULL, /* Severe: Animation rollfilm is NULL after deserialization */
 
   /* Input and user interaction errors */
-  INVALID_INPUT,    /* Moderate: Invalid user input */
-  TOO_SMALL_SCREEN, /* Moderate: Screen size is too small for the app */
+  INVALID_INPUT,          /* Moderate: Invalid user input */
+  INVALID_ARGUMENT_ERROR, /* Moderate: Invalid argument error */
+  TOO_SMALL_SCREEN,       /* Moderate: Screen size is too small for the app */
   ERROR_EXECUTING_SELECTED_ACTION, /* Moderate: Error during selected action execution */
 
   /* Update errors */
@@ -41,7 +45,11 @@ typedef enum {
   SOCKET_READ_ERROR,       /* Moderate: Failed to read from socket */
   SOCKET_WRITE_ERROR,      /* Moderate: Failed to write to socket */
   SOCKET_CLOSE_ERROR,      /* Minor: Socket closing error */
-  UNLINK_ERROR             /* Minor: Unlinking the socket path failed */
+  UNLINK_ERROR,            /* Minor: Unlinking the socket path failed */
+
+  /* Notification-related errors */
+  NOTIFICATION_SEND_ERROR, /* Severe: Failed to send notification */
+  AUDIO_PLAYBACK_ERROR     /* Severe: Failed to play audio */
 } ErrorType;
 
 /* Get a descriptive error message */
