@@ -10,9 +10,9 @@ LIBDIR = -L$(PREFIX)/lib
 CPPFLAGS += $(INCLUDES) $(DEPFLAGS)
 LDFLAGS += $(LIBDIR)
 ifdef __APPLE__
-LDLIBS = -lncurses -lm
+LDLIBS = -lncurses -lpthread -lm
 else
-LDLIBS = $(shell pkg-config --libs ncursesw) -lm
+LDLIBS = $(shell pkg-config --libs ncursesw libnotify) -lpthread -lm
 endif
 
 # Dependency flags
@@ -23,10 +23,14 @@ CC = gcc
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
+ifdef __APPLE__
 CFLAGS = -std=c99 -g -Wall $(GCCFLAGS) $(DFLAGS)
+else
+CFLAGS = -std=c99 -g -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+endif
 
 # Debug flag
-DEBUG ?= 0
+DEBUG :Wall?= 0
 ifeq ($(DEBUG), 1)
     DFLAGS += -DDEBUG_FLAG
     CFLAGS += -g
