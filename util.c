@@ -251,11 +251,8 @@ void setLogVars(appData *app) {
   char lastline[1024] = {
     0,
   };
-  int lastlineIndex = 0;
-  /* Just to get the last line and count lines */
-  while (fgets(lastline, 1024, log) != NULL) {
-    lastlineIndex++;
-  }
+  /* Just to get the last line */
+  while (fgets(lastline, 1024, log) != NULL) {}
 
   /* Get variables */
   if (sscanf(lastline, "%d/%d WT %d D %d %d %d", &app->pomodoroCounter,
@@ -516,7 +513,8 @@ void toggleNoise(appData *app, int noise) {
       app->playRainNoise = 1;
       if (app->runRainOnce == 0) {
         char *rainnoisecmd[] = {
-          "/usr/local/share/tomato/sounds/ambience-rain.wav", app->rainVolume,
+          "tomatonoise",
+          "ambience-rain.wav", app->rainVolume,
           "tomato noise rain", NULL};
         app->rainNoisePID = fork();
         app->runRainOnce = 1;
@@ -539,7 +537,8 @@ void toggleNoise(appData *app, int noise) {
       app->playFireNoise = 1;
       if (app->runFireOnce == 0) {
         char *firenoisecmd[] = {
-          "/usr/local/share/tomato/sounds/ambience-fire.wav", app->fireVolume,
+          "tomatonoise",
+          "ambience-fire.wav", app->fireVolume,
           "tomato noise fire", NULL};
         app->fireNoisePID = fork();
         app->runFireOnce = 1;
@@ -562,7 +561,8 @@ void toggleNoise(appData *app, int noise) {
       app->playWindNoise = 1;
       if (app->runWindOnce == 0) {
         char *windnoisecmd[] = {
-          "/usr/local/share/tomato/sounds/ambience-wind.wav", app->windVolume,
+          "tomatonoise",
+          "ambience-wind.wav", app->windVolume,
           "tomato noise wind", NULL};
         app->windNoisePID = fork();
         app->runWindOnce = 1;
@@ -585,7 +585,8 @@ void toggleNoise(appData *app, int noise) {
       app->playThunderNoise = 1;
       if (app->runThunderOnce == 0) {
         char *thundernoisecmd[] = {
-          "/usr/local/share/tomato/sounds/ambience-thunder.wav",
+          "tomatonoise",
+          "ambience-thunder.wav",
           app->thunderVolume, "tomato noise thunder", NULL};
         app->thunderNoisePID = fork();
         app->runThunderOnce = 1;
@@ -630,14 +631,14 @@ void controlVolumeNoise(appData *app, int noise, char sign) {
   if (noise == 1) {
     if (sign == '-') {
       uintmax_t rainVolume = strtoumax(app->rainVolume, NULL, 10);
-      if (rainVolume > 0) sprintf(app->rainVolume, "%lu", (rainVolume - 10));
+      if (rainVolume > 0) sprintf(app->rainVolume, "%llu", (rainVolume - 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_rain_state", "w");
       fprintf(tmpfile, "%s ON", app->rainVolume);
       fclose(tmpfile);
     } else if (sign == '+') {
       uintmax_t rainVolume = strtoumax(app->rainVolume, NULL, 10);
-      if (rainVolume < 100) sprintf(app->rainVolume, "%lu", (rainVolume + 10));
+      if (rainVolume < 100) sprintf(app->rainVolume, "%llu", (rainVolume + 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_rain_state", "w");
       fprintf(tmpfile, "%s ON", app->rainVolume);
@@ -646,14 +647,14 @@ void controlVolumeNoise(appData *app, int noise, char sign) {
   } else if (noise == 2) {
     if (sign == '-') {
       uintmax_t fireVolume = strtoumax(app->fireVolume, NULL, 10);
-      if (fireVolume > 0) sprintf(app->fireVolume, "%lu", (fireVolume - 10));
+      if (fireVolume > 0) sprintf(app->fireVolume, "%llu", (fireVolume - 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_fire_state", "w");
       fprintf(tmpfile, "%s ON", app->fireVolume);
       fclose(tmpfile);
     } else if (sign == '+') {
       uintmax_t fireVolume = strtoumax(app->fireVolume, NULL, 10);
-      if (fireVolume < 100) sprintf(app->fireVolume, "%lu", (fireVolume + 10));
+      if (fireVolume < 100) sprintf(app->fireVolume, "%llu", (fireVolume + 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_fire_state", "w");
       fprintf(tmpfile, "%s ON", app->fireVolume);
@@ -662,14 +663,14 @@ void controlVolumeNoise(appData *app, int noise, char sign) {
   } else if (noise == 3) {
     if (sign == '-') {
       uintmax_t windVolume = strtoumax(app->windVolume, NULL, 10);
-      if (windVolume > 0) sprintf(app->windVolume, "%lu", (windVolume - 10));
+      if (windVolume > 0) sprintf(app->windVolume, "%llu", (windVolume - 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_wind_state", "w");
       fprintf(tmpfile, "%s ON", app->windVolume);
       fclose(tmpfile);
     } else if (sign == '+') {
       uintmax_t windVolume = strtoumax(app->windVolume, NULL, 10);
-      if (windVolume < 100) sprintf(app->windVolume, "%lu", (windVolume + 10));
+      if (windVolume < 100) sprintf(app->windVolume, "%llu", (windVolume + 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_wind_state", "w");
       fprintf(tmpfile, "%s ON", app->windVolume);
@@ -679,7 +680,7 @@ void controlVolumeNoise(appData *app, int noise, char sign) {
     if (sign == '-') {
       uintmax_t thunderVolume = strtoumax(app->thunderVolume, NULL, 10);
       if (thunderVolume > 0)
-        sprintf(app->thunderVolume, "%lu", (thunderVolume - 10));
+        sprintf(app->thunderVolume, "%llu", (thunderVolume - 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_thunder_state", "w");
       fprintf(tmpfile, "%s ON", app->thunderVolume);
@@ -687,7 +688,7 @@ void controlVolumeNoise(appData *app, int noise, char sign) {
     } else if (sign == '+') {
       uintmax_t thunderVolume = strtoumax(app->thunderVolume, NULL, 10);
       if (thunderVolume < 100)
-        sprintf(app->thunderVolume, "%lu", (thunderVolume + 10));
+        sprintf(app->thunderVolume, "%llu", (thunderVolume + 10));
       FILE *tmpfile;
       tmpfile = fopen("/tmp/tomato_thunder_state", "w");
       fprintf(tmpfile, "%s ON", app->thunderVolume);

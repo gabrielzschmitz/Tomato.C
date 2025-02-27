@@ -20,6 +20,9 @@ int play(char *file, char *volume, char *title) {
     return 1;
   }
 
+  char path[512];
+  snprintf(path, 512, "%s/%s", SOUNDS, file);
+
   /* Set loop */
   char loop[4] = "inf";
   char quit[2] = "1";
@@ -52,8 +55,8 @@ int play(char *file, char *volume, char *title) {
   // Done setting up options.
   mpvCheckError(mpv_initialize(mpvCtx));
 
-  // Play this file.
-  const char *load[] = {"loadfile", file, NULL};
+  // Play this path.
+  const char *load[] = {"loadfile", path, NULL};
   mpvCheckError(mpv_command(mpvCtx, load));
   const char *volumecmd[] = {"set", "volume", volume, NULL};
   mpvCheckError(mpv_command(mpvCtx, volumecmd));
@@ -101,7 +104,7 @@ int play(char *file, char *volume, char *title) {
 int main(int argc, char *argv[]) {
   if (argc == 0) return 1;
 
-  play(argv[0], argv[1], argv[2]);
+  play(argv[1], argv[2], argv[3]);
 
   return 0;
 }
