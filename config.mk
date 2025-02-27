@@ -21,16 +21,16 @@ endif
 APPPREFIX = $(PREFIX)/share/applications
 LOGPREFIX = .local/share/tomato
 
-# To remove mpv as a dependencie
+# To remove mpv as a dependency
 # comment this line below,
 # and toggle off the sound and noise
 # at config.h
 MPVTOGGLE = 1
 
-DFLAGS = -D_ISOC99_SOURCE -DTOMATONOISE=\"$(PREFIX)/bin/tomatonoise\" -DLOGPREFIX=\"$(LOGPREFIX)\" -DLOGFILE=\"$(LOGPREFIX)/tomato.log\" -DTMPFILE=\"$(LOGPREFIX)/tmp.log\" -DTIMERFILE=\"$(LOGPREFIX)/time.log\" -DNOTEPADFILE=\"$(LOGPREFIX)/notepad.log\"
+DFLAGS = -D_ISOC99_SOURCE -DSOUNDS=\"$(PREFIX)/share/tomato/sounds\" -DTOMATONOISE=\"$(PREFIX)/bin/tomatonoise\" -DLOGPREFIX=\"$(LOGPREFIX)\" -DLOGFILE=\"$(LOGPREFIX)/tomato.log\" -DTMPFILE=\"$(LOGPREFIX)/tmp.log\" -DTIMERFILE=\"$(LOGPREFIX)/time.log\" -DNOTEPADFILE=\"$(LOGPREFIX)/notepad.log\"
 CFLAGS  = -std=c99 -Wall -Wextra -pedantic -Wunused-result -Wno-unused-variable -Os ${DFLAGS}
 
-ifeq ($(OS),Darwin)
+ifeq ($(OS),$(filter $(OS),Darwin OpenBSD))
     ifdef MPVTOGGLE
         LDLIBS  = -lncurses -lmpv
     else
