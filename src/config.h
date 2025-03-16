@@ -83,6 +83,8 @@ static const int WIND_VOLUME = 50;
 static const int THUNDER_VOLUME = 50;
 
 /* Logging Settings --------------------------------------------------------- */
+/* the file path for the errors log (default: /tmp/tomato_errors.log) */
+static const char* ERROR_LOG = "/tmp/tomato_errors.log";
 /* 1 means timer log on, 0 off (default: 1)
  * Note: if you turn it off "$tomato -t" will not work */
 static const int TIMER_LOG = 1;

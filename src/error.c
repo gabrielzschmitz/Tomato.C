@@ -1,5 +1,63 @@
 #include "error.h"
+#include "config.h"
+
+#include <ncurses.h>
 #include <stdio.h>
+
+/* Get a descriptive error message with its level */
+const char* GetErrorLevelMessage(ErrorLevel level) {
+  switch (level) {
+    case ERROR_LEVEL_INFO: return "INFO";
+    case ERROR_LEVEL_WARNING: return "WARNING";
+    case ERROR_LEVEL_ERROR: return "ERROR";
+    case ERROR_LEVEL_CRITICAL: return "CRITICAL";
+    default: return "UNKNOWN";
+  }
+}
+
+/* Get error level from error type */
+ErrorLevel GetErrorLevel(ErrorType error) {
+  switch (error) {
+    case MALLOC_ERROR:
+    case NULL_POINTER_ERROR:
+    case FORK_ERROR:
+    case PTHREAD_CREATION_ERROR:
+    case PTHREAD_DETACH_ERROR:
+    case INVALID_CONFIG:
+    case INIT_ERROR: return ERROR_LEVEL_CRITICAL;
+
+    case WINDOW_CREATION_ERROR:
+    case ANIMATION_DESERIALIZATION_ERROR:
+    case ANIMATION_EQUAL_NULL:
+    case UPDATE_ERROR:
+    case DRAW_ERROR:
+    case INPUT_ERROR:
+    case TIMER_LOG_ERROR:
+    case SOCKET_CREATION_ERROR:
+    case SOCKET_CONNECTION_ERROR:
+    case SOCKET_BIND_ERROR:
+    case SOCKET_LISTEN_ERROR:
+    case AUDIO_PLAYBACK_ERROR: return ERROR_LEVEL_ERROR;
+
+    case INVALID_INPUT:
+    case INVALID_ARGUMENT_ERROR:
+    case NOTIFICATION_SEND_ERROR:
+    case ERROR_EXECUTING_SELECTED_ACTION:
+    case SOCKET_ACCEPT_ERROR:
+    case SOCKET_READ_ERROR:
+    case SOCKET_WRITE_ERROR: return ERROR_LEVEL_WARNING;
+
+    case TOO_SMALL_SCREEN:
+    case WINDOW_DELETION_ERROR:
+    case END_SCREEN_ERROR:
+    case END_APP_ERROR:
+    case SOCKET_CLOSE_ERROR:
+    case UNLINK_ERROR: return ERROR_LEVEL_INFO;
+
+    default:
+      return ERROR_LEVEL_INFO; /* Default to INFO if error type is unknown */
+  }
+}
 
 /* Descriptive error messages */
 const char* GetErrorMessage(ErrorType error) {
@@ -63,8 +121,20 @@ const char* GetErrorMessage(ErrorType error) {
   }
 }
 
-/* Log error with a descriptive message */
+/* Log error with descriptive message and level */
 void LogError(const char* context, ErrorType error) {
-  fprintf(stderr, "[ERROR] %s: %s (Code: %d)\n", context,
-          GetErrorMessage(error), error);
+  const char* error_message = GetErrorMessage(error);
+  const char* error_level = GetErrorLevelMessage(GetErrorLevel(error));
+
+  char message[256];
+  snprintf(message, sizeof(message), "[%s] %s: %s (Code: %d)", error_level,
+           context, error_message, error);
+
+  FILE* logFile = fopen(ERROR_LOG, "a");
+  if (logFile != NULL) {
+    fprintf(logFile, "%s\n", message);
+    fclose(logFile);
+  } else {
+    fprintf(stderr, "[CRITICAL] Failed to open log file\n");
+  }
 }
