@@ -24,7 +24,7 @@ extensible, terminal-based Pomodoro timer written in C.
 - [x] Efficient read/write via UNIX sockets
 
 ### 🔊 Audio
-- [x] Audio playback library using `mpv`
+- [x] Audio playback library using `miniaudio.h`
 - [x] Supports volume control and looping
 
 ### 🔔 Notifications
