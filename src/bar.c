@@ -422,7 +422,7 @@ void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
       color = COLOR_CYAN;
       break;
     default:
-      snprintf(content, 50, "Idle");
+      snprintf(content, 50, "IDLE");
       icon = (char*)IDLE_ICONS[icon_type];
       color = COLOR_YELLOW;
       break;
