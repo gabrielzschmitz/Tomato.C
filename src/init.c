@@ -1,4 +1,5 @@
 #include "init.h"
+#include "bar.h"
 #include "config.h"
 #include "error.h"
 #include "input.h"
