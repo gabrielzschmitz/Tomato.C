@@ -86,4 +86,7 @@ void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel);
 /* Current scene module for status bar */
 void SceneModule(AppData* app, StatusBarModule* module, Panel* panel);
 
+/* Current status module for status bar */
+void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel);
+
 #endif /* BAR_H_ */

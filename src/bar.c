@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "tomato.h"
 
 /* Function to create and allocate a StatusBarModule */
@@ -383,5 +384,61 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
     int required_length = snprintf(NULL, 0, "%s %s", icon, content) + 1;
     snprintf(module->content, required_length, "%s %s", icon, content);
   }
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/* Current status module for status bar */
+void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+
+  // Access the Pomodoro state from the app
+  PomodoroData pomodoro = app->pomodoro_data;
+  int current_step = pomodoro.current_step;
+  int current_cycle = pomodoro.current_cycle + 1;
+  int total_cycles = pomodoro.total_cycles;
+
+  // Set default values for the icon and content
+  int color = COLOR_BLACK;
+  char content[50];
+  IconType icon_type = GetConfigIconType();
+  const char* icon;
+  icon = "?";
+  color = COLOR_WHITE;
+
+  switch (current_step) {
+    case WORK_TIME:
+      snprintf(content, 50, "%02d/%02d", current_cycle, total_cycles);
+      icon = (char*)WORK_ICONS[icon_type];
+      color = COLOR_MAGENTA;
+      break;
+    case SHORT_PAUSE:
+      snprintf(content, 50, "%02d/%02d", current_cycle, total_cycles);
+      icon = (char*)SHORT_PAUSE_ICONS[icon_type];
+      color = COLOR_BLUE;
+      break;
+    case LONG_PAUSE:
+      snprintf(content, 50, "%02d/%02d", current_cycle, total_cycles);
+      icon = (char*)LONG_PAUSE_ICONS[icon_type];
+      color = COLOR_CYAN;
+      break;
+    default:
+      snprintf(content, 50, "Idle");
+      icon = (char*)IDLE_ICONS[icon_type];
+      color = COLOR_YELLOW;
+      break;
+  }
+
+  module->bg_color = color;
+  module->fg_color = COLOR_BLACK;
+
+  if (strlen(icon) < 1) {
+    int required_length = snprintf(NULL, 0, "%s", content) + 1;
+    snprintf(module->content, required_length, "%s", content);
+  } else {
+    int required_length =
+      snprintf(NULL, 0, "%d %s %s", current_step, icon, content) + 1;
+    snprintf(module->content, required_length, "%s %s", icon, content);
+  }
+
   module->content_length = UTF16CharCount(module->content);
 }
