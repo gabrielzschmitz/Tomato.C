@@ -38,6 +38,7 @@ static const char* LONG_PAUSE_ICONS[3] = {"", "🌴", ""};
 static const char* NOTES_ICONS[3] = {"", "📝", ""};
 static const char* HELP_ICONS[3] = {"", "⁉️", ""};
 static const char* CONTINUE_ICONS[3] = {"", "⏯️", ""};
+static const char* IDLE_ICONS[3] = {"", "🌙", ""};
 /* Input Icons */
 static const char* NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
 static const char* INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
