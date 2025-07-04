@@ -168,6 +168,9 @@ But optionally you can install [libnotify](https://github.com/GNOME/libnotify) t
 ARCH LINUX
 $ sudo pacman -S base-devel ncurses mpv pkgconf libnotify
 
+VOID LINUX
+$ sudo xbps-install -S gcc make ncurses ncurses-devel pkg-config mpv mpv-devel libnotify libnotify-devel
+
 UBUNTU
 $ sudo apt install build-essential libncurses5-dev libncursesw5-dev libmpv-dev mpv pkg-config libnotify4
 
