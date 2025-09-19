@@ -46,6 +46,7 @@ void deallocateFileNames(appData *app) {
   if (WORKLOG == 1) {
    free(app->logFile);
    free(app->tmpFile);
+   free(app->historyFile);
   }
   if (TIMERLOG == 1) {
     free(app->timerFile);
@@ -139,6 +140,15 @@ void createLog(appData *app) {
   free(app->tmpFile); // Deallocates memmory allocated at appInit() -- tomato.c
   app->tmpFile = tmpFile;
 
+  /* Set history file fullpath */
+  char *historyFile = NULL;
+  historyFile = malloc(homeLen + sizeof(char) + strlen(app->historyFile) + 1);
+  strcpy(historyFile, home);
+  strcat(historyFile, "/");
+  strcat(historyFile, app->historyFile);
+  free(app->historyFile); // Deallocates memory allocated at appInit() -- tomato.c
+  app->historyFile = historyFile;
+
   /* Set timer file fullpath */
   char *timerFile = NULL;
   timerFile = malloc(homeLen + sizeof(char) + strlen(app->timerFile) + 1);
@@ -190,6 +200,19 @@ void createLog(appData *app) {
             "# %%d/%%d\n"
             "#");
     fclose(log);
+  }
+
+  /* Create history file if it doesn't exist */
+  FILE *history;
+  history = fopen(app->historyFile, "r");
+  if (history)
+    fclose(history);
+  else {
+    history = fopen(app->historyFile, "w");
+    fprintf(history,
+            "# Tomato.C work session history\n"
+            "# start_iso8601|end_iso8601|planned_minutes|actual_seconds|pomodoro_index|pomodoros_total\n");
+    fclose(history);
   }
 }
 
@@ -255,26 +278,28 @@ void setLogVars(appData *app) {
   while (fgets(lastline, 1024, log) != NULL) {}
 
   /* Get variables */
+  int elapsedTicks = 0;
   if (sscanf(lastline, "%d/%d WT %d D %d %d %d", &app->pomodoroCounter,
-             &app->pomodoros, &app->timer, &app->workTime, &app->shortPause,
+             &app->pomodoros, &elapsedTicks, &app->workTime, &app->shortPause,
              &app->longPause) == 6) {
-    app->timer = (app->timer - app->workTime) * -1;
+    app->timer = (elapsedTicks - app->workTime) * -1;
     app->frameTimer = 0;
     app->lastMode = app->currentMode;
     app->currentMode = 1;
+    beginWorkHistory(app, elapsedTicks);
     notify("worktime");
   } else if (sscanf(lastline, "%d/%d SP %d D %d %d %d", &app->pomodoroCounter,
-                    &app->pomodoros, &app->timer, &app->workTime,
+                    &app->pomodoros, &elapsedTicks, &app->workTime,
                     &app->shortPause, &app->longPause) == 6) {
-    app->timer = (app->timer - app->shortPause) * -1;
+    app->timer = (elapsedTicks - app->shortPause) * -1;
     app->frameTimer = 0;
     app->lastMode = app->currentMode;
     app->currentMode = 2;
     notify("shortpause");
   } else if (sscanf(lastline, "%d/%d LP %d D %d %d %d", &app->pomodoroCounter,
-                    &app->pomodoros, &app->timer, &app->workTime,
+                    &app->pomodoros, &elapsedTicks, &app->workTime,
                     &app->shortPause, &app->longPause) == 6) {
-    app->timer = (app->timer - app->longPause) * -1;
+    app->timer = (elapsedTicks - app->longPause) * -1;
     app->frameTimer = 0;
     app->lastMode = app->currentMode;
     app->currentMode = 3;
@@ -344,6 +369,34 @@ void readNotepad(appData *app) {
   fclose(log);
 }
 
+static void formatIso8601(time_t value, char *buffer, size_t size) {
+  struct tm *info = localtime(&value);
+  if (!info) {
+    if (size > 0) buffer[0] = '\0';
+    return;
+  }
+  if (strftime(buffer, size, "%Y-%m-%dT%H:%M:%S", info) == 0 && size > 0)
+    buffer[0] = '\0';
+}
+
+static void appendHistoryEntry(appData *app, time_t start, time_t end,
+                               int plannedMinutes, int actualSeconds,
+                               int pomodoroIndex, int pomodorosTotal) {
+  if (WORKLOG != 1 || app->historyFile == NULL) return;
+
+  FILE *history = fopen(app->historyFile, "a");
+  if (!history) return;
+
+  char startIso[32];
+  char endIso[32];
+  formatIso8601(start, startIso, sizeof startIso);
+  formatIso8601(end, endIso, sizeof endIso);
+
+  fprintf(history, "%s|%s|%d|%d|%d|%d\n", startIso, endIso, plannedMinutes,
+          actualSeconds, pomodoroIndex, pomodorosTotal);
+  fclose(history);
+}
+
 /* Write current notes in the notepad log file */
 void writeToNotepad(appData *app) {
   FILE *log;
@@ -362,6 +415,133 @@ void writeToNotepad(appData *app) {
   }
 
   fclose(log);
+}
+
+void beginWorkHistory(appData *app, int elapsedTicks) {
+  if (WORKLOG != 1) return;
+  time_t now;
+  time(&now);
+  time_t offset = 0;
+  if (elapsedTicks > 0) offset = elapsedTicks / 8;
+  if (offset > 0 && offset < now)
+    app->workSessionStart = now - offset;
+  else
+    app->workSessionStart = now;
+  app->workSessionActive = 1;
+}
+
+void completeWorkHistory(appData *app) {
+  if (WORKLOG != 1 || app->workSessionActive == 0) return;
+
+  time_t end;
+  time(&end);
+  if (app->workSessionStart == 0) app->workSessionStart = end;
+
+  int plannedMinutes = app->workTime / (60 * 8);
+  if (plannedMinutes < 0) plannedMinutes = 0;
+
+  double actualSecondsD = difftime(end, app->workSessionStart);
+  if (actualSecondsD < 0) actualSecondsD = 0;
+  int actualSeconds = (int)(actualSecondsD + 0.5);
+
+  appendHistoryEntry(app, app->workSessionStart, end, plannedMinutes,
+                     actualSeconds, app->pomodoroCounter, app->pomodoros);
+
+  app->workSessionActive = 0;
+  app->workSessionStart = 0;
+}
+
+typedef struct {
+  char start[32];
+  char end[32];
+  int plannedMinutes;
+  int actualSeconds;
+  int pomodoroIndex;
+  int pomodorosTotal;
+} historyEntry;
+
+static void printHistoryEntry(size_t ordinal, const historyEntry *entry) {
+  char prettyStart[32];
+  char prettyEnd[32];
+  strncpy(prettyStart, entry->start, sizeof prettyStart);
+  strncpy(prettyEnd, entry->end, sizeof prettyEnd);
+  prettyStart[sizeof prettyStart - 1] = '\0';
+  prettyEnd[sizeof prettyEnd - 1] = '\0';
+  for (int i = 0; prettyStart[i] != '\0'; i++)
+    if (prettyStart[i] == 'T') prettyStart[i] = ' ';
+  for (int i = 0; prettyEnd[i] != '\0'; i++)
+    if (prettyEnd[i] == 'T') prettyEnd[i] = ' ';
+
+  int actualMinutes = entry->actualSeconds / 60;
+  int actualSeconds = entry->actualSeconds % 60;
+
+  printf("commit %zu (pomodoro %d/%d)\n", ordinal, entry->pomodoroIndex,
+         entry->pomodorosTotal);
+  printf("Date:   %s -> %s\n", prettyStart, prettyEnd);
+  printf("  planned: %d min\n", entry->plannedMinutes);
+  printf("  actual : %d min %02d s\n\n", actualMinutes, actualSeconds);
+}
+
+int tomatoHistory(const char *historyFile, int limit) {
+  if (WORKLOG != 1) {
+    printf("enable work log to use [-w]\n");
+    return 1;
+  }
+
+  FILE *history = fopen(historyFile, "r");
+  if (!history) {
+    perror("couldn't read history file");
+    return 1;
+  }
+
+  size_t capacity = 32;
+  size_t count = 0;
+  historyEntry *entries = malloc(sizeof(historyEntry) * capacity);
+  if (!entries) {
+    fclose(history);
+    perror("couldn't allocate history entries");
+    return 1;
+  }
+
+  char line[256];
+  while (fgets(line, sizeof line, history)) {
+    if (line[0] == '#') continue;
+    historyEntry entry;
+    if (sscanf(line, "%31[^|]|%31[^|]|%d|%d|%d|%d", entry.start, entry.end,
+               &entry.plannedMinutes, &entry.actualSeconds,
+               &entry.pomodoroIndex, &entry.pomodorosTotal) != 6)
+      continue;
+
+    if (count == capacity) {
+      capacity *= 2;
+      historyEntry *tmp = realloc(entries, sizeof(historyEntry) * capacity);
+      if (!tmp) {
+        free(entries);
+        fclose(history);
+        perror("couldn't grow history buffer");
+        return 1;
+      }
+      entries = tmp;
+    }
+    entries[count++] = entry;
+  }
+  fclose(history);
+
+  if (count == 0) {
+    printf("no work sessions recorded yet\n");
+    free(entries);
+    return 0;
+  }
+
+  int printed = 0;
+  for (ssize_t i = (ssize_t)count - 1; i >= 0; i--) {
+    if (limit > 0 && printed >= limit) break;
+    printHistoryEntry((size_t)printed + 1, &entries[i]);
+    printed++;
+  }
+
+  free(entries);
+  return 0;
 }
 
 /* Write current infos in the log file */

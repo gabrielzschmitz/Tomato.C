@@ -11,6 +11,7 @@
 #ifndef TOMATO_H_
 #define TOMATO_H_
 #include <ncurses.h>
+#include <time.h>
 #ifdef MPV
 #include <mpv/client.h>
 #endif
@@ -78,6 +79,7 @@ struct appData {
   char *tmpFile;
   char *timerFile;
   char *notepadFile;
+  char *historyFile;
   int pomodorosLevels;
   int workTimeLevels;
   int shortPauseLevels;
@@ -126,6 +128,8 @@ struct appData {
   int middley;
   int x;
   int y;
+  time_t workSessionStart;
+  int workSessionActive;
 };
 
 /* Initialize variables */

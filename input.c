@@ -345,13 +345,15 @@ void handleInputs(appData *app) {
           app->framems = 0;
           app->logoFrame = 0;
           app->lastMode = app->currentMode;
-          app->currentMode = 0;
-          app->menuPos = 1;
-          app->pomodoroCounter = 0;
-          if (WORKLOG == 1) writeToLog(app);
-          if (TIMERLOG == 1) endTimerLog(app);
-        }
-        break;
+      app->currentMode = 0;
+      app->menuPos = 1;
+      app->pomodoroCounter = 0;
+      app->workSessionActive = 0;
+      app->workSessionStart = 0;
+      if (WORKLOG == 1) writeToLog(app);
+      if (TIMERLOG == 1) endTimerLog(app);
+    }
+    break;
 
       case CTRLP:
       case 'p':
@@ -403,6 +405,8 @@ void handleInputs(appData *app) {
           app->frameTimer = 0;
           app->timer = 0;
           app->timerms = 0;
+          app->workSessionActive = 0;
+          app->workSessionStart = 0;
         }
         break;
 
@@ -882,6 +886,7 @@ void mainMenuInput(appData *app, char key) {
       app->frameTimer = 0;
       app->lastMode = app->currentMode;
       app->currentMode = 1;
+      beginWorkHistory(app, 0);
       if (app->pomodoroCounter == 0) app->pomodoroCounter = 1;
       notify("worktime");
     } else if (app->menuPos == 2) {
@@ -920,6 +925,7 @@ void mainMenuInput(appData *app, char key) {
       app->frameTimer = 0;
       app->lastMode = app->currentMode;
       app->currentMode = 1;
+      beginWorkHistory(app, 0);
       if (app->pomodoroCounter == 0) app->pomodoroCounter = 1;
       notify("worktime");
     } else if (app->menuPos == 2) {
