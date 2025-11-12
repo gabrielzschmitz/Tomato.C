@@ -58,8 +58,7 @@ static void* playbackThread(void* arg) {
   }
 
   /* Wait for playback to finish */
-  while (ma_sound_is_playing(&sound))
-    ma_sleep(1);
+  while (ma_sound_is_playing(&sound)) ma_sleep(1);
 
   /* Cleanup */
   ma_sound_uninit(&sound);

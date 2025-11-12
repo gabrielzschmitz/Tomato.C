@@ -54,10 +54,17 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
 
   StatusBarModule** modules_root;
   switch (position) {
-    case LEFT: modules_root = &status_bar->left_modules; break;
-    case RIGHT: modules_root = &status_bar->right_modules; break;
-    case CENTER: modules_root = &status_bar->center_modules; break;
-    default: return;
+    case LEFT:
+      modules_root = &status_bar->left_modules;
+      break;
+    case RIGHT:
+      modules_root = &status_bar->right_modules;
+      break;
+    case CENTER:
+      modules_root = &status_bar->center_modules;
+      break;
+    default:
+      return;
   }
 
   if (*modules_root == NULL) {
@@ -153,8 +160,7 @@ void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
 
   /* Fill background */
   SetColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);
-  for (int i = 0; i < bar_width; i++)
-    mvprintw(bar_y, i, " ");
+  for (int i = 0; i < bar_width; i++) mvprintw(bar_y, i, " ");
 
   /* Render LEFT modules */
   StatusBarModule* current = status_bar->left_modules;
@@ -212,21 +218,21 @@ void UpdateStatusBar(AppData* app, StatusBar* status_bar,
 
   StatusBarModule* current;
 
-  // Update LEFT modules
+  /* Update LEFT modules */
   current = status_bar->left_modules;
   while (current != NULL) {
     UpdateStatusBarModule(app, current, current_panel);
     current = current->next;
   }
 
-  // Update CENTER modules
+  /* Update CENTER modules */
   current = status_bar->center_modules;
   while (current != NULL) {
     UpdateStatusBarModule(app, current, current_panel);
     current = current->next;
   }
 
-  // Update RIGHT modules
+  /* Update RIGHT modules */
   current = status_bar->right_modules;
   while (current != NULL) {
     UpdateStatusBarModule(app, current, current_panel);
@@ -391,13 +397,13 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
 void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
-  // Access the Pomodoro state from the app
+  /* Access the Pomodoro state from the app */
   PomodoroData pomodoro = app->pomodoro_data;
   int current_step = pomodoro.current_step;
   int current_cycle = pomodoro.current_cycle + 1;
   int total_cycles = pomodoro.total_cycles;
 
-  // Set default values for the icon and content
+  /* Set default values for the icon and content */
   int color = COLOR_BLACK;
   char content[50];
   IconType icon_type = GetConfigIconType();

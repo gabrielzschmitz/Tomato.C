@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "config.h"
 #include "tomato.h"
 #include "util.h"
 
@@ -290,9 +291,7 @@ int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
 }
 
 /* Checks if the line contains icons. */
-int IsIconsLine(const char* line) {
-  return strstr(line, ICONS) != NULL;
-}
+int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
 
 /* Checks if the line is a separator. */
 int IsSeparatorLine(const char* line) {
@@ -309,7 +308,9 @@ int ParseFrameTime(const char* line, double* frame_time) {
 int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
                      int* line_width) {
   FrameToken* line_token = DeserializeFrameLine(line, line_color);
-  if (line_token == NULL) { return -1; }
+  if (line_token == NULL) {
+    return -1;
+  }
   int current_line_width = 0;
   FrameToken* token = line_token;
   while (token != NULL) {
@@ -321,7 +322,9 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
 
   (*current_row)->tokens = line_token;
   FrameRow* new_row = CreateRow();
-  if (new_row == NULL) { return -1; }
+  if (new_row == NULL) {
+    return -1;
+  }
   (*current_row)->next = new_row;
   *current_row = new_row;
   return 0;
@@ -330,7 +333,9 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
 /* Links a new frame to the current frame and updates the frame ID. */
 void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
   Frame* new_frame = CreateFrame();
-  if (new_frame == NULL) { return; }
+  if (new_frame == NULL) {
+    return;
+  }
   (*current_frame)->rows = head_row;
   new_frame->id = frame_id;
 
@@ -347,13 +352,17 @@ void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
 
 /* Returns the widest frame from a rollfilm */
 int GetWidestFrame(Rollfilm* rollfilm) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) { return 0; }
+  if (rollfilm == NULL || rollfilm->frames == NULL) {
+    return 0;
+  }
 
   Frame* current_frame = rollfilm->frames;
   int max_width = current_frame->width;
 
   do {
-    if (current_frame->width > max_width) { max_width = current_frame->width; }
+    if (current_frame->width > max_width) {
+      max_width = current_frame->width;
+    }
     current_frame = current_frame->next;
   } while (current_frame != rollfilm->frames);
 
@@ -437,8 +446,7 @@ int HandleUnicode(const char* src, char** dest) {
 
   /* Append the UTF-8 character to the destination string */
   size_t dest_len = strlen(*dest);
-  for (int i = 0; i < utf8_length; ++i)
-    (*dest)[dest_len + i] = utf8_char[i];
+  for (int i = 0; i < utf8_length; ++i) (*dest)[dest_len + i] = utf8_char[i];
   (*dest)[dest_len + utf8_length] = '\0';
 
   /* Return the number of characters processed */
@@ -455,7 +463,9 @@ int HandleColor(const char* src, int* dest) {
 
 /* Render the current frame of the Rollfilm at the specified coordinates */
 void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) { return; }
+  if (rollfilm == NULL || rollfilm->frames == NULL) {
+    return;
+  }
 
   Frame* current_frame = rollfilm->frames;
   FrameRow* current_row = current_frame->rows;

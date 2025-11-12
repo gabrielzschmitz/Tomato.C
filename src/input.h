@@ -2,6 +2,7 @@
 #define INPUT_H_
 
 #include <ncurses.h>
+
 #include "error.h"
 #include "tomato.h"
 #include "ui.h"

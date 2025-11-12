@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "bar.h"
+#include "config.h"
 #include "log.h"
 #include "notify.h"
 #include "tomato.h"
@@ -23,14 +24,29 @@ ErrorType UpdateApp(AppData* app) {
     current_panel = &app->screen->panels[i];
 
     switch (current_panel->scene_history->present) {
-      case MAIN_MENU: UpdateMainMenu(app); break;
-      case WORK_TIME: UpdateWorkTime(app); break;
-      case SHORT_PAUSE: UpdateShortPause(app); break;
-      case LONG_PAUSE: UpdateLongPause(app); break;
-      case NOTES: UpdateNotes(app); break;
-      case HELP: UpdateHelp(app); break;
-      case CONTINUE: UpdateContinue(app); break;
-      default: break;
+      case MAIN_MENU:
+        UpdateMainMenu(app);
+        break;
+      case WORK_TIME:
+        UpdateWorkTime(app);
+        break;
+      case SHORT_PAUSE:
+        UpdateShortPause(app);
+        break;
+      case LONG_PAUSE:
+        UpdateLongPause(app);
+        break;
+      case NOTES:
+        UpdateNotes(app);
+        break;
+      case HELP:
+        UpdateHelp(app);
+        break;
+      case CONTINUE:
+        UpdateContinue(app);
+        break;
+      default:
+        break;
     }
   }
 

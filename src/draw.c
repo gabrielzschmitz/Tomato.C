@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "config.h"
 #include "error.h"
 #include "init.h"
 #include "input.h"
@@ -95,7 +96,8 @@ ErrorType DrawScreen(AppData* app) {
       case CONTINUE:
         if (ANIMATIONS) animation = app->animations[CONTINUE];
         break;
-      default: break;
+      default:
+        break;
     }
     if (DEBUG && current_panel->visible)
       mvprintw(1, 2, "CS%d - %c/%c - %dcm", app->pomodoro_data.current_step,

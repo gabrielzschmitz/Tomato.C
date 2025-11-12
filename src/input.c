@@ -1,12 +1,12 @@
 #include "input.h"
 
+#include <ncurses.h>
+
 #include "draw.h"
 #include "notify.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
-
-#include <ncurses.h>
 
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key) {
@@ -32,8 +32,10 @@ ErrorType HandleInputs(AppData* app) {
   if (!CheckScreenSize(app)) {
     if (IsKeyAssignedToAction(app->user_input, QuitApp))
       ProcessKeyInput(app, app->user_input);
-    else app->user_input = -1;
-  } else if (!app->block_input) ProcessKeyInput(app, app->user_input);
+    else
+      app->user_input = -1;
+  } else if (!app->block_input)
+    ProcessKeyInput(app, app->user_input);
 
   flushinp();
 
@@ -89,8 +91,10 @@ void ChangeMode(AppData* app) {
   if (app->popup_dialog != NULL) return;
   int* mode = &app->screen->panels[app->screen->current_panel].mode;
 
-  if (*mode == VISUAL) *mode = NORMAL;
-  else *mode <<= 1;
+  if (*mode == VISUAL)
+    *mode = NORMAL;
+  else
+    *mode <<= 1;
 }
 
 /* Update animation mode */
@@ -108,9 +112,7 @@ void QuitApp(AppData* app) {
 }
 
 /* Quit the program forcefully */
-void ForcefullyQuitApp(AppData* app) {
-  app->running = false;
-}
+void ForcefullyQuitApp(AppData* app) { app->running = false; }
 
 /* Close the popup dialog */
 void ClosePopup(AppData* app) {
@@ -143,10 +145,17 @@ void SkipPomodoroStep(AppData* app) {
   int duration;
 
   switch (step) {
-    case WORK_TIME: duration = app->pomodoro_data.work_time; break;
-    case SHORT_PAUSE: duration = app->pomodoro_data.short_pause_time; break;
-    case LONG_PAUSE: duration = app->pomodoro_data.long_pause_time; break;
-    default: return;
+    case WORK_TIME:
+      duration = app->pomodoro_data.work_time;
+      break;
+    case SHORT_PAUSE:
+      duration = app->pomodoro_data.short_pause_time;
+      break;
+    case LONG_PAUSE:
+      duration = app->pomodoro_data.long_pause_time;
+      break;
+    default:
+      return;
   }
 
   app->pomodoro_data.current_step_time = duration * 60;
@@ -158,10 +167,17 @@ void ForcefullySkipPomodoroStep(AppData* app) {
   int duration;
 
   switch (step) {
-    case WORK_TIME: duration = app->pomodoro_data.work_time; break;
-    case SHORT_PAUSE: duration = app->pomodoro_data.short_pause_time; break;
-    case LONG_PAUSE: duration = app->pomodoro_data.long_pause_time; break;
-    default: return;
+    case WORK_TIME:
+      duration = app->pomodoro_data.work_time;
+      break;
+    case SHORT_PAUSE:
+      duration = app->pomodoro_data.short_pause_time;
+      break;
+    case LONG_PAUSE:
+      duration = app->pomodoro_data.long_pause_time;
+      break;
+    default:
+      return;
   }
 
   app->pomodoro_data.current_step_time = duration * 60;

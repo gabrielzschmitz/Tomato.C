@@ -78,7 +78,9 @@ ErrorType CreateTimerLog(const char* path) {
             continue;
           }
           FD_SET(client_sock, &master_set);
-          if (client_sock > max_sd) { max_sd = client_sock; }
+          if (client_sock > max_sd) {
+            max_sd = client_sock;
+          }
         } else {
           /* Read from client */
           ssize_t n = recv(i, buffer, sizeof(buffer) - 1, 0);
@@ -215,7 +217,7 @@ ErrorType SetTimerLog(const char* path, const char* log) {
   const int max_length = 31;
   char message[max_length + 2];
   snprintf(message, sizeof(message), "%.*s\n", max_length, log);
-  message[max_length + 1] = '\0';  // Ensure null termination
+  message[max_length + 1] = '\0'; /* Ensure null termination */
 
   if (send(sock, message, strlen(message), 0) == -1) {
     LogError("SetTimerLog", SOCKET_WRITE_ERROR);
@@ -251,7 +253,8 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
       step_icon = LONG_PAUSE_ICONS[icon_type];
       duration = data.long_pause_time;
       break;
-    default: return NULL;
+    default:
+      return NULL;
   }
 
   char* remaining_time = FormatRemainingTime(data.current_step_time, duration);
@@ -268,7 +271,8 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
   if (pause_icon)
     snprintf(log_string, buffer_size, "%s %s %s", pause_icon, step_icon,
              remaining_time);
-  else snprintf(log_string, buffer_size, "%s %s", step_icon, remaining_time);
+  else
+    snprintf(log_string, buffer_size, "%s %s", step_icon, remaining_time);
 
   free(remaining_time);
   return log_string;

@@ -41,8 +41,7 @@ Screen* CreateScreen(void) {
 void FreeScreen(Screen* screen) {
   if (screen == NULL) return;
 
-  for (int i = 0; i < MAX_PANELS; i++)
-    FreePanel(&screen->panels[i]);
+  for (int i = 0; i < MAX_PANELS; i++) FreePanel(&screen->panels[i]);
 
   free(screen);
 }
@@ -105,19 +104,19 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog) {
   int width = dialog->size.width;
   int height = dialog->size.height;
 
-  // Draw top border
+  /* Draw top border */
   mvprintw(y, x, "%s", dialog->border.top_left);
   for (int i = 1; i < width - 1; i++)
     mvprintw(y, x + i, "%s", dialog->border.horizontal);
   mvprintw(y, x + width - 1, "%s", dialog->border.top_right);
 
-  // Draw bottom border
+  /* Draw bottom border */
   mvprintw(y + height - 1, x, "%s", dialog->border.bottom_left);
   for (int i = 1; i < width - 1; i++)
     mvprintw(y + height - 1, x + i, "%s", dialog->border.horizontal);
   mvprintw(y + height - 1, x + width - 1, "%s", dialog->border.bottom_right);
 
-  // Draw vertical borders
+  /* Draw vertical borders */
   for (int i = 1; i < height - 1; i++) {
     mvprintw(y + i, x, "%s", dialog->border.vertical);
     mvprintw(y + i, x + width - 1, "%s", dialog->border.vertical);
@@ -127,7 +126,7 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog) {
 /* Render a quit confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app) {
   if (app->popup_dialog == NULL) {
-    // Create the popup dialog if it doesn't exist
+    /* Create the popup dialog if it doesn't exist */
     const char* message = "Are you sure you want to quit?";
     MenuItem menu_items[] = {{"Confirm", ForcefullyQuitApp},
                              {"Cancel", ClosePopup}};
@@ -150,7 +149,7 @@ void RenderQuitConfirmation(AppData* app) {
 /* Render a skip confirmation message at the center of the screen */
 void RenderSkipConfirmation(AppData* app) {
   if (app->popup_dialog == NULL) {
-    // Create the popup dialog if it doesn't exist
+    /* Create the popup dialog if it doesn't exist */
     const char* message = "Are you sure you want to skip this pomodoro step?";
     MenuItem menu_items[] = {{"Confirm", ForcefullySkipPomodoroStep},
                              {"Cancel", ClosePopup}};
@@ -178,9 +177,9 @@ void UpdateScreen(Screen* screen) {
   int panels_height = screen->size.height;
   int remainder_width = screen->size.width % MAX_PANELS;
 
-  // Check if the screen can display all panels
+  /* Check if the screen can display all panels */
   if (screen->size.width >= screen->min_panel_size.width * MAX_PANELS) {
-    // Display all panels
+    /* Display all panels */
     for (int i = 0; i < MAX_PANELS; i++) {
       Dimensions panel_dimensions;
       panel_dimensions.width = panels_width + (i < remainder_width ? 1 : 0);
@@ -195,10 +194,9 @@ void UpdateScreen(Screen* screen) {
       UpdatePanel(&screen->panels[i], panel_dimensions, panel_position);
     }
   } else {
-    for (int i = 0; i < MAX_PANELS; i++)
-      screen->panels[i].visible = false;
+    for (int i = 0; i < MAX_PANELS; i++) screen->panels[i].visible = false;
 
-    // Display only the current panel
+    /* Display only the current panel */
     int current_panel = screen->current_panel;
     if (current_panel >= 0 && current_panel < MAX_PANELS) {
       Dimensions panel_dimensions;
@@ -209,7 +207,7 @@ void UpdateScreen(Screen* screen) {
       panel_position.x = 0;
       panel_position.y = 0;
 
-      // Update the current panel and make it visible
+      /* Update the current panel and make it visible */
       screen->panels[current_panel].visible = true;
       UpdatePanel(&screen->panels[current_panel], panel_dimensions,
                   panel_position);
@@ -308,8 +306,7 @@ int PopHistory(HistoryNode** stack) {
 
 /* Function to clear a stack */
 void ClearStack(HistoryNode** stack) {
-  while (*stack != NULL)
-    PopHistory(stack);
+  while (*stack != NULL) PopHistory(stack);
 }
 
 /* Function to create and initialize a new history */
@@ -407,7 +404,7 @@ void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
   if (!container_width % 2 == 0) container_width += 1;
   int total_width = 0;
 
-  // Calculate the total width of the menu items
+  /* Calculate the total width of the menu items */
   for (int i = 0; i < menu->item_count; i++) {
     total_width += strlen(menu->items[i].label) +
                    strlen(menu->select_style_left) +
@@ -415,10 +412,10 @@ void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
     if (i < menu->item_count - 1) total_width += spacing;
   }
 
-  // Adjust the initial x-offset to center the menu
+  /* Adjust the initial x-offset to center the menu */
   offset.x += (container_width - total_width) / 2;
 
-  // Render each menu item
+  /* Render each menu item */
   for (int i = 0; i < menu->item_count; i++) {
     const char* item_label = menu->items[i].label;
 
@@ -444,7 +441,7 @@ void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
       mvprintw(offset.y, offset.x, "%s", item_label);
     }
 
-    // Move the offset horizontally to the right for the next menu item
+    /* Move the offset horizontally to the right for the next menu item */
     offset.x += strlen(item_label) + strlen(menu->select_style_left) +
                 strlen(menu->select_style_right) + spacing;
   }
@@ -467,8 +464,7 @@ Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
     menu->items[i].label = strdup(items[i].label);
     menu->items[i].action = items[i].action;
     if (menu->items[i].label == NULL) {
-      for (int j = 0; j < i; ++j)
-        free((char*)menu->items[j].label);
+      for (int j = 0; j < i; ++j) free((char*)menu->items[j].label);
       free(menu->items);
       free(menu);
       return NULL;
@@ -489,8 +485,7 @@ Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
 void FreeMenu(Menu* menu) {
   if (menu == NULL) return;
 
-  for (int i = 0; i < menu->item_count; i++)
-    free((char*)menu->items[i].label);
+  for (int i = 0; i < menu->item_count; i++) free((char*)menu->items[i].label);
 
   free(menu->items);
   free(menu);
@@ -516,7 +511,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   dialog->position = position;
   dialog->border = border;
 
-  // Deep copy the menu
+  /* Deep copy the menu */
   dialog->menu.item_count = menu.item_count;
   dialog->menu.selected_item = menu.selected_item;
   dialog->menu.focused_color = menu.focused_color;
@@ -545,21 +540,21 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
 void FreeFloatingDialog(FloatingDialog* dialog) {
   if (!dialog) return;
 
-  // Free menu items
+  /* Free menu items */
   for (int i = 0; i < dialog->menu.item_count; i++) {
-    free(
-      (char*)dialog->menu.items[i].label);  // Cast to `char*` for `const char*`
+    free((char*)dialog->menu.items[i]
+           .label); /* Cast to `char*` for `const char*` */
   }
   free(dialog->menu.items);
 
-  // Free menu styles
+  /* Free menu styles */
   free((char*)dialog->menu.select_style_left);
   free((char*)dialog->menu.select_style_right);
 
-  // Free message
+  /* Free message */
   free(dialog->message);
 
-  // Free the dialog itself
+  /* Free the dialog itself */
   free(dialog);
 }
 
@@ -578,8 +573,7 @@ void RenderFloatingDialog(FloatingDialog* dialog) {
 
   /* Draw background */
   for (int i = 1; i < height - 1; i++)
-    for (int j = 1; j < width - 1; j++)
-      mvprintw(y + i, x + j, " ");
+    for (int j = 1; j < width - 1; j++) mvprintw(y + i, x + j, " ");
 
   /* Print message */
   int msg_x = x + 2;
@@ -627,13 +621,15 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
   char total_time[32];
   char cycle_info[16];
 
-  // Determine the properties based on the step
+  /* Determine the properties based on the step */
   switch (step) {
     case WORK_TIME:
       color = COLOR_MAGENTA;
       icon = WORK_ICONS[icon_type];
-      if (icon_type == ASCII) status_text = "Pomodoro  ";
-      else status_text = "Pomodoro";
+      if (icon_type == ASCII)
+        status_text = "Pomodoro  ";
+      else
+        status_text = "Pomodoro";
       duration = app->pomodoro_data.work_time;
       break;
     case SHORT_PAUSE:
@@ -648,7 +644,8 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
       status_text = "Long pause";
       duration = app->pomodoro_data.long_pause_time;
       break;
-    default: return;
+    default:
+      return;
   }
 
   snprintf(cycle_info, sizeof(cycle_info), "%02d/%02d",
@@ -657,25 +654,25 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
   snprintf(message, sizeof(message), "%s %s", icon, status_text);
   snprintf(total_time, sizeof(total_time), "[%d minutes]", duration);
 
-  // Calculate centered positions
+  /* Calculate centered positions */
   int total_width = strlen(message) + strlen(total_time);
   int start_x = anim_pos.x + (anim_size.width - total_width) / 2 + 1;
   int render_y = anim_pos.y + anim_size.height + 1;
   int start_x_above = start_x + strlen(message) + 1 + strlen(cycle_info);
   int render_y_above = anim_pos.y - 1;
 
-  // Render the cycle info and controls above the animation
+  /* Render the cycle info and controls above the animation */
   SetColor(color, NO_COLOR, A_BOLD);
   mvprintw(render_y_above, start_x_above, "%s", cycle_info);
   RenderPomodoroControls(app, (Vector2D){start_x, render_y_above});
 
-  // Render the message and total_time side by side
+  /* Render the message and total_time side by side */
   SetColor(color, NO_COLOR, A_BOLD);
   mvprintw(render_y, start_x, "%s", message);
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   mvprintw(render_y, start_x + strlen(message) - 1, "%s", total_time);
 
-  // Render the current_time centered below message and total_time
+  /* Render the current_time centered below message and total_time */
   char* current_time =
     FormatRemainingTime(app->pomodoro_data.current_step_time, duration);
   int current_time_width = strlen(current_time);
@@ -692,16 +689,22 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
   const char* pause_icon = PAUSE_ICONS[icon_type];
   int color;
 
-  if (step == WORK_TIME) color = COLOR_MAGENTA;
-  else if (step == SHORT_PAUSE || step == LONG_PAUSE) color = COLOR_CYAN;
-  else return;
+  if (step == WORK_TIME)
+    color = COLOR_MAGENTA;
+  else if (step == SHORT_PAUSE || step == LONG_PAUSE)
+    color = COLOR_CYAN;
+  else
+    return;
 
   SetColor(color, NO_COLOR, A_BOLD);
   mvprintw(pos.y, pos.x, "%s ", skip_icon);
   int skip_length = strlen(skip_icon);
-  if (icon_type == NERD_ICONS) skip_length--;
-  else if (icon_type == EMOJIS) skip_length -= 2;
-  else if (icon_type == ASCII) skip_length++;
+  if (icon_type == NERD_ICONS)
+    skip_length--;
+  else if (icon_type == EMOJIS)
+    skip_length -= 2;
+  else if (icon_type == ASCII)
+    skip_length++;
 
   SetColor(app->is_paused ? color : COLOR_BLACK, NO_COLOR, A_BOLD);
   mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);

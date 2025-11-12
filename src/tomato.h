@@ -1,12 +1,10 @@
 #ifndef TOMATO_H_
 #define TOMATO_H_
 
-#include <math.h>
 #include <ncurses.h>
 #include <stdbool.h>
 
 #include "bar.h"
-#include "config.h"
 #include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)

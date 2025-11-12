@@ -2,6 +2,7 @@
 #define LOG_H_
 
 #include <ncurses.h>
+
 #include "error.h"
 #include "tomato.h"
 

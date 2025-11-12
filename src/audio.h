@@ -2,6 +2,7 @@
 #define AUDIO_H_
 
 #include <stdbool.h>
+
 #include "error.h"
 
 /* Play audio from path using miniaudio */

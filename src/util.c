@@ -11,6 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "tomato.h"
 
 /* Set text foreground and background colors */
@@ -22,7 +23,8 @@ void SetColor(short int fg, short int bg, chtype attr) {
 
   if (bg == NO_COLOR && BG_TRANSPARENCY)
     color = COLOR_PAIR((fg + 1) + (PALETTE_SIZE * PALETTE_SIZE));
-  else color = COLOR_PAIR((bg * PALETTE_SIZE) + fg + 1);
+  else
+    color = COLOR_PAIR((bg * PALETTE_SIZE) + fg + 1);
 
   color |= attr;
   attrset(color);
@@ -51,18 +53,25 @@ void ResetInput(AppData* app) {
 
 /* Check if the IconType from the config.h is valid */
 bool CheckConfigIconType() {
-  if (strcmp(ICONS, "nerd-icons") == 0) return true;
-  else if (strcmp(ICONS, "emojis") == 0) return true;
-  else if (strcmp(ICONS, "ascii") == 0) return true;
-  else return false;
+  if (strcmp(ICONS, "nerd-icons") == 0)
+    return true;
+  else if (strcmp(ICONS, "emojis") == 0)
+    return true;
+  else if (strcmp(ICONS, "ascii") == 0)
+    return true;
+  else
+    return false;
 }
 
 /* Get the IconType from the config.h */
 IconType GetConfigIconType() {
-  IconType type;
-  if (strcmp(ICONS, "nerd-icons") == 0) type = NERD_ICONS;
-  else if (strcmp(ICONS, "emojis") == 0) type = EMOJIS;
-  else if (strcmp(ICONS, "ascii") == 0) type = ASCII;
+  IconType type = ASCII;
+  if (strcmp(ICONS, "nerd-icons") == 0)
+    type = NERD_ICONS;
+  else if (strcmp(ICONS, "emojis") == 0)
+    type = EMOJIS;
+  else if (strcmp(ICONS, "ascii") == 0)
+    type = ASCII;
   return type;
 }
 
@@ -128,9 +137,7 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
 }
 
 /* Returns which int is larger */
-int Max(int a, int b) {
-  return a > b ? a : b;
-}
+int Max(int a, int b) { return a > b ? a : b; }
 
 /* Function to get the current time in milliseconds */
 double GetCurrentTimeMS(void) {

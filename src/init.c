@@ -1,4 +1,7 @@
 #include "init.h"
+
+#include <ncurses.h>
+
 #include "bar.h"
 #include "config.h"
 #include "error.h"
@@ -6,8 +9,6 @@
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
-
-#include <ncurses.h>
 
 /* Initialize ncurses screen and configure settings */
 void InitScreen(void) {
@@ -20,7 +21,7 @@ void InitScreen(void) {
     if (BG_TRANSPARENCY == 1) use_default_colors();
     start_color();
 
-    // Initialize pairs with both foreground and background colors
+    /* Initialize pairs with both foreground and background colors */
     for (int bg = 0; bg < PALETTE_SIZE; bg++) {
       for (int fg = 0; fg < PALETTE_SIZE; fg++) {
         int pair_number = (bg * PALETTE_SIZE) + fg + 1;
@@ -28,7 +29,7 @@ void InitScreen(void) {
       }
     }
 
-    // Initialize pairs with foreground colors and transparent background
+    /* Initialize pairs with foreground colors and transparent background */
     for (int fg = 0; fg < PALETTE_SIZE; fg++) {
       int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
       init_pair(pair_number, fg, -1);
@@ -168,8 +169,10 @@ Border InitBorder(void) {
 
 /* Function to initialize the pomodoro data */
 ErrorType InitPomodoroData(AppData* app) {
-  if (DEBUG) app->pomodoro_data.total_cycles = 2;
-  else app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
+  if (DEBUG)
+    app->pomodoro_data.total_cycles = 2;
+  else
+    app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
   app->pomodoro_data.work_time = WORKTIME_TIME;
   app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
   app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;
