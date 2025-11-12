@@ -40,6 +40,8 @@ extern void deleteLastLog(appData*);
 extern void writeToLog(appData*);
 extern void writeToNotepad(appData*);
 extern void endTimerLog(appData*);
+extern void beginWorkHistory(appData*, int);
+extern void completeWorkHistory(appData*);
 
 /* Time the pomodoros */
 extern void timer(appData*);
@@ -47,6 +49,7 @@ extern void timer(appData*);
 extern char* initTimerPath(const char*);
 extern int printTimerLog(const char*);
 extern int tomatoTimer(const char*);
+extern int tomatoHistory(const char*, int);
 
 /* Noise funtions */
 extern void toggleNoise(appData*, int);

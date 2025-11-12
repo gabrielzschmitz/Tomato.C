@@ -126,6 +126,7 @@ void updateWorkTime(appData* app) {
   timer(app);
   frameTimer(app);
   if (app->timer <= 0) {
+    completeWorkHistory(app);
     if (app->autostartWork == 0 && app->pausedTimer == 0) {
       app->pausedTimer = 1;
       notify("autostartwork");
@@ -170,6 +171,7 @@ void updateShortPause(appData* app) {
       app->frameTimer = 0;
       app->lastMode = app->currentMode;
       app->currentMode = 1;
+      beginWorkHistory(app, 0);
       app->pomodoroCounter += 1;
       app->runOnce = 1;
     }

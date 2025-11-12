@@ -88,6 +88,8 @@ void initApp(appData *app) {
   app->runOnce = 1;
   app->runHelpOnce = 1;
   app->runNotepadOnce = 1;
+  app->workSessionActive = 0;
+  app->workSessionStart = 0;
 
   /* Notepad variables */
   app->emptyNotepad = 1;
@@ -112,6 +114,10 @@ void initApp(appData *app) {
     strcpy(app->logFile, LOGFILE);
     app->tmpFile = malloc(strlen(TMPFILE) + 1);
     strcpy(app->tmpFile, TMPFILE);
+    app->historyFile = malloc(strlen(HISTORYFILE) + 1);
+    strcpy(app->historyFile, HISTORYFILE);
+  } else {
+    app->historyFile = NULL;
   }
   if (TIMERLOG == 1) {
     app->timerFile = malloc(strlen(TIMERFILE) + 1);
@@ -234,8 +240,17 @@ int main(int argc, char *argv[]) {
   } else if (argc == 2 && !strcmp("-t", argv[1]) && TIMERLOG != 1) {
     printf("enable timer log to use [-t]");
     return 1;
+  } else if (argc >= 2 &&
+             (!strcmp("-w", argv[1]) || !strcmp("--history", argv[1]))) {
+    int limit = 0;
+    if (argc >= 3) limit = atoi(argv[2]);
+    char *historyFile = malloc(strlen(HISTORYFILE) + 1);
+    strcpy(historyFile, HISTORYFILE);
+    int status = tomatoHistory(historyFile, limit);
+    free(historyFile);
+    return status;
   } else if (argc != 1) {
-    printf("usage: tomato [-t]");
+    printf("usage: tomato [-t|-w [limit]]");
     return 0;
   }
   /* Enable Emojis */
