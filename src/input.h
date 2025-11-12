@@ -67,6 +67,15 @@ void ClosePopup(AppData* app);
 /* Start pomodoro cycle */
 void StartPomodoro(AppData* app);
 
+/* Open the reset pomodoro menu */
+void OpenResetMenu(AppData* app);
+
+/* Reset pomodoro step */
+void ResetPomodoroStep(AppData* app);
+
+/* Reset pomodoro cycle */
+void ResetPomodoroCycle(AppData* app);
+
 /* Skip pomodoro step */
 void SkipPomodoroStep(AppData* app);
 
@@ -87,6 +96,7 @@ static const KeyFunction keys[] = {
   {'h', SelectPreviousItem, NORMAL},
   {'s', SkipPomodoroStep, NORMAL},
   {'p', TogglePause, NORMAL},
+  {CTRLR, OpenResetMenu, NORMAL},
   {'q', QuitApp, NORMAL},
   {ESC, QuitApp, NORMAL | VISUAL},
   {'m', ChangeMode, NORMAL | INSERT | VISUAL},

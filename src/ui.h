@@ -122,6 +122,9 @@ void RenderFloatingDialogBorder(FloatingDialog* dialog);
 /* Render a quit confirmation message at the center of the screen */
 void RenderQuitConfirmation(AppData* app);
 
+/* Render a reset pomodoro menu at the center of the screen */
+void RenderResetMenu(AppData* app);
+
 /* Render a skip confirmation message at the center of the screen */
 void RenderSkipConfirmation(AppData* app);
 

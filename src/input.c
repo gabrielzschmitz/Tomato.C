@@ -126,6 +126,7 @@ void StartPomodoro(AppData* app) {
   ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
   app->screen->panels[0].menu_index = -1;
   app->pomodoro_data.current_step = WORK_TIME;
+  app->pomodoro_data.current_cycle = 0;
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
   app->pomodoro_data.current_step_time = 0;
 
@@ -137,9 +138,22 @@ void StartPomodoro(AppData* app) {
   Notify(&notification);
 }
 
+/* Open the reset pomodoro menu */
+void OpenResetMenu(AppData* app) { RenderResetMenu(app); }
+
+/* Reset pomodoro step */
+void ResetPomodoroStep(AppData* app) {
+  app->pomodoro_data.current_step_time = 0;
+}
+
+/* Reset pomodoro cycle */
+void ResetPomodoroCycle(AppData* app) { StartPomodoro(app); }
+
 /* Skip pomodoro step */
 void SkipPomodoroStep(AppData* app) {
   if (app->user_input != app->last_input) return;
+  ResetInput(app);
+  ClosePopup(app);
 
   int step = app->pomodoro_data.current_step;
   int duration;

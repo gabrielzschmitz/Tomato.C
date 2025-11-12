@@ -146,6 +146,32 @@ void RenderQuitConfirmation(AppData* app) {
   RenderFloatingDialog(app->popup_dialog);
 }
 
+/* Render a reset pomodoro menu at the center of the screen */
+void RenderResetMenu(AppData* app) {
+  if (app->popup_dialog == NULL) {
+    /* Create the popup dialog if it doesn't exist */
+    const char* message = "Do you want to reset this this pomodoro?";
+    MenuItem menu_items[] = {
+      {"Cycle", ResetPomodoroCycle},
+      {"Step", ResetPomodoroStep},
+      {"Cancel", ClosePopup},
+    };
+    Menu menu = {.items = menu_items,
+                 .selected_item = 0,
+                 .focused_color = COLOR_WHITE,
+                 .unfocused_color = COLOR_WHITE,
+                 .select_style_left = "<",
+                 .select_style_right = ">",
+                 .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+    Border border = InitBorder();
+
+    app->popup_dialog =
+      CreateCenterFloatingDialog(app->screen, menu, message, border);
+  }
+
+  RenderFloatingDialog(app->popup_dialog);
+}
+
 /* Render a skip confirmation message at the center of the screen */
 void RenderSkipConfirmation(AppData* app) {
   if (app->popup_dialog == NULL) {

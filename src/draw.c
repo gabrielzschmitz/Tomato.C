@@ -25,6 +25,10 @@ ErrorType DrawScreen(AppData* app) {
   if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep) &&
       IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step))
     RenderSkipConfirmation(app);
+  if ((IsKeyAssignedToAction(app->last_input, ResetPomodoroStep) ||
+       IsKeyAssignedToAction(app->last_input, ResetPomodoroCycle)) &&
+      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step))
+    RenderResetMenu(app);
 
   if (!CheckScreenSize(app)) return status;
 
@@ -117,6 +121,8 @@ ErrorType DrawScreen(AppData* app) {
     else if (app->popup_dialog->menu.items[0].action ==
              ForcefullySkipPomodoroStep)
       RenderSkipConfirmation(app);
+    else if (app->popup_dialog->menu.items[0].action == ResetPomodoroCycle)
+      RenderResetMenu(app);
   }
 
   if (DEBUG) {
