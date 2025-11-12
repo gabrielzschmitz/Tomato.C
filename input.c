@@ -359,6 +359,12 @@ void handleInputs(appData *app) {
           app->pausedTimer = app->pausedTimer ^ 1;
         break;
 
+      case KEY_BACKSPACE:
+        if (app->currentMode == 1) app->timer = app->workTime;
+        if (app->currentMode == 2) app->timer = app->shortPause;
+        if (app->currentMode == 3) app->timer = app->longPause;
+        break;
+
       case CTRLS:
       case 's':
         if (app->currentMode >= 1 && app->currentMode <= 3) app->timer = 0;
