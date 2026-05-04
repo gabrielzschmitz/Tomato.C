@@ -11,10 +11,12 @@
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key) {
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  int current_scene = app->screen->panels[app->screen->current_panel].scene_history->present;
   for (size_t i = 0; i < numKeyFunctions; i++) {
     if (keys[i].key == key &&
         (keys[i].modes &
-         app->screen->panels[app->screen->current_panel].mode)) {
+         app->screen->panels[app->screen->current_panel].mode) &&
+        (keys[i].scene_types & (1 << current_scene))) {
       keys[i].action(app);
       break;
     }

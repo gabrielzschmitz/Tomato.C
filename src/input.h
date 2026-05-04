@@ -12,6 +12,7 @@ typedef struct {
   int key;
   void (*action)(AppData* app);
   int modes;
+  int scene_types;
 } KeyFunction;
 
 /* Defining some ASCII Keys */
@@ -85,22 +86,27 @@ void ForcefullySkipPomodoroStep(AppData* app);
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app);
 
+/* Scene types bitmask for pomodoro-related scenes */
+#define POMODORO_SCENES \
+  (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE | SCENE_MAIN_MENU)
+#define ALL_SCENES (POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
+
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
-  {' ', NextPanel, NORMAL},
-  {KEY_DOWN, SelectNextItem, NORMAL},
-  {KEY_UP, SelectPreviousItem, NORMAL},
-  {'j', SelectNextItem, NORMAL},
-  {'k', SelectPreviousItem, NORMAL},
-  {'l', SelectNextItem, NORMAL},
-  {'h', SelectPreviousItem, NORMAL},
-  {'s', SkipPomodoroStep, NORMAL},
-  {'p', TogglePause, NORMAL},
-  {CTRLR, OpenResetMenu, NORMAL},
-  {'q', QuitApp, NORMAL},
-  {ESC, QuitApp, NORMAL | VISUAL},
-  {'m', ChangeMode, NORMAL | INSERT | VISUAL},
-  {ENTER, ExecuteMenuAction, NORMAL},
+  {' ', NextPanel, NORMAL, ALL_SCENES},
+  {KEY_DOWN, SelectNextItem, NORMAL, ALL_SCENES},
+  {KEY_UP, SelectPreviousItem, NORMAL, ALL_SCENES},
+  {'j', SelectNextItem, NORMAL, ALL_SCENES},
+  {'k', SelectPreviousItem, NORMAL, ALL_SCENES},
+  {'l', SelectNextItem, NORMAL, ALL_SCENES},
+  {'h', SelectPreviousItem, NORMAL, ALL_SCENES},
+  {'s', SkipPomodoroStep, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
+  {'p', TogglePause, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
+  {CTRLR, OpenResetMenu, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
+  {'q', QuitApp, NORMAL, ALL_SCENES},
+  {ESC, QuitApp, NORMAL | VISUAL, ALL_SCENES},
+  {'m', ChangeMode, NORMAL | INSERT | VISUAL, ALL_SCENES},
+  {ENTER, ExecuteMenuAction, NORMAL, ALL_SCENES},
 };
 
 #endif /* INPUT_H_ */
