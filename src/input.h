@@ -86,27 +86,52 @@ void ForcefullySkipPomodoroStep(AppData* app);
 /* Function to execute the action of the selected menu item */
 void ExecuteMenuAction(AppData* app);
 
+/* Notes keybinding functions */
+void NoteDownApp(AppData* app);
+void NoteUpApp(AppData* app);
+void ToggleTaskAtNotes(AppData* app);
+void DeleteNoteAtNotes(AppData* app);
+void AddNewNote(AppData* app);     /* Add task with [ ] prefix */
+void AddNewNoteItem(AppData* app); /* Add note with - prefix */
+
+/* Input buffer for INSERT mode (accessible from other files) */
+extern char input_buffer[];
+extern int input_pos;
+extern int input_mode_type; /* 0 = task, 1 = note */
+
 /* Scene types bitmask for pomodoro-related scenes */
 #define POMODORO_SCENES \
   (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE | SCENE_MAIN_MENU)
-#define ALL_SCENES (POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
+#define NOTES_SCENES (SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
+#define ALL_SCENES (POMODORO_SCENES | NOTES_SCENES)
 
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
+  /* NOTES panel vim-like keybindings (checked first for NOTES scene) */
+  {'j', NoteDownApp, NORMAL, SCENE_NOTES},
+  {'k', NoteUpApp, NORMAL, SCENE_NOTES},
+  {KEY_DOWN, NoteDownApp, NORMAL, SCENE_NOTES},
+  {KEY_UP, NoteUpApp, NORMAL, SCENE_NOTES},
+  {ENTER, ToggleTaskAtNotes, NORMAL, SCENE_NOTES},
+  {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
+  {'a', AddNewNote, NORMAL, SCENE_NOTES},     /* Add task */
+  {'A', AddNewNoteItem, NORMAL, SCENE_NOTES}, /* Add note */
+
+  /* General keybindings */
   {' ', NextPanel, NORMAL, ALL_SCENES},
-  {KEY_DOWN, SelectNextItem, NORMAL, ALL_SCENES},
-  {KEY_UP, SelectPreviousItem, NORMAL, ALL_SCENES},
-  {'j', SelectNextItem, NORMAL, ALL_SCENES},
-  {'k', SelectPreviousItem, NORMAL, ALL_SCENES},
-  {'l', SelectNextItem, NORMAL, ALL_SCENES},
-  {'h', SelectPreviousItem, NORMAL, ALL_SCENES},
+  {KEY_DOWN, SelectNextItem, NORMAL, POMODORO_SCENES},
+  {KEY_UP, SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {'j', SelectNextItem, NORMAL, POMODORO_SCENES},
+  {'k', SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {'l', SelectNextItem, NORMAL, POMODORO_SCENES},
+  {'h', SelectPreviousItem, NORMAL, POMODORO_SCENES},
   {'s', SkipPomodoroStep, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
   {'p', TogglePause, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
   {CTRLR, OpenResetMenu, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
   {'q', QuitApp, NORMAL, ALL_SCENES},
   {ESC, QuitApp, NORMAL | VISUAL, ALL_SCENES},
   {'m', ChangeMode, NORMAL | INSERT | VISUAL, ALL_SCENES},
-  {ENTER, ExecuteMenuAction, NORMAL, ALL_SCENES},
+  {ENTER, ExecuteMenuAction, NORMAL, POMODORO_SCENES},
 };
 
 #endif /* INPUT_H_ */

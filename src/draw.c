@@ -8,6 +8,7 @@
 #include "error.h"
 #include "init.h"
 #include "input.h"
+#include "notes.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -92,6 +93,21 @@ ErrorType DrawScreen(AppData* app) {
           animation = app->animations[NOTES];
           RenderAnimationAtPanelCenter(current_panel, animation,
                                        (Vector2D){0, 0});
+        }
+        /* Render notes below the animation */
+        if (app->notes != NULL) {
+          int start_x = current_panel->position.x +
+                        (animation ? animation->frame_width / 2 : 1);
+          int start_y = current_panel->position.y +
+                        (animation ? animation->frame_height / 2 : 1);
+          /* Pass input_buffer if in INSERT mode */
+          const char* input_buf = NULL;
+          if (app->screen->panels[app->screen->current_panel].mode == INSERT) {
+            input_buf = input_buffer;
+          }
+          RenderNotes(app->notes, start_x, start_y,
+                      current_panel->size.width - 2,
+                      current_panel->size.height - start_y, input_buf);
         }
         break;
       case HELP:

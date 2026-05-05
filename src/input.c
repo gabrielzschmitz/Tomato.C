@@ -1,17 +1,26 @@
 #include "input.h"
 
 #include <ncurses.h>
+#include <string.h>
 
+#include "config.h"
 #include "draw.h"
+#include "notes.h"
 #include "notify.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
 
+/* Buffer for INSERT mode text input */
+char input_buffer[256];
+int input_pos = 0;
+int input_mode_type = 0; /* 0 = task, 1 = note */
+
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key) {
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
-  int current_scene = app->screen->panels[app->screen->current_panel].scene_history->present;
+  int current_scene =
+    app->screen->panels[app->screen->current_panel].scene_history->present;
   for (size_t i = 0; i < numKeyFunctions; i++) {
     if (keys[i].key == key &&
         (keys[i].modes &
@@ -30,6 +39,52 @@ ErrorType HandleInputs(AppData* app) {
 
   if (app->user_input != -1) app->last_input = app->user_input;
   app->user_input = getch();
+
+  /* Handle INSERT mode - capture all input for text entry */
+  if (app->screen->panels[app->screen->current_panel].mode == INSERT) {
+    int key = app->user_input;
+
+    if (key == KEY_ENTER || key == '\n' || key == '\r') {
+      /* Finish input - switch back to NORMAL and add the note/task */
+      input_buffer[input_pos] = '\0';
+      if (input_pos > 0) {
+        if (input_mode_type == 0) {
+          /* Task */
+          AddNote(app->notes, input_buffer, true);
+        } else {
+          /* Note */
+          AddNote(app->notes, input_buffer, false);
+        }
+      }
+      input_pos = 0;
+      input_buffer[0] = '\0';
+      app->screen->panels[app->screen->current_panel].mode = NORMAL;
+      /* Clear the input line */
+      move(LINES - 1, 0);
+      clrtoeol();
+      refresh();
+    } else if (key == 27) { /* ESC to cancel */
+      input_pos = 0;
+      input_buffer[0] = '\0';
+      app->screen->panels[app->screen->current_panel].mode = NORMAL;
+      /* Clear the input line */
+      move(LINES - 1, 0);
+      clrtoeol();
+      refresh();
+    } else if (key == KEY_BACKSPACE || key == 127) {
+      if (input_pos > 0) {
+        input_pos--;
+        input_buffer[input_pos] = '\0';
+      }
+    } else if (key >= 32 && key <= 126 &&
+               input_pos < (int)sizeof(input_buffer) - 1) {
+      input_buffer[input_pos++] = key;
+      input_buffer[input_pos] = '\0';
+    }
+    /* In INSERT mode, don't process other key bindings */
+    flushinp();
+    return status;
+  }
 
   if (!CheckScreenSize(app)) {
     if (IsKeyAssignedToAction(app->user_input, QuitApp))
@@ -219,4 +274,49 @@ void ExecuteMenuAction(AppData* app) {
 
   if (action) action(app);
   ResetInput(app);
+}
+
+/* Notes keybinding functions */
+void ToggleTaskAtNotes(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  ToggleTask(app->notes);
+}
+
+void DeleteNoteAtNotes(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  DeleteNote(app->notes);
+}
+
+void AddNewNote(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+
+  /* Switch to INSERT mode - HandleInputs will handle the text input */
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+  input_pos = 0;
+  input_buffer[0] = '\0';
+  input_mode_type = 0; /* Task */
+
+  /* Show prompt */
+  echo();
+  curs_set(1);
+  mvprintw(LINES - 1, 0, "New Task: ");
+  clrtoeol();
+  refresh();
+}
+
+void AddNewNoteItem(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+
+  /* Switch to INSERT mode - HandleInputs will handle the text input */
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+  input_pos = 0;
+  input_buffer[0] = '\0';
+  input_mode_type = 1; /* Note */
+
+  /* Show prompt */
+  echo();
+  curs_set(1);
+  mvprintw(LINES - 1, 0, "New Note: ");
+  clrtoeol();
+  refresh();
 }

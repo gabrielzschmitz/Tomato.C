@@ -76,6 +76,14 @@ ErrorType InitApp(AppData* app) {
   app->is_paused = false;
   app->popup_dialog = NULL;
 
+  app->notes = CreateNotesData();
+  if (app->notes == NULL) return MALLOC_ERROR;
+
+  /* Add some example notes */
+  AddNote(app->notes, "Buy groceries", true);
+  AddNote(app->notes, "Read a book", true);
+  AddNote(app->notes, "This is a note", false);
+
   app->user_input = -1;
   app->last_input = -1;
   app->block_input = false;
@@ -211,6 +219,7 @@ ErrorType EndApp(AppData* app) {
   }
   FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
+  FreeNotesData(app->notes);
   FreeScreen(app->screen);
   return NO_ERROR;
 }

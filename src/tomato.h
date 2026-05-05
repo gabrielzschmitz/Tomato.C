@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "bar.h"
+#include "notes.h"
 #include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
@@ -32,13 +33,13 @@ typedef enum {
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
-#define SCENE_MAIN_MENU    (1 << MAIN_MENU)
-#define SCENE_WORK_TIME    (1 << WORK_TIME)
-#define SCENE_SHORT_PAUSE  (1 << SHORT_PAUSE)
-#define SCENE_LONG_PAUSE   (1 << LONG_PAUSE)
-#define SCENE_NOTES        (1 << NOTES)
-#define SCENE_HELP         (1 << HELP)
-#define SCENE_CONTINUE     (1 << CONTINUE)
+#define SCENE_MAIN_MENU (1 << MAIN_MENU)
+#define SCENE_WORK_TIME (1 << WORK_TIME)
+#define SCENE_SHORT_PAUSE (1 << SHORT_PAUSE)
+#define SCENE_LONG_PAUSE (1 << LONG_PAUSE)
+#define SCENE_NOTES (1 << NOTES)
+#define SCENE_HELP (1 << HELP)
+#define SCENE_CONTINUE (1 << CONTINUE)
 
 /* Defining input mode enum */
 typedef enum {
@@ -77,6 +78,7 @@ struct AppData {
   bool running;
 
   PomodoroData pomodoro_data;
+  NotesData* notes;
 };
 
 #endif /* TOMATO_H_ */
