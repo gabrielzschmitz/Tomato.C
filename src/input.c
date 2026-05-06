@@ -32,6 +32,82 @@ void ProcessKeyInput(AppData* app, int key) {
   }
 }
 
+/* Handle INSERT mode - capture all input for text entry */
+ErrorType HandleInsertMode(AppData* app, int key) {
+  ErrorType status = NO_ERROR;
+
+  if (key == KEY_ENTER || key == '\n' || key == '\r') {
+    /* Finish input - switch back to NORMAL and add the note/task */
+    input_buffer[input_pos] = '\0';
+    if (input_pos > 0) {
+      if (input_mode_type == 0) /* Task */
+        AddNote(app->notes, input_buffer, true);
+      else /* Note */
+        AddNote(app->notes, input_buffer, false);
+    }
+    input_pos = 0;
+    input_buffer[0] = '\0';
+    app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    /* Clear last_input to prevent triggering quit popup */
+    app->last_input = -1;
+    /* Clear the input line */
+    move(LINES - 1, 0);
+    clrtoeol();
+    refresh();
+  } else if (key == 27) { /* ESC to cancel */
+    input_pos = 0;
+    input_buffer[0] = '\0';
+    app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    /* Clear last_input to prevent triggering quit popup */
+    app->last_input = -1;
+    /* Clear the input line */
+    move(LINES - 1, 0);
+    clrtoeol();
+    refresh();
+  } else if (key == KEY_BACKSPACE || key == 127) {
+    if (input_pos > 0) {
+      input_pos--;
+      input_buffer[input_pos] = '\0';
+    }
+  } else if (key >= 32 && key <= 126 &&
+             input_pos < (int)sizeof(input_buffer) - 1) {
+    input_buffer[input_pos++] = key;
+    input_buffer[input_pos] = '\0';
+  }
+
+  return status;
+}
+
+/* Handle VISUAL mode - process key bindings */
+ErrorType HandleVisualMode(AppData* app, int key) {
+  ErrorType status = NO_ERROR;
+
+  if (!CheckScreenSize(app)) {
+    if (IsKeyAssignedToAction(key, QuitApp))
+      ProcessKeyInput(app, key);
+    else
+      app->user_input = -1;
+  } else if (!app->block_input)
+    ProcessKeyInput(app, key);
+
+  return status;
+}
+
+/* Handle NORMAL mode - process key bindings */
+ErrorType HandleNormalMode(AppData* app, int key) {
+  ErrorType status = NO_ERROR;
+
+  if (!CheckScreenSize(app)) {
+    if (IsKeyAssignedToAction(key, QuitApp))
+      ProcessKeyInput(app, key);
+    else
+      app->user_input = -1;
+  } else if (!app->block_input)
+    ProcessKeyInput(app, key);
+
+  return status;
+}
+
 /* Handle user input and app state */
 ErrorType HandleInputs(AppData* app) {
   ErrorType status = NO_ERROR;
@@ -40,59 +116,37 @@ ErrorType HandleInputs(AppData* app) {
   if (app->user_input != -1) app->last_input = app->user_input;
   app->user_input = getch();
 
-  /* Handle INSERT mode - capture all input for text entry */
-  if (app->screen->panels[app->screen->current_panel].mode == INSERT) {
-    int key = app->user_input;
+  int key = app->user_input;
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
 
-    if (key == KEY_ENTER || key == '\n' || key == '\r') {
-      /* Finish input - switch back to NORMAL and add the note/task */
-      input_buffer[input_pos] = '\0';
-      if (input_pos > 0) {
-        if (input_mode_type == 0) {
-          /* Task */
-          AddNote(app->notes, input_buffer, true);
-        } else {
-          /* Note */
-          AddNote(app->notes, input_buffer, false);
-        }
-      }
-      input_pos = 0;
-      input_buffer[0] = '\0';
-      app->screen->panels[app->screen->current_panel].mode = NORMAL;
-      /* Clear the input line */
-      move(LINES - 1, 0);
-      clrtoeol();
-      refresh();
-    } else if (key == 27) { /* ESC to cancel */
-      input_pos = 0;
-      input_buffer[0] = '\0';
-      app->screen->panels[app->screen->current_panel].mode = NORMAL;
-      /* Clear the input line */
-      move(LINES - 1, 0);
-      clrtoeol();
-      refresh();
-    } else if (key == KEY_BACKSPACE || key == 127) {
-      if (input_pos > 0) {
-        input_pos--;
-        input_buffer[input_pos] = '\0';
-      }
-    } else if (key >= 32 && key <= 126 &&
-               input_pos < (int)sizeof(input_buffer) - 1) {
-      input_buffer[input_pos++] = key;
-      input_buffer[input_pos] = '\0';
+  /* If popup is showing, handle popup navigation keys directly */
+  if (app->popup_dialog != NULL) {
+    if (key == KEY_UP || key == 'k' || key == KEY_LEFT || key == 'h') {
+      ChangeSelectedItem(&app->popup_dialog->menu, -1);
+      flushinp();
+      return status;
+    } else if (key == KEY_DOWN || key == 'j' || key == KEY_RIGHT ||
+               key == 'l') {
+      ChangeSelectedItem(&app->popup_dialog->menu, 1);
+      flushinp();
+      return status;
+    } else if (key == KEY_ENTER || key == '\n' || key == '\r') {
+      ExecuteMenuAction(app);
+      flushinp();
+      return status;
     }
-    /* In INSERT mode, don't process other key bindings */
-    flushinp();
-    return status;
+    /* For other keys (like q, ESC), let them pass through to ProcessKeyInput */
   }
 
-  if (!CheckScreenSize(app)) {
-    if (IsKeyAssignedToAction(app->user_input, QuitApp))
-      ProcessKeyInput(app, app->user_input);
-    else
-      app->user_input = -1;
-  } else if (!app->block_input)
-    ProcessKeyInput(app, app->user_input);
+  /* Dispatch to mode-specific handler */
+  if (current_mode == INSERT) {
+    status = HandleInsertMode(app, key);
+    flushinp();
+    return status;
+  } else if (current_mode == VISUAL)
+    status = HandleVisualMode(app, key);
+  else if (current_mode == NORMAL)
+    status = HandleNormalMode(app, key);
 
   flushinp();
 
@@ -163,7 +217,7 @@ void ChangeDebugAnimation(AppData* app, int step) {
   *present = (*present + step + MAX_ANIMATIONS) % MAX_ANIMATIONS;
 }
 
-/* Quit the program */
+/* Quit the program - requires double press of same key */
 void QuitApp(AppData* app) {
   if (app->user_input == app->last_input) app->running = false;
 }
@@ -278,7 +332,10 @@ void ExecuteMenuAction(AppData* app) {
 
 /* Notes keybinding functions */
 void ToggleTaskAtNotes(AppData* app) {
-  if (app->popup_dialog != NULL) return;
+  if (app->popup_dialog != NULL) {
+    ExecuteMenuAction(app);
+    return;
+  }
   ToggleTask(app->notes);
 }
 

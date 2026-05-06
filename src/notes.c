@@ -175,10 +175,18 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
 /* Wrapper functions for keybinding (take AppData*) */
 void NoteUpApp(AppData* app) {
   if (app == NULL || app->notes == NULL) return;
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, -1);
+    return;
+  }
   NoteUp(app->notes);
 }
 
 void NoteDownApp(AppData* app) {
   if (app == NULL || app->notes == NULL) return;
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, 1);
+    return;
+  }
   NoteDown(app->notes);
 }

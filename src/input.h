@@ -35,6 +35,11 @@ void ProcessKeyInput(AppData* app, int key);
 /* Handle user input and app state */
 ErrorType HandleInputs(AppData* app);
 
+/* Mode-specific handlers */
+ErrorType HandleInsertMode(AppData* app, int key);
+ErrorType HandleVisualMode(AppData* app, int key);
+ErrorType HandleNormalMode(AppData* app, int key);
+
 /* Check if the given key is assigned to the specified action function */
 int IsKeyAssignedToAction(int key, void (*action)(AppData*));
 
@@ -131,8 +136,8 @@ static const KeyFunction keys[] = {
   {'p', TogglePause, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
   {CTRLR, OpenResetMenu, NORMAL | INSERT | VISUAL, POMODORO_SCENES},
   {'q', QuitApp, NORMAL, ALL_SCENES},
-  {ESC, QuitApp, NORMAL | VISUAL, ALL_SCENES},
-  {'m', ChangeMode, NORMAL | INSERT | VISUAL, ALL_SCENES},
+  {ESC, QuitApp, NORMAL, ALL_SCENES},
+  // {'m', ChangeMode, NORMAL | INSERT | VISUAL, ALL_SCENES},
   {ENTER, ExecuteMenuAction, NORMAL, POMODORO_SCENES},
 };
 

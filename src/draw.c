@@ -18,7 +18,9 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
-  if (IsKeyAssignedToAction(app->last_input, QuitApp))
+  /* Only render quit popup if in NORMAL mode */
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
+  if (current_mode == NORMAL && IsKeyAssignedToAction(app->user_input, QuitApp))
     RenderQuitConfirmation(app);
 
   int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
@@ -174,7 +176,7 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (app->popup_dialog != NULL) {
+  if (app->popup_dialog != NULL && current_mode == NORMAL) {
     if (app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
       RenderQuitConfirmation(app);
     else if (app->popup_dialog->menu.items[0].action ==
