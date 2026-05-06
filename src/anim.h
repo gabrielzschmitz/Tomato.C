@@ -22,6 +22,7 @@ struct FrameToken {
   char* token;      /* String representing the token */
   int length;       /* Length of the token */
   int color;        /* Color code for the token */
+  bool is_blank;    /* Whether this is a blank (non-printing) token */
 };
 
 /* Structure for storing a row of frame tokens */
@@ -143,6 +144,9 @@ void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
 
 /* Finds the Rollfilm with the largest width and height among specified indices */
 int FindLargestRollfilm(Rollfilm* animations[], int* indices,
-                        int indices_count);
+                         int indices_count);
+
+/* Finds the first blank token position in the last frame */
+bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y);
 
 #endif /* ANIM_H */

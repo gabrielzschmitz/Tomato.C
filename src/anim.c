@@ -98,6 +98,7 @@ FrameToken* CreateToken(void) {
   }
   newToken->length = 0;
   newToken->color = NO_COLOR;
+  newToken->is_blank = false;
   return newToken;
 }
 
@@ -394,6 +395,32 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
       current_token->next = new_token;
       current_token = new_token;
       current_token->color = *color;
+    } else if (*src == '\\' && *(src + 1) == '*') {
+      FrameToken* blank_token = CreateToken();
+      if (blank_token == NULL) {
+        FreeTokens(head);
+        return NULL;
+      }
+      blank_token->is_blank = true;
+      blank_token->color = *color;
+
+      int count = 0;
+      while (*src == '\\' && *(src + 1) == '*') {
+        count++;
+        src += 2;
+      }
+      blank_token->length = count;
+
+      current_token->next = blank_token;
+      FrameToken* new_token = CreateToken();
+      if (new_token == NULL) {
+        FreeTokens(head);
+        return NULL;
+      }
+      new_token->color = *color;
+      blank_token->next = new_token;
+      current_token = new_token;
+      continue;
     } else {
       if (current_token->color == NO_COLOR) current_token->color = *color;
       if (*src != '\n') {
@@ -482,7 +509,9 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
         SetColor(color, NO_COLOR, A_BOLD);
       }
 
-      mvprintw(y, x, "%s", current_token->token);
+      if (!current_token->is_blank) {
+        mvprintw(y, x, "%s", current_token->token);
+      }
       x += current_token->length;
       current_token = current_token->next;
     }
@@ -518,7 +547,7 @@ void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
 
 /* Finds the Rollfilm with the largest width and height among specified indices */
 int FindLargestRollfilm(Rollfilm* animations[], int* indices,
-                        int indices_count) {
+                         int indices_count) {
   if (!animations || !indices || indices_count <= 0) return -1;
 
   int max_index = 1;
@@ -540,4 +569,38 @@ int FindLargestRollfilm(Rollfilm* animations[], int* indices,
   }
 
   return max_index;
+}
+
+/* Finds the first blank token position in the last frame */
+bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) return false;
+
+  Frame* last_frame = rollfilm->frames;
+  Frame* current = rollfilm->frames->next;
+  while (current != rollfilm->frames) {
+    if (current->id > last_frame->id) {
+      last_frame = current;
+    }
+    current = current->next;
+  }
+
+  FrameRow* row = last_frame->rows;
+  int y = 0;
+  while (row != NULL && y < rollfilm->frame_height) {
+    int x = 0;
+    FrameToken* token = row->tokens;
+    while (token != NULL) {
+      if (token->is_blank) {
+        *out_x = x;
+        *out_y = y;
+        return true;
+      }
+      x += token->length;
+      token = token->next;
+    }
+    y++;
+    row = row->next;
+  }
+
+  return false;
 }

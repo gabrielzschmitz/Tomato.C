@@ -89,17 +89,29 @@ ErrorType DrawScreen(AppData* app) {
         RenderPomodoroStatus(app, size, position);
         break;
       case NOTES:
-        if (ANIMATIONS) {
-          animation = app->animations[NOTES];
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
-        }
+        if (ANIMATIONS) animation = app->animations[NOTES];
         /* Render notes below the animation */
         if (app->notes != NULL) {
-          int start_x = current_panel->position.x +
-                        (animation ? animation->frame_width / 2 : 1);
-          int start_y = current_panel->position.y +
-                        (animation ? animation->frame_height / 2 : 1);
+          int start_x, start_y;
+          if (animation != NULL) {
+            int panel_center_x = current_panel->position.x +
+                                 current_panel->size.width / 2;
+            int panel_center_y = current_panel->position.y +
+                                 current_panel->size.height / 2;
+            int anim_x = panel_center_x - animation->frame_width / 2;
+            int anim_y = panel_center_y - animation->frame_height / 2;
+            int blank_x, blank_y;
+            if (FindFirstBlankInLastFrame(animation, &blank_x, &blank_y)) {
+              start_x = anim_x + blank_x;
+              start_y = anim_y + blank_y;
+            } else {
+              start_x = current_panel->position.x + animation->frame_width / 2;
+              start_y = current_panel->position.y + animation->frame_height / 2;
+            }
+          } else {
+            start_x = current_panel->position.x + 1;
+            start_y = current_panel->position.y + 1;
+          }
           /* Pass input_buffer if in INSERT mode */
           const char* input_buf = NULL;
           if (app->screen->panels[app->screen->current_panel].mode == INSERT) {
@@ -109,6 +121,9 @@ ErrorType DrawScreen(AppData* app) {
                       current_panel->size.width - 2,
                       current_panel->size.height - start_y, input_buf);
         }
+        if (ANIMATIONS)
+          RenderAnimationAtPanelCenter(current_panel, animation,
+                                       (Vector2D){0, 0});
         break;
       case HELP:
         if (ANIMATIONS) animation = app->animations[HELP];
