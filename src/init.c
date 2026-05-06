@@ -80,9 +80,11 @@ ErrorType InitApp(AppData* app) {
   if (app->notes == NULL) return MALLOC_ERROR;
 
   /* Add some example notes */
-  AddNote(app->notes, "Buy groceries", true);
-  AddNote(app->notes, "Read a book", true);
-  AddNote(app->notes, "This is a note", false);
+  if (DEBUG) {
+    AddNote(app->notes, "Buy groceries", true);
+    AddNote(app->notes, "Read a book", true);
+    AddNote(app->notes, "This is a note", false);
+  }
 
   app->user_input = -1;
   app->last_input = -1;

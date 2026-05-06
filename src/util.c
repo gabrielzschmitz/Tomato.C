@@ -81,18 +81,17 @@ int UTF16CharCount(const char* str) {
   const unsigned char* s = (const unsigned char*)str;
 
   while (*s) {
-    if ((*s & 0x80) == 0) {
+    if ((*s & 0x80) == 0)
       s++; /* 1-byte sequence (ASCII) */
-    } else if ((*s & 0xE0) == 0xC0) {
+    else if ((*s & 0xE0) == 0xC0)
       s += 2; /* 2-byte sequence */
-    } else if ((*s & 0xF0) == 0xE0) {
+    else if ((*s & 0xF0) == 0xE0)
       s += 3; /* 3-byte sequence */
-    } else if ((*s & 0xF8) == 0xF0) {
+    else if ((*s & 0xF8) == 0xF0) {
       if (GetConfigIconType() == EMOJIS) count++;
       s += 4; /* 4-byte sequence */
-    } else {
+    } else
       s++; /* Invalid UTF-8 byte */
-    }
     count++;
   }
 

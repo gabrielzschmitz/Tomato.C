@@ -72,19 +72,17 @@ void RenderPanelBorder(Panel panel, Border border) {
 
   mvprintw(panel.position.y, panel.position.x, "%s", border.top_left);
   for (x = panel.position.x + 1; x < panel.position.x + panel.size.width - 1;
-       x++) {
+       x++)
     mvprintw(panel.position.y, x, "%s", border.horizontal);
-  }
   mvprintw(panel.position.y, panel.position.x + panel.size.width - 1, "%s",
            border.top_right);
 
   mvprintw(panel.position.y + panel.size.height - 1, panel.position.x, "%s",
            border.bottom_left);
   for (x = panel.position.x + 1; x < panel.position.x + panel.size.width - 1;
-       x++) {
+       x++)
     mvprintw(panel.position.y + panel.size.height - 1, x, "%s",
              border.horizontal);
-  }
   mvprintw(panel.position.y + panel.size.height - 1,
            panel.position.x + panel.size.width - 1, "%s", border.bottom_right);
 
@@ -412,9 +410,8 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
                  item_label, menu->select_style_right);
         RenderAtPanelCenter(panel, full_text, offset);
         free(full_text);
-      } else {
+      } else
         RenderAtPanelCenter(panel, item_label, offset);
-      }
     } else {
       SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
       RenderAtPanelCenter(panel, item_label, offset);
@@ -459,9 +456,8 @@ void PrintMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
                  item_label, menu->select_style_right);
         mvprintw(offset.y, offset.x, "%s", full_text);
         free(full_text);
-      } else {
+      } else
         mvprintw(offset.y, offset.x, "%s", item_label);
-      }
     } else {
       SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
       mvprintw(offset.y, offset.x, "%s", item_label);
@@ -567,10 +563,9 @@ void FreeFloatingDialog(FloatingDialog* dialog) {
   if (!dialog) return;
 
   /* Free menu items */
-  for (int i = 0; i < dialog->menu.item_count; i++) {
+  for (int i = 0; i < dialog->menu.item_count; i++)
     free((char*)dialog->menu.items[i]
            .label); /* Cast to `char*` for `const char*` */
-  }
   free(dialog->menu.items);
 
   /* Free menu styles */

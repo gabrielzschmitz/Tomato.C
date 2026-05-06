@@ -143,9 +143,9 @@ Rollfilm* DeserializeSprites(const char* filename) {
     } else if (IsIconsLine(line)) {
       if (ProcessIconsLine(line, &read, &rollfilm, &head_frame, &current_frame,
                            &head_row, &current_row, &current_frame_id,
-                           file) != 0) {
+                           file) != 0)
         return NULL;
-      }
+
     } else if (read) {
       if (lines_read == 0) {
         if (ParseFrameTime(line, &seconds_multiplier) != 0) {
@@ -309,9 +309,7 @@ int ParseFrameTime(const char* line, double* frame_time) {
 int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
                      int* line_width) {
   FrameToken* line_token = DeserializeFrameLine(line, line_color);
-  if (line_token == NULL) {
-    return -1;
-  }
+  if (line_token == NULL) return -1;
   int current_line_width = 0;
   FrameToken* token = line_token;
   while (token != NULL) {
@@ -323,9 +321,7 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
 
   (*current_row)->tokens = line_token;
   FrameRow* new_row = CreateRow();
-  if (new_row == NULL) {
-    return -1;
-  }
+  if (new_row == NULL) return -1;
   (*current_row)->next = new_row;
   *current_row = new_row;
   return 0;
@@ -334,9 +330,7 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
 /* Links a new frame to the current frame and updates the frame ID. */
 void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
   Frame* new_frame = CreateFrame();
-  if (new_frame == NULL) {
-    return;
-  }
+  if (new_frame == NULL) return;
   (*current_frame)->rows = head_row;
   new_frame->id = frame_id;
 
@@ -361,9 +355,7 @@ int GetWidestFrame(Rollfilm* rollfilm) {
   int max_width = current_frame->width;
 
   do {
-    if (current_frame->width > max_width) {
-      max_width = current_frame->width;
-    }
+    if (current_frame->width > max_width) max_width = current_frame->width;
     current_frame = current_frame->next;
   } while (current_frame != rollfilm->frames);
 
@@ -490,9 +482,7 @@ int HandleColor(const char* src, int* dest) {
 
 /* Render the current frame of the Rollfilm at the specified coordinates */
 void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) {
-    return;
-  }
+  if (rollfilm == NULL || rollfilm->frames == NULL) return;
 
   Frame* current_frame = rollfilm->frames;
   FrameRow* current_row = current_frame->rows;
@@ -509,9 +499,7 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
         SetColor(color, NO_COLOR, A_BOLD);
       }
 
-      if (!current_token->is_blank) {
-        mvprintw(y, x, "%s", current_token->token);
-      }
+      if (!current_token->is_blank) mvprintw(y, x, "%s", current_token->token);
       x += current_token->length;
       current_token = current_token->next;
     }
@@ -547,7 +535,7 @@ void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
 
 /* Finds the Rollfilm with the largest width and height among specified indices */
 int FindLargestRollfilm(Rollfilm* animations[], int* indices,
-                         int indices_count) {
+                        int indices_count) {
   if (!animations || !indices || indices_count <= 0) return -1;
 
   int max_index = 1;
@@ -578,9 +566,7 @@ bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
   Frame* last_frame = rollfilm->frames;
   Frame* current = rollfilm->frames->next;
   while (current != rollfilm->frames) {
-    if (current->id > last_frame->id) {
-      last_frame = current;
-    }
+    if (current->id > last_frame->id) last_frame = current;
     current = current->next;
   }
 

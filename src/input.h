@@ -121,6 +121,8 @@ static const KeyFunction keys[] = {
   {' ', NextPanel, NORMAL, ALL_SCENES},
   {KEY_DOWN, SelectNextItem, NORMAL, POMODORO_SCENES},
   {KEY_UP, SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {KEY_RIGHT, SelectNextItem, NORMAL, POMODORO_SCENES},
+  {KEY_LEFT, SelectPreviousItem, NORMAL, POMODORO_SCENES},
   {'j', SelectNextItem, NORMAL, POMODORO_SCENES},
   {'k', SelectPreviousItem, NORMAL, POMODORO_SCENES},
   {'l', SelectNextItem, NORMAL, POMODORO_SCENES},

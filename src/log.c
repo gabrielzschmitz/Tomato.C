@@ -78,9 +78,7 @@ ErrorType CreateTimerLog(const char* path) {
             continue;
           }
           FD_SET(client_sock, &master_set);
-          if (client_sock > max_sd) {
-            max_sd = client_sock;
-          }
+          if (client_sock > max_sd) max_sd = client_sock;
         } else {
           /* Read from client */
           ssize_t n = recv(i, buffer, sizeof(buffer) - 1, 0);

@@ -171,7 +171,6 @@ void LogError(const char* context, ErrorType error) {
   if (logFile != NULL) {
     fprintf(logFile, "%s\n", message);
     fclose(logFile);
-  } else {
+  } else
     fprintf(stderr, "[CRITICAL] Failed to open log file\n");
-  }
 }
