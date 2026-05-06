@@ -45,13 +45,13 @@ extensible, terminal-based Pomodoro timer written in C.
 ## 🚧 In Progress
 
 - [ ] Simple in-app note-taking
-  - [ ] Add and remove tasks
-  - [ ] Move through tasks
+  - [X] Add and remove tasks
+  - [X] Move through tasks
+  - [X] Toggle tasks on/off
   - [ ] Edit tasks
   - [ ] Manage breaklines and large lines
   - [ ] Add and remove subtasks (max depth 1)
   - [ ] Undo and redo tasks
-  - [ ] Toggle tasks on/off
 
 ---
 
