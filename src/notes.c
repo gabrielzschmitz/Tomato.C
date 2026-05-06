@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "input.h"
 #include "tomato.h"
 
 /* Forward declaration for SetColor */
@@ -141,7 +142,7 @@ void NoteDown(NotesData* notes) {
 
 /* Render notes in a panel */
 void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
-                 int height, const char* input_buffer) {
+                 int height, const char* input_buffer, int mode) {
   if (notes == NULL) return;
 
   int y = start_y;
@@ -165,10 +166,47 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
     item = item->next;
   }
 
-  if (input_buffer != NULL && y < start_y + height - 1) {
-    SetColor(COLOR_WHITE, NO_COLOR, A_UNDERLINE);
-    mvprintw(y, start_x, "%s", input_buffer);
-    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  /* Show input buffer if there's content (in any mode) */
+  if (input_len > 0 && y < start_y + height - 1) {
+    /* Mode-specific cursor indicators */
+    if (mode == INSERT) {
+      /* Show ▏ cursor at cursor position for INSERT mode */
+      char left_part[input_cursor_pos + 1];
+      char right_part[input_len - input_cursor_pos + 1];
+      strncpy(left_part, input_buffer, input_cursor_pos);
+      left_part[input_cursor_pos] = '\0';
+      strcpy(right_part, input_buffer + input_cursor_pos);
+      mvprintw(y, start_x, "%s▏%s", left_part, right_part);
+    } else if (mode == VISUAL) {
+      /* Highlight selection from visual_start to cursor */
+      int start_sel =
+        (visual_start < input_cursor_pos) ? visual_start : input_cursor_pos;
+      int end_sel =
+        (visual_start < input_cursor_pos) ? input_cursor_pos : visual_start;
+      for (int i = 0; i < input_len; i++) {
+        if (i >= start_sel && i < end_sel) {
+          SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+          mvaddch(y, start_x + i, input_buffer[i]);
+          SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+        } else
+          mvaddch(y, start_x + i, input_buffer[i]);
+      }
+    } else {
+      /* NORMAL mode - only highlight character at cursor position */
+      for (int i = 0; i < input_len; i++) {
+        if (i == input_cursor_pos) {
+          SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+          mvaddch(y, start_x + i, input_buffer[i]);
+          SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+        } else
+          mvaddch(y, start_x + i, input_buffer[i]);
+      }
+      if (input_cursor_pos >= input_len) {
+        SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+        mvaddch(y, start_x + input_len, ' ');
+        SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      }
+    }
   }
 }
 

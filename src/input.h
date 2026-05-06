@@ -58,6 +58,11 @@ void TogglePause(AppData* app);
 /* Change the input mode */
 void ChangeMode(AppData* app);
 
+/* Vim-like mode switching */
+void SwitchToInsertMode(AppData* app); /* 'i' key */
+void SwitchToVisualMode(AppData* app); /* 'v' key */
+void SwitchToNormalMode(AppData* app); /* ESC key */
+
 /* Update animation mode */
 void ChangeDebugAnimation(AppData* app, int step);
 
@@ -101,7 +106,10 @@ void AddNewNoteItem(AppData* app); /* Add note with - prefix */
 
 /* Input buffer for INSERT mode (accessible from other files) */
 extern char input_buffer[];
-extern int input_pos;
+extern int input_len; /* Actual length of input */
+extern int
+  input_cursor_pos;      /* Cursor position in input buffer (0 to input_len) */
+extern int visual_start; /* Start position for VISUAL mode selection */
 extern int input_mode_type; /* 0 = task, 1 = note */
 
 /* Scene types bitmask for pomodoro-related scenes */
@@ -121,6 +129,11 @@ static const KeyFunction keys[] = {
   {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
   {'a', AddNewNote, NORMAL, SCENE_NOTES},     /* Add task */
   {'A', AddNewNoteItem, NORMAL, SCENE_NOTES}, /* Add note */
+
+  /* Vim-like mode switching (only in NOTES scene) */
+  {'i', SwitchToInsertMode, NORMAL | VISUAL, SCENE_NOTES},
+  {'v', SwitchToVisualMode, NORMAL | INSERT, SCENE_NOTES},
+  {ESC, SwitchToNormalMode, INSERT | VISUAL, SCENE_NOTES},
 
   /* General keybindings */
   {' ', NextPanel, NORMAL, ALL_SCENES},

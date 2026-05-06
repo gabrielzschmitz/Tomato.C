@@ -138,14 +138,17 @@ ErrorType DrawScreen(AppData* app) {
             start_x = current_panel->position.x + 1;
             start_y = current_panel->position.y + 1;
           }
-          /* Pass input_buffer if in INSERT mode */
+          /* Pass input_buffer and mode if in INSERT or NORMAL mode with content */
           const char* input_buf = NULL;
-          if (app->screen->panels[app->screen->current_panel].mode == INSERT) {
+          int current_mode =
+            app->screen->panels[app->screen->current_panel].mode;
+          if (current_mode == INSERT || current_mode == VISUAL ||
+              (current_mode == NORMAL && input_len > 0))
             input_buf = input_buffer;
-          }
-          RenderNotes(app->notes, start_x, start_y,
-                      current_panel->size.width - 2,
-                      current_panel->size.height - start_y, input_buf);
+
+          RenderNotes(
+            app->notes, start_x, start_y, current_panel->size.width - 2,
+            current_panel->size.height - start_y, input_buf, current_mode);
         }
         if (ANIMATIONS) {
           if (DEBUG)

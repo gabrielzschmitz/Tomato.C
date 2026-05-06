@@ -13,8 +13,10 @@
 
 /* Buffer for INSERT mode text input */
 char input_buffer[256];
-int input_pos = 0;
-int input_mode_type = 0; /* 0 = task, 1 = note */
+int input_len = 0;        /* Actual length of input */
+int input_cursor_pos = 0; /* Cursor position in input buffer (0 to input_len) */
+int visual_start = 0;     /* Start position for VISUAL mode selection */
+int input_mode_type = 0;  /* 0 = task, 1 = note */
 
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key) {
@@ -38,49 +40,141 @@ ErrorType HandleInsertMode(AppData* app, int key) {
 
   if (key == KEY_ENTER || key == '\n' || key == '\r') {
     /* Finish input - switch back to NORMAL and add the note/task */
-    input_buffer[input_pos] = '\0';
-    if (input_pos > 0) {
-      if (input_mode_type == 0) /* Task */
+    input_buffer[input_len] = '\0';
+    if (input_len > 0) {
+      if (input_mode_type == 0) {
+        /* Task */
         AddNote(app->notes, input_buffer, true);
-      else /* Note */
+      } else {
+        /* Note */
         AddNote(app->notes, input_buffer, false);
+      }
+      /* Select the newly added note */
+      app->notes->current = app->notes->tail;
     }
-    input_pos = 0;
+    input_len = 0;
+    input_cursor_pos = 0;
     input_buffer[0] = '\0';
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
-    /* Clear last_input to prevent triggering quit popup */
+    /* Clear input state to prevent triggering quit popup */
+    app->user_input = -1;
     app->last_input = -1;
     /* Clear the input line */
     move(LINES - 1, 0);
     clrtoeol();
     refresh();
-  } else if (key == 27) { /* ESC to cancel */
-    input_pos = 0;
-    input_buffer[0] = '\0';
+  } else if (key == 27) { /* ESC to go to NORMAL mode - keep input */
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
-    /* Clear last_input to prevent triggering quit popup */
+    /* Clear input state to prevent quit popup */
+    app->user_input = -1;
     app->last_input = -1;
-    /* Clear the input line */
-    move(LINES - 1, 0);
-    clrtoeol();
+    noecho();
+    curs_set(0);
     refresh();
+  } else if (key == KEY_LEFT && input_cursor_pos > 0) {
+    /* Move cursor left */
+    input_cursor_pos--;
+  } else if (key == KEY_RIGHT && input_cursor_pos < input_len) {
+    /* Move cursor right */
+    input_cursor_pos++;
   } else if (key == KEY_BACKSPACE || key == 127) {
-    if (input_pos > 0) {
-      input_pos--;
-      input_buffer[input_pos] = '\0';
+    if (input_cursor_pos > 0) {
+      /* Delete character before cursor and shift left */
+      for (int i = input_cursor_pos - 1; i < input_len - 1; i++)
+        input_buffer[i] = input_buffer[i + 1];
+      input_cursor_pos--;
+      input_len--;
+      input_buffer[input_len] = '\0';
     }
   } else if (key >= 32 && key <= 126 &&
-             input_pos < (int)sizeof(input_buffer) - 1) {
-    input_buffer[input_pos++] = key;
-    input_buffer[input_pos] = '\0';
+             input_len < (int)sizeof(input_buffer) - 1) {
+    /* Insert character at cursor position - shift right */
+    for (int i = input_len; i > input_cursor_pos; i--) {
+      input_buffer[i] = input_buffer[i - 1];
+    }
+    input_buffer[input_cursor_pos] = key;
+    input_cursor_pos++;
+    input_len++;
+    input_buffer[input_len] = '\0';
   }
 
   return status;
 }
 
-/* Handle VISUAL mode - process key bindings */
 ErrorType HandleVisualMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
+
+  /* Handle ENTER to commit note in VISUAL mode */
+  if (key == KEY_ENTER || key == '\n' || key == '\r') {
+    input_buffer[input_len] = '\0';
+    if (input_len > 0) {
+      if (input_mode_type == 0)
+        AddNote(app->notes, input_buffer, true);
+      else
+        AddNote(app->notes, input_buffer, false);
+      /* Select the newly added note */
+      app->notes->current = app->notes->tail;
+    }
+    input_len = 0;
+    input_cursor_pos = 0;
+    visual_start = 0;
+    input_buffer[0] = '\0';
+    app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    app->user_input = -1;
+    app->last_input = -1;
+    move(LINES - 1, 0);
+    clrtoeol();
+    refresh();
+    return status;
+  }
+
+  /* Handle cursor movement and delete in VISUAL mode */
+  if (input_len > 0) {
+    if (key == 'h' && input_cursor_pos > 0) {
+      input_cursor_pos--;
+      return status;
+    } else if (key == 'l' && input_cursor_pos < input_len) {
+      input_cursor_pos++;
+      return status;
+    } else if (key == 'x') {
+      /* Delete all selected characters (from visual_start to cursor) */
+      int start_sel =
+        (visual_start < input_cursor_pos) ? visual_start : input_cursor_pos;
+      int end_sel =
+        (visual_start < input_cursor_pos) ? input_cursor_pos : visual_start;
+      int sel_len = end_sel - start_sel;
+      if (sel_len > 0 && start_sel < input_len) {
+        /* Shift characters after selection left */
+        for (int i = start_sel; i < input_len - sel_len; i++) {
+          input_buffer[i] = input_buffer[i + sel_len];
+        }
+        input_len -= sel_len;
+        input_buffer[input_len] = '\0';
+        input_cursor_pos = start_sel;
+        visual_start = start_sel;
+      }
+      app->screen->panels[app->screen->current_panel].mode = NORMAL;
+      noecho();
+      curs_set(0);
+      refresh();
+      return status;
+    } else if (key == 'i' || key == 'a') {
+      /* Go back to INSERT mode */
+      app->screen->panels[app->screen->current_panel].mode = INSERT;
+      noecho();
+      curs_set(1);
+      refresh();
+      return status;
+    } else if (key == 27) { /* ESC - go back to NORMAL */
+      app->screen->panels[app->screen->current_panel].mode = NORMAL;
+      noecho();
+      curs_set(0);
+      refresh();
+      return status;
+    }
+    /* Block all other keys */
+    return status;
+  }
 
   if (!CheckScreenSize(app)) {
     if (IsKeyAssignedToAction(key, QuitApp))
@@ -96,6 +190,71 @@ ErrorType HandleVisualMode(AppData* app, int key) {
 /* Handle NORMAL mode - process key bindings */
 ErrorType HandleNormalMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
+
+  /* Handle input buffer navigation if there's content */
+  if (input_len > 0) {
+    /* Only allow specific keys while editing - block note list interaction */
+    if (key == 'h' && input_cursor_pos > 0) {
+      input_cursor_pos--;
+      return status;
+    } else if (key == 'l' && input_cursor_pos < input_len) {
+      input_cursor_pos++;
+      return status;
+    } else if (key == 'x') {
+      /* Delete character at cursor */
+      if (input_cursor_pos < input_len) {
+        for (int i = input_cursor_pos; i < input_len - 1; i++)
+          input_buffer[i] = input_buffer[i + 1];
+        input_len--;
+        input_buffer[input_len] = '\0';
+        /* If cursor is past end, move back one */
+        if (input_cursor_pos > input_len) input_cursor_pos = input_len;
+      }
+      return status;
+    } else if (key == 'i' || key == 'a') {
+      /* Go back to INSERT mode */
+      app->screen->panels[app->screen->current_panel].mode = INSERT;
+      noecho();
+      curs_set(1);
+      refresh();
+      return status;
+    } else if (key == 'v') {
+      /* Go to VISUAL mode */
+      app->screen->panels[app->screen->current_panel].mode = VISUAL;
+      visual_start = input_cursor_pos;
+      noecho();
+      curs_set(0);
+      refresh();
+      return status;
+    } else if (key == 27) { /* ESC - go back to INSERT */
+      app->screen->panels[app->screen->current_panel].mode = INSERT;
+      noecho();
+      curs_set(1);
+      refresh();
+      return status;
+    } else if (key == KEY_ENTER || key == '\n' || key == '\r') {
+      /* Commit note in NORMAL mode */
+      input_buffer[input_len] = '\0';
+      if (input_len > 0) {
+        if (input_mode_type == 0)
+          AddNote(app->notes, input_buffer, true);
+        else
+          AddNote(app->notes, input_buffer, false);
+      }
+      input_len = 0;
+      input_cursor_pos = 0;
+      input_buffer[0] = '\0';
+      app->screen->panels[app->screen->current_panel].mode = NORMAL;
+      app->user_input = -1;
+      app->last_input = -1;
+      move(LINES - 1, 0);
+      clrtoeol();
+      refresh();
+      return status;
+    }
+    /* Block all other keys while editing */
+    return status;
+  }
 
   if (!CheckScreenSize(app)) {
     if (IsKeyAssignedToAction(key, QuitApp))
@@ -206,6 +365,27 @@ void ChangeMode(AppData* app) {
     *mode = NORMAL;
   else
     *mode <<= 1;
+}
+
+/* Switch to INSERT mode (vim 'i' key) */
+void SwitchToInsertMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+/* Switch to VISUAL mode (vim 'v' key) */
+void SwitchToVisualMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = VISUAL;
+}
+
+/* Switch to NORMAL mode (ESC key) */
+void SwitchToNormalMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = NORMAL;
+  /* Clear input state to prevent quit popup from appearing */
+  app->user_input = -1;
+  app->last_input = -1;
 }
 
 /* Update animation mode */
@@ -347,9 +527,13 @@ void DeleteNoteAtNotes(AppData* app) {
 void AddNewNote(AppData* app) {
   if (app->popup_dialog != NULL) return;
 
+  /* Clear selection - unselect all notes */
+  app->notes->current = NULL;
+
   /* Switch to INSERT mode - HandleInputs will handle the text input */
   app->screen->panels[app->screen->current_panel].mode = INSERT;
-  input_pos = 0;
+  input_len = 0;
+  input_cursor_pos = 0;
   input_buffer[0] = '\0';
   input_mode_type = 0; /* Task */
 
@@ -364,9 +548,13 @@ void AddNewNote(AppData* app) {
 void AddNewNoteItem(AppData* app) {
   if (app->popup_dialog != NULL) return;
 
+  /* Clear selection - unselect all notes */
+  app->notes->current = NULL;
+
   /* Switch to INSERT mode - HandleInputs will handle the text input */
   app->screen->panels[app->screen->current_panel].mode = INSERT;
-  input_pos = 0;
+  input_len = 0;
+  input_cursor_pos = 0;
   input_buffer[0] = '\0';
   input_mode_type = 1; /* Note */
 

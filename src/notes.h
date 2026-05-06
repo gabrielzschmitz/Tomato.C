@@ -53,6 +53,6 @@ int GetSelectedNoteIndex(NotesData* notes);
 /* Render notes in a panel */
 /* If input_buffer is not NULL, it will be rendered at the end (for INSERT mode) */
 void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
-                 int height, const char* input_buffer);
+                 int height, const char* input_buffer, int mode);
 
 #endif /* NOTES_H_ */
