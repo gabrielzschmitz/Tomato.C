@@ -58,33 +58,49 @@ ErrorType DrawScreen(AppData* app) {
       case MAIN_MENU:
         if (ANIMATIONS) {
           animation = app->animations[MAIN_MENU];
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
+          if (DEBUG)
+            DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+          else
+            RenderAnimationAtPanelCenter(current_panel, animation,
+                                         (Vector2D){0, 0});
         }
-        PrintMenuAtCenter(current_panel, app->menus[0],
-                          (Vector2D){0, animation->frame_height / 2 + 2}, 0);
+        if (DEBUG)
+          PrintMenuAtCenter(current_panel, app->menus[0],
+                            (Vector2D){0, animation->frame_height / 2 + 3}, 0);
+        else
+          PrintMenuAtCenter(current_panel, app->menus[0],
+                            (Vector2D){0, animation->frame_height / 2 + 2}, 0);
         break;
       case WORK_TIME:
         if (ANIMATIONS) {
           animation = app->animations[WORK_TIME];
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
+          if (DEBUG)
+            DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+          else
+            RenderAnimationAtPanelCenter(current_panel, animation,
+                                         (Vector2D){0, 0});
         }
         RenderPomodoroStatus(app, size, position);
         break;
       case SHORT_PAUSE:
         if (ANIMATIONS) {
           animation = app->animations[SHORT_PAUSE];
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
+          if (DEBUG)
+            DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+          else
+            RenderAnimationAtPanelCenter(current_panel, animation,
+                                         (Vector2D){0, 0});
         }
         RenderPomodoroStatus(app, size, position);
         break;
       case LONG_PAUSE:
         if (ANIMATIONS) {
           animation = app->animations[LONG_PAUSE];
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
+          if (DEBUG)
+            DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+          else
+            RenderAnimationAtPanelCenter(current_panel, animation,
+                                         (Vector2D){0, 0});
         }
         RenderPomodoroStatus(app, size, position);
         break;
@@ -94,10 +110,10 @@ ErrorType DrawScreen(AppData* app) {
         if (app->notes != NULL) {
           int start_x, start_y;
           if (animation != NULL) {
-            int panel_center_x = current_panel->position.x +
-                                 current_panel->size.width / 2;
-            int panel_center_y = current_panel->position.y +
-                                 current_panel->size.height / 2;
+            int panel_center_x =
+              current_panel->position.x + current_panel->size.width / 2;
+            int panel_center_y =
+              current_panel->position.y + current_panel->size.height / 2;
             int anim_x = panel_center_x - animation->frame_width / 2;
             int anim_y = panel_center_y - animation->frame_height / 2;
             int blank_x, blank_y;
@@ -121,9 +137,13 @@ ErrorType DrawScreen(AppData* app) {
                       current_panel->size.width - 2,
                       current_panel->size.height - start_y, input_buf);
         }
-        if (ANIMATIONS)
-          RenderAnimationAtPanelCenter(current_panel, animation,
-                                       (Vector2D){0, 0});
+        if (ANIMATIONS) {
+          if (DEBUG)
+            DebugAnimation(current_panel, animation, (Vector2D){0, 0});
+          else
+            RenderAnimationAtPanelCenter(current_panel, animation,
+                                         (Vector2D){0, 0});
+        }
         break;
       case HELP:
         if (ANIMATIONS) animation = app->animations[HELP];
