@@ -91,7 +91,11 @@ ErrorType DrawScreen(AppData* app) {
             RenderAnimationAtPanelCenter(current_panel, animation,
                                          (Vector2D){0, 0});
         }
-        RenderPomodoroStatus(app, size, position);
+        if (DEBUG)
+          RenderPomodoroStatus(app, size,
+                               (Vector2D){position.x, position.y + 2});
+        else
+          RenderPomodoroStatus(app, size, position);
         break;
       case LONG_PAUSE:
         if (ANIMATIONS) {
@@ -102,7 +106,11 @@ ErrorType DrawScreen(AppData* app) {
             RenderAnimationAtPanelCenter(current_panel, animation,
                                          (Vector2D){0, 0});
         }
-        RenderPomodoroStatus(app, size, position);
+        if (DEBUG)
+          RenderPomodoroStatus(app, size,
+                               (Vector2D){position.x, position.y + 1});
+        else
+          RenderPomodoroStatus(app, size, position);
         break;
       case NOTES:
         if (ANIMATIONS) animation = app->animations[NOTES];
