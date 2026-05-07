@@ -25,12 +25,16 @@ ErrorType DrawScreen(AppData* app) {
 
   int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
   size_t steps_count = sizeof(steps) / sizeof(steps[0]);
+  int current_scene =
+    app->screen->panels[app->screen->current_panel].scene_history->present;
   if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep) &&
-      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step))
+      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step) &&
+      (POMODORO_SCENES & (1 << current_scene)))
     RenderSkipConfirmation(app);
   if ((IsKeyAssignedToAction(app->last_input, ResetPomodoroStep) ||
        IsKeyAssignedToAction(app->last_input, ResetPomodoroCycle)) &&
-      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step))
+      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step) &&
+      (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
 
   if (!CheckScreenSize(app)) return status;
@@ -180,12 +184,17 @@ ErrorType DrawScreen(AppData* app) {
   RenderStatusBar(app->status_bar, app->screen);
 
   if (app->popup_dialog != NULL && current_mode == NORMAL) {
+    int current_scene =
+        app->screen->panels[app->screen->current_panel].scene_history->present;
     if (app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
       RenderQuitConfirmation(app);
     else if (app->popup_dialog->menu.items[0].action ==
-             ForcefullySkipPomodoroStep)
+               ForcefullySkipPomodoroStep &&
+             (POMODORO_SCENES & (1 << current_scene)))
       RenderSkipConfirmation(app);
-    else if (app->popup_dialog->menu.items[0].action == ResetPomodoroCycle)
+    else if ((app->popup_dialog->menu.items[0].action == ResetPomodoroStep ||
+                app->popup_dialog->menu.items[0].action == ResetPomodoroCycle) &&
+               (POMODORO_SCENES & (1 << current_scene)))
       RenderResetMenu(app);
   }
 
