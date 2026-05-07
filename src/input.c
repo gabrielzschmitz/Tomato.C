@@ -141,14 +141,17 @@ int input_mode_type = 0;  /* 0 = task, 1 = note */
 
 /* New action functions for keybindings */
 void InputCursorLeft(AppData* app) {
+  (void)app;
   if (input_cursor_pos > 0) input_cursor_pos--;
 }
 
 void InputCursorRight(AppData* app) {
+  (void)app;
   if (input_cursor_pos < input_len) input_cursor_pos++;
 }
 
 void InputBackspace(AppData* app) {
+  (void)app;
   if (input_cursor_pos > 0) {
     for (int i = input_cursor_pos - 1; i < input_len - 1; i++)
       input_buffer[i] = input_buffer[i + 1];
@@ -159,6 +162,7 @@ void InputBackspace(AppData* app) {
 }
 
 void InputDeleteChar(AppData* app) {
+  (void)app;
   if (input_cursor_pos < input_len) {
     for (int i = input_cursor_pos; i < input_len - 1; i++)
       input_buffer[i] = input_buffer[i + 1];

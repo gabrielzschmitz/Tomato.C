@@ -1,6 +1,16 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include "input.h"
+
+/* Key function struct */
+typedef struct {
+  int key;
+  void (*action)(AppData* app);
+  int modes;
+  int scene_types;
+} KeyFunction;
+
 /* Visual Settings ---------------------------------------------------------- */
 /* 1 if you want animations, 0 if not (default: 1) */
 static const int ANIMATIONS = 1;
@@ -120,5 +130,75 @@ static const char* SEPARATOR =
   "---------------------------------------------------------------------------";
 /* sets the fps app runs (default: 120) */
 static const int FPS = 120;
+
+/* Scene types bitmask for key binding filters */
+#define POMODORO_SCENES \
+  (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE | SCENE_MAIN_MENU)
+#define NOTES_SCENES (SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
+#define ALL_SCENES (POMODORO_SCENES | NOTES_SCENES)
+
+/* Struct to map a key to a function */
+static const KeyFunction keys[] = {
+  /* NORMAL mode - editing keys (when input_len > 0) */
+  {'h', InputCursorLeft, NORMAL, SCENE_NOTES},
+  {'l', InputCursorRight, NORMAL, SCENE_NOTES},
+  {'x', InputDeleteChar, NORMAL, SCENE_NOTES},
+  {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
+  {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
+  {ESC, InputESC, NORMAL, SCENE_NOTES},
+
+  /* NORMAL mode - navigation keys (when input_len == 0) */
+  {'j', NoteDownApp, NORMAL, SCENE_NOTES},
+  {'k', NoteUpApp, NORMAL, SCENE_NOTES},
+  {KEY_DOWN, NoteDownApp, NORMAL, SCENE_NOTES},
+  {KEY_UP, NoteUpApp, NORMAL, SCENE_NOTES},
+  {ENTER, ToggleTaskAtNotes, NORMAL, SCENE_NOTES},
+  {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
+  {'a', AddNewNote, NORMAL, SCENE_NOTES},
+  {'A', AddNewNoteItem, NORMAL, SCENE_NOTES},
+
+  /* INSERT mode keys */
+  {KEY_LEFT, InputCursorLeft, INSERT, SCENE_NOTES},
+  {KEY_RIGHT, InputCursorRight, INSERT, SCENE_NOTES},
+  {KEY_BACKSPACE, InputBackspace, INSERT, SCENE_NOTES},
+  {BACKSPACE, InputBackspace, INSERT, SCENE_NOTES},
+  {ENTER, InputCommit, INSERT, SCENE_NOTES},
+  {'\r', InputCommit, INSERT, SCENE_NOTES},
+  {KEY_ENTER, InputCommit, INSERT, SCENE_NOTES},
+  {ESC, InputESC, INSERT, SCENE_NOTES},
+  {-1, InputInsertChar, INSERT, SCENE_NOTES}, /* printable chars */
+
+  /* VISUAL mode keys */
+  {'h', InputCursorLeft, VISUAL, SCENE_NOTES},
+  {'l', InputCursorRight, VISUAL, SCENE_NOTES},
+  {'x', InputVisualDelete, VISUAL, SCENE_NOTES},
+  {'a', InputSwitchToInsertFromVisual, VISUAL, SCENE_NOTES},
+  {ENTER, InputCommit, VISUAL, SCENE_NOTES},
+  {'\r', InputCommit, VISUAL, SCENE_NOTES},
+  {KEY_ENTER, InputCommit, VISUAL, SCENE_NOTES},
+  {ESC, InputESC, VISUAL, SCENE_NOTES},
+
+  /* Mode switching */
+  {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
+  {'v', SwitchToVisualMode, INSERT, SCENE_NOTES},
+  {ESC, InputESC, INSERT | VISUAL, SCENE_NOTES},
+
+  /* General keybindings - only for NORMAL mode */
+  {' ', NextPanel, NORMAL, ALL_SCENES},
+  {KEY_DOWN, SelectNextItem, NORMAL, POMODORO_SCENES},
+  {KEY_UP, SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {KEY_RIGHT, SelectNextItem, NORMAL, POMODORO_SCENES},
+  {KEY_LEFT, SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {'j', SelectNextItem, NORMAL, POMODORO_SCENES},
+  {'k', SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {'l', SelectNextItem, NORMAL, POMODORO_SCENES},
+  {'h', SelectPreviousItem, NORMAL, POMODORO_SCENES},
+  {'s', SkipPomodoroStep, NORMAL, POMODORO_SCENES},
+  {'p', TogglePause, NORMAL, POMODORO_SCENES},
+  {CTRLR, OpenResetMenu, NORMAL, POMODORO_SCENES},
+  {'q', QuitApp, NORMAL, ALL_SCENES},
+  {ESC, QuitApp, NORMAL, ALL_SCENES},
+  {ENTER, ExecuteMenuAction, NORMAL, POMODORO_SCENES},
+};
 
 #endif /* CONFIG_H_ */
