@@ -89,4 +89,7 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel);
 /* Current status module for status bar */
 void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel);
 
+/* Line and Column module for NOTES scene */
+void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel);
+
 #endif /* BAR_H_ */

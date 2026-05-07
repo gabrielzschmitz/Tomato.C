@@ -137,6 +137,7 @@ ErrorType InitStatusBar(AppData* app) {
   AddStatusBarModule(app->status_bar, LEFT, InputModeModule);
   AddStatusBarModule(app->status_bar, LEFT, RealTimeModule);
   AddStatusBarModule(app->status_bar, RIGHT, SceneModule);
+  AddStatusBarModule(app->status_bar, RIGHT, LineColumnModule);
 
   app->status_bar->right_modules =
     InvertModulesOrder(app->status_bar->right_modules);

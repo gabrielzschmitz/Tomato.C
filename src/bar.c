@@ -448,3 +448,70 @@ void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
 
   module->content_length = UTF16CharCount(module->content);
 }
+
+/* Line and Column module for NOTES scene */
+void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)panel;
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_CYAN;
+
+  /* Only show in NOTES scene */
+  int current_scene =
+    app->screen->panels[app->screen->current_panel].scene_history->present;
+  if (!(SCENE_NOTES & (1 << current_scene))) {
+    module->content[0] = '\0';
+    module->content_length = 0;
+    return;
+  }
+
+  int line = 0;
+  int col = input_cursor_pos + 1; /* 1-indexed */
+  bool show_col = false;
+
+  if (input_len > 0)
+    show_col = true;
+  else {
+    int current_mode = app->screen->panels[app->screen->current_panel].mode;
+    if (current_mode == INSERT || current_mode == VISUAL) show_col = true;
+  }
+
+  if (app->notes != NULL) {
+    if (app->notes->current == NULL) {
+      line = app->notes->count + 1;
+    } else {
+      NoteItem* item = app->notes->head;
+      line = 1;
+      while (item != NULL) {
+        if (item == app->notes->current) break;
+        line++;
+        item = item->next;
+      }
+    }
+  }
+
+  int required_length;
+  IconType icon_type = GetConfigIconType();
+  const char* icon = (char*)LINE_COLUMN_MODULE_ICONS[icon_type];
+  if (show_col) {
+    if (strlen(icon) < 1) {
+      required_length = snprintf(NULL, 0, "Ln %d, Col %d", line, col) + 1;
+      snprintf(module->content, required_length, "Ln %d, Col %d", line, col);
+    } else {
+      required_length =
+        snprintf(NULL, 0, "%s Ln %d, Col %d", icon, line, col) + 1;
+      snprintf(module->content, required_length, "%s Ln %d, Col %d", icon, line,
+               col);
+    }
+  } else {
+    if (strlen(icon) < 1) {
+      required_length = snprintf(NULL, 0, "Ln %d", line) + 1;
+      snprintf(module->content, required_length, "Ln %d", line);
+    } else {
+      required_length = snprintf(NULL, 0, "%s Ln %d", icon, line) + 1;
+      snprintf(module->content, required_length, "%s Ln %d", icon, line);
+    }
+  }
+  module->content_length = UTF16CharCount(module->content);
+}

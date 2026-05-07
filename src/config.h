@@ -54,6 +54,7 @@ static const char* NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
 static const char* INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
 static const char* VISUAL_MODE_ICONS[3] = {"󰕢", "🔲", ""};
 static const char* REAL_TIME_MODULE_ICONS[3] = {"", "🕘", ""};
+static const char* LINE_COLUMN_MODULE_ICONS[3] = {"", "▶", ""};
 static const char* VISUAL_CURSOR_ICON = "█";
 static const char* INSERT_CURSOR_ICON = "▏";
 /* Misc Icons */
