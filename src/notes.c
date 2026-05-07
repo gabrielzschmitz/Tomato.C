@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "input.h"
 #include "tomato.h"
 
@@ -166,44 +167,57 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
     item = item->next;
   }
 
-  /* Show input buffer if there's content (in any mode) */
-  if (input_len > 0 && y < start_y + height - 1) {
+  /* Show input buffer if there's content OR if in INSERT mode (show cursor) */
+  if ((input_len > 0 || mode == INSERT) && y < start_y + height - 1) {
+    /* Get the prefix based on input_mode_type */
+    const char* prefix = (input_mode_type == 0) ? "[ ] " : "- ";
+    int prefix_len = strlen(prefix);
+
     /* Mode-specific cursor indicators */
     if (mode == INSERT) {
-      /* Show ▏ cursor at cursor position for INSERT mode */
-      char left_part[input_cursor_pos + 1];
-      char right_part[input_len - input_cursor_pos + 1];
-      strncpy(left_part, input_buffer, input_cursor_pos);
-      left_part[input_cursor_pos] = '\0';
-      strcpy(right_part, input_buffer + input_cursor_pos);
-      mvprintw(y, start_x, "%s▏%s", left_part, right_part);
+      if (input_len == 0) {
+        /* Show cursor at start after prefix when buffer is empty */
+        mvprintw(y, start_x, "%s%s", prefix, INSERT_CURSOR_ICON);
+      } else {
+        /* Show ▏ cursor at cursor position for INSERT mode */
+        char left_part[input_cursor_pos + 1];
+        char right_part[input_len - input_cursor_pos + 1];
+        strncpy(left_part, input_buffer, input_cursor_pos);
+        left_part[input_cursor_pos] = '\0';
+        strcpy(right_part, input_buffer + input_cursor_pos);
+        mvprintw(y, start_x, "%s%s▏%s", prefix, left_part, right_part);
+      }
     } else if (mode == VISUAL) {
       /* Highlight selection from visual_start to cursor */
       int start_sel =
         (visual_start < input_cursor_pos) ? visual_start : input_cursor_pos;
       int end_sel =
         (visual_start < input_cursor_pos) ? input_cursor_pos : visual_start;
+      /* Show prefix first */
+      mvprintw(y, start_x, "%s", prefix);
       for (int i = 0; i < input_len; i++) {
         if (i >= start_sel && i < end_sel) {
           SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
-          mvaddch(y, start_x + i, input_buffer[i]);
+          mvaddch(y, start_x + prefix_len + i, input_buffer[i]);
           SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
         } else
-          mvaddch(y, start_x + i, input_buffer[i]);
+          mvaddch(y, start_x + prefix_len + i, input_buffer[i]);
       }
     } else {
       /* NORMAL mode - only highlight character at cursor position */
+      /* Show prefix first */
+      mvprintw(y, start_x, "%s", prefix);
       for (int i = 0; i < input_len; i++) {
         if (i == input_cursor_pos) {
           SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
-          mvaddch(y, start_x + i, input_buffer[i]);
+          mvaddch(y, start_x + prefix_len + i, input_buffer[i]);
           SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
         } else
-          mvaddch(y, start_x + i, input_buffer[i]);
+          mvaddch(y, start_x + prefix_len + i, input_buffer[i]);
       }
       if (input_cursor_pos >= input_len) {
         SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
-        mvaddch(y, start_x + input_len, ' ');
+        mvaddch(y, start_x + prefix_len + input_len, ' ');
         SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
       }
     }

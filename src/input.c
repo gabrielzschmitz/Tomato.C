@@ -51,6 +51,9 @@ ErrorType HandleInsertMode(AppData* app, int key) {
       }
       /* Select the newly added note */
       app->notes->current = app->notes->tail;
+    } else {
+      /* Cancel commit - select last note on the list */
+      app->notes->current = app->notes->tail;
     }
     input_len = 0;
     input_cursor_pos = 0;
@@ -113,6 +116,9 @@ ErrorType HandleVisualMode(AppData* app, int key) {
       else
         AddNote(app->notes, input_buffer, false);
       /* Select the newly added note */
+      app->notes->current = app->notes->tail;
+    } else {
+      /* Cancel commit - select last note on the list */
       app->notes->current = app->notes->tail;
     }
     input_len = 0;
@@ -240,6 +246,9 @@ ErrorType HandleNormalMode(AppData* app, int key) {
           AddNote(app->notes, input_buffer, true);
         else
           AddNote(app->notes, input_buffer, false);
+      } else {
+        /* Cancel commit - select last note on the list */
+        app->notes->current = app->notes->tail;
       }
       input_len = 0;
       input_cursor_pos = 0;
