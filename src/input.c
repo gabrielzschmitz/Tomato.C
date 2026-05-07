@@ -42,19 +42,14 @@ ErrorType HandleInsertMode(AppData* app, int key) {
     /* Finish input - switch back to NORMAL and add the note/task */
     input_buffer[input_len] = '\0';
     if (input_len > 0) {
-      if (input_mode_type == 0) {
-        /* Task */
+      if (input_mode_type == 0)
         AddNote(app->notes, input_buffer, true);
-      } else {
-        /* Note */
+      else
         AddNote(app->notes, input_buffer, false);
-      }
       /* Select the newly added note */
       app->notes->current = app->notes->tail;
-    } else {
-      /* Cancel commit - select last note on the list */
+    } else
       app->notes->current = app->notes->tail;
-    }
     input_len = 0;
     input_cursor_pos = 0;
     input_buffer[0] = '\0';
@@ -66,7 +61,7 @@ ErrorType HandleInsertMode(AppData* app, int key) {
     move(LINES - 1, 0);
     clrtoeol();
     refresh();
-  } else if (key == 27) { /* ESC to go to NORMAL mode - keep input */
+  } else if (key == ESC) { /* ESC to go to NORMAL mode - keep input */
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     /* Clear input state to prevent quit popup */
     app->user_input = -1;
@@ -80,7 +75,7 @@ ErrorType HandleInsertMode(AppData* app, int key) {
   } else if (key == KEY_RIGHT && input_cursor_pos < input_len) {
     /* Move cursor right */
     input_cursor_pos++;
-  } else if (key == KEY_BACKSPACE || key == 127) {
+  } else if (key == KEY_BACKSPACE || key == BACKSPACE) {
     if (input_cursor_pos > 0) {
       /* Delete character before cursor and shift left */
       for (int i = input_cursor_pos - 1; i < input_len - 1; i++)
@@ -89,12 +84,12 @@ ErrorType HandleInsertMode(AppData* app, int key) {
       input_len--;
       input_buffer[input_len] = '\0';
     }
-  } else if (key >= 32 && key <= 126 &&
-             input_len < (int)sizeof(input_buffer) - 1) {
+  } else if (key >= ' ' && key <= '~' &&
+             input_len <
+               (int)sizeof(input_buffer) - 1) { /* Printable characters */
     /* Insert character at cursor position - shift right */
-    for (int i = input_len; i > input_cursor_pos; i--) {
+    for (int i = input_len; i > input_cursor_pos; i--)
       input_buffer[i] = input_buffer[i - 1];
-    }
     input_buffer[input_cursor_pos] = key;
     input_cursor_pos++;
     input_len++;
@@ -171,7 +166,7 @@ ErrorType HandleVisualMode(AppData* app, int key) {
       curs_set(1);
       refresh();
       return status;
-    } else if (key == 27) { /* ESC - go back to NORMAL */
+    } else if (key == ESC) { /* ESC - go back to NORMAL */
       app->screen->panels[app->screen->current_panel].mode = NORMAL;
       noecho();
       curs_set(0);
@@ -232,7 +227,7 @@ ErrorType HandleNormalMode(AppData* app, int key) {
       curs_set(0);
       refresh();
       return status;
-    } else if (key == 27) { /* ESC - go back to INSERT */
+    } else if (key == ESC) { /* ESC - go back to INSERT */
       app->screen->panels[app->screen->current_panel].mode = INSERT;
       noecho();
       curs_set(1);
@@ -246,10 +241,8 @@ ErrorType HandleNormalMode(AppData* app, int key) {
           AddNote(app->notes, input_buffer, true);
         else
           AddNote(app->notes, input_buffer, false);
-      } else {
-        /* Cancel commit - select last note on the list */
+      } else
         app->notes->current = app->notes->tail;
-      }
       input_len = 0;
       input_cursor_pos = 0;
       input_buffer[0] = '\0';
