@@ -145,8 +145,12 @@ void InputCursorLeft(AppData* app) {
 }
 
 void InputCursorRight(AppData* app) {
-  (void)app;
-  if (input_cursor_pos < input_len) input_cursor_pos++;
+  int mode = app->screen->panels[app->screen->current_panel].mode;
+  if (mode == INSERT) {
+    if (input_cursor_pos < input_len) input_cursor_pos++;
+  } else {
+    if (input_len > 0 && input_cursor_pos < input_len - 1) input_cursor_pos++;
+  }
 }
 
 void InputBackspace(AppData* app) {
@@ -203,6 +207,9 @@ void InputVisualDelete(AppData* app) {
     curs_set(1);
     refresh();
   } else {
+    if (input_cursor_pos > 0 && input_cursor_pos > input_len - 1) {
+      input_cursor_pos = (input_len > 0) ? input_len - 1 : 0;
+    }
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     noecho();
     curs_set(0);
@@ -243,6 +250,9 @@ void InputCommit(AppData* app) {
 void InputESC(AppData* app) {
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   if (current_mode == INSERT) {
+    if (input_cursor_pos > 0 && input_cursor_pos > input_len - 1) {
+      input_cursor_pos = (input_len > 0) ? input_len - 1 : 0;
+    }
     if (input_len == 0) {
       input_len = 0;
       input_cursor_pos = 0;
