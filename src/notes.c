@@ -175,8 +175,8 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
 
   /* Show input buffer if there's content OR if in INSERT mode (show cursor) */
   if ((input_len > 0 || mode == INSERT) && y < start_y + height - 1) {
-    /* Default prefix for input (task format) */
-    const char* prefix = "[ ] ";
+    /* Default prefix for input (task or note format) */
+    const char* prefix = input && input->is_task ? "[ ] " : "- ";
     int prefix_len = strlen(prefix);
 
     /* Mode-specific cursor indicators */

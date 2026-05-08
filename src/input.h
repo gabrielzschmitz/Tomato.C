@@ -27,6 +27,7 @@ typedef struct InputState {
   char buffer[256];
   int len;
   int cursor;
+  bool is_task;  /* true for task [ ], false for note - */
   struct {
     int start;
     int end;
@@ -127,6 +128,5 @@ void AddNewNote(AppData* app); /* Add note with - prefix */
 /* Popup navigation wrappers */
 void ChangeSelectedItemLeft(AppData* app);
 void ChangeSelectedItemRight(AppData* app);
-void ExecuteMenuActionFromKeybind(AppData* app);
 
 #endif /* INPUT_H_ */

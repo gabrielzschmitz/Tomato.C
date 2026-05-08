@@ -137,8 +137,7 @@ ErrorType HandleNormalMode(AppData* app, int key) {
   }
 
   /* If input is empty in NORMAL mode, fall through to DEFAULT handling */
-  if (!app->block_input)
-    ProcessKeyInput(app, key);
+  if (!app->block_input) ProcessKeyInput(app, key);
 
   return status;
 }
@@ -164,6 +163,7 @@ InputState* InputStateCreate(void) {
     s->buffer[0] = '\0';
     s->len = 0;
     s->cursor = 0;
+    s->is_task = true;
     s->selection.start = 0;
     s->selection.end = 0;
   }
@@ -323,11 +323,12 @@ void InputCommit(AppData* app) {
   }
 
   input->buffer[input->len] = '\0';
-  AddNote(app->notes, input->buffer, true);
+  AddNote(app->notes, input->buffer, input->is_task);
   app->notes->current = app->notes->tail;
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
+  input->is_task = true;
   app->screen->panels[app->screen->current_panel].mode = DEFAULT;
   app->user_input = -1;
   app->last_input = -1;
@@ -622,15 +623,9 @@ void AddNewTask(AppData* app) {
     input->len = 0;
     input->cursor = 0;
     input->buffer[0] = '\0';
+    input->is_task = true;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
-
-  /* Show prompt */
-  echo();
-  curs_set(1);
-  mvprintw(LINES - 1, 0, "New Task: ");
-  clrtoeol();
-  refresh();
 }
 
 void AddNewNote(AppData* app) {
@@ -645,15 +640,9 @@ void AddNewNote(AppData* app) {
     input->len = 0;
     input->cursor = 0;
     input->buffer[0] = '\0';
+    input->is_task = false;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
-
-  /* Show prompt */
-  echo();
-  curs_set(1);
-  mvprintw(LINES - 1, 0, "New Note: ");
-  clrtoeol();
-  refresh();
 }
 
 void InputSwitchToInsertFromVisual(AppData* app) {
@@ -669,9 +658,8 @@ void ChangeSelectedItemLeft(AppData* app) {
   if (app->popup_dialog != NULL) {
     ChangeSelectedItem(&app->popup_dialog->menu, -1);
     flushinp();
-  } else {
+  } else
     SelectPreviousItem(app);
-  }
 }
 
 /* Wrapper for popup navigation - change selected item right */
@@ -679,17 +667,6 @@ void ChangeSelectedItemRight(AppData* app) {
   if (app->popup_dialog != NULL) {
     ChangeSelectedItem(&app->popup_dialog->menu, 1);
     flushinp();
-  } else {
+  } else
     SelectNextItem(app);
-  }
-}
-
-/* Wrapper for execute menu action - works in both popup and non-popup */
-void ExecuteMenuActionFromKeybind(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ExecuteMenuAction(app);
-    flushinp();
-  } else {
-    ExecuteMenuAction(app);
-  }
 }

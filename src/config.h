@@ -198,7 +198,7 @@ static const KeyFunction keys[] = {
   {'k', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
   {'l', SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
   {'h', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
-  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, SCENE_MAIN_MENU},
+  {ENTER, ExecuteMenuAction, DEFAULT, SCENE_MAIN_MENU},
 
   /* Popup navigation keys - DEFAULT mode, ALL_SCENES */
   {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
@@ -209,10 +209,10 @@ static const KeyFunction keys[] = {
   {'j', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
   {KEY_RIGHT, ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
   {'l', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
-  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
-  {KEY_ENTER, ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
-  {'\n', ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
-  {'\r', ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
+  {ENTER, ExecuteMenuAction, DEFAULT, ALL_SCENES},
+  {KEY_ENTER, ExecuteMenuAction, DEFAULT, ALL_SCENES},
+  {'\n', ExecuteMenuAction, DEFAULT, ALL_SCENES},
+  {'\r', ExecuteMenuAction, DEFAULT, ALL_SCENES},
 
   /* General keybindings */
   {' ', NextPanel, DEFAULT, ALL_SCENES},
