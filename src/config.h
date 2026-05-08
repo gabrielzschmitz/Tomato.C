@@ -136,9 +136,10 @@ static const char* SEPARATOR =
 static const int FPS = 120;
 
 /* Scene types bitmask for key binding filters */
-#define POMODORO_SCENES \
-  (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE | SCENE_MAIN_MENU)
-#define ALL_SCENES (POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
+#define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
+#define ALL_SCENES                                                \
+  (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | \
+   SCENE_CONTINUE)
 
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
@@ -188,17 +189,16 @@ static const KeyFunction keys[] = {
   {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
   {'a', AddNewTask, DEFAULT, SCENE_NOTES},
   {'A', AddNewNote, DEFAULT, SCENE_NOTES},
-  /* ENTER for NOTES toggling - before ALL_SCENES keys */
   {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
-  {KEY_DOWN, SelectNextItem, DEFAULT, POMODORO_SCENES},
-  {KEY_UP, SelectPreviousItem, DEFAULT, POMODORO_SCENES},
-  {KEY_RIGHT, SelectNextItem, DEFAULT, POMODORO_SCENES},
-  {KEY_LEFT, SelectPreviousItem, DEFAULT, POMODORO_SCENES},
-  {'j', SelectNextItem, DEFAULT, POMODORO_SCENES},
-  {'k', SelectPreviousItem, DEFAULT, POMODORO_SCENES},
-  {'l', SelectNextItem, DEFAULT, POMODORO_SCENES},
-  {'h', SelectPreviousItem, DEFAULT, POMODORO_SCENES},
-  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, POMODORO_SCENES},
+  {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
+  {KEY_UP, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
+  {KEY_RIGHT, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
+  {KEY_LEFT, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
+  {'j', SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
+  {'k', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
+  {'l', SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
+  {'h', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
+  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, SCENE_MAIN_MENU},
 
   /* Popup navigation keys - DEFAULT mode, ALL_SCENES */
   {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
