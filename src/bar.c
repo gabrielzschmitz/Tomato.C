@@ -472,14 +472,14 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   }
 
   int line = 0;
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  int col = (input && input->len > 0) ? input->cursor + 1 : 0;
+  int col = (input && (input->len > 0 || current_mode == INSERT)) ? input->cursor + 1 : 0;
   bool show_col = false;
 
   if (input && input->len > 0)
     show_col = true;
   else {
-    int current_mode = app->screen->panels[app->screen->current_panel].mode;
     if (current_mode == INSERT || current_mode == VISUAL) show_col = true;
   }
 
