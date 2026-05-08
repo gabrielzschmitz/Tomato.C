@@ -90,11 +90,12 @@ ErrorType HandleInputs(AppData* app) {
 int HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
 
-  /* When popup is active, use ALL_SCENES for key matching so keys bound to ALL_SCENES work */
+  /* When popup is active, only use keys bound to ALL_SCENES to avoid
+   * scene-specific keys (like ToggleTaskAtNotes) intercepting popup input */
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
   for (size_t i = 0; i < numKeyFunctions; i++) {
     if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
-        (keys[i].scene_types == ALL_SCENES || keys[i].scene_types & (1 << app->screen->panels[app->screen->current_panel].scene_history->present))) {
+        keys[i].scene_types == ALL_SCENES) {
       keys[i].action(app);
       return 1; /* handled */
     }
