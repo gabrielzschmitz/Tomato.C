@@ -18,10 +18,11 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
-  /* Only render quit popup if in NORMAL mode and no input active */
+  /* Only render quit popup if in DEFAULT mode */
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
-  if (current_mode == NORMAL && input_len == 0 &&
-      IsKeyAssignedToAction(app->user_input, QuitApp))
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  bool is_default_mode = (current_mode == DEFAULT) || (input && input->len == 0);
+  if (is_default_mode && IsKeyAssignedToAction(app->user_input, QuitApp))
     RenderQuitConfirmation(app);
 
   int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
@@ -143,17 +144,14 @@ ErrorType DrawScreen(AppData* app) {
             start_x = current_panel->position.x + 1;
             start_y = current_panel->position.y + 1;
           }
-          /* Pass input_buffer and mode if in INSERT or NORMAL mode with content */
-          const char* input_buf = NULL;
+          /* Pass input state and mode if in INSERT/NORMAL/VISUAL mode */
           int current_mode =
             app->screen->panels[app->screen->current_panel].mode;
-          if (current_mode == INSERT || current_mode == VISUAL ||
-              (current_mode == NORMAL && input_len > 0))
-            input_buf = input_buffer;
+          InputState* input = current_panel->input;
 
           RenderNotes(
             app->notes, start_x, start_y, current_panel->size.width - 2,
-            current_panel->size.height - start_y, input_buf, current_mode);
+            current_panel->size.height - start_y, input, current_mode);
         }
         if (ANIMATIONS) {
           if (DEBUG)
@@ -184,7 +182,7 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (app->popup_dialog != NULL && current_mode == NORMAL) {
+  if (app->popup_dialog != NULL && (current_mode == NORMAL || current_mode == DEFAULT)) {
     int current_scene =
         app->screen->panels[app->screen->current_panel].scene_history->present;
     if (app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)

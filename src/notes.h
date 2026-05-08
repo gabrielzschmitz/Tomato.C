@@ -6,6 +6,7 @@
 
 typedef struct AppData AppData;
 typedef struct NoteItem NoteItem;
+typedef struct InputState InputState;
 
 struct NoteItem {
   char* text;
@@ -51,8 +52,8 @@ void NoteDownApp(AppData* app);
 int GetSelectedNoteIndex(NotesData* notes);
 
 /* Render notes in a panel */
-/* If input_buffer is not NULL, it will be rendered at the end (for INSERT mode) */
+/* If input is not NULL, it will be rendered at the end (for INSERT/NORMAL/VISUAL modes) */
 void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
-                 int height, const char* input_buffer, int mode);
+                 int height, InputState* input, int mode);
 
 #endif /* NOTES_H_ */

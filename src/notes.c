@@ -143,11 +143,17 @@ void NoteDown(NotesData* notes) {
 
 /* Render notes in a panel */
 void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
-                 int height, const char* input_buffer, int mode) {
+                 int height, InputState* input, int mode) {
   if (notes == NULL) return;
 
   int y = start_y;
   NoteItem* item = notes->head;
+
+  /* Use InputState if available, otherwise use NULL for no input */
+  const char* input_buffer = input ? input->buffer : NULL;
+  int input_len = input ? input->len : 0;
+  int input_cursor_pos = input ? input->cursor : 0;
+  int visual_start = input ? input->selection.start : 0;
 
   while (item != NULL && y < start_y + height - 1) {
     bool is_selected = (item == notes->current);
@@ -169,8 +175,8 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
 
   /* Show input buffer if there's content OR if in INSERT mode (show cursor) */
   if ((input_len > 0 || mode == INSERT) && y < start_y + height - 1) {
-    /* Get the prefix based on input_mode_type */
-    const char* prefix = (input_mode_type == 0) ? "[ ] " : "- ";
+    /* Default prefix for input (task format) */
+    const char* prefix = "[ ] ";
     int prefix_len = strlen(prefix);
 
     /* Mode-specific cursor indicators */

@@ -73,6 +73,8 @@ ErrorType InitApp(AppData* app) {
   ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
   app->screen->panels[0].menu_index = MAIN_MENU_MENU;
   app->screen->panels[1].menu_index = -1;
+  app->screen->panels[1].input = InputStateCreate();
+  app->screen->panels[1].mode = DEFAULT;
   app->is_paused = false;
   app->popup_dialog = NULL;
 

@@ -267,6 +267,11 @@ void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   int color = COLOR_BLUE;
 
   switch (panel->mode) {
+    case DEFAULT:
+      mode = (char*)"DEFAULT";
+      icon = (char*)DEFAULT_MODE_ICONS[icon_type];
+      color = COLOR_MAGENTA;
+      break;
     case NORMAL:
       mode = (char*)"NORMAL";
       icon = (char*)NORMAL_MODE_ICONS[icon_type];
@@ -467,10 +472,11 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   }
 
   int line = 0;
-  int col = input_cursor_pos + 1; /* 1-indexed */
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  int col = (input && input->len > 0) ? input->cursor + 1 : 0;
   bool show_col = false;
 
-  if (input_len > 0)
+  if (input && input->len > 0)
     show_col = true;
   else {
     int current_mode = app->screen->panels[app->screen->current_panel].mode;

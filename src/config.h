@@ -52,6 +52,7 @@ static const char* HELP_ICONS[3] = {"", "⁉️", ""};
 static const char* CONTINUE_ICONS[3] = {"", "⏯️", ""};
 static const char* IDLE_ICONS[3] = {"", "🌙", ""};
 /* Input Icons */
+static const char* DEFAULT_MODE_ICONS[3] = {"", "🌐", ""};
 static const char* NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
 static const char* INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
 static const char* VISUAL_MODE_ICONS[3] = {"󰕢", "🔲", ""};
@@ -141,18 +142,18 @@ static const int FPS = 120;
 
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
-  /* NORMAL mode - editing keys (when input_len > 0) */
-  {'h', InputCursorLeft, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {'l', InputCursorRight, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {KEY_LEFT, InputCursorLeft, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {KEY_RIGHT, InputCursorRight, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {'x', InputDeleteChar, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {'i', SwitchToInsertMode, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {'v', SwitchToVisualMode, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {ESC, InputESC, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {ENTER, InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {'\r', InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
-  {KEY_ENTER, InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
+  /* NORMAL mode - editing keys (when Panel.input != NULL) */
+  {'h', InputCursorLeft, NORMAL, SCENE_NOTES},
+  {'l', InputCursorRight, NORMAL, SCENE_NOTES},
+  {KEY_LEFT, InputCursorLeft, NORMAL, SCENE_NOTES},
+  {KEY_RIGHT, InputCursorRight, NORMAL, SCENE_NOTES},
+  {'x', InputDeleteChar, NORMAL, SCENE_NOTES},
+  {ESC, InputESC, NORMAL, SCENE_NOTES},
+  {ENTER, InputCommit, NORMAL, SCENE_NOTES},
+  {'\r', InputCommit, NORMAL, SCENE_NOTES},
+  {KEY_ENTER, InputCommit, NORMAL, SCENE_NOTES},
+  {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
+  {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
 
   /* INSERT mode keys */
   {KEY_LEFT, InputCursorLeft, INSERT, SCENE_NOTES},
@@ -163,6 +164,7 @@ static const KeyFunction keys[] = {
   {'\r', InputCommit, INSERT, SCENE_NOTES},
   {KEY_ENTER, InputCommit, INSERT, SCENE_NOTES},
   {ESC, InputESC, INSERT, SCENE_NOTES},
+  {'v', SwitchToVisualMode, INSERT, SCENE_NOTES},
   {-1, InputInsertChar, INSERT, SCENE_NOTES}, /* printable chars */
 
   /* VISUAL mode keys */
@@ -171,43 +173,54 @@ static const KeyFunction keys[] = {
   {KEY_LEFT, InputCursorLeft, VISUAL, SCENE_NOTES},
   {KEY_RIGHT, InputCursorRight, VISUAL, SCENE_NOTES},
   {'x', InputVisualDelete, VISUAL, SCENE_NOTES},
-  {'a', InputSwitchToInsertFromVisual, VISUAL, SCENE_NOTES},
   {ENTER, InputCommit, VISUAL, SCENE_NOTES},
   {'\r', InputCommit, VISUAL, SCENE_NOTES},
   {KEY_ENTER, InputCommit, VISUAL, SCENE_NOTES},
   {ESC, InputESC, VISUAL, SCENE_NOTES},
-
-  /* Mode switching */
+  {'a', InputSwitchToInsertFromVisual, VISUAL, SCENE_NOTES},
   {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
-  {'v', SwitchToVisualMode, INSERT, SCENE_NOTES},
-  {ESC, InputESC, INSERT | VISUAL, SCENE_NOTES},
 
-  /* NORMAL mode - navigation keys (when input_len == 0) */
-  {'j', NoteDownApp, NORMAL, SCENE_NOTES},
-  {'k', NoteUpApp, NORMAL, SCENE_NOTES},
-  {KEY_DOWN, NoteDownApp, NORMAL, SCENE_NOTES},
-  {KEY_UP, NoteUpApp, NORMAL, SCENE_NOTES},
-  {ENTER, ToggleTaskAtNotes, NORMAL, SCENE_NOTES},
-  {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
-  {'a', AddNewNote, NORMAL, SCENE_NOTES},
-  {'A', AddNewNoteItem, NORMAL, SCENE_NOTES},
+  /* Scene-specific keybindings - Before ALL_SCENES keys */
+  {'j', NoteDownApp, DEFAULT, SCENE_NOTES},
+  {'k', NoteUpApp, DEFAULT, SCENE_NOTES},
+  {KEY_DOWN, NoteDownApp, DEFAULT, SCENE_NOTES},
+  {KEY_UP, NoteUpApp, DEFAULT, SCENE_NOTES},
+  {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
+  {'a', AddNewTask, DEFAULT, SCENE_NOTES},
+  {'A', AddNewNote, DEFAULT, SCENE_NOTES},
+  /* ENTER for NOTES toggling - before ALL_SCENES keys */
+  {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
+  {KEY_DOWN, SelectNextItem, DEFAULT, POMODORO_SCENES},
+  {KEY_UP, SelectPreviousItem, DEFAULT, POMODORO_SCENES},
+  {KEY_RIGHT, SelectNextItem, DEFAULT, POMODORO_SCENES},
+  {KEY_LEFT, SelectPreviousItem, DEFAULT, POMODORO_SCENES},
+  {'j', SelectNextItem, DEFAULT, POMODORO_SCENES},
+  {'k', SelectPreviousItem, DEFAULT, POMODORO_SCENES},
+  {'l', SelectNextItem, DEFAULT, POMODORO_SCENES},
+  {'h', SelectPreviousItem, DEFAULT, POMODORO_SCENES},
+  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, POMODORO_SCENES},
 
-  /* General keybindings - only for NORMAL mode */
-  {' ', NextPanel, NORMAL, ALL_SCENES},
-  {KEY_DOWN, SelectNextItem, NORMAL, POMODORO_SCENES},
-  {KEY_UP, SelectPreviousItem, NORMAL, POMODORO_SCENES},
-  {KEY_RIGHT, SelectNextItem, NORMAL, POMODORO_SCENES},
-  {KEY_LEFT, SelectPreviousItem, NORMAL, POMODORO_SCENES},
-  {'j', SelectNextItem, NORMAL, POMODORO_SCENES},
-  {'k', SelectPreviousItem, NORMAL, POMODORO_SCENES},
-  {'l', SelectNextItem, NORMAL, POMODORO_SCENES},
-  {'h', SelectPreviousItem, NORMAL, POMODORO_SCENES},
-  {'s', SkipPomodoroStep, NORMAL, POMODORO_SCENES},
-  {'p', TogglePause, NORMAL, POMODORO_SCENES},
-  {CTRLR, OpenResetMenu, NORMAL, POMODORO_SCENES},
-  {'q', QuitApp, NORMAL, ALL_SCENES},
-  {ESC, QuitApp, NORMAL, ALL_SCENES},
-  {ENTER, ExecuteMenuAction, NORMAL, POMODORO_SCENES},
+  /* Popup navigation keys - DEFAULT mode, ALL_SCENES */
+  {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
+  {'k', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
+  {KEY_LEFT, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
+  {'h', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
+  {KEY_DOWN, ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
+  {'j', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
+  {KEY_RIGHT, ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
+  {'l', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
+  {ENTER, ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
+  {KEY_ENTER, ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
+  {'\n', ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
+  {'\r', ExecuteMenuActionFromKeybind, DEFAULT, ALL_SCENES},
+
+  /* General keybindings */
+  {' ', NextPanel, DEFAULT, ALL_SCENES},
+  {'s', SkipPomodoroStep, DEFAULT, POMODORO_SCENES},
+  {'p', TogglePause, DEFAULT, POMODORO_SCENES},
+  {CTRLR, OpenResetMenu, DEFAULT, POMODORO_SCENES},
+  {'q', QuitApp, DEFAULT, ALL_SCENES},
+  {ESC, QuitApp, DEFAULT, ALL_SCENES},
 };
 
 #endif /* CONFIG_H_ */

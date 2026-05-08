@@ -2,6 +2,7 @@
 #define INPUT_H_
 
 #include <ncurses.h>
+#include <stdbool.h>
 
 #include "error.h"
 #include "tomato.h"
@@ -21,12 +22,32 @@
 #define CTRLW 23
 #define CTRLT 20
 
+/* Input state for text input (vim-like modes) */
+typedef struct InputState {
+  char buffer[256];
+  int len;
+  int cursor;
+  struct {
+    int start;
+    int end;
+  } selection;
+} InputState;
+
+/* InputState management */
+InputState* InputStateCreate(void);
+void InputStateDestroy(InputState** input);
+void InputStateClear(InputState* s);
+
+/* Centralized mode transition */
+void InputSetMode(Panel* panel, InputMode mode);
+
 /* Function to process key input */
 void ProcessKeyInput(AppData* app, int key);
 
 /* Handle user input and app state */
 ErrorType HandleInputs(AppData* app);
 
+ErrorType HandleDefaultMode(AppData* app, int key);
 ErrorType HandleNormalMode(AppData* app, int key);
 ErrorType HandleInsertMode(AppData* app, int key);
 ErrorType HandleVisualMode(AppData* app, int key);
@@ -56,9 +77,6 @@ void SelectPreviousItem(AppData* app);
 
 /* Toggle pause */
 void TogglePause(AppData* app);
-
-/* Change the input mode */
-void ChangeMode(AppData* app);
 
 /* Vim-like mode switching */
 void SwitchToInsertMode(AppData* app); /* 'i' key */
@@ -103,15 +121,12 @@ void NoteDownApp(AppData* app);
 void NoteUpApp(AppData* app);
 void ToggleTaskAtNotes(AppData* app);
 void DeleteNoteAtNotes(AppData* app);
-void AddNewNote(AppData* app);     /* Add task with [ ] prefix */
-void AddNewNoteItem(AppData* app); /* Add note with - prefix */
+void AddNewTask(AppData* app); /* Add task with [ ] prefix */
+void AddNewNote(AppData* app); /* Add note with - prefix */
 
-/* Input buffer for INSERT mode (accessible from other files) */
-extern char input_buffer[];
-extern int input_len; /* Actual length of input */
-extern int
-  input_cursor_pos;      /* Cursor position in input buffer (0 to input_len) */
-extern int visual_start; /* Start position for VISUAL mode selection */
-extern int input_mode_type; /* 0 = task, 1 = note */
+/* Popup navigation wrappers */
+void ChangeSelectedItemLeft(AppData* app);
+void ChangeSelectedItemRight(AppData* app);
+void ExecuteMenuActionFromKeybind(AppData* app);
 
 #endif /* INPUT_H_ */

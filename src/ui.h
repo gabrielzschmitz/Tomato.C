@@ -18,6 +18,7 @@ typedef struct FloatingDialog FloatingDialog;
 
 /* Forward declaration of AppData */
 typedef struct AppData AppData;
+typedef struct InputState InputState;
 /* Define a type for menu item action functions */
 typedef void (*MenuAction)(AppData* app);
 
@@ -70,6 +71,7 @@ struct Panel {
   int mode;               /* Mode or state of the panel */
   int menu_index;         /* Menu index of the current panel */
   bool visible;           /* Visibility status of the panel */
+  InputState* input;      /* Text input state (NULL = DEFAULT mode) */
 };
 
 /* Structure for managing the screen and its panels */

@@ -50,7 +50,7 @@ void FreeScreen(Screen* screen) {
 Panel CreatePanel(Dimensions size, Vector2D position) {
   Panel panel;
 
-  panel.mode = NORMAL;
+  panel.mode = DEFAULT;
   panel.size = size;
   panel.visible = true;
   panel.position = position;
