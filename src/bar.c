@@ -474,7 +474,9 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   int line = 0;
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  int col = (input && (input->len > 0 || current_mode == INSERT)) ? input->cursor + 1 : 0;
+  int col = (input && (input->len > 0 || current_mode == INSERT))
+              ? input->cursor + 1
+              : 0;
   bool show_col = false;
 
   if (input && input->len > 0)
@@ -484,17 +486,20 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   }
 
   if (app->notes != NULL) {
-    if (app->notes->current == NULL) {
-      line = app->notes->count + 1;
-    } else {
-      NoteItem* item = app->notes->head;
-      line = 1;
-      while (item != NULL) {
-        if (item == app->notes->current) break;
-        line++;
-        item = item->next;
+    if (app->notes->count > 0) {
+      if (app->notes->current == NULL) {
+        line = app->notes->count + 1;
+      } else {
+        NoteItem* item = app->notes->head;
+        line = 1;
+        while (item != NULL) {
+          if (item == app->notes->current) break;
+          line++;
+          item = item->next;
+        }
       }
-    }
+    } else if (current_mode == INSERT)
+      line = 1;
   }
 
   int required_length;
