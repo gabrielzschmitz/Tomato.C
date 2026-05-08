@@ -46,6 +46,7 @@ typedef enum {
   NORMAL = 1 << 0,
   INSERT = 1 << 1,
   VISUAL = 1 << 2,
+  NORMAL_WITH_INPUT = 1 << 3,
 } InputMode;
 
 /* Defining the PomodoroConfig struct */

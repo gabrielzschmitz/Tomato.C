@@ -193,6 +193,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
         (visual_start < input_cursor_pos) ? visual_start : input_cursor_pos;
       int end_sel =
         (visual_start < input_cursor_pos) ? input_cursor_pos : visual_start;
+      end_sel++;
       /* Show prefix first */
       mvprintw(y, start_x, "%s", prefix);
       for (int i = 0; i < input_len; i++) {

@@ -17,11 +17,16 @@ void ProcessKeyInput(AppData* app, int key) {
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   int current_scene =
     app->screen->panels[app->screen->current_panel].scene_history->present;
+  int effective_mode = current_mode;
+
+  /* When in NORMAL mode with input, use NORMAL_WITH_INPUT for key matching */
+  if (current_mode == NORMAL && input_len > 0)
+    effective_mode = NORMAL_WITH_INPUT;
 
   /* Handle printable characters in INSERT mode via special entry */
-  if (current_mode == INSERT && key >= ' ' && key <= '~') {
+  if (effective_mode == INSERT && key >= ' ' && key <= '~') {
     for (size_t i = 0; i < numKeyFunctions; i++) {
-      if (keys[i].key == -1 && (keys[i].modes & current_mode) &&
+      if (keys[i].key == -1 && (keys[i].modes & effective_mode) &&
           (keys[i].scene_types & (1 << current_scene))) {
         keys[i].action(app);
         return;
@@ -31,7 +36,7 @@ void ProcessKeyInput(AppData* app, int key) {
 
   /* Normal lookup */
   for (size_t i = 0; i < numKeyFunctions; i++) {
-    if (keys[i].key == key && (keys[i].modes & current_mode) &&
+    if (keys[i].key == key && (keys[i].modes & effective_mode) &&
         (keys[i].scene_types & (1 << current_scene))) {
       keys[i].action(app);
       return;
@@ -97,12 +102,6 @@ ErrorType HandleNormalMode(AppData* app, int key) {
 
   /* Handle input buffer editing if there's content */
   if (input_len > 0) {
-    /* Handle ENTER to commit note */
-    if (key == ENTER || key == '\r' || key == KEY_ENTER) {
-      InputCommit(app);
-      return status;
-    }
-    /* Use keys[] for other editing keys (InputCursorLeft, etc.) */
     ProcessKeyInput(app, key);
     return status;
   }
@@ -170,6 +169,14 @@ void InputDeleteChar(AppData* app) {
     input_buffer[input_len] = '\0';
     if (input_cursor_pos > input_len) input_cursor_pos = input_len;
   }
+  if (input_len == 0) {
+    input_cursor_pos = 0;
+    input_buffer[0] = '\0';
+    app->screen->panels[app->screen->current_panel].mode = INSERT;
+    echo();
+    curs_set(1);
+    refresh();
+  }
 }
 
 void InputVisualDelete(AppData* app) {
@@ -177,6 +184,7 @@ void InputVisualDelete(AppData* app) {
     (visual_start < input_cursor_pos) ? visual_start : input_cursor_pos;
   int end_sel =
     (visual_start < input_cursor_pos) ? input_cursor_pos : visual_start;
+  end_sel++;
   int sel_len = end_sel - start_sel;
   if (sel_len > 0 && start_sel < input_len) {
     for (int i = start_sel; i < input_len - sel_len; i++)
@@ -186,10 +194,20 @@ void InputVisualDelete(AppData* app) {
     input_cursor_pos = start_sel;
     visual_start = start_sel;
   }
-  app->screen->panels[app->screen->current_panel].mode = NORMAL;
-  noecho();
-  curs_set(0);
-  refresh();
+  if (input_len == 0) {
+    input_len = 0;
+    input_cursor_pos = 0;
+    input_buffer[0] = '\0';
+    app->screen->panels[app->screen->current_panel].mode = INSERT;
+    echo();
+    curs_set(1);
+    refresh();
+  } else {
+    app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    noecho();
+    curs_set(0);
+    refresh();
+  }
 }
 
 void InputCommit(AppData* app) {
@@ -224,11 +242,34 @@ void InputCommit(AppData* app) {
 
 void InputESC(AppData* app) {
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
-  if (current_mode == INSERT || current_mode == VISUAL) {
+  if (current_mode == INSERT) {
+    if (input_len == 0) {
+      input_len = 0;
+      input_cursor_pos = 0;
+      input_buffer[0] = '\0';
+      app->notes->current = app->notes->tail;
+    }
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     noecho();
     curs_set(0);
-    /* Select last note when cancelling */
+    app->user_input = -1;
+    app->last_input = -1;
+  } else if (current_mode == VISUAL) {
+    /* Switch to NORMAL, select last note */
+    app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    noecho();
+    curs_set(0);
+    app->notes->current = app->notes->tail;
+    app->user_input = -1;
+    app->last_input = -1;
+    move(LINES - 1, 0);
+    clrtoeol();
+    refresh();
+  } else if (current_mode == NORMAL) {
+    /* Clear input state, select last note */
+    input_len = 0;
+    input_cursor_pos = 0;
+    input_buffer[0] = '\0';
     app->notes->current = app->notes->tail;
     app->user_input = -1;
     app->last_input = -1;
@@ -236,7 +277,6 @@ void InputESC(AppData* app) {
     clrtoeol();
     refresh();
   }
-  /* ESC in NORMAL mode does nothing */
 }
 
 void InputInsertChar(AppData* app) {
@@ -312,6 +352,7 @@ void SwitchToInsertMode(AppData* app) {
 void SwitchToVisualMode(AppData* app) {
   if (app->popup_dialog != NULL) return;
   app->screen->panels[app->screen->current_panel].mode = VISUAL;
+  visual_start = input_cursor_pos;
 }
 
 /* Switch to NORMAL mode (ESC key) */
@@ -463,10 +504,7 @@ void ExecuteMenuAction(AppData* app) {
 
 /* Notes keybinding functions */
 void ToggleTaskAtNotes(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ExecuteMenuAction(app);
-    return;
-  }
+  if (app->popup_dialog != NULL) return;
   ToggleTask(app->notes);
 }
 

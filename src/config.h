@@ -1,6 +1,8 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <ncurses.h>
+
 #include "input.h"
 
 /* Key function struct */
@@ -135,28 +137,22 @@ static const int FPS = 120;
 /* Scene types bitmask for key binding filters */
 #define POMODORO_SCENES \
   (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE | SCENE_MAIN_MENU)
-#define NOTES_SCENES (SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
-#define ALL_SCENES (POMODORO_SCENES | NOTES_SCENES)
+#define ALL_SCENES (POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | SCENE_CONTINUE)
 
 /* Struct to map a key to a function */
 static const KeyFunction keys[] = {
   /* NORMAL mode - editing keys (when input_len > 0) */
-  {'h', InputCursorLeft, NORMAL, SCENE_NOTES},
-  {'l', InputCursorRight, NORMAL, SCENE_NOTES},
-  {'x', InputDeleteChar, NORMAL, SCENE_NOTES},
-  {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
-  {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
-  {ESC, InputESC, NORMAL, SCENE_NOTES},
-
-  /* NORMAL mode - navigation keys (when input_len == 0) */
-  {'j', NoteDownApp, NORMAL, SCENE_NOTES},
-  {'k', NoteUpApp, NORMAL, SCENE_NOTES},
-  {KEY_DOWN, NoteDownApp, NORMAL, SCENE_NOTES},
-  {KEY_UP, NoteUpApp, NORMAL, SCENE_NOTES},
-  {ENTER, ToggleTaskAtNotes, NORMAL, SCENE_NOTES},
-  {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
-  {'a', AddNewNote, NORMAL, SCENE_NOTES},
-  {'A', AddNewNoteItem, NORMAL, SCENE_NOTES},
+  {'h', InputCursorLeft, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {'l', InputCursorRight, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {KEY_LEFT, InputCursorLeft, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {KEY_RIGHT, InputCursorRight, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {'x', InputDeleteChar, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {'i', SwitchToInsertMode, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {'v', SwitchToVisualMode, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {ESC, InputESC, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {ENTER, InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {'\r', InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
+  {KEY_ENTER, InputCommit, NORMAL_WITH_INPUT, SCENE_NOTES},
 
   /* INSERT mode keys */
   {KEY_LEFT, InputCursorLeft, INSERT, SCENE_NOTES},
@@ -172,6 +168,8 @@ static const KeyFunction keys[] = {
   /* VISUAL mode keys */
   {'h', InputCursorLeft, VISUAL, SCENE_NOTES},
   {'l', InputCursorRight, VISUAL, SCENE_NOTES},
+  {KEY_LEFT, InputCursorLeft, VISUAL, SCENE_NOTES},
+  {KEY_RIGHT, InputCursorRight, VISUAL, SCENE_NOTES},
   {'x', InputVisualDelete, VISUAL, SCENE_NOTES},
   {'a', InputSwitchToInsertFromVisual, VISUAL, SCENE_NOTES},
   {ENTER, InputCommit, VISUAL, SCENE_NOTES},
@@ -183,6 +181,16 @@ static const KeyFunction keys[] = {
   {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
   {'v', SwitchToVisualMode, INSERT, SCENE_NOTES},
   {ESC, InputESC, INSERT | VISUAL, SCENE_NOTES},
+
+  /* NORMAL mode - navigation keys (when input_len == 0) */
+  {'j', NoteDownApp, NORMAL, SCENE_NOTES},
+  {'k', NoteUpApp, NORMAL, SCENE_NOTES},
+  {KEY_DOWN, NoteDownApp, NORMAL, SCENE_NOTES},
+  {KEY_UP, NoteUpApp, NORMAL, SCENE_NOTES},
+  {ENTER, ToggleTaskAtNotes, NORMAL, SCENE_NOTES},
+  {'d', DeleteNoteAtNotes, NORMAL, SCENE_NOTES},
+  {'a', AddNewNote, NORMAL, SCENE_NOTES},
+  {'A', AddNewNoteItem, NORMAL, SCENE_NOTES},
 
   /* General keybindings - only for NORMAL mode */
   {' ', NextPanel, NORMAL, ALL_SCENES},

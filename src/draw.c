@@ -18,9 +18,10 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
-  /* Only render quit popup if in NORMAL mode */
+  /* Only render quit popup if in NORMAL mode and no input active */
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
-  if (current_mode == NORMAL && IsKeyAssignedToAction(app->user_input, QuitApp))
+  if (current_mode == NORMAL && input_len == 0 &&
+      IsKeyAssignedToAction(app->user_input, QuitApp))
     RenderQuitConfirmation(app);
 
   int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
