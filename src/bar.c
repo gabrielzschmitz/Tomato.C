@@ -455,7 +455,7 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   (void)panel;
 
   module->fg_color = COLOR_BLACK;
-  module->bg_color = COLOR_CYAN;
+  module->bg_color = COLOR_GREEN;
 
   /* Only show in NOTES scene */
   int current_scene =
