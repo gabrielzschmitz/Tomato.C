@@ -6,6 +6,8 @@
 #include "config.h"
 #include "error.h"
 #include "input.h"
+#include "log.h"
+#include "notes.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -81,12 +83,17 @@ ErrorType InitApp(AppData* app) {
   app->notes = CreateNotesData();
   if (app->notes == NULL) return MALLOC_ERROR;
 
+  if (NOTEPAD_LOG) LoadNotes(NOTES_LOG, app->notes);
+
   /* Add some example notes */
-  if (DEBUG) {
-    AddNote(app->notes, "Buy groceries", true);
-    AddNote(app->notes, "Read a book", true);
-    AddNote(app->notes, "This is a note", false);
+  if (DEBUG && app->notes->count == 0) {
+    AddNote(app->notes, "Buy groceries", NOTE_UNDONE);
+    AddNote(app->notes, "Read a book", NOTE_DONE);
+    AddNote(app->notes, "This is a note", NOTE_PLAIN);
   }
+
+  if (app->notes->count > 0 && app->notes->current_id < 0)
+    app->notes->current_id = app->notes->items[0]->id;
 
   app->user_input = -1;
   app->last_input = -1;
@@ -224,6 +231,7 @@ ErrorType EndApp(AppData* app) {
   }
   FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
+  if (NOTEPAD_LOG) SaveNotes(NOTES_LOG, app->notes);
   FreeNotesData(app->notes);
   FreeScreen(app->screen);
   return NO_ERROR;

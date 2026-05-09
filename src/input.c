@@ -163,6 +163,7 @@ InputState* InputStateCreate(void) {
     s->buffer[0] = '\0';
     s->len = 0;
     s->cursor = 0;
+    s->max_len = sizeof(s->buffer) - 1;
     s->is_task = true;
     s->selection.start = 0;
     s->selection.end = 0;
@@ -310,9 +311,9 @@ void InputVisualDelete(AppData* app) {
 
 void InputCommit(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  /* Commit if there's text, otherwise cancel (select last note) */
   if (!input || input->len == 0) {
-    app->notes->current = app->notes->tail;
+    if (app->notes->count > 0 && app->notes->current_id < 0)
+      app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
     app->screen->panels[app->screen->current_panel].mode = DEFAULT;
     app->user_input = -1;
     app->last_input = -1;
@@ -323,8 +324,8 @@ void InputCommit(AppData* app) {
   }
 
   input->buffer[input->len] = '\0';
-  AddNote(app->notes, input->buffer, input->is_task);
-  app->notes->current = app->notes->tail;
+  NoteState state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
+  AddNote(app->notes, input->buffer, state);
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
@@ -349,7 +350,8 @@ void InputESC(AppData* app) {
         input->cursor = 0;
         input->buffer[0] = '\0';
       }
-      app->notes->current = app->notes->tail;
+      if (app->notes->count > 0)
+        app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
       app->screen->panels[app->screen->current_panel].mode = DEFAULT;
     } else
       app->screen->panels[app->screen->current_panel].mode = NORMAL;
@@ -358,25 +360,21 @@ void InputESC(AppData* app) {
     app->user_input = -1;
     app->last_input = -1;
   } else if (current_mode == VISUAL) {
-    /* Switch to NORMAL, select last note */
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     noecho();
     curs_set(0);
-    app->notes->current = app->notes->tail;
     app->user_input = -1;
     app->last_input = -1;
     move(LINES - 1, 0);
     clrtoeol();
     refresh();
   } else if (current_mode == NORMAL) {
-    /* Clear input state, select last note */
     if (input) {
       input->len = 0;
       input->cursor = 0;
       input->buffer[0] = '\0';
     }
     app->screen->panels[app->screen->current_panel].mode = DEFAULT;
-    app->notes->current = app->notes->tail;
     app->user_input = -1;
     app->last_input = -1;
     move(LINES - 1, 0);
@@ -389,7 +387,7 @@ void InputInsertChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
   int key = app->user_input;
-  if (key >= ' ' && key <= '~' && input->len < (int)sizeof(input->buffer) - 1) {
+  if (key >= ' ' && key <= '~' && input->len < input->max_len) {
     for (int i = input->len; i > input->cursor; i--)
       input->buffer[i] = input->buffer[i - 1];
     input->buffer[input->cursor] = key;
@@ -613,11 +611,12 @@ void DeleteNoteAtNotes(AppData* app) {
 
 void AddNewTask(AppData* app) {
   if (app->popup_dialog != NULL) return;
+  if (app->notes->max_lines > 0 &&
+      app->notes->total_lines >= app->notes->max_lines)
+    return;
 
-  /* Clear selection - unselect all notes */
-  app->notes->current = NULL;
+  app->notes->current_id = -1;
 
-  /* Switch to INSERT mode - HandleInputs will handle the text input */
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (input) {
     input->len = 0;
@@ -630,11 +629,12 @@ void AddNewTask(AppData* app) {
 
 void AddNewNote(AppData* app) {
   if (app->popup_dialog != NULL) return;
+  if (app->notes->max_lines > 0 &&
+      app->notes->total_lines >= app->notes->max_lines)
+    return;
 
-  /* Clear selection - unselect all notes */
-  app->notes->current = NULL;
+  app->notes->current_id = -1;
 
-  /* Switch to INSERT mode - HandleInputs will handle the text input */
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (input) {
     input->len = 0;

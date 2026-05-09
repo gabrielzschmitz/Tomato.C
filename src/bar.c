@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "notes.h"
 #include "tomato.h"
 
 /* Function to create and allocate a StatusBarModule */
@@ -487,19 +488,54 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
 
   if (app->notes != NULL) {
     if (app->notes->count > 0) {
-      if (app->notes->current == NULL) {
-        line = app->notes->count + 1;
+      if (app->notes->current_id < 0) {
+        int input_lines = 0;
+        if (current_mode == INSERT && input && input->len > 0) {
+          const char* input_prefix = input->is_task ? "[ ] " : " - ";
+          int input_prefix_len = (int)strlen(input_prefix);
+          int input_wrap_width = app->notes->render_width - input_prefix_len;
+          input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
+        }
+        if (input_lines > 1)
+          line = app->notes->total_lines + input_lines;
+        else
+          line = app->notes->total_lines + 1;
       } else {
-        NoteItem* item = app->notes->head;
-        line = 1;
-        while (item != NULL) {
-          if (item == app->notes->current) break;
-          line++;
-          item = item->next;
+        line = 0;
+        for (int i = 0; i < app->notes->count; i++) {
+          const char* prefix;
+          switch (app->notes->items[i]->state) {
+            case NOTE_DONE:
+            case NOTE_UNDONE:
+              prefix = "[ ] ";
+              break;
+            case NOTE_PLAIN:
+            default:
+              prefix = " - ";
+              break;
+          }
+          int prefix_len = (int)strlen(prefix);
+          int item_wrap_width = app->notes->render_width - prefix_len;
+          if (app->notes->items[i]->id == app->notes->current_id) {
+            line++;
+            break;
+          }
+          line += GetNoteLines(app->notes->items[i], item_wrap_width);
         }
       }
-    } else if (current_mode == INSERT)
-      line = 1;
+    } else if (current_mode == INSERT) {
+      int input_lines = 0;
+      if (input && input->len > 0) {
+        const char* input_prefix = input->is_task ? "[ ] " : " - ";
+        int input_prefix_len = (int)strlen(input_prefix);
+        int input_wrap_width = app->notes->render_width - input_prefix_len;
+        input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
+      }
+      if (input_lines > 1)
+        line = input_lines;
+      else
+        line = 1;
+    }
   }
 
   int required_length;

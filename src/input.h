@@ -27,7 +27,8 @@ typedef struct InputState {
   char buffer[256];
   int len;
   int cursor;
-  bool is_task;  /* true for task [ ], false for note - */
+  int max_len;
+  bool is_task; /* true for task [ ], false for note - */
   struct {
     int start;
     int end;

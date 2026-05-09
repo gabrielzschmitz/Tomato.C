@@ -21,7 +21,8 @@ ErrorType DrawScreen(AppData* app) {
   /* Only render quit popup if in DEFAULT mode */
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  bool is_default_mode = (current_mode == DEFAULT) || (input && input->len == 0);
+  bool is_default_mode =
+    (current_mode == DEFAULT) || (input && input->len == 0);
   if (is_default_mode && IsKeyAssignedToAction(app->user_input, QuitApp))
     RenderQuitConfirmation(app);
 
@@ -30,12 +31,14 @@ ErrorType DrawScreen(AppData* app) {
   int current_scene =
     app->screen->panels[app->screen->current_panel].scene_history->present;
   if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep) &&
-      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step) &&
+      IsCurrentStepInList(steps, steps_count,
+                          app->pomodoro_data.current_step) &&
       (POMODORO_SCENES & (1 << current_scene)))
     RenderSkipConfirmation(app);
   if ((IsKeyAssignedToAction(app->last_input, ResetPomodoroStep) ||
        IsKeyAssignedToAction(app->last_input, ResetPomodoroCycle)) &&
-      IsCurrentStepInList(steps, steps_count, app->pomodoro_data.current_step) &&
+      IsCurrentStepInList(steps, steps_count,
+                          app->pomodoro_data.current_step) &&
       (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
 
@@ -124,7 +127,7 @@ ErrorType DrawScreen(AppData* app) {
         if (ANIMATIONS) animation = app->animations[NOTES];
         /* Render notes below the animation */
         if (app->notes != NULL) {
-          int start_x, start_y;
+          int start_x, start_y, end_x, end_y;
           if (animation != NULL) {
             int panel_center_x =
               current_panel->position.x + current_panel->size.width / 2;
@@ -137,21 +140,32 @@ ErrorType DrawScreen(AppData* app) {
               start_x = anim_x + blank_x;
               start_y = anim_y + blank_y;
             } else {
-              start_x = current_panel->position.x + animation->frame_width / 2;
-              start_y = current_panel->position.y + animation->frame_height / 2;
+              start_x = anim_x;
+              start_y = anim_y + animation->frame_height;
+            }
+            if (FindLastBlankInLastFrame(animation, &blank_x, &blank_y)) {
+              end_x = anim_x + blank_x;
+              end_y = anim_y + blank_y + 1;
+            } else {
+              end_x = anim_x + animation->frame_width;
+              end_y = anim_y + animation->frame_height;
             }
           } else {
             start_x = current_panel->position.x + 1;
             start_y = current_panel->position.y + 1;
+            end_x = current_panel->position.x + current_panel->size.width - 1;
+            end_y = current_panel->position.y + current_panel->size.height - 1;
           }
+          /* Ensure valid bounds */
+          if (end_x <= start_x) end_x = start_x + 1;
+          if (end_y <= start_y) end_y = start_y + 1;
           /* Pass input state and mode if in INSERT/NORMAL/VISUAL mode */
           int current_mode =
             app->screen->panels[app->screen->current_panel].mode;
           InputState* input = current_panel->input;
 
-          RenderNotes(
-            app->notes, start_x, start_y, current_panel->size.width - 2,
-            current_panel->size.height - start_y, input, current_mode);
+          RenderNotes(app->notes, start_x, start_y, end_x, end_y, input,
+                      current_mode);
         }
         if (ANIMATIONS) {
           if (DEBUG)
@@ -182,9 +196,10 @@ ErrorType DrawScreen(AppData* app) {
 
   RenderStatusBar(app->status_bar, app->screen);
 
-  if (app->popup_dialog != NULL && (current_mode == NORMAL || current_mode == DEFAULT)) {
+  if (app->popup_dialog != NULL &&
+      (current_mode == NORMAL || current_mode == DEFAULT)) {
     int current_scene =
-        app->screen->panels[app->screen->current_panel].scene_history->present;
+      app->screen->panels[app->screen->current_panel].scene_history->present;
     if (app->popup_dialog->menu.items[0].action == ForcefullyQuitApp)
       RenderQuitConfirmation(app);
     else if (app->popup_dialog->menu.items[0].action ==
@@ -192,8 +207,8 @@ ErrorType DrawScreen(AppData* app) {
              (POMODORO_SCENES & (1 << current_scene)))
       RenderSkipConfirmation(app);
     else if ((app->popup_dialog->menu.items[0].action == ResetPomodoroStep ||
-                app->popup_dialog->menu.items[0].action == ResetPomodoroCycle) &&
-               (POMODORO_SCENES & (1 << current_scene)))
+              app->popup_dialog->menu.items[0].action == ResetPomodoroCycle) &&
+             (POMODORO_SCENES & (1 << current_scene)))
       RenderResetMenu(app);
   }
 
