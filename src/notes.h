@@ -4,56 +4,47 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "gap_buffer.h"
+
 typedef struct AppData AppData;
 typedef struct NoteItem NoteItem;
 typedef struct InputState InputState;
 
+typedef enum { NOTE_UNDONE, NOTE_DONE, NOTE_PLAIN } NoteState;
+
+#define NOTES_INITIAL_CAPACITY 8
+
 struct NoteItem {
-  char* text;
-  bool done;
-  NoteItem* next;
-  NoteItem* prev;
+  GapBuffer* text;
+  NoteState state;
+  int id;
 };
 
 typedef struct {
-  NoteItem* head;
-  NoteItem* tail;
-  NoteItem* current;
+  NoteItem** items;
   int count;
-  bool insert_mode;
+  int capacity;
+  int current_id;
+  int max_lines;
+  int total_lines;
+  int render_width;
 } NotesData;
 
-/* Initialize notes data */
 NotesData* CreateNotesData(void);
-
-/* Free notes data */
 void FreeNotesData(NotesData* notes);
-
-/* Add a new note/task */
-void AddNote(NotesData* notes, const char* text, bool is_task);
-
-/* Delete the selected note/task */
+void SetNotesMaxLines(NotesData* notes, int max_lines);
+int GetNoteLines(NoteItem* item, int render_width);
+int GetNoteLinesFromText(const char* text, int render_width);
+void AddNote(NotesData* notes, const char* text, NoteState state);
 void DeleteNote(NotesData* notes);
-
-/* Toggle the done status of the selected task */
 void ToggleTask(NotesData* notes);
-
-/* Move selection up */
 void NoteUp(NotesData* notes);
-
-/* Move selection down */
 void NoteDown(NotesData* notes);
-
-/* Wrapper functions for keybinding (take AppData*) */
 void NoteUpApp(AppData* app);
 void NoteDownApp(AppData* app);
-
-/* Get the selected note index */
 int GetSelectedNoteIndex(NotesData* notes);
-
-/* Render notes in a panel */
-/* If input is not NULL, it will be rendered at the end (for INSERT/NORMAL/VISUAL modes) */
-void RenderNotes(NotesData* notes, int start_x, int start_y, int width,
-                 int height, InputState* input, int mode);
+void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
+                 int end_y, InputState* input, int mode);
+int WrapText(const char* text, int max_width, char*** out_lines);
 
 #endif /* NOTES_H_ */
