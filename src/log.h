@@ -18,4 +18,8 @@ ErrorType SetTimerLog(const char* path, const char* log);
 /* Format pomdoro data to log in timer log */
 char* FormatTimerLog(PomodoroData data, bool is_paused);
 
+/* Notes file logging */
+ErrorType SaveNotes(const char* path, const NotesData* notes);
+ErrorType LoadNotes(const char* path, NotesData* notes);
+
 #endif /* LOG_H_ */

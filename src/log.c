@@ -1,6 +1,7 @@
 #include "log.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -12,6 +13,8 @@
 
 #include "config.h"
 #include "error.h"
+#include "gap_buffer.h"
+#include "notes.h"
 #include "tomato.h"
 
 /* Function to create the timer log server */
@@ -274,4 +277,118 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
 
   free(remaining_time);
   return log_string;
+}
+
+ErrorType SaveNotes(const char* path, const NotesData* notes) {
+  if (!path || !notes) return NO_ERROR;
+
+  FILE* file = fopen(path, "w");
+  if (!file) return NO_ERROR;
+
+  for (int i = 0; i < notes->count; i++) {
+    NoteItem* item = notes->items[i];
+    char* text = GapBufferToString(item->text);
+    if (!text) continue;
+
+    char state_char;
+    switch (item->state) {
+      case NOTE_DONE:
+        state_char = 'X';
+        break;
+      case NOTE_UNDONE:
+        state_char = ' ';
+        break;
+      case NOTE_PLAIN:
+      default:
+        state_char = '-';
+        break;
+    }
+
+    fprintf(file, "%d|%c|", item->id, state_char);
+
+    for (size_t j = 0; j < strlen(text); j++) {
+      if (text[j] == '|')
+        fprintf(file, "\\|");
+      else
+        fputc(text[j], file);
+    }
+    fputc('\n', file);
+
+    free(text);
+  }
+
+  fclose(file);
+  return NO_ERROR;
+}
+
+static NoteState char_to_state(char c) {
+  switch (c) {
+    case 'X':
+      return NOTE_DONE;
+    case ' ':
+      return NOTE_UNDONE;
+    case '-':
+    default:
+      return NOTE_PLAIN;
+  }
+}
+
+ErrorType LoadNotes(const char* path, NotesData* notes) {
+  if (!path || !notes) return NO_ERROR;
+
+  FILE* file = fopen(path, "r");
+  if (!file) return NO_ERROR;
+
+  char line[1024];
+  while (fgets(line, sizeof(line), file)) {
+    size_t len = strlen(line);
+    if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
+
+    char* p = line;
+    char* end;
+    long id = strtol(p, &end, 10);
+    if (end == p || *end != '|') continue;
+    p = end + 1;
+
+    if (*p == '\0') continue;
+    NoteState state = char_to_state(*p);
+    p++;
+    if (*p != '|') continue;
+    p++;
+
+    char text[1024] = {0};
+    int ti = 0;
+    while (*p && ti < (int)sizeof(text) - 1) {
+      if (*p == '\\' && *(p + 1) == '|') {
+        text[ti++] = '|';
+        p += 2;
+      } else
+        text[ti++] = *p++;
+    }
+    text[ti] = '\0';
+
+    if (notes->count >= notes->capacity) {
+      notes->capacity *= 2;
+      NoteItem** new_items =
+        (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * notes->capacity);
+      if (new_items) notes->items = new_items;
+    }
+
+    NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
+    if (!item) continue;
+
+    item->id = (int)id;
+    item->state = state;
+    item->text = GapBufferCreate();
+    if (!item->text) {
+      free(item);
+      continue;
+    }
+    GapBufferSetText(item->text, text);
+
+    notes->items[notes->count++] = item;
+  }
+
+  fclose(file);
+  return NO_ERROR;
 }
