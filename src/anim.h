@@ -144,9 +144,10 @@ void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
 
 /* Finds the Rollfilm with the largest width and height among specified indices */
 int FindLargestRollfilm(Rollfilm* animations[], int* indices,
-                         int indices_count);
+                        int indices_count);
 
 /* Finds the first blank token position in the last frame */
 bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y);
+bool FindLastBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y);
 
 #endif /* ANIM_H */

@@ -590,3 +590,43 @@ bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
 
   return false;
 }
+
+/* Finds the last blank token position in the last frame */
+bool FindLastBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) return false;
+
+  Frame* last_frame = rollfilm->frames;
+  Frame* current = rollfilm->frames->next;
+  while (current != rollfilm->frames) {
+    if (current->id > last_frame->id) last_frame = current;
+    current = current->next;
+  }
+
+  int max_x = -1;
+  int max_y = -1;
+  FrameRow* row = last_frame->rows;
+  int y = 0;
+  while (row != NULL && y < rollfilm->frame_height) {
+    int x = 0;
+    FrameToken* token = row->tokens;
+    while (token != NULL) {
+      if (token->is_blank) {
+        int token_end_x = x + token->length;
+        if (token_end_x > max_x) max_x = token_end_x;
+        if (y > max_y) max_y = y;
+      }
+      x += token->length;
+      token = token->next;
+    }
+    y++;
+    row = row->next;
+  }
+
+  if (max_x >= 0) {
+    *out_x = max_x;
+    *out_y = max_y;
+    return true;
+  }
+
+  return false;
+}
