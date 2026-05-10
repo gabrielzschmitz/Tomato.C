@@ -324,12 +324,22 @@ void InputCommit(AppData* app) {
   }
 
   input->buffer[input->len] = '\0';
-  NoteState state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
+  NoteState state;
   if (app->notes->current_id >= 0) {
+    NoteItem* note = NULL;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == app->notes->current_id) {
+        note = app->notes->items[i];
+        break;
+      }
+    }
+    state = note ? note->state : (input->is_task ? NOTE_UNDONE : NOTE_PLAIN);
+  } else
+    state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
+  if (app->notes->current_id >= 0)
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
-  } else {
+  else
     AddNote(app->notes, input->buffer, state);
-  }
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
@@ -674,7 +684,7 @@ void EditCurrentNote(AppData* app) {
   strncpy(input->buffer, text, 255);
   input->buffer[255] = '\0';
   input->len = strlen(input->buffer);
-  input->cursor = input->len;
+  input->cursor = input->len > 0 ? input->len - 1 : 0;
   input->is_task = (note->state != NOTE_PLAIN);
 
   free(text);

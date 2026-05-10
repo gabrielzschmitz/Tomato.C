@@ -122,7 +122,8 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
   notes->total_lines += new_note_lines;
 }
 
-void UpdateNote(NotesData* notes, int note_id, const char* text, NoteState state) {
+void UpdateNote(NotesData* notes, int note_id, const char* text,
+                NoteState state) {
   if (!notes || !text || note_id < 0) return;
 
   NoteItem* note = find_by_id(notes, note_id);
@@ -324,10 +325,27 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
   notes->render_width = max_width;
   notes->total_lines = 0;
 
-for (int i = 0; i < notes->count; i++) {
-    bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) && notes->current_id >= 0);
+  bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) &&
+                     notes->current_id >= 0);
+
+  for (int i = 0; i < notes->count; i++) {
     bool is_selected = (notes->items[i]->id == notes->current_id);
-    if (is_editing && is_selected) continue;
+    if (is_editing && is_selected) {
+      const char* prefix;
+      switch (notes->items[i]->state) {
+        case NOTE_DONE:
+        case NOTE_UNDONE:
+          prefix = "[ ] ";
+          break;
+        case NOTE_PLAIN:
+        default:
+          prefix = " - ";
+      }
+      int prefix_len = (int)strlen(prefix);
+      int item_wrap_width = max_width - prefix_len;
+      notes->total_lines += GetNoteLines(notes->items[i], item_wrap_width);
+      continue;
+    }
 
     const char* prefix;
     switch (notes->items[i]->state) {
@@ -348,10 +366,129 @@ for (int i = 0; i < notes->count; i++) {
   int render_y = start_y;
 
   for (int i = 0; i < notes->count && render_y < end_y; i++) {
-    bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) && notes->current_id >= 0);
     bool is_selected = (notes->items[i]->id == notes->current_id);
 
-    if (is_editing && is_selected) continue;
+    if (is_editing && is_selected) {
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      const char* edit_prefix;
+      switch (notes->items[i]->state) {
+        case NOTE_DONE:
+          edit_prefix = "[X] ";
+          break;
+        case NOTE_UNDONE:
+          edit_prefix = "[ ] ";
+          break;
+        default:
+          edit_prefix = " - ";
+          break;
+      }
+      if (mode == INSERT) {
+        const char* prefix = edit_prefix;
+        if (input && input->len > 0) {
+          int prefix_len = (int)strlen(prefix);
+          int input_wrap_width = max_width - prefix_len;
+          char** wrapped_input = NULL;
+          int num_input_lines =
+            WrapText(input->buffer, input_wrap_width, &wrapped_input);
+          if (num_input_lines == 0) {
+            num_input_lines = 1;
+            wrapped_input = (char**)malloc(sizeof(char*));
+            if (wrapped_input) wrapped_input[0] = (char*)"";
+          }
+          for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
+            if (wl == 0) {
+              char buffer[max_width + 1];
+              int left_len =
+                (input->cursor <= input->len) ? input->cursor : input->len;
+              char left_part[left_len + 1];
+              strncpy(left_part, input->buffer, left_len);
+              left_part[left_len] = '\0';
+              const char* right_part = input->buffer + input->cursor;
+              snprintf(buffer, max_width + 1, "%s%s|%s", prefix, left_part,
+                       right_part);
+              mvprintw(render_y, start_x, "%s", buffer);
+            } else {
+              const char* line =
+                wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "";
+              mvprintw(render_y, start_x + strlen(prefix), "%s", line);
+            }
+            render_y++;
+          }
+          for (int wl = 0; wl < num_input_lines; wl++)
+            if (wrapped_input[wl]) free(wrapped_input[wl]);
+          free(wrapped_input);
+        } else {
+          mvprintw(render_y, start_x, "%s", INSERT_CURSOR_ICON);
+          render_y++;
+        }
+        SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+        continue;
+      }
+      if (input && input->len > 0 && (mode == NORMAL || mode == VISUAL)) {
+        if (input && input->len > 0) {
+          const char* prefix = edit_prefix;
+          int prefix_len = (int)strlen(prefix);
+          int input_wrap_width = max_width - prefix_len;
+
+          char** wrapped_input = NULL;
+          int num_input_lines =
+            WrapText(input->buffer, input_wrap_width, &wrapped_input);
+
+          if (num_input_lines == 0) {
+            num_input_lines = 1;
+            wrapped_input = (char**)malloc(sizeof(char*));
+            if (wrapped_input) wrapped_input[0] = (char*)"";
+          }
+
+          int sel_start = 0;
+          int sel_end = 0;
+          if (mode == VISUAL && input) {
+            sel_start = input->selection.start;
+            sel_end = input->cursor;
+            if (sel_start > sel_end) {
+              int tmp = sel_start;
+              sel_start = sel_end;
+              sel_end = tmp;
+            }
+          }
+
+          for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
+            int line_char_offset = wl * input_wrap_width;
+            int line_len = (int)strlen(
+              wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "");
+            if (wl == 0) mvprintw(render_y, start_x, "%s", prefix);
+            for (int ci = 0; ci < line_len; ci++) {
+              int abs_pos = line_char_offset + ci;
+              bool in_selection =
+                (mode == VISUAL && abs_pos >= sel_start && abs_pos <= sel_end);
+              bool is_cursor = (mode == NORMAL && abs_pos == input->cursor);
+              if (is_cursor || in_selection)
+                SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+              mvaddch(render_y, start_x + prefix_len + ci,
+                      wrapped_input[wl][ci] ? wrapped_input[wl][ci] : ' ');
+              if (is_cursor || in_selection)
+                SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+            }
+            int cursor_line_start = line_char_offset;
+            int cursor_line_end = line_char_offset + line_len - 1;
+            if (input->cursor > cursor_line_end && wl == num_input_lines - 1) {
+              bool is_cursor = (mode == NORMAL);
+              if (is_cursor) SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+              mvaddch(render_y, start_x + prefix_len + line_len, ' ');
+              if (is_cursor) SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+            }
+            render_y++;
+          }
+
+          for (int wl = 0; wl < num_input_lines; wl++)
+            if (wrapped_input[wl]) free(wrapped_input[wl]);
+          free(wrapped_input);
+        }
+      }
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      continue;
+    }
+
     char* text = GapBufferToString(notes->items[i]->text);
     if (!text) continue;
 
@@ -392,10 +529,9 @@ for (int i = 0; i < notes->count; i++) {
         snprintf(buffer, max_width + 1, "%s%s", prefix,
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
         mvprintw(render_y, start_x, "%s", buffer);
-      } else {
+      } else
         mvprintw(render_y, start_x + prefix_len, "%s",
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
-      }
       render_y++;
     }
     for (int wl = 0; wl < num_lines; wl++)
@@ -407,7 +543,11 @@ for (int i = 0; i < notes->count; i++) {
   int input_len = input ? input->len : 0;
   int input_cursor_pos = input ? input->cursor : 0;
 
-  if (render_y < end_y && (input_len > 0 || mode == INSERT)) {
+  bool input_already_rendered = is_editing && notes->current_id >= 0 &&
+                                ((input && input->len > 0) || mode == INSERT);
+
+  if (!input_already_rendered && render_y < end_y &&
+      (input_len > 0 || mode == INSERT)) {
     const char* prefix = input && input->is_task ? "[ ] " : " - ";
     int prefix_len = (int)strlen(prefix);
     int input_wrap_width = max_width - prefix_len;
@@ -469,9 +609,7 @@ for (int i = 0; i < notes->count; i++) {
         int line_char_offset = wl * input_wrap_width;
         int line_len = (int)strlen(
           wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "");
-        if (wl == 0) {
-          mvprintw(render_y, start_x, "%s", prefix);
-        }
+        if (wl == 0) mvprintw(render_y, start_x, "%s", prefix);
         for (int ci = 0; ci < line_len; ci++) {
           int abs_pos = line_char_offset + ci;
           bool in_selection =
