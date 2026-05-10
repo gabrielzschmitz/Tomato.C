@@ -48,8 +48,8 @@ extensible, terminal-based Pomodoro timer written in C.
   - [X] Add and remove tasks
   - [X] Move through tasks
   - [X] Toggle tasks on/off
-  - [ ] Edit tasks
-  - [ ] Manage breaklines and large lines
+  - [X] Manage breaklines and large lines
+  - [X] Edit tasks
   - [ ] Add and remove subtasks (max depth 1)
   - [ ] Undo and redo tasks
 

@@ -325,7 +325,11 @@ void InputCommit(AppData* app) {
 
   input->buffer[input->len] = '\0';
   NoteState state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
-  AddNote(app->notes, input->buffer, state);
+  if (app->notes->current_id >= 0) {
+    UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
+  } else {
+    AddNote(app->notes, input->buffer, state);
+  }
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
@@ -643,6 +647,38 @@ void AddNewNote(AppData* app) {
     input->is_task = false;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+void EditCurrentNote(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  if (app->notes == NULL || app->notes->current_id < 0) return;
+
+  NoteItem* note = NULL;
+  for (int i = 0; i < app->notes->count; i++) {
+    if (app->notes->items[i]->id == app->notes->current_id) {
+      note = app->notes->items[i];
+      break;
+    }
+  }
+  if (!note) return;
+
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (!input) return;
+
+  char* text = GapBufferToString(note->text);
+  if (!text) return;
+
+  input->len = 0;
+  input->cursor = 0;
+  input->buffer[0] = '\0';
+  strncpy(input->buffer, text, 255);
+  input->buffer[255] = '\0';
+  input->len = strlen(input->buffer);
+  input->cursor = input->len;
+  input->is_task = (note->state != NOTE_PLAIN);
+
+  free(text);
+  app->screen->panels[app->screen->current_panel].mode = NORMAL;
 }
 
 void InputSwitchToInsertFromVisual(AppData* app) {

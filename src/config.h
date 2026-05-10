@@ -191,6 +191,7 @@ static const KeyFunction keys[] = {
   {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
   {'a', AddNewTask, DEFAULT, SCENE_NOTES},
   {'A', AddNewNote, DEFAULT, SCENE_NOTES},
+  {'e', EditCurrentNote, DEFAULT, SCENE_NOTES},
   {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
   {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
   {KEY_UP, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},

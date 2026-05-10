@@ -36,6 +36,7 @@ void SetNotesMaxLines(NotesData* notes, int max_lines);
 int GetNoteLines(NoteItem* item, int render_width);
 int GetNoteLinesFromText(const char* text, int render_width);
 void AddNote(NotesData* notes, const char* text, NoteState state);
+void UpdateNote(NotesData* notes, int note_id, const char* text, NoteState state);
 void DeleteNote(NotesData* notes);
 void ToggleTask(NotesData* notes);
 void NoteUp(NotesData* notes);

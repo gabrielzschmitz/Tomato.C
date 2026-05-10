@@ -122,6 +122,24 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
   notes->total_lines += new_note_lines;
 }
 
+void UpdateNote(NotesData* notes, int note_id, const char* text, NoteState state) {
+  if (!notes || !text || note_id < 0) return;
+
+  NoteItem* note = find_by_id(notes, note_id);
+  if (!note) return;
+
+  int old_lines = GetNoteLines(note, notes->render_width);
+  int new_lines = GetNoteLinesFromText(text, notes->render_width);
+
+  if (notes->max_lines > 0 &&
+      notes->total_lines - old_lines + new_lines > notes->max_lines)
+    return;
+
+  GapBufferSetText(note->text, text);
+  note->state = state;
+  notes->total_lines = notes->total_lines - old_lines + new_lines;
+}
+
 void DeleteNote(NotesData* notes) {
   if (!notes || notes->current_id < 0) return;
 
@@ -306,7 +324,11 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
   notes->render_width = max_width;
   notes->total_lines = 0;
 
-  for (int i = 0; i < notes->count; i++) {
+for (int i = 0; i < notes->count; i++) {
+    bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) && notes->current_id >= 0);
+    bool is_selected = (notes->items[i]->id == notes->current_id);
+    if (is_editing && is_selected) continue;
+
     const char* prefix;
     switch (notes->items[i]->state) {
       case NOTE_DONE:
@@ -316,7 +338,6 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
       case NOTE_PLAIN:
       default:
         prefix = " - ";
-        break;
     }
     int prefix_len = (int)strlen(prefix);
     int item_wrap_width = max_width - prefix_len;
@@ -327,7 +348,10 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
   int render_y = start_y;
 
   for (int i = 0; i < notes->count && render_y < end_y; i++) {
+    bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) && notes->current_id >= 0);
     bool is_selected = (notes->items[i]->id == notes->current_id);
+
+    if (is_editing && is_selected) continue;
     char* text = GapBufferToString(notes->items[i]->text);
     if (!text) continue;
 

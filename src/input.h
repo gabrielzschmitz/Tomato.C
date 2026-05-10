@@ -125,6 +125,7 @@ void ToggleTaskAtNotes(AppData* app);
 void DeleteNoteAtNotes(AppData* app);
 void AddNewTask(AppData* app); /* Add task with [ ] prefix */
 void AddNewNote(AppData* app); /* Add note with - prefix */
+void EditCurrentNote(AppData* app); /* Edit selected node, NORMAL mode */
 
 /* Popup navigation wrappers */
 void ChangeSelectedItemLeft(AppData* app);
