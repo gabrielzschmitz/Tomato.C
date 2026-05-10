@@ -457,6 +457,14 @@ void SwitchToInsertMode(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
+/* Switch to INSERT mode at cursor+1 (vim 'a' key) */
+void SwitchToInsertModeAppend(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input && input->cursor < input->len) input->cursor++;
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
 /* Switch to VISUAL mode (vim 'v' key) */
 void SwitchToVisualMode(AppData* app) {
   if (app->popup_dialog != NULL) return;

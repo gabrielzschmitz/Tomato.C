@@ -156,6 +156,7 @@ static const KeyFunction keys[] = {
   {'\r', InputCommit, NORMAL, SCENE_NOTES},
   {KEY_ENTER, InputCommit, NORMAL, SCENE_NOTES},
   {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
+  {'a', SwitchToInsertModeAppend, NORMAL, SCENE_NOTES},
   {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
 
   /* INSERT mode keys */

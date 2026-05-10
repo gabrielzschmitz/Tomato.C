@@ -82,6 +82,7 @@ void TogglePause(AppData* app);
 
 /* Vim-like mode switching */
 void SwitchToInsertMode(AppData* app); /* 'i' key */
+void SwitchToInsertModeAppend(AppData* app); /* 'a' key */
 void SwitchToVisualMode(AppData* app); /* 'v' key */
 void SwitchToNormalMode(AppData* app); /* ESC key */
 
