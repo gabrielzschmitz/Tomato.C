@@ -44,7 +44,7 @@ static bool isIconsLine(const char* line);
 static bool isSeparatorLine(const char* line);
 static int handleUnicode(const char* src, char** dest);
 static int handleColor(const char* src, int* dest);
-/* Util functions */
+/* Utility */
 static int getWidestFrame(Rollfilm* rollfilm);
 /* Animation callbacks */
 static void updateAnimation(Rollfilm* rollfilm);
@@ -628,7 +628,7 @@ static int handleColor(const char* src, int* dest) {
 
 /**
  * ---------------------------------------------------------------------------
- * Util functions
+ * Utility 
  * ---------------------------------------------------------------------------
  */
 
