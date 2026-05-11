@@ -9,7 +9,10 @@ typedef enum {
   ERROR_LEVEL_CRITICAL /* Critical: failure requiring immediate attention */
 } ErrorLevel;
 
-/* Defining error handling enum */
+/**
+ * Enum for defining error types throughout the application.
+ * Categorized by subsystem and severity.
+ */
 typedef enum {
   NO_ERROR, /* No error, default state */
 
@@ -60,16 +63,12 @@ typedef enum {
   AUDIO_PLAYBACK_ERROR     /* Error: Failed to play audio */
 } ErrorType;
 
-/* Get a descriptive error message with its level */
-const char* GetErrorLevelMessage(ErrorLevel level);
-
-/* Get error level from error type */
-ErrorLevel GetErrorLevel(ErrorType error);
-
-/* Log error with descriptive message and level */
-const char* GetErrorMessage(ErrorType error);
-
-/* Log error with descriptive message */
+/**
+ * Log an error with context information.
+ * Writes to the error log file with timestamp and context.
+ * @param context String describing where the error occurred
+ * @param error The error type
+ */
 void LogError(const char* context, ErrorType error);
 
 #endif /* ERROR_H */
