@@ -8,39 +8,63 @@
 #include "notes.h"
 #include "tomato.h"
 
-/* Function to create and allocate a StatusBarModule */
-StatusBarModule* CreateStatusBarModule(StatusBarModulePosition position,
-                                       char* content, int fg_color,
-                                       int bg_color, ModuleUpdate update) {
-  StatusBarModule* new_widget =
-    (StatusBarModule*)malloc(sizeof(StatusBarModule));
-  if (new_widget == NULL) return NULL;
+/* PRIVATE BAR FUNCTIONS */
+/* StatusBar Lifecycle */
+static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
+                                              char* content, int fg_color,
+                                              int bg_color,
+                                              ModuleUpdate update);
+static void freeStatusBarModule(StatusBarModule* widget);
+static void freeStatusBarModules(StatusBarModule* module);
+/* Rendering/Updating */
+static void renderStatusBarModule(const StatusBarModule* module, int start_y,
+                                  int start_x, int max_width);
+static void updateStatusBarModule(AppData* app, StatusBarModule* module,
+                                  Panel* current_panel);
 
-  new_widget->fg_color = fg_color;
-  new_widget->bg_color = bg_color;
-  new_widget->update = update;
-  new_widget->position = position;
-  new_widget->next = NULL;
-  new_widget->id = 0;
+/**
+ * ---------------------------------------------------------------------------
+ * StatusBar Lifecycle
+ * ---------------------------------------------------------------------------
+ */
 
-  if (content != NULL) {
-    new_widget->content_length = strlen(content);
-    new_widget->content = (char*)malloc(new_widget->content_length + 1);
-    if (new_widget->content == NULL) {
-      free(new_widget);
-      return NULL;
-    }
-    strncpy(new_widget->content, content, new_widget->content_length);
-    new_widget->content[new_widget->content_length] = '\0';
-  } else {
-    new_widget->content = NULL;
-    new_widget->content_length = 0;
-  }
+/**
+ * Create and allocate a new StatusBar.
+ * @param position Position of the status bar (TOP or BOTTOM)
+ * @return Pointer to the created status bar, or NULL on allocation failure
+ */
+StatusBar* CreateStatusBar(StatusBarPosition position) {
+  StatusBar* bar = (StatusBar*)malloc(sizeof(StatusBar));
+  if (bar == NULL) return NULL;
 
-  return new_widget;
+  bar->position = position;
+  bar->left_modules = NULL;
+  bar->center_modules = NULL;
+  bar->right_modules = NULL;
+
+  return bar;
 }
 
-/* Function to add a StatusBarModule to the end of the linked list by values */
+/**
+ * Free a StatusBar and all its modules.
+ * @param bar Pointer to the status bar to free
+ */
+void FreeStatusBar(StatusBar* bar) {
+  if (bar == NULL) return;
+
+  freeStatusBarModules(bar->left_modules);
+  freeStatusBarModules(bar->center_modules);
+  freeStatusBarModules(bar->right_modules);
+
+  free(bar);
+}
+
+/**
+ * Add a new StatusBarModule to the end of the linked list by position.
+ * @param status_bar Pointer to the status bar
+ * @param position Position for the new module
+ * @param update Function pointer for the module update logic
+ */
 void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
                         ModuleUpdate update) {
   if (status_bar == NULL) return;
@@ -49,7 +73,7 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
   int default_fg_color = COLOR_WHITE;
   int default_bg_color = COLOR_BLACK;
 
-  StatusBarModule* new_widget = CreateStatusBarModule(
+  StatusBarModule* new_widget = createStatusBarModule(
     position, default_content, default_fg_color, default_bg_color, update);
   if (new_widget == NULL) return;
 
@@ -81,51 +105,81 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
   }
 }
 
-/* Function to free a StatusBarModule */
-void FreeStatusBarModule(StatusBarModule* widget) {
+/**
+ * Create and allocate a new StatusBarModule.
+ * @param position Position of the module within the bar
+ * @param content Initial content string
+ * @param fg_color Foreground color
+ * @param bg_color Background color
+ * @param update Function pointer for module updates
+ * @return Pointer to the created module, or NULL on allocation failure
+ */
+static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
+                                              char* content, int fg_color,
+                                              int bg_color,
+                                              ModuleUpdate update) {
+  StatusBarModule* new_widget =
+    (StatusBarModule*)malloc(sizeof(StatusBarModule));
+  if (new_widget == NULL) return NULL;
+
+  new_widget->fg_color = fg_color;
+  new_widget->bg_color = bg_color;
+  new_widget->update = update;
+  new_widget->position = position;
+  new_widget->next = NULL;
+  new_widget->id = 0;
+
+  if (content != NULL) {
+    new_widget->content_length = strlen(content);
+    new_widget->content = (char*)malloc(new_widget->content_length + 1);
+    if (new_widget->content == NULL) {
+      free(new_widget);
+      return NULL;
+    }
+    strncpy(new_widget->content, content, new_widget->content_length);
+    new_widget->content[new_widget->content_length] = '\0';
+  } else {
+    new_widget->content = NULL;
+    new_widget->content_length = 0;
+  }
+
+  return new_widget;
+}
+
+/**
+ * Free a single StatusBarModule and its content.
+ * @param widget Pointer to the module to free
+ */
+static void freeStatusBarModule(StatusBarModule* widget) {
   if (widget == NULL) return;
   if (widget->content != NULL) free(widget->content);
   free(widget);
 }
 
-/* Function to free a linked list of StatusBarModule modules */
-void FreeStatusBarModules(StatusBarModule* module) {
+/**
+ * Free a linked list of StatusBarModule modules.
+ * @param module Pointer to the first module in the list
+ */
+static void freeStatusBarModules(StatusBarModule* module) {
   StatusBarModule* current = module;
   StatusBarModule* next;
 
   while (current) {
     next = current->next;
-    FreeStatusBarModule(current);
+    freeStatusBarModule(current);
     current = next;
   }
 }
 
-/* Function to create and allocate a StatusBar */
-StatusBar* CreateStatusBar(StatusBarPosition position) {
-  StatusBar* bar = (StatusBar*)malloc(sizeof(StatusBar));
-  if (bar == NULL) return NULL;
-
-  bar->position = position;
-  bar->left_modules = NULL;
-  bar->center_modules = NULL;
-  bar->right_modules = NULL;
-
-  return bar;
-}
-
-/* Function to free a StatusBar */
-void FreeStatusBar(StatusBar* bar) {
-  if (bar == NULL) return;
-
-  FreeStatusBarModules(bar->left_modules);
-  FreeStatusBarModules(bar->center_modules);
-  FreeStatusBarModules(bar->right_modules);
-
-  free(bar);
-}
-
-void RenderStatusBarModule(const StatusBarModule* module, int start_y,
-                           int start_x, int max_width) {
+/**
+ * Render a single status bar module at the specified coordinates.
+ * @param module Pointer to the module to render
+ * @param start_y Starting y coordinate
+ * @param start_x Starting x coordinate
+ * @param max_width Maximum width for the module
+ */
+static void renderStatusBarModule(const StatusBarModule* module, int start_y,
+                                  int start_x, int max_width) {
   if (module == NULL || module->content == NULL) return;
 
   if (GetConfigIconType() == NERD_ICONS) {
@@ -153,6 +207,17 @@ void RenderStatusBarModule(const StatusBarModule* module, int start_y,
   }
 }
 
+/**
+ * ---------------------------------------------------------------------------
+ * Rendering/Updating
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render the entire status bar with all its modules.
+ * @param status_bar Pointer to the status bar to render
+ * @param screen Pointer to the screen for dimensions
+ */
 void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
   if (status_bar == NULL || screen == NULL) return;
 
@@ -167,7 +232,7 @@ void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
   StatusBarModule* current = status_bar->left_modules;
   int x_offset = 0;
   while (current != NULL) {
-    RenderStatusBarModule(current, bar_y, x_offset,
+    renderStatusBarModule(current, bar_y, x_offset,
                           bar_width - x_offset + STATUS_BAR_SPACING);
     x_offset += current->content_length + STATUS_BAR_SPACING;
     current = current->next;
@@ -184,7 +249,7 @@ void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
   x_offset = (bar_width - total_center_width) / 2;
   current = status_bar->center_modules;
   while (current != NULL) {
-    RenderStatusBarModule(current, bar_y, x_offset, bar_width - x_offset);
+    renderStatusBarModule(current, bar_y, x_offset, bar_width - x_offset);
     x_offset += current->content_length + STATUS_BAR_SPACING;
     current = current->next;
   }
@@ -199,20 +264,19 @@ void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
   x_offset = bar_width - total_right_width;
   current = status_bar->right_modules;
   while (current != NULL) {
-    RenderStatusBarModule(current, bar_y, x_offset + STATUS_BAR_SPACING,
+    renderStatusBarModule(current, bar_y, x_offset + STATUS_BAR_SPACING,
                           bar_width - x_offset + STATUS_BAR_SPACING);
     x_offset += current->content_length + STATUS_BAR_SPACING;
     current = current->next;
   }
 }
 
-/* Update status bar module */
-void UpdateStatusBarModule(AppData* app, StatusBarModule* module,
-                           Panel* current_panel) {
-  if (module && module->update) module->update(app, module, current_panel);
-}
-
-/* Update status bar */
+/**
+ * Update all modules in the status bar.
+ * @param app Pointer to the application data
+ * @param status_bar Pointer to the status bar to update
+ * @param current_panel Pointer to the current panel
+ */
 void UpdateStatusBar(AppData* app, StatusBar* status_bar,
                      Panel* current_panel) {
   if (status_bar == NULL || current_panel == NULL) return;
@@ -222,26 +286,48 @@ void UpdateStatusBar(AppData* app, StatusBar* status_bar,
   /* Update LEFT modules */
   current = status_bar->left_modules;
   while (current != NULL) {
-    UpdateStatusBarModule(app, current, current_panel);
+    updateStatusBarModule(app, current, current_panel);
     current = current->next;
   }
 
   /* Update CENTER modules */
   current = status_bar->center_modules;
   while (current != NULL) {
-    UpdateStatusBarModule(app, current, current_panel);
+    updateStatusBarModule(app, current, current_panel);
     current = current->next;
   }
 
   /* Update RIGHT modules */
   current = status_bar->right_modules;
   while (current != NULL) {
-    UpdateStatusBarModule(app, current, current_panel);
+    updateStatusBarModule(app, current, current_panel);
     current = current->next;
   }
 }
 
-/* Inverts the order of a linked list of StatusBarModule */
+/**
+ * Update a single status bar module with the latest app data.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param current_panel Pointer to the current panel
+ */
+static void updateStatusBarModule(AppData* app, StatusBarModule* module,
+                                  Panel* current_panel) {
+  if (module && module->update) module->update(app, module, current_panel);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Utility
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Inverts the order of a linked list of StatusBarModule.
+ * Used for right-aligned modules that need to be rendered in reverse order.
+ * @param module Pointer to the first module in the list
+ * @return Pointer to the new first module (was last)
+ */
 StatusBarModule* InvertModulesOrder(StatusBarModule* module) {
   StatusBarModule* prev = NULL;
   StatusBarModule* current = module;
@@ -257,7 +343,19 @@ StatusBarModule* InvertModulesOrder(StatusBarModule* module) {
   return prev; /* New head of the inverted list */
 }
 
-/* Input mode module to status bar */
+/**
+ * ---------------------------------------------------------------------------
+ * Module Callbacks
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Input mode module update function.
+ * Displays the current input mode (NORMAL, INSERT, VISUAL) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   (void)app;
   if (module == NULL || panel == NULL) return;
@@ -309,7 +407,13 @@ void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   module->content_length = UTF16CharCount(module->content);
 }
 
-/* Real-time module for status bar */
+/**
+ * Real-time module update function.
+ * Displays the current time in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   (void)app;
   if (module == NULL || panel == NULL) return;
@@ -334,7 +438,13 @@ void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   module->content_length = UTF16CharCount(module->content);
 }
 
-/* Current scene module for status bar */
+/**
+ * Scene module update function.
+ * Displays the current scene type (WORK, PAUSE, etc.) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
@@ -366,9 +476,15 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
       content = (char*)"LONG PAUSE";
       break;
     case NOTES:
-      icon = (char*)NOTES_ICONS[icon_type];
-      color = COLOR_YELLOW;
-      content = (char*)"NOTES";
+      if (app->notes && app->notes->is_move_mode) {
+        icon = (char*)NOTES_ICONS[icon_type];
+        color = COLOR_YELLOW;
+        content = (char*)"MOVE NOTE";
+      } else {
+        icon = (char*)NOTES_ICONS[icon_type];
+        color = COLOR_YELLOW;
+        content = (char*)"NOTES";
+      }
       break;
     case HELP:
       icon = (char*)HELP_ICONS[icon_type];
@@ -399,7 +515,13 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
   module->content_length = UTF16CharCount(module->content);
 }
 
-/* Current status module for status bar */
+/**
+ * Current status module update function.
+ * Displays the pomodoro status (time remaining, cycle count) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
 
@@ -455,7 +577,13 @@ void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel) {
   module->content_length = UTF16CharCount(module->content);
 }
 
-/* Line and Column module for NOTES scene */
+/**
+ * Line and column module update function for NOTES scene.
+ * Displays the current cursor line and column in the notes editor.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
   if (module == NULL || panel == NULL) return;
   (void)panel;
@@ -502,7 +630,8 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
         if (current_mode == INSERT && input && input->len > 0) {
           const char* input_prefix = input->is_task ? "[ ] " : " - ";
           int input_prefix_len = (int)strlen(input_prefix);
-          int input_wrap_width = app->notes->render_width - input_prefix_len - input_indent;
+          int input_wrap_width =
+            app->notes->render_width - input_prefix_len - input_indent;
           if (input_wrap_width <= 0) input_wrap_width = 1;
           input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
         }
@@ -550,7 +679,8 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
       if (input && input->len > 0) {
         const char* input_prefix = input->is_task ? "[ ] " : " - ";
         int input_prefix_len = (int)strlen(input_prefix);
-        int input_wrap_width = app->notes->render_width - input_prefix_len - input_indent;
+        int input_wrap_width =
+          app->notes->render_width - input_prefix_len - input_indent;
         if (input_wrap_width <= 0) input_wrap_width = 1;
         input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
       }

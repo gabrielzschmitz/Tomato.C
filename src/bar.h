@@ -3,14 +3,12 @@
 
 #include "ui.h"
 
-typedef struct AppData AppData;
-
 /* Bar specific structs */
-typedef struct StatusBarModule StatusBarModule;
+typedef struct AppData AppData;
 typedef struct StatusBar StatusBar;
+typedef struct StatusBarModule StatusBarModule;
 
-/* Function pointer type for updating a module */
-typedef void (*ModuleUpdate)(AppData*, struct StatusBarModule*, struct Panel*);
+typedef void (*ModuleUpdate)(AppData*, StatusBarModule*, Panel*);
 
 /* Enum for specifying the bar position */
 typedef enum { TOP, BOTTOM } StatusBarPosition;
@@ -18,78 +16,144 @@ typedef enum { TOP, BOTTOM } StatusBarPosition;
 /* Enum for specifying the module position within the bar */
 typedef enum { LEFT, CENTER, RIGHT } StatusBarModulePosition;
 
-/* Structure for defining a status bar module */
+/**
+ * Structure for defining a status bar module.
+ * A module represents a single segment of the status bar (e.g., time, mode).
+ */
 struct StatusBarModule {
   StatusBarModule* next;            /* Pointer to the next module in the list */
-  StatusBarModulePosition position; /* Position of the module within the bar */
+  StatusBarModulePosition position; /* Position of module within bar */
   char* content;                    /* Content to be displayed in the module */
-  int content_length;               /* Length of the content */
-  int fg_color;                     /* Foreground color of the module */
+  int content_length;               /* Length of the content string */
+  int fg_color;                     /* Foreground color of the module text */
   int bg_color;                     /* Background color of the module */
   int id;                           /* Unique identifier for the module */
   ModuleUpdate update; /* Function pointer for updating the module */
 };
 
-/* Structure for configuring the status bar */
+/**
+ * Structure for configuring the status bar.
+ * Contains position and linked lists of modules organized by position.
+ */
 struct StatusBar {
-  StatusBarPosition position; /* Position of the status bar (top or bottom) */
-  StatusBarModule*
-    left_modules; /* Linked list of modules positioned on the left */
-  StatusBarModule*
-    center_modules; /* Linked list of modules positioned in the center */
-  StatusBarModule*
-    right_modules; /* Linked list of modules positioned on the right */
+  StatusBarPosition position; /* Position of the status bar (TOP or BOTTOM) */
+  StatusBarModule* left_modules;   /* List of modules positioned on left */
+  StatusBarModule* center_modules; /* List of modules on center */
+  StatusBarModule* right_modules;  /* List of modules on right */
 };
 
-/* Function to create and allocate a StatusBarModule */
-StatusBarModule* CreateStatusBarModule(StatusBarModulePosition position,
-                                       char* content, int fg_color,
-                                       int bg_color, ModuleUpdate update);
+/**
+ * ---------------------------------------------------------------------------
+ * StatusBar Lifecycle
+ * ---------------------------------------------------------------------------
+ */
 
-/* Function to add a StatusBarModule to the end of the linked list by values */
+/**
+ * Create and allocate a new StatusBar.
+ * @param position Position of the status bar (TOP or BOTTOM)
+ * @return Pointer to the created status bar, or NULL on allocation failure
+ */
+StatusBar* CreateStatusBar(StatusBarPosition position);
+
+/**
+ * Free a StatusBar and all its modules.
+ * @param bar Pointer to the status bar to free
+ */
+void FreeStatusBar(StatusBar* bar);
+
+/**
+ * Add a new StatusBarModule to the end of the linked list by position.
+ * @param status_bar Pointer to the status bar
+ * @param position Position for the new module
+ * @param update Function pointer for the module update logic
+ */
 void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
                         ModuleUpdate update);
 
-/* Function to free a StatusBarModule */
-void FreeStatusBarModule(StatusBarModule* widget);
+/**
+ * ---------------------------------------------------------------------------
+ * Rendering/Updating
+ * ---------------------------------------------------------------------------
+ */
 
-/* Function to free a linked list of StatusBarModule modules */
-void FreeStatusBarModules(StatusBarModule* module);
-
-/* Function to create and allocate a StatusBar */
-StatusBar* CreateStatusBar(StatusBarPosition position);
-
-/* Function to free a StatusBar */
-void FreeStatusBar(StatusBar* bar);
-
+/**
+ * Render the entire status bar with all its modules.
+ * @param status_bar Pointer to the status bar to render
+ * @param screen Pointer to the screen for dimensions
+ */
 void RenderStatusBar(const StatusBar* status_bar, const Screen* screen);
 
-void RenderStatusBarModule(const StatusBarModule* module, int start_y,
-                           int start_x, int max_width);
-
-/* Update status bar module */
-void UpdateStatusBarModule(AppData* app, StatusBarModule* module,
-                           Panel* current_panel);
-
-/* Update status bar */
+/**
+ * Update all modules in the status bar.
+ * @param app Pointer to the application data
+ * @param status_bar Pointer to the status bar to update
+ * @param current_panel Pointer to the current panel
+ */
 void UpdateStatusBar(AppData* app, StatusBar* status_bar, Panel* current_panel);
 
-/* Inverts the order of a linked list of StatusBarModule */
+/**
+ * ---------------------------------------------------------------------------
+ * Utility
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Inverts the order of a linked list of StatusBarModule.
+ * Used for right-aligned modules that need to be rendered in reverse order.
+ * @param module Pointer to the first module in the list
+ * @return Pointer to the new first module (was last)
+ */
 StatusBarModule* InvertModulesOrder(StatusBarModule* module);
 
-/* Input mode module to status bar */
+/**
+ * ---------------------------------------------------------------------------
+ * Module Callbacks
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Input mode module update function.
+ * Displays the current input mode (NORMAL, INSERT, VISUAL) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel);
 
-/* Real-time module for status bar */
+/**
+ * Real-time module update function.
+ * Displays the current time in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel);
 
-/* Current scene module for status bar */
+/**
+ * Scene module update function.
+ * Displays the current scene type (WORK, PAUSE, etc.) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void SceneModule(AppData* app, StatusBarModule* module, Panel* panel);
 
-/* Current status module for status bar */
+/**
+ * Current status module update function.
+ * Displays the pomodoro status (time remaining, cycle count) in the status bar.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel);
 
-/* Line and Column module for NOTES scene */
+/**
+ * Line and column module update function for NOTES scene.
+ * Displays the current cursor line and column in the notes editor.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
 void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel);
 
 #endif /* BAR_H_ */
