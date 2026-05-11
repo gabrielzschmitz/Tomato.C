@@ -8,7 +8,7 @@ extensible, terminal-based Pomodoro timer written in C.
 ## ✅ Completed
 
 ### 🎞️ Animations
-- [x] ASCII animations with frame timing and color support
+- [x] ASCII animations with frame timing, color and UNICODE support
 - [x] Animation variants: nerd-icons, emojis, ASCII
 - [x] Animation API: print to position, center, toggle loop
 
@@ -33,9 +33,6 @@ extensible, terminal-based Pomodoro timer written in C.
 ### 🔧 Core Logic
 - [x] Pomodoro loop (work, short/long breaks)
 - [x] Pause, resume, and skip functionality
-
-### 👨🏻‍💻 UI Behavior
-- [x] Auto-centering for all interface components
 
 ### ⚙️ Configuration
 - [X] Modular config system for durations, break types, and user settings
