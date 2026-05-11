@@ -18,17 +18,8 @@
 #include "util.h"
 
 /* Helper function to handle errors and cleanup */
-void HandleErrorAndExit(const char* context, ErrorType error, AppData* app,
-                        pid_t pid) {
-  if (app) EndApp(app);
-  if (pid > 0) {
-    kill(pid, SIGTERM);
-    waitpid(pid, NULL, 0);
-  }
-  endwin();
-  LogError(context, error);
-  exit(error);
-}
+static void handleErrorAndExit(const char* context, ErrorType error,
+                               AppData* app, pid_t pid);
 
 int main(int argc, char* argv[]) {
   if (argc == 2 && !strcmp("-t", argv[1])) {
@@ -47,7 +38,7 @@ int main(int argc, char* argv[]) {
   AppData app;
   InitScreen();
   if (InitApp(&app) != NO_ERROR)
-    HandleErrorAndExit("Initializing app data", INIT_ERROR, NULL, 0);
+    handleErrorAndExit("Initializing app data", INIT_ERROR, NULL, 0);
 
   /* Log process */
   pid_t pid = fork();
@@ -57,16 +48,16 @@ int main(int argc, char* argv[]) {
       LogError("Timer log server failure", TIMER_LOG_ERROR);
     exit(0);
   } else if (pid < 0)
-    HandleErrorAndExit("Forking the main process", FORK_ERROR, NULL, 0);
+    handleErrorAndExit("Forking the main process", FORK_ERROR, NULL, 0);
 
   /* Main application loop */
   while (app.running) {
     if (UpdateApp(&app) != NO_ERROR)
-      HandleErrorAndExit("Updating app", UPDATE_ERROR, &app, pid);
+      handleErrorAndExit("Updating app", UPDATE_ERROR, &app, pid);
     if (HandleInputs(&app) != NO_ERROR)
-      HandleErrorAndExit("Handling input", INPUT_ERROR, &app, pid);
+      handleErrorAndExit("Handling input", INPUT_ERROR, &app, pid);
     if (DrawScreen(&app) != NO_ERROR)
-      HandleErrorAndExit("Drawing screen", DRAW_ERROR, &app, pid);
+      handleErrorAndExit("Drawing screen", DRAW_ERROR, &app, pid);
     napms(FPMS);
   }
 
@@ -80,4 +71,23 @@ int main(int argc, char* argv[]) {
   printf("Goodbye!\n");
 
   return 0;
+}
+
+/**
+ * Handles fatal errors, performs cleanup, and terminates the process.
+ * @param context Human-readable description of the error context.
+ * @param error Error code describing the failure condition.
+ * @param app Pointer to the application state structure. May be NULL.
+ * @param pid Process ID of a child process to terminate. Ignored if <= 0.
+ */
+static void handleErrorAndExit(const char* context, ErrorType error,
+                               AppData* app, pid_t pid) {
+  if (app) EndApp(app);
+  if (pid > 0) {
+    kill(pid, SIGTERM);
+    waitpid(pid, NULL, 0);
+  }
+  endwin();
+  LogError(context, error);
+  exit(error);
 }

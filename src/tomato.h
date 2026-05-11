@@ -21,15 +21,18 @@
 #define DEBUG 0
 #endif
 
-/* Defining current mode enum */
+/**
+ * Scene type enum representing the current application view.
+ * Used for routing input and determining which UI to display.
+ */
 typedef enum {
-  MAIN_MENU,
-  WORK_TIME,
-  SHORT_PAUSE,
-  LONG_PAUSE,
-  NOTES,
-  HELP,
-  CONTINUE,
+  MAIN_MENU,   /* Main menu scene */
+  WORK_TIME,   /* Work session timer scene */
+  SHORT_PAUSE, /* Short break timer scene */
+  LONG_PAUSE,  /* Long break timer scene */
+  NOTES,       /* Notes/text editor scene */
+  HELP,        /* Help screen scene */
+  CONTINUE,    /* Continue/pause scene */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -41,45 +44,57 @@ typedef enum {
 #define SCENE_HELP (1 << HELP)
 #define SCENE_CONTINUE (1 << CONTINUE)
 
-/* Defining input mode enum */
+/**
+ * Input mode enum for the text editor (vim-like modes).
+ * Determines how keyboard input is interpreted.
+ */
 typedef enum {
-  DEFAULT = 1 << 0,
-  NORMAL = 1 << 1,
-  INSERT = 1 << 2,
-  VISUAL = 1 << 3,
+  DEFAULT = 1 << 0, /* Default mode for menu navigation */
+  NORMAL = 1 << 1,  /* Normal mode for text commands and navigation */
+  INSERT = 1 << 2,  /* Insert mode for text input */
+  VISUAL = 1 << 3,  /* Visual mode for text selection */
 } InputMode;
 
-/* Defining the PomodoroConfig struct */
+/**
+ * Pomodoro timer data structure.
+ * Tracks the current state of the pomodoro cycle.
+ */
 typedef struct {
-  int total_cycles;      /* Total Pomodoro cycles configured */
-  int current_cycle;     /* Current Pomodoro cycle */
-  int work_time;         /* Work time duration (minutes) */
-  int short_pause_time;  /* Short pause duration (minutes) */
-  int long_pause_time;   /* Long pause duration (minutes) */
-  int current_step;      /* Current step (work, short pause, etc.) */
-  int current_step_time; /* Time in the current step (seconds) */
-  int last_step_time;    /* Time in the last step (seconds) */
-  double delta_time_ms;  /* Elapsed time in milliseconds since last frame */
+  int total_cycles;     /* Total number of pomodoro cycles to complete */
+  int current_cycle;    /* Current cycle number (1 to total_cycles) */
+  int work_time;        /* Work time duration in minutes */
+  int short_pause_time; /* Short pause duration in minutes */
+  int long_pause_time;  /* Long pause duration in minutes */
+  int current_step;     /* Current step (0=work, 1=short pause, 2=long pause) */
+  int current_step_time; /* Elapsed time in current step (seconds) */
+  int last_step_time;    /* Time from previous step for comparison */
+  double
+    delta_time_ms; /* Elapsed time in milliseconds since last frame update */
 } PomodoroData;
 
-/* Defining the app struct */
+/**
+ * Main application data structure.
+ * Contains all state and references needed by the application.
+ */
 struct AppData {
-  struct Screen* screen;
-  struct StatusBar* status_bar;
-  struct Menu* menus[MAX_MENUS];
-  struct FloatingDialog* popup_dialog;
-  int current_menu;
+  struct Screen* screen;         /* Current screen and its panels */
+  struct StatusBar* status_bar;  /* Status bar displaying app info */
+  struct Menu* menus[MAX_MENUS]; /* Array of menu structures */
+  struct FloatingDialog*
+    popup_dialog;   /* Currently displayed popup dialog (or NULL) */
+  int current_menu; /* Index of the currently active menu */
 
-  int user_input;
-  int last_input;
-  bool block_input;
+  int user_input;   /* Most recent user keypress */
+  int last_input;   /* Previous keypress for edge detection */
+  bool block_input; /* True to ignore user input temporarily */
 
-  struct Rollfilm* animations[MAX_ANIMATIONS];
-  bool is_paused;
-  bool running;
+  struct Rollfilm*
+    animations[MAX_ANIMATIONS]; /* Loaded animations for scenes */
+  bool is_paused;               /* Whether the timer is paused */
+  bool running;                 /* Whether the app is running (false = exit) */
 
-  PomodoroData pomodoro_data;
-  NotesData* notes;
+  PomodoroData pomodoro_data; /* Pomodoro timer state */
+  NotesData* notes;           /* Notes/text editor data */
 };
 
 #endif /* TOMATO_H_ */
