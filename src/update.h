@@ -1,10 +1,12 @@
 #ifndef UPDATE_H_
 #define UPDATE_H_
 
-#include "error.h"
-#include "tomato.h"
+#include <stddef.h>
 
-/* Update variables */
+#include "error.h"
+
+typedef struct AppData AppData;
+
 ErrorType UpdateApp(AppData* app);
 
 /* Get the screen size */

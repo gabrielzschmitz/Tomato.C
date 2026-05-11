@@ -22,40 +22,6 @@
 #endif
 
 /**
- * Scene type enum representing the current application view.
- * Used for routing input and determining which UI to display.
- */
-typedef enum {
-  MAIN_MENU,   /* Main menu scene */
-  WORK_TIME,   /* Work session timer scene */
-  SHORT_PAUSE, /* Short break timer scene */
-  LONG_PAUSE,  /* Long break timer scene */
-  NOTES,       /* Notes/text editor scene */
-  HELP,        /* Help screen scene */
-  CONTINUE,    /* Continue/pause scene */
-} SceneType;
-
-/* Scene type bitmasks for key binding filters */
-#define SCENE_MAIN_MENU (1 << MAIN_MENU)
-#define SCENE_WORK_TIME (1 << WORK_TIME)
-#define SCENE_SHORT_PAUSE (1 << SHORT_PAUSE)
-#define SCENE_LONG_PAUSE (1 << LONG_PAUSE)
-#define SCENE_NOTES (1 << NOTES)
-#define SCENE_HELP (1 << HELP)
-#define SCENE_CONTINUE (1 << CONTINUE)
-
-/**
- * Input mode enum for the text editor (vim-like modes).
- * Determines how keyboard input is interpreted.
- */
-typedef enum {
-  DEFAULT = 1 << 0, /* Default mode for menu navigation */
-  NORMAL = 1 << 1,  /* Normal mode for text commands and navigation */
-  INSERT = 1 << 2,  /* Insert mode for text input */
-  VISUAL = 1 << 3,  /* Visual mode for text selection */
-} InputMode;
-
-/**
  * Pomodoro timer data structure.
  * Tracks the current state of the pomodoro cycle.
  */

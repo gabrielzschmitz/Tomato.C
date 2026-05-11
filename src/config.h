@@ -5,17 +5,6 @@
 
 #include "input.h"
 
-/**
- * Struct to map a key to a function with mode and scene filters.
- * Used for defining keyboard shortcuts in the application.
- */
-typedef struct {
-  int key;                      /* The key code */
-  void (*action)(AppData* app); /* Function to execute when key's pressed */
-  int modes;       /* Bitmask of input modes where this key is active */
-  int scene_types; /* Bitmask of scene types where this key is active */
-} KeyFunction;
-
 /* Visual Settings ---------------------------------------------------------- */
 /* 1 if you want animations, 0 if not (default: 1) */
 static const int ANIMATIONS = 1;
