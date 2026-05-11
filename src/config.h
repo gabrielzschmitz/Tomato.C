@@ -5,12 +5,15 @@
 
 #include "input.h"
 
-/* Key function struct */
+/**
+ * Struct to map a key to a function with mode and scene filters.
+ * Used for defining keyboard shortcuts in the application.
+ */
 typedef struct {
-  int key;
-  void (*action)(AppData* app);
-  int modes;
-  int scene_types;
+  int key;                      /* The key code */
+  void (*action)(AppData* app); /* Function to execute when key's pressed */
+  int modes;       /* Bitmask of input modes where this key is active */
+  int scene_types; /* Bitmask of scene types where this key is active */
 } KeyFunction;
 
 /* Visual Settings ---------------------------------------------------------- */
@@ -187,7 +190,7 @@ static const KeyFunction keys[] = {
   {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
 
   /* Scene-specific keybindings - Before ALL_SCENES keys */
-  {'V', ToggleMoveMode, DEFAULT, SCENE_NOTES}, /* Shift+V: toggle move mode */
+  {'V', ToggleMoveMode, DEFAULT, SCENE_NOTES},
   {'j', MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
   {'k', MoveNoteUpWrapper, DEFAULT, SCENE_NOTES},
   {KEY_DOWN, MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
@@ -215,7 +218,7 @@ static const KeyFunction keys[] = {
   {'h', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
   {ENTER, ExecuteMenuAction, DEFAULT, SCENE_MAIN_MENU},
 
-  /* Popup navigation keys - DEFAULT mode, ALL_SCENES */
+  /* General keybindings - DEFAULT mode, ALL_SCENES */
   {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
   {'k', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
   {KEY_LEFT, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
@@ -228,8 +231,6 @@ static const KeyFunction keys[] = {
   {KEY_ENTER, ExecuteMenuAction, DEFAULT, ALL_SCENES},
   {'\n', ExecuteMenuAction, DEFAULT, ALL_SCENES},
   {'\r', ExecuteMenuAction, DEFAULT, ALL_SCENES},
-
-  /* General keybindings */
   {' ', NextPanel, DEFAULT, ALL_SCENES},
   {'s', SkipPomodoroStep, DEFAULT, POMODORO_SCENES},
   {'p', TogglePause, DEFAULT, POMODORO_SCENES},
