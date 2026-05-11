@@ -10,6 +10,46 @@
 #include "tomato.h"
 #include "util.h"
 
+/* PRIVATE ANIM FUNCTIONS */
+/* Rollfilm Lifecycle */
+static struct Frame* createFrame(void);
+static void linkNewFrame(struct Frame** current_frame,
+                         struct FrameRow* head_row, int frame_id);
+static void freeFrame(struct Frame* frame);
+static void freeFrames(struct Frame* frames);
+static struct FrameRow* createRow(void);
+static void freeRows(struct FrameRow* rows);
+static struct FrameToken* createToken(void);
+static void freeToken(struct FrameToken* token);
+static void freeTokens(struct FrameToken* tokens);
+/* Rollfilm Deserialization */
+static struct FrameToken* deserializeFrameLine(const char* src, int* color);
+static Rollfilm* cleanupAndReturn(FILE* file, Rollfilm* rollfilm,
+                                  struct Frame* head_frame,
+                                  struct Frame* current_frame,
+                                  struct FrameRow* head_row, int line_width);
+static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
+                            struct Frame** head_frame,
+                            struct Frame** current_frame,
+                            struct FrameRow** head_row,
+                            struct FrameRow** current_row,
+                            int* current_frame_id, FILE* file);
+/* Parsing Helpers */
+static int processFrameLine(const char* line, struct FrameRow** current_row,
+                            int* line_color, int* line_width);
+static int parseFrameSize(const char* line, int* frame_count,
+                          int* frame_height);
+static int parseFrameTime(const char* line, double* frame_time);
+static bool isIconsLine(const char* line);
+static bool isSeparatorLine(const char* line);
+static int handleUnicode(const char* src, char** dest);
+static int handleColor(const char* src, int* dest);
+/* Util functions */
+static int getWidestFrame(Rollfilm* rollfilm);
+/* Animation callbacks */
+static void updateAnimation(Rollfilm* rollfilm);
+static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
+
 /**
  * ---------------------------------------------------------------------------
  * Rollfilm Lifecycle
@@ -33,8 +73,8 @@ Rollfilm* CreateRollfilm(int N, int M) {
   film->frame_width = 0;
   film->loop = true;
   film->frames = NULL;
-  film->render = RenderCurrentFrame;
-  film->update = UpdateAnimation;
+  film->render = renderCurrentFrame;
+  film->update = updateAnimation;
 
   return film;
 }
@@ -60,7 +100,7 @@ void SetRollfilmLoop(Rollfilm** film, const int* list_to_update,
  */
 void FreeRollfilm(Rollfilm* rollfilm) {
   if (rollfilm == NULL) return;
-  FreeFrames(rollfilm->frames);
+  freeFrames(rollfilm->frames);
   free(rollfilm);
 }
 
@@ -68,8 +108,8 @@ void FreeRollfilm(Rollfilm* rollfilm) {
  * Create a new empty Frame.
  * @return Pointer to the created Frame, or NULL on allocation failure
  */
-Frame* CreateFrame(void) {
-  Frame* newFrame = (Frame*)malloc(sizeof(Frame));
+static struct Frame* createFrame(void) {
+  struct Frame* newFrame = (struct Frame*)malloc(sizeof(struct Frame));
   if (newFrame == NULL) return NULL;
   newFrame->next = NULL;
   newFrame->rows = NULL;
@@ -86,8 +126,9 @@ Frame* CreateFrame(void) {
  * @param head_row Row to attach as the first row of the new frame
  * @param frame_id ID to assign to the new frame
  */
-void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
-  Frame* new_frame = CreateFrame();
+static void linkNewFrame(struct Frame** current_frame,
+                         struct FrameRow* head_row, int frame_id) {
+  struct Frame* new_frame = createFrame();
   if (new_frame == NULL) return;
   (*current_frame)->rows = head_row;
   new_frame->id = frame_id;
@@ -107,9 +148,9 @@ void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
  * Free all memory associated with a single Frame.
  * @param frame Pointer to the Frame to free
  */
-void FreeFrame(Frame* frame) {
+static void freeFrame(struct Frame* frame) {
   if (frame == NULL) return;
-  FreeRows(frame->rows);
+  freeRows(frame->rows);
   free(frame);
 }
 
@@ -117,13 +158,13 @@ void FreeFrame(Frame* frame) {
  * Free all frames in a circular linked list.
  * @param frames Pointer to the first frame in the circular list
  */
-void FreeFrames(Frame* frames) {
+static void freeFrames(struct Frame* frames) {
   if (frames == NULL) return;
 
-  Frame* current = frames;
+  struct Frame* current = frames;
   do {
-    Frame* next = current->next;
-    FreeFrame(current);
+    struct Frame* next = current->next;
+    freeFrame(current);
     current = next;
   } while (current != frames);
 }
@@ -132,8 +173,8 @@ void FreeFrames(Frame* frames) {
  * Create a new empty FrameRow.
  * @return Pointer to the created FrameRow, or NULL on allocation failure
  */
-FrameRow* CreateRow(void) {
-  FrameRow* newRow = (FrameRow*)malloc(sizeof(FrameRow));
+static struct FrameRow* createRow(void) {
+  struct FrameRow* newRow = (struct FrameRow*)malloc(sizeof(struct FrameRow));
   if (newRow == NULL) return NULL;
   newRow->next = NULL;
   newRow->tokens = NULL;
@@ -144,11 +185,11 @@ FrameRow* CreateRow(void) {
  * Free all rows in a linked list starting from the given row.
  * @param rows Pointer to the first row to free
  */
-void FreeRows(FrameRow* rows) {
-  FrameRow* current = rows;
+static void freeRows(struct FrameRow* rows) {
+  struct FrameRow* current = rows;
   while (current != NULL) {
-    FrameRow* next = current->next;
-    FreeTokens(current->tokens);
+    struct FrameRow* next = current->next;
+    freeTokens(current->tokens);
     free(current);
     current = next;
   }
@@ -158,8 +199,9 @@ void FreeRows(FrameRow* rows) {
  * Create a new empty FrameToken.
  * @return Pointer to the created FrameToken, or NULL on allocation failure
  */
-FrameToken* CreateToken(void) {
-  FrameToken* newToken = (FrameToken*)malloc(sizeof(FrameToken));
+static struct FrameToken* createToken(void) {
+  struct FrameToken* newToken =
+    (struct FrameToken*)malloc(sizeof(struct FrameToken));
   if (newToken == NULL) return NULL;
   newToken->next = NULL;
   newToken->token = (char*)calloc(MAX_FRAME_WIDTH, sizeof(char));
@@ -177,7 +219,7 @@ FrameToken* CreateToken(void) {
  * Free all memory associated with a single FrameToken.
  * @param token Pointer to the FrameToken to free
  */
-void FreeToken(FrameToken* token) {
+static void freeToken(struct FrameToken* token) {
   if (token == NULL) return;
   free(token->token);
   free(token);
@@ -187,18 +229,18 @@ void FreeToken(FrameToken* token) {
  * Free all tokens in a linked list starting from the given token.
  * @param tokens Pointer to the first token to free
  */
-void FreeTokens(FrameToken* tokens) {
-  FrameToken* current = tokens;
+static void freeTokens(struct FrameToken* tokens) {
+  struct FrameToken* current = tokens;
   while (current != NULL) {
-    FrameToken* next = current->next;
-    FreeToken(current);
+    struct FrameToken* next = current->next;
+    freeToken(current);
     current = next;
   }
 }
 
 /**
  * ---------------------------------------------------------------------------
- * Rollfilm Serialization / Deserialization
+ * Rollfilm Deserialization
  * ---------------------------------------------------------------------------
  */
 
@@ -215,10 +257,10 @@ Rollfilm* DeserializeSprites(const char* filename) {
   char line[MAX_FRAME_WIDTH];
   int lines_read = 0;
   Rollfilm* rollfilm = NULL;
-  Frame* head_frame = NULL;
-  Frame* current_frame = NULL;
-  FrameRow* head_row = NULL;
-  FrameRow* current_row = NULL;
+  struct Frame* head_frame = NULL;
+  struct Frame* current_frame = NULL;
+  struct FrameRow* head_row = NULL;
+  struct FrameRow* current_row = NULL;
   int current_frame_id = 0;
   int line_color = NO_COLOR;
   int read = 0;
@@ -226,17 +268,17 @@ Rollfilm* DeserializeSprites(const char* filename) {
   double seconds_multiplier = 0.0;
 
   while (fgets(line, sizeof(line), file) != NULL) {
-    if (IsSeparatorLine(line) && read) {
+    if (isSeparatorLine(line) && read) {
       break;
-    } else if (IsIconsLine(line)) {
-      if (ProcessIconsLine(line, &read, &rollfilm, &head_frame, &current_frame,
+    } else if (isIconsLine(line)) {
+      if (processIconsLine(line, &read, &rollfilm, &head_frame, &current_frame,
                            &head_row, &current_row, &current_frame_id,
                            file) != 0)
         return NULL;
 
     } else if (read) {
       if (lines_read == 0) {
-        if (ParseFrameTime(line, &seconds_multiplier) != 0) {
+        if (parseFrameTime(line, &seconds_multiplier) != 0) {
           FreeRollfilm(rollfilm);
           fclose(file);
           return NULL;
@@ -249,7 +291,7 @@ Rollfilm* DeserializeSprites(const char* filename) {
         current_frame->seconds_multiplier = seconds_multiplier;
       } else if (lines_read >= rollfilm->frame_count * rollfilm->frame_height)
         break;
-      if (ProcessFrameLine(line, &current_row, &line_color, &line_width) != 0) {
+      if (processFrameLine(line, &current_row, &line_color, &line_width) != 0) {
         FreeRollfilm(rollfilm);
         fclose(file);
         return NULL;
@@ -259,8 +301,8 @@ Rollfilm* DeserializeSprites(const char* filename) {
           lines_read < rollfilm->frame_count * rollfilm->frame_height) {
         current_frame->width = line_width;
         line_width = 0;
-        LinkNewFrame(&current_frame, head_row, ++current_frame_id);
-        head_row = CreateRow();
+        linkNewFrame(&current_frame, head_row, ++current_frame_id);
+        head_row = createRow();
         if (head_row == NULL) {
           FreeRollfilm(rollfilm);
           fclose(file);
@@ -274,7 +316,7 @@ Rollfilm* DeserializeSprites(const char* filename) {
             fclose(file);
             return NULL;
           }
-          if (ParseFrameTime(line, &seconds_multiplier) != 0) {
+          if (parseFrameTime(line, &seconds_multiplier) != 0) {
             FreeRollfilm(rollfilm);
             fclose(file);
             return NULL;
@@ -285,7 +327,7 @@ Rollfilm* DeserializeSprites(const char* filename) {
     }
   }
 
-  return CleanupAndReturn(file, rollfilm, head_frame, current_frame, head_row,
+  return cleanupAndReturn(file, rollfilm, head_frame, current_frame, head_row,
                           line_width);
 }
 
@@ -296,24 +338,24 @@ Rollfilm* DeserializeSprites(const char* filename) {
  * @param color Output: color code parsed from line
  * @return Pointer to the first token, or NULL on error
  */
-FrameToken* DeserializeFrameLine(const char* src, int* color) {
-  FrameToken* head = CreateToken();
-  FrameToken* current_token = head;
+static struct FrameToken* deserializeFrameLine(const char* src, int* color) {
+  struct FrameToken* head = createToken();
+  struct FrameToken* current_token = head;
   if (current_token == NULL) return NULL;
 
   current_token->color = *color;
   while (*src != '\0') {
     if (*src == '\\' && *(src + 1) == 'u') {
       if (current_token->color == NO_COLOR) current_token->color = *color;
-      int length = HandleUnicode(src, &current_token->token);
+      int length = handleUnicode(src, &current_token->token);
       src += length + 3;
       current_token->length += length;
     } else if (*src == '\\' && *(src + 1) == 'c') {
-      src += HandleColor(src, color);
+      src += handleColor(src, color);
 
-      FrameToken* new_token = CreateToken();
+      struct FrameToken* new_token = createToken();
       if (new_token == NULL) {
-        FreeTokens(head);
+        freeTokens(head);
         return NULL;
       }
 
@@ -321,9 +363,9 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
       current_token = new_token;
       current_token->color = *color;
     } else if (*src == '\\' && *(src + 1) == '*') {
-      FrameToken* blank_token = CreateToken();
+      struct FrameToken* blank_token = createToken();
       if (blank_token == NULL) {
-        FreeTokens(head);
+        freeTokens(head);
         return NULL;
       }
       blank_token->is_blank = true;
@@ -337,9 +379,9 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
       blank_token->length = count;
 
       current_token->next = blank_token;
-      FrameToken* new_token = CreateToken();
+      struct FrameToken* new_token = createToken();
       if (new_token == NULL) {
-        FreeTokens(head);
+        freeTokens(head);
         return NULL;
       }
       new_token->color = *color;
@@ -371,9 +413,10 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
  * @param line_width Width of the largest line processed
  * @return Pointer to the finalized Rollfilm
  */
-Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
-                           Frame* current_frame, FrameRow* head_row,
-                           int line_width) {
+static Rollfilm* cleanupAndReturn(FILE* file, Rollfilm* rollfilm,
+                                  struct Frame* head_frame,
+                                  struct Frame* current_frame,
+                                  struct FrameRow* head_row, int line_width) {
   fclose(file);
 
   if (current_frame != NULL) {
@@ -385,7 +428,7 @@ Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
   if (head_frame != NULL && current_frame != NULL &&
       current_frame != head_frame)
     current_frame->next = head_frame;
-  rollfilm->frame_width = GetWidestFrame(rollfilm);
+  rollfilm->frame_width = getWidestFrame(rollfilm);
 
   return rollfilm;
 }
@@ -403,13 +446,15 @@ Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
  * @param file File handle for reading
  * @return 0 on success, non-zero on error
  */
-int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
-                     Frame** head_frame, Frame** current_frame,
-                     FrameRow** head_row, FrameRow** current_row,
-                     int* current_frame_id, FILE* file) {
+static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
+                            struct Frame** head_frame,
+                            struct Frame** current_frame,
+                            struct FrameRow** head_row,
+                            struct FrameRow** current_row,
+                            int* current_frame_id, FILE* file) {
   int frame_count, frame_height;
   *read = 1;
-  if (ParseFrameSize(line, &frame_count, &frame_height) != 0) {
+  if (parseFrameSize(line, &frame_count, &frame_height) != 0) {
     fclose(file);
     return -1;
   }
@@ -418,7 +463,7 @@ int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
     fclose(file);
     return -1;
   }
-  *head_frame = CreateFrame();
+  *head_frame = createFrame();
   if (*head_frame == NULL) {
     FreeRollfilm(*rollfilm);
     fclose(file);
@@ -426,7 +471,7 @@ int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
   }
   *current_frame = *head_frame;
   (*current_frame)->id = *current_frame_id;
-  *head_row = CreateRow();
+  *head_row = createRow();
   if (*head_row == NULL) {
     FreeRollfilm(*rollfilm);
     fclose(file);
@@ -451,12 +496,12 @@ int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
  * @param line_width Output: width of the line
  * @return 0 on success, non-zero on error
  */
-int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
-                     int* line_width) {
-  FrameToken* line_token = DeserializeFrameLine(line, line_color);
+static int processFrameLine(const char* line, struct FrameRow** current_row,
+                            int* line_color, int* line_width) {
+  struct FrameToken* line_token = deserializeFrameLine(line, line_color);
   if (line_token == NULL) return -1;
   int current_line_width = 0;
-  FrameToken* token = line_token;
+  struct FrameToken* token = line_token;
   while (token != NULL) {
     current_line_width += token->length;
     token = token->next;
@@ -465,7 +510,7 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
   if (current_line_width > *line_width) *line_width = current_line_width;
 
   (*current_row)->tokens = line_token;
-  FrameRow* new_row = CreateRow();
+  struct FrameRow* new_row = createRow();
   if (new_row == NULL) return -1;
   (*current_row)->next = new_row;
   *current_row = new_row;
@@ -480,7 +525,8 @@ int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
  * @param frame_height Output: height of each frame
  * @return 0 on success, non-zero on error
  */
-int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
+static int parseFrameSize(const char* line, int* frame_count,
+                          int* frame_height) {
   return sscanf(line, "%*[^/]/%dc/%dh", frame_count, frame_height) != 2 ? -1
                                                                         : 0;
 }
@@ -492,7 +538,7 @@ int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
  * @param frame_time Output: time multiplier value
  * @return 0 on success, non-zero on error
  */
-int ParseFrameTime(const char* line, double* frame_time) {
+static int parseFrameTime(const char* line, double* frame_time) {
   return sscanf(line, "%lfs", frame_time) != 1 ? -1 : 0;
 }
 
@@ -501,14 +547,16 @@ int ParseFrameTime(const char* line, double* frame_time) {
  * @param line Line to check
  * @return true if icons, false if not
  */
-bool IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
+static bool isIconsLine(const char* line) {
+  return strstr(line, ICONS) != NULL;
+}
 
 /**
  * Check if a line is a separator between sprite sections.
  * @param line Line to check
  * @return true if separator, false if not
  */
-bool IsSeparatorLine(const char* line) {
+static bool isSeparatorLine(const char* line) {
   if (strlen(line) != strlen(SEPARATOR)) return 0;
   return strcmp(line, SEPARATOR) == 0;
 }
@@ -520,7 +568,7 @@ bool IsSeparatorLine(const char* line) {
  * @param dest Pointer to destination pointer (updated)
  * @return Number of bytes consumed
  */
-int HandleUnicode(const char* src, char** dest) {
+static int handleUnicode(const char* src, char** dest) {
   /* Create a buffer to store the UTF-8 character
    * (max 4 bytes for UTF-8 + 1 for null terminator) */
   char utf8_char[5] = {0};
@@ -571,7 +619,7 @@ int HandleUnicode(const char* src, char** dest) {
  * @param dest Output: color code
  * @return Number of bytes consumed
  */
-int HandleColor(const char* src, int* dest) {
+static int handleColor(const char* src, int* dest) {
   int color_code = src[2] - '0';
   if (color_code < 0 || color_code > PALETTE_SIZE) return 3;
   *dest = color_code;
@@ -589,10 +637,10 @@ int HandleColor(const char* src, int* dest) {
  * @param rollfilm Pointer to the rollfilm
  * @return Width of the widest frame, or 0 if rollfilm is NULL
  */
-int GetWidestFrame(Rollfilm* rollfilm) {
+static int getWidestFrame(Rollfilm* rollfilm) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return 0;
 
-  Frame* current_frame = rollfilm->frames;
+  struct Frame* current_frame = rollfilm->frames;
   int max_width = current_frame->width;
 
   do {
@@ -646,18 +694,18 @@ int RollfilmLargest(Rollfilm* animations[], int* indices, int indices_count) {
 bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return false;
 
-  Frame* last_frame = rollfilm->frames;
-  Frame* current = rollfilm->frames->next;
+  struct Frame* last_frame = rollfilm->frames;
+  struct Frame* current = rollfilm->frames->next;
   while (current != rollfilm->frames) {
     if (current->id > last_frame->id) last_frame = current;
     current = current->next;
   }
 
-  FrameRow* row = last_frame->rows;
+  struct FrameRow* row = last_frame->rows;
   int y = 0;
   while (row != NULL && y < rollfilm->frame_height) {
     int x = 0;
-    FrameToken* token = row->tokens;
+    struct FrameToken* token = row->tokens;
     while (token != NULL) {
       if (token->is_blank) {
         *out_x = x;
@@ -684,8 +732,8 @@ bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
 bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return false;
 
-  Frame* last_frame = rollfilm->frames;
-  Frame* current = rollfilm->frames->next;
+  struct Frame* last_frame = rollfilm->frames;
+  struct Frame* current = rollfilm->frames->next;
   while (current != rollfilm->frames) {
     if (current->id > last_frame->id) last_frame = current;
     current = current->next;
@@ -693,11 +741,11 @@ bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
 
   int max_x = -1;
   int max_y = -1;
-  FrameRow* row = last_frame->rows;
+  struct FrameRow* row = last_frame->rows;
   int y = 0;
   while (row != NULL && y < rollfilm->frame_height) {
     int x = 0;
-    FrameToken* token = row->tokens;
+    struct FrameToken* token = row->tokens;
     while (token != NULL) {
       if (token->is_blank) {
         int token_end_x = x + token->length;
@@ -732,16 +780,16 @@ bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
  * @param start_y Starting y coordinate on screen
  * @param start_x Starting x coordinate on screen
  */
-void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
+static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return;
 
-  Frame* current_frame = rollfilm->frames;
-  FrameRow* current_row = current_frame->rows;
+  struct Frame* current_frame = rollfilm->frames;
+  struct FrameRow* current_row = current_frame->rows;
   int y = start_y;
   int color = NO_COLOR;
 
   while (current_row != NULL) {
-    FrameToken* current_token = current_row->tokens;
+    struct FrameToken* current_token = current_row->tokens;
     int x = start_x;
 
     while (current_token != NULL) {
@@ -765,7 +813,7 @@ void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
  * Handles timing, looping, and frame index wrapping.
  * @param rollfilm Pointer to the rollfilm to update
  */
-void UpdateAnimation(Rollfilm* rollfilm) {
+static void updateAnimation(Rollfilm* rollfilm) {
   if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
     return;
   double current_time = GetCurrentTimeMS();
