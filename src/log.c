@@ -17,7 +17,22 @@
 #include "notes.h"
 #include "tomato.h"
 
-/* Function to create the timer log server */
+/* PRIVATE ANIM FUNCTIONS */
+/* Notes */
+static NoteState charToNoteState(char c);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Timer
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a timer log server using Unix domain sockets.
+ * Server listens for connections and serves timer data.
+ * @param path File path for the Unix socket
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType CreateTimerLog(const char* path) {
   int server_sock, client_sock;
   struct sockaddr_un addr;
@@ -122,7 +137,13 @@ ErrorType CreateTimerLog(const char* path) {
   return NO_ERROR;
 }
 
-/* Function to get the last timer log from the socket */
+/**
+ * Get the timer log from the socket (client-side).
+ * Connects to the timer log server and reads current status.
+ * @param path File path for the Unix socket
+ * @param loop Whether to continuously poll the socket
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType GetTimerLog(const char* path, bool loop) {
   int sock;
   struct sockaddr_un addr;
@@ -188,7 +209,13 @@ ErrorType GetTimerLog(const char* path, bool loop) {
   return NO_ERROR;
 }
 
-/* Function to set a timer log by writing to the socket */
+/**
+ * Set a timer log by writing to the socket.
+ * Sends timer data to the Unix socket server.
+ * @param path File path for the Unix socket
+ * @param log Formatted log string to write
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType SetTimerLog(const char* path, const char* log) {
   static char last_log[32] = "";
 
@@ -233,7 +260,13 @@ ErrorType SetTimerLog(const char* path, const char* log) {
   return NO_ERROR;
 }
 
-/* Format pomdoro data to log in timer log */
+/**
+ * Format pomodoro data into a timer log string.
+ * Creates a human-readable string for timer status display.
+ * @param data Pomodoro timer data to format
+ * @param is_paused Whether the timer is currently paused
+ * @return Newly allocated formatted string (caller must free), or NULL on failure
+ */
 char* FormatTimerLog(PomodoroData data, bool is_paused) {
   const char *step_icon = NULL, *pause_icon = NULL;
   int icon_type = GetConfigIconType();
@@ -279,6 +312,19 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
   return log_string;
 }
 
+/**
+ * ---------------------------------------------------------------------------
+ * Notes
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Save notes to a file for persistence.
+ * Writes the current notes data structure to disk.
+ * @param path File path for the notes log
+ * @param notes Pointer to the notes data to save
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType SaveNotes(const char* path, const NotesData* notes) {
   if (!path || !notes) return NO_ERROR;
 
@@ -322,18 +368,13 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
   return NO_ERROR;
 }
 
-static NoteState char_to_state(char c) {
-  switch (c) {
-    case 'X':
-      return NOTE_DONE;
-    case ' ':
-      return NOTE_UNDONE;
-    case '-':
-    default:
-      return NOTE_PLAIN;
-  }
-}
-
+/**
+ * Load notes from a file for persistence.
+ * Reads notes data from disk and populates the notes structure.
+ * @param path File path for the notes log
+ * @param notes Pointer to the notes data to populate
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType LoadNotes(const char* path, NotesData* notes) {
   if (!path || !notes) return NO_ERROR;
 
@@ -360,7 +401,7 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
     p = end + 1;
 
     if (*p == '\0') continue;
-    NoteState state = char_to_state(*p);
+    NoteState state = charToNoteState(*p);
     p++;
     if (*p != '|') continue;
     p++;
@@ -402,4 +443,21 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
 
   fclose(file);
   return NO_ERROR;
+}
+
+/**
+ * Convert a character to its corresponding NoteState.
+ * @param c Character representing note state ('X', ' ', '-')
+ * @return NoteState corresponding to the character
+ */
+static NoteState charToNoteState(char c) {
+  switch (c) {
+    case 'X':
+      return NOTE_DONE;
+    case ' ':
+      return NOTE_UNDONE;
+    case '-':
+    default:
+      return NOTE_PLAIN;
+  }
 }
