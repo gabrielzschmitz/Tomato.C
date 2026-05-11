@@ -11,7 +11,24 @@
 #include "ui.h"
 #include "util.h"
 
-/* Update variables */
+/* PRIVATE ANIM FUNCTIONS */
+/* Pomodoro */
+static void updatePomodoroTime(AppData* app);
+static void updateTimerLog(AppData* app, const int* steps,
+                           const size_t steps_count);
+
+/**
+ * ---------------------------------------------------------------------------
+ * App / Screen
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Update all application variables and state.
+ * Called each frame to refresh app state.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType UpdateApp(AppData* app) {
   ErrorType status = NO_ERROR;
 
@@ -52,12 +69,21 @@ ErrorType UpdateApp(AppData* app) {
 
   const int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
   const size_t steps_count = sizeof(steps) / sizeof(steps[0]);
-  UpdateTimerLog(app, steps, steps_count);
+  updateTimerLog(app, steps, steps_count);
 
   return status;
 }
 
-/* Update MAIN_MENU */
+/**
+ * ---------------------------------------------------------------------------
+ * Scene Updates
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Update MAIN_MENU scene state and menu selection.
+ * @param app Pointer to the application data
+ */
 void UpdateMainMenu(AppData* app) {
   /* Tomato Animation */
   if (ANIMATIONS && !app->is_paused) {
@@ -66,16 +92,19 @@ void UpdateMainMenu(AppData* app) {
   }
 }
 
-/* Update WORK_TIME */
+/**
+ * Update WORK_TIME scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateWorkTime(AppData* app) {
   /* Coffee Animation */
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[WORK_TIME];
     animation->update(animation);
   }
-  if (!app->is_paused) UpdatePomodoroTime(app);
-  if (StepEnded(app->pomodoro_data.current_step_time,
-                app->pomodoro_data.work_time)) {
+  if (!app->is_paused) updatePomodoroTime(app);
+  if (IsStepEnded(app->pomodoro_data.current_step_time,
+                  app->pomodoro_data.work_time)) {
     if (app->pomodoro_data.current_cycle >=
         app->pomodoro_data.total_cycles - 1) {
       ExecuteHistory(app->screen->panels[0].scene_history, LONG_PAUSE);
@@ -105,16 +134,19 @@ void UpdateWorkTime(AppData* app) {
   }
 }
 
-/* Update SHORT_PAUSE */
+/**
+ * Update SHORT_PAUSE scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateShortPause(AppData* app) {
   /* Coffee Machine Animation */
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[SHORT_PAUSE];
     animation->update(animation);
   }
-  if (!app->is_paused) UpdatePomodoroTime(app);
-  if (StepEnded(app->pomodoro_data.current_step_time,
-                app->pomodoro_data.short_pause_time)) {
+  if (!app->is_paused) updatePomodoroTime(app);
+  if (IsStepEnded(app->pomodoro_data.current_step_time,
+                  app->pomodoro_data.short_pause_time)) {
     ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
     app->screen->panels[0].menu_index = -1;
     app->pomodoro_data.current_step = WORK_TIME;
@@ -130,16 +162,19 @@ void UpdateShortPause(AppData* app) {
   }
 }
 
-/* Update LONG_PAUSE */
+/**
+ * Update LONG_PAUSE scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateLongPause(AppData* app) {
   /* Beach Animation */
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[LONG_PAUSE];
     animation->update(animation);
   }
-  if (!app->is_paused) UpdatePomodoroTime(app);
-  if (StepEnded(app->pomodoro_data.current_step_time,
-                app->pomodoro_data.long_pause_time)) {
+  if (!app->is_paused) updatePomodoroTime(app);
+  if (IsStepEnded(app->pomodoro_data.current_step_time,
+                  app->pomodoro_data.long_pause_time)) {
     ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
     app->screen->panels[0].menu_index = MAIN_MENU_MENU;
     app->pomodoro_data.current_step = MAIN_MENU;
@@ -155,7 +190,10 @@ void UpdateLongPause(AppData* app) {
   }
 }
 
-/* Update NOTES */
+/**
+ * Update NOTES scene - note selection and editing state.
+ * @param app Pointer to the application data
+ */
 void UpdateNotes(AppData* app) {
   /* Notepad Animation */
   if (ANIMATIONS && !app->is_paused) {
@@ -164,7 +202,10 @@ void UpdateNotes(AppData* app) {
   }
 }
 
-/* Update HELP */
+/**
+ * Update HELP scene - help content display.
+ * @param app Pointer to the application data
+ */
 void UpdateHelp(AppData* app) {
   /* Scroll Animation */
   if (ANIMATIONS && !app->is_paused) {
@@ -173,7 +214,10 @@ void UpdateHelp(AppData* app) {
   }
 }
 
-/* Update CONTINUE */
+/**
+ * Update CONTINUE scene - pause/resume confirmation.
+ * @param app Pointer to the application data
+ */
 void UpdateContinue(AppData* app) {
   /* Banner Animation */
   if (ANIMATIONS && !app->is_paused) {
@@ -182,8 +226,17 @@ void UpdateContinue(AppData* app) {
   }
 }
 
-/* Update pomodoro data time */
-void UpdatePomodoroTime(AppData* app) {
+/**
+ * ---------------------------------------------------------------------------
+ * Pomodoro
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Update pomodoro timer data - decrement time, check for step end.
+ * @param app Pointer to the application data
+ */
+static void updatePomodoroTime(AppData* app) {
   double current_time = GetCurrentTimeMS();
   double delta_time = current_time - app->pomodoro_data.delta_time_ms;
 
@@ -198,8 +251,14 @@ void UpdatePomodoroTime(AppData* app) {
   }
 }
 
-/* Update timer log socket */
-void UpdateTimerLog(AppData* app, const int* steps, const size_t steps_count) {
+/**
+ * Update the timer log socket with current step information.
+ * @param app Pointer to the application data
+ * @param steps Array of step types to log
+ * @param steps_count Number of steps in the array
+ */
+static void updateTimerLog(AppData* app, const int* steps,
+                           const size_t steps_count) {
   if (IsCurrentStepInList(steps, steps_count,
                           app->pomodoro_data.current_step)) {
     char* time_string = FormatTimerLog(app->pomodoro_data, app->is_paused);

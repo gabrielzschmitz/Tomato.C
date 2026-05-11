@@ -7,36 +7,66 @@
 
 typedef struct AppData AppData;
 
+/**
+ * ---------------------------------------------------------------------------
+ * App / Screen
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Update all application variables and state.
+ * Called each frame to refresh app state.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType UpdateApp(AppData* app);
 
-/* Get the screen size */
-void GetScreenSize(AppData* app);
+/**
+ * ---------------------------------------------------------------------------
+ * Scene Updates
+ * ---------------------------------------------------------------------------
+ */
 
-/* Update MAIN_MENU */
+/**
+ * Update MAIN_MENU scene state and menu selection.
+ * @param app Pointer to the application data
+ */
 void UpdateMainMenu(AppData* app);
 
-/* Update WORK_TIME */
+/**
+ * Update WORK_TIME scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateWorkTime(AppData* app);
 
-/* Update SHORT_PAUSE */
+/**
+ * Update SHORT_PAUSE scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateShortPause(AppData* app);
 
-/* Update LONG_PAUSE */
+/**
+ * Update LONG_PAUSE scene - timer countdown and animations.
+ * @param app Pointer to the application data
+ */
 void UpdateLongPause(AppData* app);
 
-/* Update NOTES */
+/**
+ * Update NOTES scene - note selection and editing state.
+ * @param app Pointer to the application data
+ */
 void UpdateNotes(AppData* app);
 
-/* Update HELP */
+/**
+ * Update HELP scene - help content display.
+ * @param app Pointer to the application data
+ */
 void UpdateHelp(AppData* app);
 
-/* Update CONTINUE */
+/**
+ * Update CONTINUE scene - pause/resume confirmation.
+ * @param app Pointer to the application data
+ */
 void UpdateContinue(AppData* app);
-
-/* Update pomodoro data time */
-void UpdatePomodoroTime(AppData* app);
-
-/* Update timer log socket */
-void UpdateTimerLog(AppData* app, const int* steps, const size_t steps_count);
 
 #endif /* UPDATE_H_ */
