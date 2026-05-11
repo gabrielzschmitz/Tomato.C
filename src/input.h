@@ -89,111 +89,420 @@ struct KeyFunction {
   int scene_types; /* Bitmask of scene types where this key is active */
 };
 
-InputState* InputStateCreate(void);
-void InputStateDestroy(InputState** input);
-void InputStateClear(InputState* s);
+/**
+ * ---------------------------------------------------------------------------
+ * Input Dispatching
+ * ---------------------------------------------------------------------------
+ */
 
-/* Centralized mode transition */
-void InputSetMode(Panel* panel, InputMode mode);
-
-/* Function to process key input */
+/**
+ * Process a single key input and dispatch to appropriate handler.
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ */
 void ProcessKeyInput(AppData* app, int key);
 
-/* Handle user input and app state */
-ErrorType HandleInputs(AppData* app);
-
-ErrorType HandleDefaultMode(AppData* app, int key);
-ErrorType HandleNormalMode(AppData* app, int key);
-ErrorType HandleInsertMode(AppData* app, int key);
-ErrorType HandleVisualMode(AppData* app, int key);
-
-/* New action functions for keybindings */
-void InputCursorLeft(AppData* app);
-void InputCursorRight(AppData* app);
-void InputBackspace(AppData* app);
-void InputDeleteChar(AppData* app);
-void InputVisualDelete(AppData* app);
-void InputCommit(AppData* app);
-void InputESC(AppData* app);
-void InputInsertChar(AppData* app);
-void InputSwitchToInsertFromVisual(AppData* app);
-
-/* Check if the given key is assigned to the specified action function */
+/**
+ * Check if the given key is assigned to the specified action function.
+ * @param key The key code to check
+ * @param action Function pointer to compare against
+ * @return 1 if key is assigned to action, 0 otherwise
+ */
 int IsKeyAssignedToAction(int key, void (*action)(AppData*));
 
-/* Switch to next panel */
+/**
+ * Handle all user input based on current app state.
+ * Reads input from terminal and routes to appropriate handler.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleInputs(AppData* app);
+
+/**
+ * Handle input in DEFAULT mode (menu navigation, pomodoro control).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleDefaultMode(AppData* app, int key);
+
+/**
+ * Handle input in NORMAL mode (text navigation, note editing).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleNormalMode(AppData* app, int key);
+
+/**
+ * Handle input in INSERT mode (text input).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleInsertMode(AppData* app, int key);
+
+/**
+ * Handle input in VISUAL mode (text selection).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleVisualMode(AppData* app, int key);
+
+/**
+ * Handle input in while POPUP is active.
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return true if input is consumed, or false if not popup active
+ */
+bool HandlePopupInput(AppData* app, int key);
+
+/**
+ * ---------------------------------------------------------------------------
+ * InputState Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a new InputState with default values.
+ * @return Pointer to the created InputState, or NULL on allocation failure
+ */
+InputState* InputStateCreate(void);
+
+/**
+ * Destroy an InputState and free its memory.
+ * @param input Pointer to the InputState pointer to free
+ */
+void InputStateDestroy(InputState** input);
+
+/**
+ * Clear the InputState contents, resetting cursor and buffer.
+ * @param s Pointer to the InputState to clear
+ */
+void InputStateClear(InputState* s);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Mode Management
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Set the input mode of a panel, updating the panel's mode field.
+ * Centralized mode transition that handles mode switching logic.
+ * @param panel Pointer to the panel to update
+ * @param mode The new input mode (DEFAULT, NORMAL, INSERT, VISUAL)
+ */
+void InputSetMode(Panel* panel, InputMode mode);
+
+/**
+ * Switch to INSERT mode from current position.
+ * @param app Pointer to the application data
+ */
+void SwitchToInsertMode(AppData* app); /* 'i' key */
+
+/**
+ * Switch to INSERT mode after current cursor position.
+ * @param app Pointer to the application data
+ */
+void SwitchToInsertModeAppend(AppData* app); /* 'a' key */
+
+/**
+ * Enter VISUAL mode for text selection.
+ * @param app Pointer to the application data
+ */
+void SwitchToVisualMode(AppData* app); /* 'v' key */
+
+/**
+ * Exit to NORMAL mode (ESC key handler).
+ * @param app Pointer to the application data
+ */
+void SwitchToNormalMode(AppData* app); /* ESC key */
+
+/**
+ * ---------------------------------------------------------------------------
+ * Editor Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move cursor one position to the left.
+ * @param app Pointer to the application data
+ */
+void InputCursorLeft(AppData* app);
+
+/**
+ * Move cursor one position to the right.
+ * @param app Pointer to the application data
+ */
+void InputCursorRight(AppData* app);
+
+/**
+ * Delete character before cursor (backspace).
+ * @param app Pointer to the application data
+ */
+void InputBackspace(AppData* app);
+
+/**
+ * Delete character at cursor (in NORMAL mode).
+ * @param app Pointer to the application data
+ */
+void InputDeleteChar(AppData* app);
+
+/**
+ * Delete character(s) in visual selection.
+ * @param app Pointer to the application data
+ */
+void InputVisualDelete(AppData* app);
+
+/**
+ * Commit current input (return/enter key).
+ * Finalizes text entry or confirms selection.
+ * @param app Pointer to the application data
+ */
+void InputCommit(AppData* app);
+
+/**
+ * Handle escape key - exit to DEFAULT mode or close dialog.
+ * @param app Pointer to the application data
+ */
+void InputESC(AppData* app);
+
+/**
+ * Insert a printable character at cursor position.
+ * @param app Pointer to the application data
+ */
+void InputInsertChar(AppData* app);
+
+/**
+ * Switch from VISUAL mode to INSERT mode, keeping selection.
+ * @param app Pointer to the application data
+ */
+void InputSwitchToInsertFromVisual(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * App Control Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Switch focus to the next panel.
+ * @param app Pointer to the application data
+ */
 void NextPanel(AppData* app);
 
-/* Select next menu item */
-void SelectNextItem(AppData* app);
-
-/* Select previous menu item */
-void SelectPreviousItem(AppData* app);
-
-/* Toggle pause */
+/**
+ * Toggle pomodoro timer pause state.
+ * @param app Pointer to the application data
+ */
 void TogglePause(AppData* app);
 
-/* Vim-like mode switching */
-void SwitchToInsertMode(AppData* app);       /* 'i' key */
-void SwitchToInsertModeAppend(AppData* app); /* 'a' key */
-void SwitchToVisualMode(AppData* app);       /* 'v' key */
-void SwitchToNormalMode(AppData* app);       /* ESC key */
-
-/* Update animation mode */
+/**
+ * Update animation mode for debugging (step through frames).
+ * @param app Pointer to the application data
+ * @param step Number of frames to advance (can be negative)
+ */
 void ChangeDebugAnimation(AppData* app, int step);
 
-/* Quit the program */
+/**
+ * Quit the program with confirmation dialog.
+ * @param app Pointer to the application data
+ */
 void QuitApp(AppData* app);
 
-/* Quit the program forcefully */
+/**
+ * Quit the program immediately without confirmation.
+ * @param app Pointer to the application data
+ */
 void ForcefullyQuitApp(AppData* app);
 
-/* Close the popup dialog */
-void ClosePopup(AppData* app);
-
-/* Start pomodoro cycle */
+/**
+ * Start a new pomodoro cycle from the current scene.
+ * @param app Pointer to the application data
+ */
 void StartPomodoro(AppData* app);
 
-/* Open the reset pomodoro menu */
+/**
+ * Open the reset pomodoro menu dialog.
+ * @param app Pointer to the application data
+ */
 void OpenResetMenu(AppData* app);
 
-/* Reset pomodoro step */
+/**
+ * Reset the current pomodoro step (time only, not cycle).
+ * @param app Pointer to the application data
+ */
 void ResetPomodoroStep(AppData* app);
 
-/* Reset pomodoro cycle */
+/**
+ * Reset the entire pomodoro cycle (all steps and progress).
+ * @param app Pointer to the application data
+ */
 void ResetPomodoroCycle(AppData* app);
 
-/* Skip pomodoro step */
+/**
+ * Skip the current pomodoro step (with confirmation).
+ * @param app Pointer to the application data
+ */
 void SkipPomodoroStep(AppData* app);
 
-/* Forcefully skip pomodoro step */
+/**
+ * Skip the current pomodoro step without confirmation.
+ * @param app Pointer to the application data
+ */
 void ForcefullySkipPomodoroStep(AppData* app);
 
-/* Function to execute the action of the selected menu item */
+/**
+ * ---------------------------------------------------------------------------
+ * Navigation Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Select the next item in the current menu.
+ * @param app Pointer to the application data
+ */
+void SelectNextItem(AppData* app);
+
+/**
+ * Select the previous item in the current menu.
+ * @param app Pointer to the application data
+ */
+void SelectPreviousItem(AppData* app);
+
+/**
+ * Execute the action of the currently selected menu item.
+ * @param app Pointer to the application data
+ */
 void ExecuteMenuAction(AppData* app);
 
-/* Notes keybinding functions */
+/**
+ * Close the currently open popup dialog.
+ * @param app Pointer to the application data
+ */
+void ClosePopup(AppData* app);
+
+/**
+ * Navigate popup left/up (previous item).
+ * @param app Pointer to the application data
+ */
+void ChangeSelectedItemLeft(AppData* app);
+
+/**
+ * Navigate popup right/down (next item).
+ * @param app Pointer to the application data
+ */
+void ChangeSelectedItemRight(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Notes Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move selected note down in the list.
+ * @param app Pointer to the application data
+ */
 void NoteDownApp(AppData* app);
+
+/**
+ * Move selected note up in the list.
+ * @param app Pointer to the application data
+ */
 void NoteUpApp(AppData* app);
+
+/**
+ * Toggle the selected note between done and undone.
+ * @param app Pointer to the application data
+ */
 void ToggleTaskAtNotes(AppData* app);
+
+/**
+ * Delete the currently selected note.
+ * @param app Pointer to the application data
+ */
 void DeleteNoteAtNotes(AppData* app);
-void AddNewTask(AppData* app);      /* Add task with [ ] prefix */
-void AddNewNote(AppData* app);      /* Add note with - prefix */
-void AddSubtask(AppData* app);      /* Add subtask under selected node */
-void AddSubnote(AppData* app);      /* Add subnote under selected node */
+
+/**
+ * Add a new task with [ ] prefix at the end of notes.
+ * @param app Pointer to the application data
+ */
+void AddNewTask(AppData* app); /* Add task with [ ] prefix */
+
+/**
+ * Add a new note with - prefix at the end of notes.
+ * @param app Pointer to the application data
+ */
+void AddNewNote(AppData* app); /* Add note with - prefix */
+
+/**
+ * Add a subtask under the selected note node.
+ * @param app Pointer to the application data
+ */
+void AddSubtask(AppData* app); /* Add subtask under selected node */
+
+/**
+ * Add a subnote under the selected note node.
+ * @param app Pointer to the application data
+ */
+void AddSubnote(AppData* app); /* Add subnote under selected node */
+
+/**
+ * Edit the selected note content (NORMAL mode).
+ * Switches to INSERT mode with existing content loaded.
+ * @param app Pointer to the application data
+ */
 void EditCurrentNote(AppData* app); /* Edit selected node, NORMAL mode */
 
-/* Move mode functions */
-void ToggleMoveMode(AppData* app);
-void ExitMoveMode(AppData* app);
-void MoveNoteUpWrapper(AppData* app);
-void MoveNoteDownWrapper(AppData* app);
-void PromoteNoteWrapper(AppData* app);
-void DemoteNoteWrapper(AppData* app);
-void QuitAppNotes(AppData* app);
+/**
+ * ---------------------------------------------------------------------------
+ * Move Mode Actions
+ * ---------------------------------------------------------------------------
+ */
 
-/* Popup navigation wrappers */
-void ChangeSelectedItemLeft(AppData* app);
-void ChangeSelectedItemRight(AppData* app);
+/**
+ * Toggle move mode for reorganizing notes.
+ * @param app Pointer to the application data
+ */
+void ToggleMoveMode(AppData* app);
+
+/**
+ * Exit move mode and return to normal interaction.
+ * @param app Pointer to the application data
+ */
+void ExitMoveMode(AppData* app);
+
+/**
+ * Move the selected note up one position.
+ * @param app Pointer to the application data
+ */
+void MoveNoteUpWrapper(AppData* app);
+
+/**
+ * Move the selected note down one position.
+ * @param app Pointer to the application data
+ */
+void MoveNoteDownWrapper(AppData* app);
+
+/**
+ * Promote note (move to parent level, decrease depth).
+ * @param app Pointer to the application data
+ */
+void PromoteNoteWrapper(AppData* app);
+
+/**
+ * Demote note (move to child of previous sibling, increase depth).
+ * @param app Pointer to the application data
+ */
+void DemoteNoteWrapper(AppData* app);
+
+/**
+ * Quit notes scene and return to previous scene.
+ * @param app Pointer to the application data
+ */
+void QuitAppNotes(AppData* app);
 
 #endif /* INPUT_H_ */

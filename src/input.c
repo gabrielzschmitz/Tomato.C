@@ -13,7 +13,17 @@
 #include "ui.h"
 #include "util.h"
 
-/* Function to process key input */
+/**
+ * ---------------------------------------------------------------------------
+ * Input Dispatching
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Process a single key input and dispatch to appropriate handler.
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ */
 void ProcessKeyInput(AppData* app, int key) {
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
@@ -47,7 +57,12 @@ void ProcessKeyInput(AppData* app, int key) {
   }
 }
 
-/* Check if the given key is assigned to the specified action function */
+/**
+ * Check if the given key is assigned to the specified action function.
+ * @param key The key code to check
+ * @param action Function pointer to compare against
+ * @return 1 if key is assigned to action, 0 otherwise
+ */
 int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
   size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
   for (size_t i = 0; i < numKeyFunctions; i++)
@@ -55,7 +70,12 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
   return 0;
 }
 
-/* Handle user input and app state */
+/**
+ * Handle all user input based on current app state.
+ * Reads input from terminal and routes to appropriate handler.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType HandleInputs(AppData* app) {
   ErrorType status = NO_ERROR;
   ESCDELAY = 25;
@@ -86,25 +106,12 @@ ErrorType HandleInputs(AppData* app) {
   return status;
 }
 
-/* Handle popup input - only when popup is active */
-int HandlePopupInput(AppData* app, int key) {
-  if (app->popup_dialog == NULL) return 0;
-
-  /* When popup is active, only use keys bound to ALL_SCENES to avoid
-   * scene-specific keys (like ToggleTaskAtNotes) intercepting popup input */
-  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
-  for (size_t i = 0; i < numKeyFunctions; i++) {
-    if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
-        keys[i].scene_types == ALL_SCENES) {
-      keys[i].action(app);
-      return 1; /* handled */
-    }
-  }
-  /* For other keys (like q, ESC), let them pass through */
-  return 0;
-}
-
-/* Handle DEFAULT mode - navigation, no text input */
+/**
+ * Handle input in DEFAULT mode (menu navigation, pomodoro control).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType HandleDefaultMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
 
@@ -113,7 +120,7 @@ ErrorType HandleDefaultMode(AppData* app, int key) {
     return status; /* popup key was handled */
   }
 
-  if (!CheckScreenSize(app)) {
+  if (!ValidateAndRenderScreenSize(app)) {
     if (IsKeyAssignedToAction(key, QuitApp))
       ProcessKeyInput(app, key);
     else
@@ -124,7 +131,12 @@ ErrorType HandleDefaultMode(AppData* app, int key) {
   return status;
 }
 
-/* Handle NORMAL mode - text input editing */
+/**
+ * Handle input in NORMAL mode (text navigation, note editing).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType HandleNormalMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
   Panel* panel = &app->screen->panels[app->screen->current_panel];
@@ -142,21 +154,63 @@ ErrorType HandleNormalMode(AppData* app, int key) {
   return status;
 }
 
-/* Handle INSERT mode - now handled via keys[] */
+/**
+ * Handle input in INSERT mode (text input).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType HandleInsertMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
   ProcessKeyInput(app, key);
   return status;
 }
 
-/* Handle VISUAL mode - now handled via keys[] */
+/**
+ * Handle input in VISUAL mode (text selection).
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType HandleVisualMode(AppData* app, int key) {
   ErrorType status = NO_ERROR;
   ProcessKeyInput(app, key);
   return status;
 }
 
-/* InputState management */
+/**
+ * Handle input in while POPUP is active.
+ * @param app Pointer to the application data
+ * @param key The key code that was pressed
+ * @return true if input is consumed, or false if not popup active
+ */
+bool HandlePopupInput(AppData* app, int key) {
+  if (app->popup_dialog == NULL) return 0;
+
+  /* When popup is active, only use keys bound to ALL_SCENES to avoid
+   * scene-specific keys (like ToggleTaskAtNotes) intercepting popup input */
+  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  for (size_t i = 0; i < numKeyFunctions; i++) {
+    if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+        keys[i].scene_types == ALL_SCENES) {
+      keys[i].action(app);
+      return true; /* handled */
+    }
+  }
+  /* For other keys (like q, ESC), let them pass through */
+  return false;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * InputState Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a new InputState with default values.
+ * @return Pointer to the created InputState, or NULL on allocation failure
+ */
 InputState* InputStateCreate(void) {
   InputState* s = (InputState*)malloc(sizeof(InputState));
   if (s) {
@@ -173,6 +227,10 @@ InputState* InputStateCreate(void) {
   return s;
 }
 
+/**
+ * Destroy an InputState and free its memory.
+ * @param input Pointer to the InputState pointer to free
+ */
 void InputStateDestroy(InputState** input) {
   if (input && *input) {
     free(*input);
@@ -180,6 +238,10 @@ void InputStateDestroy(InputState** input) {
   }
 }
 
+/**
+ * Clear the InputState contents, resetting cursor and buffer.
+ * @param s Pointer to the InputState to clear
+ */
 void InputStateClear(InputState* s) {
   if (s) {
     s->buffer[0] = '\0';
@@ -190,7 +252,18 @@ void InputStateClear(InputState* s) {
   }
 }
 
-/* Centralized mode transition */
+/**
+ * ---------------------------------------------------------------------------
+ * Mode Management
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Set the input mode of a panel, updating the panel's mode field.
+ * Centralized mode transition that handles mode switching logic.
+ * @param panel Pointer to the panel to update
+ * @param mode The new input mode (DEFAULT, NORMAL, INSERT, VISUAL)
+ */
 void InputSetMode(Panel* panel, InputMode mode) {
   panel->mode = mode;
 
@@ -217,12 +290,68 @@ void InputSetMode(Panel* panel, InputMode mode) {
   }
 }
 
-/* Action functions for keybindings */
+/**
+ * Switch to INSERT mode from current position.
+ * @param app Pointer to the application data
+ */
+void SwitchToInsertMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+/**
+ * Switch to INSERT mode after current cursor position.
+ * @param app Pointer to the application data
+ */
+void SwitchToInsertModeAppend(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input && input->cursor < input->len) input->cursor++;
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+/**
+ * Enter VISUAL mode for text selection.
+ * @param app Pointer to the application data
+ */
+void SwitchToVisualMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  app->screen->panels[app->screen->current_panel].mode = VISUAL;
+  if (input) input->selection.start = input->cursor;
+}
+
+/**
+ * Exit to NORMAL mode (ESC key handler).
+ * @param app Pointer to the application data
+ */
+void SwitchToNormalMode(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = NORMAL;
+  /* Clear input state to prevent quit popup from appearing */
+  app->user_input = -1;
+  app->last_input = -1;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Editor Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move cursor one position to the left.
+ * @param app Pointer to the application data
+ */
 void InputCursorLeft(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (input && input->cursor > 0) input->cursor--;
 }
 
+/**
+ * Move cursor one position to the right.
+ * @param app Pointer to the application data
+ */
 void InputCursorRight(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
@@ -234,6 +363,10 @@ void InputCursorRight(AppData* app) {
   }
 }
 
+/**
+ * Delete character before cursor (backspace).
+ * @param app Pointer to the application data
+ */
 void InputBackspace(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
@@ -246,6 +379,10 @@ void InputBackspace(AppData* app) {
   }
 }
 
+/**
+ * Delete character at cursor (in NORMAL mode).
+ * @param app Pointer to the application data
+ */
 void InputDeleteChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
@@ -269,6 +406,10 @@ void InputDeleteChar(AppData* app) {
   }
 }
 
+/**
+ * Delete character(s) in visual selection.
+ * @param app Pointer to the application data
+ */
 void InputVisualDelete(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
@@ -301,9 +442,8 @@ void InputVisualDelete(AppData* app) {
     curs_set(1);
     refresh();
   } else {
-    if (input->cursor > 0 && input->cursor > input->len - 1) {
+    if (input->cursor > 0 && input->cursor > input->len - 1)
       input->cursor = (input->len > 0) ? input->len - 1 : 0;
-    }
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     noecho();
     curs_set(0);
@@ -311,6 +451,11 @@ void InputVisualDelete(AppData* app) {
   }
 }
 
+/**
+ * Commit current input (return/enter key).
+ * Finalizes text entry or confirms selection.
+ * @param app Pointer to the application data
+ */
 void InputCommit(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input || input->len == 0) {
@@ -339,15 +484,14 @@ void InputCommit(AppData* app) {
   } else
     state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
 
-  if (app->notes->current_id >= 0) {
+  if (app->notes->current_id >= 0)
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
-  } else if (input->insert_after_id >= 0) {
+  else if (input->insert_after_id >= 0)
     AddNoteAfter(app->notes, input->insert_after_id, input->buffer, state);
-  } else if (input->pending_parent_id >= 0) {
+  else if (input->pending_parent_id >= 0)
     AddChildNote(app->notes, input->pending_parent_id, input->buffer, state);
-  } else {
+  else
     AddNote(app->notes, input->buffer, state);
-  }
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
@@ -362,6 +506,10 @@ void InputCommit(AppData* app) {
   refresh();
 }
 
+/**
+ * Handle escape key - exit to DEFAULT mode or close dialog.
+ * @param app Pointer to the application data
+ */
 void InputESC(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
@@ -409,6 +557,10 @@ void InputESC(AppData* app) {
   }
 }
 
+/**
+ * Insert a printable character at cursor position.
+ * @param app Pointer to the application data
+ */
 void InputInsertChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
@@ -423,7 +575,28 @@ void InputInsertChar(AppData* app) {
   }
 }
 
-/* Switch to next panel */
+/**
+ * Switch from VISUAL mode to INSERT mode, keeping selection.
+ * @param app Pointer to the application data
+ */
+void InputSwitchToInsertFromVisual(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+  noecho();
+  curs_set(1);
+  refresh();
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * App Control Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Switch focus to the next panel.
+ * @param app Pointer to the application data
+ */
 void NextPanel(AppData* app) {
   if (app->popup_dialog != NULL) return;
   app->screen->current_panel = (app->screen->current_panel + 1) % MAX_PANELS;
@@ -431,29 +604,10 @@ void NextPanel(AppData* app) {
     app->screen->panels[app->screen->current_panel].menu_index;
 }
 
-/* Select next menu item */
-void SelectNextItem(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ChangeSelectedItem(&app->popup_dialog->menu, 1);
-    return;
-  }
-  if (app->screen->panels[app->screen->current_panel].scene_history->present ==
-      MAIN_MENU)
-    ChangeSelectedItem(app->menus[0], 1);
-}
-
-/* Select previous menu item */
-void SelectPreviousItem(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ChangeSelectedItem(&app->popup_dialog->menu, -1);
-    return;
-  }
-  if (app->screen->panels[app->screen->current_panel].scene_history->present ==
-      MAIN_MENU)
-    ChangeSelectedItem(app->menus[0], -1);
-}
-
-/* Toggle pause */
+/**
+ * Toggle pomodoro timer pause state.
+ * @param app Pointer to the application data
+ */
 void TogglePause(AppData* app) {
   if (app->popup_dialog != NULL) return;
   /* Only work in pomodoro scenes */
@@ -463,38 +617,11 @@ void TogglePause(AppData* app) {
   app->is_paused = !app->is_paused;
 }
 
-/* Switch to INSERT mode (vim 'i' key) */
-void SwitchToInsertMode(AppData* app) {
-  if (app->popup_dialog != NULL) return;
-  app->screen->panels[app->screen->current_panel].mode = INSERT;
-}
-
-/* Switch to INSERT mode at cursor+1 (vim 'a' key) */
-void SwitchToInsertModeAppend(AppData* app) {
-  if (app->popup_dialog != NULL) return;
-  InputState* input = app->screen->panels[app->screen->current_panel].input;
-  if (input && input->cursor < input->len) input->cursor++;
-  app->screen->panels[app->screen->current_panel].mode = INSERT;
-}
-
-/* Switch to VISUAL mode (vim 'v' key) */
-void SwitchToVisualMode(AppData* app) {
-  if (app->popup_dialog != NULL) return;
-  InputState* input = app->screen->panels[app->screen->current_panel].input;
-  app->screen->panels[app->screen->current_panel].mode = VISUAL;
-  if (input) input->selection.start = input->cursor;
-}
-
-/* Switch to NORMAL mode (ESC key) */
-void SwitchToNormalMode(AppData* app) {
-  if (app->popup_dialog != NULL) return;
-  app->screen->panels[app->screen->current_panel].mode = NORMAL;
-  /* Clear input state to prevent quit popup from appearing */
-  app->user_input = -1;
-  app->last_input = -1;
-}
-
-/* Update animation mode */
+/**
+ * Update animation mode for debugging (step through frames).
+ * @param app Pointer to the application data
+ * @param step Number of frames to advance (can be negative)
+ */
 void ChangeDebugAnimation(AppData* app, int step) {
   if (app->popup_dialog != NULL) return;
   int* present =
@@ -503,23 +630,25 @@ void ChangeDebugAnimation(AppData* app, int step) {
   *present = (*present + step + MAX_ANIMATIONS) % MAX_ANIMATIONS;
 }
 
-/* Quit the program - requires double press of same key */
+/**
+ * Quit the program with confirmation dialog.
+ * @param app Pointer to the application data
+ */
 void QuitApp(AppData* app) {
   if (app->notes && app->notes->is_move_mode) return;
   if (app->user_input == app->last_input) app->running = false;
 }
 
-/* Quit the program forcefully */
+/**
+ * Quit the program immediately without confirmation.
+ * @param app Pointer to the application data
+ */
 void ForcefullyQuitApp(AppData* app) { app->running = false; }
 
-/* Close the popup dialog */
-void ClosePopup(AppData* app) {
-  if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
-
-  app->popup_dialog = NULL;
-}
-
-/* Start pomodoro cycle */
+/**
+ * Start a new pomodoro cycle from the current scene.
+ * @param app Pointer to the application data
+ */
 void StartPomodoro(AppData* app) {
   ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
   app->screen->panels[0].menu_index = -1;
@@ -536,7 +665,10 @@ void StartPomodoro(AppData* app) {
   Notify(&notification);
 }
 
-/* Open the reset pomodoro menu */
+/**
+ * Open the reset pomodoro menu dialog.
+ * @param app Pointer to the application data
+ */
 void OpenResetMenu(AppData* app) {
   /* Only work in pomodoro scenes */
   int current_scene =
@@ -545,15 +677,24 @@ void OpenResetMenu(AppData* app) {
   RenderResetMenu(app);
 }
 
-/* Reset pomodoro step */
+/**
+ * Reset the current pomodoro step (time only, not cycle).
+ * @param app Pointer to the application data
+ */
 void ResetPomodoroStep(AppData* app) {
   app->pomodoro_data.current_step_time = 0;
 }
 
-/* Reset pomodoro cycle */
+/**
+ * Reset the entire pomodoro cycle (all steps and progress).
+ * @param app Pointer to the application data
+ */
 void ResetPomodoroCycle(AppData* app) { StartPomodoro(app); }
 
-/* Skip pomodoro step */
+/**
+ * Skip the current pomodoro step (with confirmation).
+ * @param app Pointer to the application data
+ */
 void SkipPomodoroStep(AppData* app) {
   if (app->user_input != app->last_input) return;
   /* Only work in pomodoro scenes */
@@ -584,7 +725,10 @@ void SkipPomodoroStep(AppData* app) {
   app->pomodoro_data.current_step_time = duration * 60;
 }
 
-/* Forcefully skip pomodoro step */
+/**
+ * Skip the current pomodoro step without confirmation.
+ * @param app Pointer to the application data
+ */
 void ForcefullySkipPomodoroStep(AppData* app) {
   /* Only work in pomodoro scenes */
   int current_scene =
@@ -611,7 +755,44 @@ void ForcefullySkipPomodoroStep(AppData* app) {
   app->pomodoro_data.current_step_time = duration * 60;
 }
 
-/* Function to execute the action of the selected menu item */
+/**
+ * ---------------------------------------------------------------------------
+ * Navigation Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Select the next item in the current menu.
+ * @param app Pointer to the application data
+ */
+void SelectNextItem(AppData* app) {
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, 1);
+    return;
+  }
+  if (app->screen->panels[app->screen->current_panel].scene_history->present ==
+      MAIN_MENU)
+    ChangeSelectedItem(app->menus[0], 1);
+}
+
+/**
+ * Select the previous item in the current menu.
+ * @param app Pointer to the application data
+ */
+void SelectPreviousItem(AppData* app) {
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, -1);
+    return;
+  }
+  if (app->screen->panels[app->screen->current_panel].scene_history->present ==
+      MAIN_MENU)
+    ChangeSelectedItem(app->menus[0], -1);
+}
+
+/**
+ * Execute the action of the currently selected menu item.
+ * @param app Pointer to the application data
+ */
 void ExecuteMenuAction(AppData* app) {
   if (app->popup_dialog != NULL) {
     Menu* current_menu = &app->popup_dialog->menu;
@@ -633,17 +814,94 @@ void ExecuteMenuAction(AppData* app) {
   ResetInput(app);
 }
 
-/* Notes keybinding functions */
+/**
+ * Close the currently open popup dialog.
+ * @param app Pointer to the application data
+ */
+void ClosePopup(AppData* app) {
+  if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
+
+  app->popup_dialog = NULL;
+}
+
+/**
+ * Navigate popup left/up (previous item).
+ * @param app Pointer to the application data
+ */
+void ChangeSelectedItemLeft(AppData* app) {
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, -1);
+    flushinp();
+  } else
+    SelectPreviousItem(app);
+}
+
+/**
+ * Navigate popup right/down (next item).
+ * @param app Pointer to the application data
+ */
+void ChangeSelectedItemRight(AppData* app) {
+  if (app->popup_dialog != NULL) {
+    ChangeSelectedItem(&app->popup_dialog->menu, 1);
+    flushinp();
+  } else
+    SelectNextItem(app);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Notes Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move selected note up in the list.
+ * @param app Pointer to the application data
+ */
+void NoteUpApp(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) {
+    ChangeSelectedItem(&app->popup_dialog->menu, -1);
+    return;
+  }
+  NoteUp(app->notes);
+}
+
+/**
+ * Move selected note down in the list.
+ * @param app Pointer to the application data
+ */
+void NoteDownApp(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) {
+    ChangeSelectedItem(&app->popup_dialog->menu, 1);
+    return;
+  }
+  NoteDown(app->notes);
+}
+
+/**
+ * Toggle the selected note between done and undone.
+ * @param app Pointer to the application data
+ */
 void ToggleTaskAtNotes(AppData* app) {
   if (app->popup_dialog != NULL) return;
   ToggleTask(app->notes);
 }
 
+/**
+ * Delete the currently selected note.
+ * @param app Pointer to the application data
+ */
 void DeleteNoteAtNotes(AppData* app) {
   if (app->popup_dialog != NULL) return;
   DeleteNote(app->notes);
 }
 
+/**
+ * Add a new task with [ ] prefix at the end of notes.
+ * @param app Pointer to the application data
+ */
 void AddNewTask(AppData* app) {
   if (app->popup_dialog != NULL) return;
   if (app->notes->max_lines > 0 &&
@@ -665,6 +923,10 @@ void AddNewTask(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
+/**
+ * Add a new note with - prefix at the end of notes.
+ * @param app Pointer to the application data
+ */
 void AddNewNote(AppData* app) {
   if (app->popup_dialog != NULL) return;
   if (app->notes->max_lines > 0 &&
@@ -686,6 +948,10 @@ void AddNewNote(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
+/**
+ * Add a subtask under the selected note node.
+ * @param app Pointer to the application data
+ */
 void AddSubtask(AppData* app) {
   if (app->popup_dialog != NULL) return;
   if (app->notes->current_id < 0) return;
@@ -716,6 +982,10 @@ void AddSubtask(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
+/**
+ * Add a subnote under the selected note node.
+ * @param app Pointer to the application data
+ */
 void AddSubnote(AppData* app) {
   if (app->popup_dialog != NULL) return;
   if (app->notes->current_id < 0) return;
@@ -746,6 +1016,11 @@ void AddSubnote(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
+/**
+ * Edit the selected note content (NORMAL mode).
+ * Switches to INSERT mode with existing content loaded.
+ * @param app Pointer to the application data
+ */
 void EditCurrentNote(AppData* app) {
   if (app->popup_dialog != NULL) return;
   if (app->notes == NULL || app->notes->current_id < 0) return;
@@ -778,33 +1053,41 @@ void EditCurrentNote(AppData* app) {
   app->screen->panels[app->screen->current_panel].mode = NORMAL;
 }
 
-void InputSwitchToInsertFromVisual(AppData* app) {
-  if (app->popup_dialog != NULL) return;
-  app->screen->panels[app->screen->current_panel].mode = INSERT;
-  noecho();
-  curs_set(1);
-  refresh();
+/**
+ * ---------------------------------------------------------------------------
+ * Move Mode Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Toggle move mode for reorganizing notes.
+ * @param app Pointer to the application data
+ */
+void ToggleMoveMode(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  app->notes->is_move_mode = !app->notes->is_move_mode;
 }
 
-/* Wrapper for popup navigation - change selected item left */
-void ChangeSelectedItemLeft(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ChangeSelectedItem(&app->popup_dialog->menu, -1);
-    flushinp();
-  } else
-    SelectPreviousItem(app);
+/**
+ * Exit move mode and return to normal interaction.
+ * @param app Pointer to the application data
+ */
+void ExitMoveMode(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->notes->is_move_mode) {
+    app->notes->is_move_mode = false;
+  } else {
+    if (app->user_input == app->last_input) app->running = false;
+  }
+  app->user_input = -1;
+  app->last_input = -1;
 }
 
-/* Wrapper for popup navigation - change selected item right */
-void ChangeSelectedItemRight(AppData* app) {
-  if (app->popup_dialog != NULL) {
-    ChangeSelectedItem(&app->popup_dialog->menu, 1);
-    flushinp();
-  } else
-    SelectNextItem(app);
-}
-
-/* Move mode wrapper functions */
+/**
+ * Move the selected note up one position.
+ * @param app Pointer to the application data
+ */
 void MoveNoteUpWrapper(AppData* app) {
   if (!app || !app->notes) return;
   if (app->popup_dialog) return;
@@ -814,6 +1097,10 @@ void MoveNoteUpWrapper(AppData* app) {
     NoteUp(app->notes);
 }
 
+/**
+ * Move the selected note down one position.
+ * @param app Pointer to the application data
+ */
 void MoveNoteDownWrapper(AppData* app) {
   if (!app || !app->notes) return;
   if (app->popup_dialog) return;
@@ -823,19 +1110,30 @@ void MoveNoteDownWrapper(AppData* app) {
     NoteDown(app->notes);
 }
 
+/**
+ * Promote note (move to parent level, decrease depth).
+ * @param app Pointer to the application data
+ */
 void PromoteNoteWrapper(AppData* app) {
   if (!app || !app->notes) return;
   if (app->popup_dialog) return;
   if (app->notes->is_move_mode) PromoteNote(app->notes);
 }
 
+/**
+ * Demote note (move to child of previous sibling, increase depth).
+ * @param app Pointer to the application data
+ */
 void DemoteNoteWrapper(AppData* app) {
   if (!app || !app->notes) return;
   if (app->popup_dialog) return;
-  if (app->notes->is_move_mode)
-    DemoteNote(app->notes);
+  if (app->notes->is_move_mode) DemoteNote(app->notes);
 }
 
+/**
+ * Quit notes scene and return to previous scene.
+ * @param app Pointer to the application data
+ */
 void QuitAppNotes(AppData* app) {
   if (!app || !app->notes) return;
   if (app->notes->is_move_mode) {
