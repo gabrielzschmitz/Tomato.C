@@ -10,7 +10,18 @@
 #include "tomato.h"
 #include "util.h"
 
-/* Creates a new Rollfilm with N frames of height M */
+/**
+ * ---------------------------------------------------------------------------
+ * Rollfilm Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a new Rollfilm with N frames of height M.
+ * @param N Number of frames to allocate
+ * @param M Height of each frame in lines
+ * @return Pointer to the created Rollfilm, or NULL on allocation failure
+ */
 Rollfilm* CreateRollfilm(int N, int M) {
   Rollfilm* film = (Rollfilm*)malloc(sizeof(Rollfilm));
   if (film == NULL) return NULL;
@@ -28,14 +39,35 @@ Rollfilm* CreateRollfilm(int N, int M) {
   return film;
 }
 
-/* Frees all memory associated with a Rollfilm */
+/**
+ * Set the loop variable for a list of Rollfilms.
+ * @param film Pointer to array of rollfilm pointers
+ * @param list_to_update Array of indices to update
+ * @param list_size Number of indices in list_to_update
+ * @param loop true to enable looping, false to disable
+ */
+void SetRollfilmLoop(Rollfilm** film, const int* list_to_update,
+                     size_t list_size, bool loop) {
+  for (size_t i = 0; i < list_size; i++) {
+    int index = list_to_update[i];
+    film[index]->loop = loop;
+  }
+}
+
+/**
+ * Free all memory associated with a Rollfilm.
+ * @param rollfilm Pointer to the Rollfilm to free
+ */
 void FreeRollfilm(Rollfilm* rollfilm) {
   if (rollfilm == NULL) return;
   FreeFrames(rollfilm->frames);
   free(rollfilm);
 }
 
-/* Creates a new frame */
+/**
+ * Create a new empty Frame.
+ * @return Pointer to the created Frame, or NULL on allocation failure
+ */
 Frame* CreateFrame(void) {
   Frame* newFrame = (Frame*)malloc(sizeof(Frame));
   if (newFrame == NULL) return NULL;
@@ -47,7 +79,44 @@ Frame* CreateFrame(void) {
   return newFrame;
 }
 
-/* Frees all frames in a linked list */
+/**
+ * Link a new frame to the current frame, maintaining circular list.
+ * Initializes the new frame and connects it to the existing chain.
+ * @param current_frame Pointer to current frame pointer (updated)
+ * @param head_row Row to attach as the first row of the new frame
+ * @param frame_id ID to assign to the new frame
+ */
+void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
+  Frame* new_frame = CreateFrame();
+  if (new_frame == NULL) return;
+  (*current_frame)->rows = head_row;
+  new_frame->id = frame_id;
+
+  if ((*current_frame)->next == NULL) {
+    new_frame->next = *current_frame;
+    (*current_frame)->next = new_frame;
+  } else {
+    new_frame->next = (*current_frame)->next;
+    (*current_frame)->next = new_frame;
+  }
+
+  *current_frame = new_frame;
+}
+
+/**
+ * Free all memory associated with a single Frame.
+ * @param frame Pointer to the Frame to free
+ */
+void FreeFrame(Frame* frame) {
+  if (frame == NULL) return;
+  FreeRows(frame->rows);
+  free(frame);
+}
+
+/**
+ * Free all frames in a circular linked list.
+ * @param frames Pointer to the first frame in the circular list
+ */
 void FreeFrames(Frame* frames) {
   if (frames == NULL) return;
 
@@ -59,14 +128,10 @@ void FreeFrames(Frame* frames) {
   } while (current != frames);
 }
 
-/* Frees all memory associated with a single frame */
-void FreeFrame(Frame* frame) {
-  if (frame == NULL) return;
-  FreeRows(frame->rows);
-  free(frame);
-}
-
-/* Creates a new frame row */
+/**
+ * Create a new empty FrameRow.
+ * @return Pointer to the created FrameRow, or NULL on allocation failure
+ */
 FrameRow* CreateRow(void) {
   FrameRow* newRow = (FrameRow*)malloc(sizeof(FrameRow));
   if (newRow == NULL) return NULL;
@@ -75,7 +140,10 @@ FrameRow* CreateRow(void) {
   return newRow;
 }
 
-/* Frees all rows in a frame */
+/**
+ * Free all rows in a linked list starting from the given row.
+ * @param rows Pointer to the first row to free
+ */
 void FreeRows(FrameRow* rows) {
   FrameRow* current = rows;
   while (current != NULL) {
@@ -86,7 +154,10 @@ void FreeRows(FrameRow* rows) {
   }
 }
 
-/* Creates a new frame token */
+/**
+ * Create a new empty FrameToken.
+ * @return Pointer to the created FrameToken, or NULL on allocation failure
+ */
 FrameToken* CreateToken(void) {
   FrameToken* newToken = (FrameToken*)malloc(sizeof(FrameToken));
   if (newToken == NULL) return NULL;
@@ -102,7 +173,20 @@ FrameToken* CreateToken(void) {
   return newToken;
 }
 
-/* Frees all tokens in a linked list */
+/**
+ * Free all memory associated with a single FrameToken.
+ * @param token Pointer to the FrameToken to free
+ */
+void FreeToken(FrameToken* token) {
+  if (token == NULL) return;
+  free(token->token);
+  free(token);
+}
+
+/**
+ * Free all tokens in a linked list starting from the given token.
+ * @param tokens Pointer to the first token to free
+ */
 void FreeTokens(FrameToken* tokens) {
   FrameToken* current = tokens;
   while (current != NULL) {
@@ -112,14 +196,18 @@ void FreeTokens(FrameToken* tokens) {
   }
 }
 
-/* Frees all memory associated with a single frame token */
-void FreeToken(FrameToken* token) {
-  if (token == NULL) return;
-  free(token->token);
-  free(token);
-}
+/**
+ * ---------------------------------------------------------------------------
+ * Rollfilm Serialization / Deserialization
+ * ---------------------------------------------------------------------------
+ */
 
-/* Deserializes sprites from a file into a Rollfilm structure */
+/**
+ * Deserialize sprites from a file into a Rollfilm structure.
+ * Parses sprite file format with frame size, timing, and color codes.
+ * @param filename Path to the sprite file
+ * @return Pointer to the created Rollfilm, or NULL on failure
+ */
 Rollfilm* DeserializeSprites(const char* filename) {
   FILE* file = fopen(filename, "r");
   if (file == NULL) return NULL;
@@ -201,168 +289,13 @@ Rollfilm* DeserializeSprites(const char* filename) {
                           line_width);
 }
 
-/* Process the line containing icons */
-int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
-                     Frame** head_frame, Frame** current_frame,
-                     FrameRow** head_row, FrameRow** current_row,
-                     int* current_frame_id, FILE* file) {
-  int frame_count, frame_height;
-  *read = 1;
-  if (ParseFrameSize(line, &frame_count, &frame_height) != 0) {
-    fclose(file);
-    return -1;
-  }
-  *rollfilm = CreateRollfilm(frame_count, frame_height);
-  if (*rollfilm == NULL) {
-    fclose(file);
-    return -1;
-  }
-  *head_frame = CreateFrame();
-  if (*head_frame == NULL) {
-    FreeRollfilm(*rollfilm);
-    fclose(file);
-    return -1;
-  }
-  *current_frame = *head_frame;
-  (*current_frame)->id = *current_frame_id;
-  *head_row = CreateRow();
-  if (*head_row == NULL) {
-    FreeRollfilm(*rollfilm);
-    fclose(file);
-    return -1;
-  }
-  *current_row = *head_row;
-  return 0;
-}
-
-/* Process the content of the frame */
-int ProcessFrameContent(char* line, int* lines_read, Rollfilm* rollfilm,
-                        Frame** current_frame, FrameRow** current_row,
-                        int* line_color, int* line_width,
-                        double* seconds_multiplier, FILE* file) {
-  if (*lines_read == 0) {
-    if (ParseFrameTime(line, seconds_multiplier) != 0) {
-      FreeRollfilm(rollfilm);
-      fclose(file);
-      return -1;
-    }
-    if (fgets(line, MAX_FRAME_WIDTH, file) == NULL) {
-      FreeRollfilm(rollfilm);
-      fclose(file);
-      return -1;
-    }
-    (*current_frame)->seconds_multiplier = *seconds_multiplier;
-  } else if (*lines_read >= rollfilm->frame_count * rollfilm->frame_height)
-    return -1;
-
-  if (ProcessFrameLine(line, current_row, line_color, line_width) != 0) {
-    FreeRollfilm(rollfilm);
-    fclose(file);
-    return -1;
-  }
-
-  (*lines_read)++;
-  return 0;
-}
-
-/* Cleanup and finalize the Rollfilm structure */
-Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
-                           Frame* current_frame, FrameRow* head_row,
-                           int line_width) {
-  fclose(file);
-
-  if (current_frame != NULL) {
-    current_frame->rows = head_row;
-    current_frame->width = line_width;
-  }
-  rollfilm->frames = head_frame;
-
-  if (head_frame != NULL && current_frame != NULL &&
-      current_frame != head_frame)
-    current_frame->next = head_frame;
-  rollfilm->frame_width = GetWidestFrame(rollfilm);
-
-  return rollfilm;
-}
-
-/* Parses the frame height from a line. */
-int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
-  return sscanf(line, "%*[^/]/%dc/%dh", frame_count, frame_height) != 2 ? -1
-                                                                        : 0;
-}
-
-/* Checks if the line contains icons. */
-int IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
-
-/* Checks if the line is a separator. */
-int IsSeparatorLine(const char* line) {
-  if (strlen(line) != strlen(SEPARATOR)) return 0;
-  return strcmp(line, SEPARATOR) == 0;
-}
-
-/* Parses the frame height from a line. */
-int ParseFrameTime(const char* line, double* frame_time) {
-  return sscanf(line, "%lfs", frame_time) != 1 ? -1 : 0;
-}
-
-/* Processes a line of frame data and updates the current row. */
-int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
-                     int* line_width) {
-  FrameToken* line_token = DeserializeFrameLine(line, line_color);
-  if (line_token == NULL) return -1;
-  int current_line_width = 0;
-  FrameToken* token = line_token;
-  while (token != NULL) {
-    current_line_width += token->length;
-    token = token->next;
-  }
-
-  if (current_line_width > *line_width) *line_width = current_line_width;
-
-  (*current_row)->tokens = line_token;
-  FrameRow* new_row = CreateRow();
-  if (new_row == NULL) return -1;
-  (*current_row)->next = new_row;
-  *current_row = new_row;
-  return 0;
-}
-
-/* Links a new frame to the current frame and updates the frame ID. */
-void LinkNewFrame(Frame** current_frame, FrameRow* head_row, int frame_id) {
-  Frame* new_frame = CreateFrame();
-  if (new_frame == NULL) return;
-  (*current_frame)->rows = head_row;
-  new_frame->id = frame_id;
-
-  if ((*current_frame)->next == NULL) {
-    new_frame->next = *current_frame;
-    (*current_frame)->next = new_frame;
-  } else {
-    new_frame->next = (*current_frame)->next;
-    (*current_frame)->next = new_frame;
-  }
-
-  *current_frame = new_frame;
-}
-
-/* Returns the widest frame from a rollfilm */
-int GetWidestFrame(Rollfilm* rollfilm) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) {
-    return 0;
-  }
-
-  Frame* current_frame = rollfilm->frames;
-  int max_width = current_frame->width;
-
-  do {
-    if (current_frame->width > max_width) max_width = current_frame->width;
-    current_frame = current_frame->next;
-  } while (current_frame != rollfilm->frames);
-
-  return max_width;
-}
-
-/* Deserializes a single line of frame data */
+/**
+ * Deserialize a single line of frame data into tokens.
+ * Handles color codes, UTF-8 characters, and text segments.
+ * @param src Source line to deserialize
+ * @param color Output: color code parsed from line
+ * @return Pointer to the first token, or NULL on error
+ */
 FrameToken* DeserializeFrameLine(const char* src, int* color) {
   FrameToken* head = CreateToken();
   FrameToken* current_token = head;
@@ -427,7 +360,166 @@ FrameToken* DeserializeFrameLine(const char* src, int* color) {
   return head;
 }
 
-/* Handles a UTF-8 character in a line */
+/**
+ * Cleanup and finalize the Rollfilm structure.
+ * Closes file and returns the completed rollfilm.
+ * @param file File handle to close
+ * @param rollfilm Pointer to the rollfilm to finalize
+ * @param head_frame Pointer to the head frame
+ * @param current_frame Pointer to the current frame
+ * @param head_row Pointer to the head row
+ * @param line_width Width of the largest line processed
+ * @return Pointer to the finalized Rollfilm
+ */
+Rollfilm* CleanupAndReturn(FILE* file, Rollfilm* rollfilm, Frame* head_frame,
+                           Frame* current_frame, FrameRow* head_row,
+                           int line_width) {
+  fclose(file);
+
+  if (current_frame != NULL) {
+    current_frame->rows = head_row;
+    current_frame->width = line_width;
+  }
+  rollfilm->frames = head_frame;
+
+  if (head_frame != NULL && current_frame != NULL &&
+      current_frame != head_frame)
+    current_frame->next = head_frame;
+  rollfilm->frame_width = GetWidestFrame(rollfilm);
+
+  return rollfilm;
+}
+
+/**
+ * Process a line containing icons in the sprite file.
+ * @param line Line of text to parse
+ * @param read Pointer to track bytes read
+ * @param rollfilm Pointer to the rollfilm pointer
+ * @param head_frame Pointer to the head frame pointer
+ * @param current_frame Pointer to the current frame pointer
+ * @param head_row Pointer to the head row pointer
+ * @param current_row Pointer to the current row pointer
+ * @param current_frame_id Pointer to current frame ID
+ * @param file File handle for reading
+ * @return 0 on success, non-zero on error
+ */
+int ProcessIconsLine(const char* line, int* read, Rollfilm** rollfilm,
+                     Frame** head_frame, Frame** current_frame,
+                     FrameRow** head_row, FrameRow** current_row,
+                     int* current_frame_id, FILE* file) {
+  int frame_count, frame_height;
+  *read = 1;
+  if (ParseFrameSize(line, &frame_count, &frame_height) != 0) {
+    fclose(file);
+    return -1;
+  }
+  *rollfilm = CreateRollfilm(frame_count, frame_height);
+  if (*rollfilm == NULL) {
+    fclose(file);
+    return -1;
+  }
+  *head_frame = CreateFrame();
+  if (*head_frame == NULL) {
+    FreeRollfilm(*rollfilm);
+    fclose(file);
+    return -1;
+  }
+  *current_frame = *head_frame;
+  (*current_frame)->id = *current_frame_id;
+  *head_row = CreateRow();
+  if (*head_row == NULL) {
+    FreeRollfilm(*rollfilm);
+    fclose(file);
+    return -1;
+  }
+  *current_row = *head_row;
+  return 0;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Parsing Helpers
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Process a line of frame data and update the current row.
+ * Parses color codes and text tokens from the line.
+ * @param line Line to process
+ * @param current_row Pointer to current row pointer
+ * @param line_color Output: color code for the line
+ * @param line_width Output: width of the line
+ * @return 0 on success, non-zero on error
+ */
+int ProcessFrameLine(const char* line, FrameRow** current_row, int* line_color,
+                     int* line_width) {
+  FrameToken* line_token = DeserializeFrameLine(line, line_color);
+  if (line_token == NULL) return -1;
+  int current_line_width = 0;
+  FrameToken* token = line_token;
+  while (token != NULL) {
+    current_line_width += token->length;
+    token = token->next;
+  }
+
+  if (current_line_width > *line_width) *line_width = current_line_width;
+
+  (*current_row)->tokens = line_token;
+  FrameRow* new_row = CreateRow();
+  if (new_row == NULL) return -1;
+  (*current_row)->next = new_row;
+  *current_row = new_row;
+  return 0;
+}
+
+/**
+ * Parse the frame height and count from a line.
+ * Format: "SIZE: NxM" where N is count and M is height.
+ * @param line Line to parse
+ * @param frame_count Output: number of frames
+ * @param frame_height Output: height of each frame
+ * @return 0 on success, non-zero on error
+ */
+int ParseFrameSize(const char* line, int* frame_count, int* frame_height) {
+  return sscanf(line, "%*[^/]/%dc/%dh", frame_count, frame_height) != 2 ? -1
+                                                                        : 0;
+}
+
+/**
+ * Parse the frame time multiplier from a line.
+ * Format: "TIME: X.X" where X.X is the multiplier value.
+ * @param line Line to parse
+ * @param frame_time Output: time multiplier value
+ * @return 0 on success, non-zero on error
+ */
+int ParseFrameTime(const char* line, double* frame_time) {
+  return sscanf(line, "%lfs", frame_time) != 1 ? -1 : 0;
+}
+
+/**
+ * Check if a line contains icon data (not a separator or metadata).
+ * @param line Line to check
+ * @return true if icons, false if not
+ */
+bool IsIconsLine(const char* line) { return strstr(line, ICONS) != NULL; }
+
+/**
+ * Check if a line is a separator between sprite sections.
+ * @param line Line to check
+ * @return true if separator, false if not
+ */
+bool IsSeparatorLine(const char* line) {
+  if (strlen(line) != strlen(SEPARATOR)) return 0;
+  return strcmp(line, SEPARATOR) == 0;
+}
+
+/**
+ * Handle a UTF-8 character in a line.
+ * Copies the multi-byte character to the destination buffer.
+ * @param src Source position in the line
+ * @param dest Pointer to destination pointer (updated)
+ * @return Number of bytes consumed
+ */
 int HandleUnicode(const char* src, char** dest) {
   /* Create a buffer to store the UTF-8 character
    * (max 4 bytes for UTF-8 + 1 for null terminator) */
@@ -472,7 +564,13 @@ int HandleUnicode(const char* src, char** dest) {
   return utf8_length;
 }
 
-/* Handles a color code in a line */
+/**
+ * Handle a color code in a line.
+ * Parses escape sequence and sets the color value.
+ * @param src Source position in the line
+ * @param dest Output: color code
+ * @return Number of bytes consumed
+ */
 int HandleColor(const char* src, int* dest) {
   int color_code = src[2] - '0';
   if (color_code < 0 || color_code > PALETTE_SIZE) return 3;
@@ -480,62 +578,40 @@ int HandleColor(const char* src, int* dest) {
   return 3;
 }
 
-/* Render the current frame of the Rollfilm at the specified coordinates */
-void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) return;
+/**
+ * ---------------------------------------------------------------------------
+ * Util functions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Get the width of the widest frame in a rollfilm.
+ * @param rollfilm Pointer to the rollfilm
+ * @return Width of the widest frame, or 0 if rollfilm is NULL
+ */
+int GetWidestFrame(Rollfilm* rollfilm) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) return 0;
 
   Frame* current_frame = rollfilm->frames;
-  FrameRow* current_row = current_frame->rows;
-  int y = start_y;
-  int color = NO_COLOR;
+  int max_width = current_frame->width;
 
-  while (current_row != NULL) {
-    FrameToken* current_token = current_row->tokens;
-    int x = start_x;
+  do {
+    if (current_frame->width > max_width) max_width = current_frame->width;
+    current_frame = current_frame->next;
+  } while (current_frame != rollfilm->frames);
 
-    while (current_token != NULL) {
-      if (color != current_token->color && current_token->color != NO_COLOR) {
-        color = current_token->color;
-        SetColor(color, NO_COLOR, A_BOLD);
-      }
-
-      if (!current_token->is_blank) mvprintw(y, x, "%s", current_token->token);
-      x += current_token->length;
-      current_token = current_token->next;
-    }
-
-    current_row = current_row->next;
-    y++;
-  }
+  return max_width;
 }
 
-/* Updates the current frame of the Rollfilm to be next frame */
-void UpdateAnimation(Rollfilm* rollfilm) {
-  if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
-    return;
-  double current_time = GetCurrentTimeMS();
-  double delta_time = current_time - rollfilm->delta_frame_ms;
-
-  if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
-    rollfilm->delta_frame_ms = current_time;
-    rollfilm->frames = rollfilm->frames->next;
-    rollfilm->current_frame =
-      (rollfilm->current_frame + 1) % rollfilm->frame_count;
-  }
-}
-
-/* Updates the loop variable of a given list of Rollfilms */
-void SetAnimationsLoop(Rollfilm** film, const int* list_to_update,
-                       size_t list_size, bool loop) {
-  for (size_t i = 0; i < list_size; i++) {
-    int index = list_to_update[i];
-    film[index]->loop = loop;
-  }
-}
-
-/* Finds the Rollfilm with the largest width and height among specified indices */
-int FindLargestRollfilm(Rollfilm* animations[], int* indices,
-                        int indices_count) {
+/**
+ * Find the rollfilm with the largest width among specified indices.
+ * Used to size panels to fit the largest animation.
+ * @param animations Pointer to array of rollfilm pointers
+ * @param indices Array of indices to check
+ * @param indices_count Number of indices
+ * @return Index of the largest rollfilm, or -1 if none found
+ */
+int RollfilmLargest(Rollfilm* animations[], int* indices, int indices_count) {
   if (!animations || !indices || indices_count <= 0) return -1;
 
   int max_index = 1;
@@ -559,8 +635,15 @@ int FindLargestRollfilm(Rollfilm* animations[], int* indices,
   return max_index;
 }
 
-/* Finds the first blank token position in the last frame */
-bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
+/**
+ * Find the position of the first blank token in the last frame.
+ * Used for cursor positioning in text input.
+ * @param rollfilm Pointer to the rollfilm
+ * @param out_x Output: x coordinate of the blank
+ * @param out_y Output: y coordinate of the blank
+ * @return true if found, false if not found
+ */
+bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return false;
 
   Frame* last_frame = rollfilm->frames;
@@ -591,8 +674,14 @@ bool FindFirstBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
   return false;
 }
 
-/* Finds the last blank token position in the last frame */
-bool FindLastBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
+/**
+ * Find the position of the last blank token in the last frame.
+ * @param rollfilm Pointer to the rollfilm
+ * @param out_x Output: x coordinate of the blank
+ * @param out_y Output: y coordinate of the blank
+ * @return true if found, false if not found
+ */
+bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
   if (rollfilm == NULL || rollfilm->frames == NULL) return false;
 
   Frame* last_frame = rollfilm->frames;
@@ -629,4 +718,63 @@ bool FindLastBlankInLastFrame(Rollfilm* rollfilm, int* out_x, int* out_y) {
   }
 
   return false;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Animation callbacks
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render the current frame of the Rollfilm at the specified coordinates.
+ * @param rollfilm Pointer to the rollfilm to render
+ * @param start_y Starting y coordinate on screen
+ * @param start_x Starting x coordinate on screen
+ */
+void RenderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) return;
+
+  Frame* current_frame = rollfilm->frames;
+  FrameRow* current_row = current_frame->rows;
+  int y = start_y;
+  int color = NO_COLOR;
+
+  while (current_row != NULL) {
+    FrameToken* current_token = current_row->tokens;
+    int x = start_x;
+
+    while (current_token != NULL) {
+      if (color != current_token->color && current_token->color != NO_COLOR) {
+        color = current_token->color;
+        SetColor(color, NO_COLOR, A_BOLD);
+      }
+
+      if (!current_token->is_blank) mvprintw(y, x, "%s", current_token->token);
+      x += current_token->length;
+      current_token = current_token->next;
+    }
+
+    current_row = current_row->next;
+    y++;
+  }
+}
+
+/**
+ * Advance the Rollfilm to the next frame.
+ * Handles timing, looping, and frame index wrapping.
+ * @param rollfilm Pointer to the rollfilm to update
+ */
+void UpdateAnimation(Rollfilm* rollfilm) {
+  if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
+    return;
+  double current_time = GetCurrentTimeMS();
+  double delta_time = current_time - rollfilm->delta_frame_ms;
+
+  if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
+    rollfilm->delta_frame_ms = current_time;
+    rollfilm->frames = rollfilm->frames->next;
+    rollfilm->current_frame =
+      (rollfilm->current_frame + 1) % rollfilm->frame_count;
+  }
 }
