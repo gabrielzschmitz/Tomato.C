@@ -2,33 +2,53 @@
 #define INIT_H_
 
 #include "error.h"
-#include "tomato.h"
+#include "ui.h"
 
-/* Initialize ncurses screen and configure settings */
-void InitScreen(void);
+typedef struct AppData AppData;
 
-/* Initialize variables */
+/**
+ * ---------------------------------------------------------------------------
+ * App Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialize application variables and data structures.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType InitApp(AppData* app);
 
-/* Function to initialize the app menus */
-ErrorType InitMenus(AppData* app);
+/**
+ * End application and free all allocated resources.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType EndApp(AppData* app);
 
-/* Function to initialize the status bar */
-ErrorType InitStatusBar(AppData* app);
+/**
+ * Initialize ncurses screen and configure settings.
+ * Sets up terminal for curses mode with required features.
+ */
+void InitScreen(void);
 
-/* Initialize animations from sprites */
-ErrorType InitAnimations(AppData* app);
-
-/* Init a Border struct with the config values */
-Border InitBorder(void);
-
-/* Function to initialize the pomodoro data */
-ErrorType InitPomodoroData(AppData* app);
-
-/* End ncurses screen and delete default window and screen */
+/**
+ * End ncurses screen and clean up default window.
+ * Must be called before program exit.
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType EndScreen(void);
 
-/* End/Free variables */
-ErrorType EndApp(AppData* app);
+/**
+ * ---------------------------------------------------------------------------
+ * Components
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialize a Border struct with configured character values.
+ * @return Border struct with default border characters
+ */
+Border InitBorder(void);
 
 #endif /* INIT_H_ */

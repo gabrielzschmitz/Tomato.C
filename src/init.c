@@ -2,6 +2,7 @@
 
 #include <ncurses.h>
 
+#include "anim.h"
 #include "bar.h"
 #include "config.h"
 #include "error.h"
@@ -12,7 +13,101 @@
 #include "ui.h"
 #include "util.h"
 
-/* Initialize ncurses screen and configure settings */
+/* PRIVATE INIT FUNCTIONS */
+/* Components */
+static ErrorType initMenus(AppData* app);
+static ErrorType initStatusBar(AppData* app);
+static ErrorType initAnimations(AppData* app);
+static ErrorType initPomodoroData(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * App Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialize application variables and data structures.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType InitApp(AppData* app) {
+  ErrorType status = NO_ERROR;
+  if (!CheckConfigIconType()) return INVALID_CONFIG;
+
+  app->screen = CreateScreen();
+  if (app->screen == NULL) return MALLOC_ERROR;
+
+  status = initStatusBar(app);
+  if (status != NO_ERROR) return status;
+
+  app->current_menu = -1;
+  status = initMenus(app);
+  if (status != NO_ERROR) return status;
+
+  status = initAnimations(app);
+  if (status != NO_ERROR) return status;
+
+  ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
+  ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
+  app->screen->panels[0].menu_index = MAIN_MENU_MENU;
+  app->screen->panels[1].menu_index = -1;
+  app->screen->panels[1].input = InputStateCreate();
+  app->screen->panels[1].mode = DEFAULT;
+  app->is_paused = false;
+  app->popup_dialog = NULL;
+
+  app->notes = CreateNotesData();
+  if (app->notes == NULL) return MALLOC_ERROR;
+
+  if (NOTEPAD_LOG) LoadNotes(NOTES_LOG, app->notes);
+
+  /* Add some example notes */
+  if (DEBUG && app->notes->count == 0) {
+    AddNote(app->notes, "Buy groceries", NOTE_UNDONE);
+    AddNote(app->notes, "Read a book", NOTE_DONE);
+    AddNote(app->notes, "This is a note", NOTE_PLAIN);
+  }
+
+  if (app->notes->count > 0 && app->notes->current_id < 0)
+    app->notes->current_id = app->notes->items[0]->id;
+
+  app->user_input = -1;
+  app->last_input = -1;
+  app->block_input = false;
+
+  status = initPomodoroData(app);
+  if (status != NO_ERROR) return status;
+  app->running = true;
+  return status;
+}
+
+/**
+ * End application and free all allocated resources.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType EndApp(AppData* app) {
+  for (int i = 0; i < MAX_ANIMATIONS; i++) {
+    FreeRollfilm(app->animations[i]);
+    app->animations[i] = NULL;
+  }
+  for (int i = 0; i < MAX_MENUS; i++) {
+    FreeMenu(app->menus[i]);
+    app->menus[i] = NULL;
+  }
+  FreeFloatingDialog(app->popup_dialog);
+  FreeStatusBar(app->status_bar);
+  if (NOTEPAD_LOG) SaveNotes(NOTES_LOG, app->notes);
+  FreeNotesData(app->notes);
+  FreeScreen(app->screen);
+  return NO_ERROR;
+}
+
+/**
+ * Initialize ncurses screen and configure settings.
+ * Sets up terminal for curses mode with required features.
+ */
 void InitScreen(void) {
 #ifdef XCURSES
   Xinitscr(argc, argv);
@@ -53,60 +148,51 @@ void InitScreen(void) {
   keypad(stdscr, TRUE);
 }
 
-/* Initialize variables */
-ErrorType InitApp(AppData* app) {
-  ErrorType status = NO_ERROR;
-  if (!CheckConfigIconType()) return INVALID_CONFIG;
+/**
+ * End ncurses screen and clean up default window.
+ * Must be called before program exit.
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType EndScreen(void) {
+  int err = endwin();
+  if (err == ERR) return WINDOW_DELETION_ERROR;
 
-  app->screen = CreateScreen();
-  if (app->screen == NULL) return MALLOC_ERROR;
+  err = delwin(stdscr);
+  if (err == ERR) return WINDOW_DELETION_ERROR;
 
-  status = InitStatusBar(app);
-  if (status != NO_ERROR) return status;
+  extern SCREEN* SP;
+  delscreen(SP);
 
-  app->current_menu = -1;
-  status = InitMenus(app);
-  if (status != NO_ERROR) return status;
-
-  status = InitAnimations(app);
-  if (status != NO_ERROR) return status;
-
-  ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
-  ExecuteHistory(app->screen->panels[1].scene_history, NOTES);
-  app->screen->panels[0].menu_index = MAIN_MENU_MENU;
-  app->screen->panels[1].menu_index = -1;
-  app->screen->panels[1].input = InputStateCreate();
-  app->screen->panels[1].mode = DEFAULT;
-  app->is_paused = false;
-  app->popup_dialog = NULL;
-
-  app->notes = CreateNotesData();
-  if (app->notes == NULL) return MALLOC_ERROR;
-
-  if (NOTEPAD_LOG) LoadNotes(NOTES_LOG, app->notes);
-
-  /* Add some example notes */
-  if (DEBUG && app->notes->count == 0) {
-    AddNote(app->notes, "Buy groceries", NOTE_UNDONE);
-    AddNote(app->notes, "Read a book", NOTE_DONE);
-    AddNote(app->notes, "This is a note", NOTE_PLAIN);
-  }
-
-  if (app->notes->count > 0 && app->notes->current_id < 0)
-    app->notes->current_id = app->notes->items[0]->id;
-
-  app->user_input = -1;
-  app->last_input = -1;
-  app->block_input = false;
-
-  status = InitPomodoroData(app);
-  if (status != NO_ERROR) return status;
-  app->running = true;
-  return status;
+  return NO_ERROR;
 }
 
-/* Function to initialize the app menus */
-ErrorType InitMenus(AppData* app) {
+/**
+ * ---------------------------------------------------------------------------
+ * Components
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialize a Border struct with configured character values.
+ * @return Border struct with default border characters
+ */
+Border InitBorder(void) {
+  Border border;
+  border.top_left = BORDER_CHARS[0];     /* "┏" */
+  border.top_right = BORDER_CHARS[1];    /* "┓" */
+  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
+  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
+  border.horizontal = BORDER_CHARS[4];   /* "━" */
+  border.vertical = BORDER_CHARS[5];     /* "┃" */
+  return border;
+}
+
+/**
+ * Initialize the application menus with menu items and actions.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+static ErrorType initMenus(AppData* app) {
   /* MAIN_MENU */
   const int n_mainmenu = 4;
   MenuItem main_menu_items[4] = {{"start", StartPomodoro},
@@ -135,8 +221,12 @@ ErrorType InitMenus(AppData* app) {
   return NO_ERROR;
 }
 
-/* Function to initialize the status bar */
-ErrorType InitStatusBar(AppData* app) {
+/**
+ * Initialize the status bar with modules for different information.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+static ErrorType initStatusBar(AppData* app) {
   StatusBarPosition position = BOTTOM;
   if (STATUS_BAR_POSITION) position = TOP;
 
@@ -154,8 +244,12 @@ ErrorType InitStatusBar(AppData* app) {
   return NO_ERROR;
 }
 
-/* Initialize animations from sprites */
-ErrorType InitAnimations(AppData* app) {
+/**
+ * Initialize animations by loading sprites from files.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+static ErrorType initAnimations(AppData* app) {
   const char* animation_files[MAX_ANIMATIONS] = {
     "./sprites/mainmenu.asc",   "./sprites/worktime.asc",
     "./sprites/shortpause.asc", "./sprites/longpause.asc",
@@ -170,25 +264,17 @@ ErrorType InitAnimations(AppData* app) {
 
   const int dont_loop[] = {NOTES, HELP, CONTINUE};
   size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
-  SetAnimationsLoop(app->animations, dont_loop, list_size, false);
+  SetRollfilmLoop(app->animations, dont_loop, list_size, false);
 
   return NO_ERROR;
 }
 
-/* Init a Border struct with the config values */
-Border InitBorder(void) {
-  Border border;
-  border.top_left = BORDER_CHARS[0];     /* "┏" */
-  border.top_right = BORDER_CHARS[1];    /* "┓" */
-  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
-  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
-  border.horizontal = BORDER_CHARS[4];   /* "━" */
-  border.vertical = BORDER_CHARS[5];     /* "┃" */
-  return border;
-}
-
-/* Function to initialize the pomodoro data */
-ErrorType InitPomodoroData(AppData* app) {
+/**
+ * Initialize pomodoro timer data with configured values.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+static ErrorType initPomodoroData(AppData* app) {
   if (DEBUG)
     app->pomodoro_data.total_cycles = 2;
   else
@@ -202,37 +288,5 @@ ErrorType InitPomodoroData(AppData* app) {
   app->pomodoro_data.current_step_time = 0;
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
 
-  return NO_ERROR;
-}
-
-/* End ncurses screen and delete default window and screen */
-ErrorType EndScreen(void) {
-  int err = endwin();
-  if (err == ERR) return WINDOW_DELETION_ERROR;
-
-  err = delwin(stdscr);
-  if (err == ERR) return WINDOW_DELETION_ERROR;
-
-  extern SCREEN* SP;
-  delscreen(SP);
-
-  return NO_ERROR;
-}
-
-/* End/Free variables */
-ErrorType EndApp(AppData* app) {
-  for (int i = 0; i < MAX_ANIMATIONS; i++) {
-    FreeRollfilm(app->animations[i]);
-    app->animations[i] = NULL;
-  }
-  for (int i = 0; i < MAX_MENUS; i++) {
-    FreeMenu(app->menus[i]);
-    app->menus[i] = NULL;
-  }
-  FreeFloatingDialog(app->popup_dialog);
-  FreeStatusBar(app->status_bar);
-  if (NOTEPAD_LOG) SaveNotes(NOTES_LOG, app->notes);
-  FreeNotesData(app->notes);
-  FreeScreen(app->screen);
   return NO_ERROR;
 }
