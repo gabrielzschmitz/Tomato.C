@@ -6,20 +6,30 @@
 
 #include "config.h"
 #include "error.h"
+
 #ifdef __APPLE__
 #define MA_NO_RUNTIME_LINKING
 #endif
 #define MINIAUDIO_IMPLEMENTATION
 #include "external/miniaudio.h"
 
-/* Structure to pass data to the playback thread */
+/**
+ * Structure to pass data to the playback thread.
+ * Contains all parameters needed to play audio asynchronously.
+ */
 static struct playbackData {
-  char audio_path[512];
-  float volume;
-  bool loop;
+  char audio_path[512]; /* Path to the audio file to play */
+  float volume;         /* Volume level for playback (0.0 to 1.0) */
+  bool loop;            /* true to loop playback, false to play once */
 } playbackData;
 
-/* Playback thread function */
+/**
+ * Playback thread function.
+ * Initializes miniaudio engine, loads and plays the audio file.
+ * Blocks until playback completes, then cleans up resources.
+ * @param arg Pointer to playbackData structure (freed by caller)
+ * @return NULL always
+ */
 static void* playbackThread(void* arg) {
   struct playbackData* data = (struct playbackData*)arg;
   ma_result result;
@@ -36,7 +46,7 @@ static void* playbackThread(void* arg) {
   /* Set volume for the engine */
   ma_engine_set_volume(&engine, data->volume);
 
-  /* Initialize the sound */
+  /* Initialize the sound from file */
   result =
     ma_sound_init_from_file(&engine, data->audio_path, 0, NULL, NULL, &sound);
   if (result != MA_SUCCESS) {
@@ -45,10 +55,10 @@ static void* playbackThread(void* arg) {
     return NULL;
   }
 
-  /* Enable looping */
+  /* Enable looping if requested */
   ma_sound_set_looping(&sound, data->loop);
 
-  /* Play the sound */
+  /* Start playback */
   result = ma_sound_start(&sound);
   if (result != MA_SUCCESS) {
     ma_sound_uninit(&sound);
@@ -57,10 +67,10 @@ static void* playbackThread(void* arg) {
     return NULL;
   }
 
-  /* Wait for playback to finish */
+  /* Wait for playback to complete */
   while (ma_sound_is_playing(&sound)) ma_sleep(1);
 
-  /* Cleanup */
+  /* Cleanup all resources */
   ma_sound_uninit(&sound);
   ma_engine_uninit(&engine);
   free(data);
@@ -69,7 +79,15 @@ static void* playbackThread(void* arg) {
   return NULL;
 }
 
-/* Play audio from path using miniaudio */
+/**
+ * Play audio from path using miniaudio.
+ * Spawns a detached thread to handle playback asynchronously.
+ * Sound is disabled on WSL and when NOTIFICATIONS_SOUND is 0.
+ * @param audio_path Path to the audio file to play
+ * @param volume Volume level for playback (0.0 to 1.0)
+ * @param loop true to loop playback, false to play once
+ * @return NO_ERROR on success, error code on failure
+ */
 ErrorType PlayAudio(const char* audio_path, const float volume,
                     const bool loop) {
   if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
