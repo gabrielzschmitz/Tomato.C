@@ -10,55 +10,221 @@ typedef struct AppData AppData;
 typedef struct NoteItem NoteItem;
 typedef struct InputState InputState;
 
+/**
+ * Enum representing the state of a note item.
+ * Determines rendering style and behavior.
+ */
 typedef enum { NOTE_UNDONE, NOTE_DONE, NOTE_PLAIN } NoteState;
 
 #define NOTES_INITIAL_CAPACITY 8
 
+/**
+ * Structure representing a single note or task item.
+ * Contains text content, state, and hierarchical positioning.
+ */
 struct NoteItem {
-  GapBuffer* text;
-  NoteState state;
-  int id;
-  int parent_id;
-  int depth;
+  GapBuffer* text; /* Text content stored as gap buffer for efficient editing */
+  NoteState state; /* Current state: undone, done, or plain */
+  int id;          /* Unique identifier for this note */
+  int parent_id;   /* ID of parent note (-1 for root-level notes) */
+  int depth; /* Nesting depth level (0 for root, increments for children) */
 };
 
+/**
+ * Container for all notes data and editor state.
+ * Manages the collection of notes and rendering parameters.
+ */
 typedef struct {
-  NoteItem** items;
-  int count;
-  int capacity;
-  int current_id;
-  int max_lines;
-  int total_lines;
-  int render_width;
-  bool is_move_mode;
+  NoteItem** items;  /* Dynamic array of note item pointers */
+  int count;         /* Number of notes currently stored */
+  int capacity;      /* Current capacity of the items array */
+  int current_id;    /* Next ID to assign to a new note */
+  int max_lines;     /* Maximum lines available for rendering */
+  int total_lines;   /* Total lines occupied by all notes when rendered */
+  int render_width;  /* Width available for rendering notes */
+  bool is_move_mode; /* Whether move mode is currently active */
 } NotesData;
 
+/**
+ * ---------------------------------------------------------------------------
+ * NotesData Lifecycle
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a new NotesData container with default values.
+ * @return Pointer to the created NotesData, or NULL on allocation failure
+ */
 NotesData* CreateNotesData(void);
+
+/**
+ * Free all memory associated with NotesData.
+ * @param notes Pointer to the NotesData to free
+ */
 void FreeNotesData(NotesData* notes);
-void SetNotesMaxLines(NotesData* notes, int max_lines);
-int GetNoteLines(NoteItem* item, int render_width);
-int GetNoteLinesFromText(const char* text, int render_width);
+
+/**
+ * Add a new note at the end of the list.
+ * @param notes Pointer to the NotesData
+ * @param text Initial text content for the note
+ * @param state Initial state of the note
+ */
 void AddNote(NotesData* notes, const char* text, NoteState state);
+
+/**
+ * Add a child note under a parent note.
+ * @param notes Pointer to the NotesData
+ * @param parent_id ID of the parent note
+ * @param text Initial text content
+ * @param state Initial state
+ */
 void AddChildNote(NotesData* notes, int parent_id, const char* text,
                   NoteState state);
-void AddNoteAfter(NotesData* notes, int after_id, const char* text, NoteState state);
+
+/**
+ * Add a note after a specific note in the list.
+ * Used for inserting notes at a specific position.
+ * @param notes Pointer to the NotesData
+ * @param after_id ID of the note to insert after
+ * @param text Initial text content
+ * @param state Initial state
+ */
+void AddNoteAfter(NotesData* notes, int after_id, const char* text,
+                  NoteState state);
+
+/**
+ * Update an existing note's content and/or state.
+ * @param notes Pointer to the NotesData
+ * @param note_id ID of the note to update
+ * @param text New text content (or NULL to keep existing)
+ * @param state New state (or -1 to keep existing)
+ */
 void UpdateNote(NotesData* notes, int note_id, const char* text,
                 NoteState state);
+
+/**
+ * Delete the currently selected note.
+ * @param notes Pointer to the NotesData
+ */
 void DeleteNote(NotesData* notes);
+
+/**
+ * Toggle the selected note between done and undone states.
+ * @param notes Pointer to the NotesData
+ */
 void ToggleTask(NotesData* notes);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Selection
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move selection up one position in the notes list.
+ * @param notes Pointer to the NotesData
+ */
 void NoteUp(NotesData* notes);
+
+/**
+ * Move selection down one position in the notes list.
+ * @param notes Pointer to the NotesData
+ */
 void NoteDown(NotesData* notes);
-void NoteUpApp(AppData* app);
-void NoteDownApp(AppData* app);
+
+/**
+ * Get the current note selection index.
+ * @param notes Pointer to the NotesData
+ * @return Index of the currently selected note, or -1 if none
+ */
 int GetSelectedNoteIndex(NotesData* notes);
-void ToggleMoveMode(AppData* app);
-void ExitMoveMode(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Move mode
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Move the selected note up one position in the list.
+ * @param notes Pointer to the NotesData
+ */
 void MoveNoteUp(NotesData* notes);
+
+/**
+ * Move the selected note down one position in the list.
+ * @param notes Pointer to the NotesData
+ */
 void MoveNoteDown(NotesData* notes);
+
+/**
+ * Promote the selected note (decrease depth, move to parent level).
+ * @param notes Pointer to the NotesData
+ */
 void PromoteNote(NotesData* notes);
+
+/**
+ * Demote the selected note (increase depth, nest under previous sibling).
+ * @param notes Pointer to the NotesData
+ */
 void DemoteNote(NotesData* notes);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Rendering
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render all notes in the specified area.
+ * @param notes Pointer to the NotesData
+ * @param start_x Left boundary of render area
+ * @param start_y Top boundary of render area
+ * @param end_x Right boundary of render area
+ * @param end_y Bottom boundary of render area
+ * @param input Pointer to input state for cursor display
+ * @param mode Current input mode affecting rendering
+ */
 void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
                  int end_y, InputState* input, int mode);
+
+/**
+ * Wrap text to fit within a maximum width.
+ * @param text Text to wrap
+ * @param max_width Maximum width for each line
+ * @param out_lines Pointer to store array of wrapped lines (caller must free)
+ * @return Number of lines created, or -1 on failure
+ */
 int WrapText(const char* text, int max_width, char*** out_lines);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Utility
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Set the maximum number of lines for note rendering.
+ * Used to calculate visible area and scrolling.
+ * @param notes Pointer to the NotesData
+ * @param max_lines Maximum lines available
+ */
+void SetNotesMaxLines(NotesData* notes, int max_lines);
+
+/**
+ * Calculate the number of visual lines a note will occupy.
+ * @param item Pointer to the note item
+ * @param render_width Available width for rendering
+ * @return Number of lines the note will occupy when displayed
+ */
+int GetNoteLines(NoteItem* item, int render_width);
+
+/**
+ * Calculate lines for plain text (without NoteItem).
+ * @param text Text to calculate lines for
+ * @param render_width Available width for rendering
+ * @return Number of lines the text will occupy
+ */
+int GetNoteLinesFromText(const char* text, int render_width);
 
 #endif /* NOTES_H_ */
