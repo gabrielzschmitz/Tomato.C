@@ -165,6 +165,7 @@ InputState* InputStateCreate(void) {
     s->cursor = 0;
     s->max_len = sizeof(s->buffer) - 1;
     s->is_task = true;
+    s->pending_parent_id = -1;
     s->selection.start = 0;
     s->selection.end = 0;
   }
@@ -336,14 +337,19 @@ void InputCommit(AppData* app) {
     state = note ? note->state : (input->is_task ? NOTE_UNDONE : NOTE_PLAIN);
   } else
     state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
-  if (app->notes->current_id >= 0)
+
+  if (app->notes->current_id >= 0) {
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
-  else
+  } else if (input->pending_parent_id >= 0) {
+    AddChildNote(app->notes, input->pending_parent_id, input->buffer, state);
+  } else {
     AddNote(app->notes, input->buffer, state);
+  }
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
   input->is_task = true;
+  input->pending_parent_id = -1;
   app->screen->panels[app->screen->current_panel].mode = DEFAULT;
   app->user_input = -1;
   app->last_input = -1;
@@ -363,12 +369,14 @@ void InputESC(AppData* app) {
         input->len = 0;
         input->cursor = 0;
         input->buffer[0] = '\0';
+        input->pending_parent_id = -1;
       }
       if (app->notes->count > 0)
         app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
       app->screen->panels[app->screen->current_panel].mode = DEFAULT;
-    } else
+    } else {
       app->screen->panels[app->screen->current_panel].mode = NORMAL;
+    }
     noecho();
     curs_set(0);
     app->user_input = -1;
@@ -663,6 +671,66 @@ void AddNewNote(AppData* app) {
     input->cursor = 0;
     input->buffer[0] = '\0';
     input->is_task = false;
+  }
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+void AddSubtask(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  if (app->notes->current_id < 0) return;
+  if (app->notes->max_lines > 0 &&
+      app->notes->total_lines >= app->notes->max_lines)
+    return;
+
+  NoteItem* parent = NULL;
+  for (int i = 0; i < app->notes->count; i++) {
+    if (app->notes->items[i]->id == app->notes->current_id) {
+      parent = app->notes->items[i];
+      break;
+    }
+  }
+  if (!parent) return;
+  if (parent->depth >= MAX_NOTE_DEPTH) return;
+
+  app->notes->current_id = -1;
+
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input) {
+    input->len = 0;
+    input->cursor = 0;
+    input->buffer[0] = '\0';
+    input->is_task = true;
+    input->pending_parent_id = parent->id;
+  }
+  app->screen->panels[app->screen->current_panel].mode = INSERT;
+}
+
+void AddSubnote(AppData* app) {
+  if (app->popup_dialog != NULL) return;
+  if (app->notes->current_id < 0) return;
+  if (app->notes->max_lines > 0 &&
+      app->notes->total_lines >= app->notes->max_lines)
+    return;
+
+  NoteItem* parent = NULL;
+  for (int i = 0; i < app->notes->count; i++) {
+    if (app->notes->items[i]->id == app->notes->current_id) {
+      parent = app->notes->items[i];
+      break;
+    }
+  }
+  if (!parent) return;
+  if (parent->depth >= MAX_NOTE_DEPTH) return;
+
+  app->notes->current_id = -1;
+
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input) {
+    input->len = 0;
+    input->cursor = 0;
+    input->buffer[0] = '\0';
+    input->is_task = false;
+    input->pending_parent_id = parent->id;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }

@@ -28,7 +28,8 @@ typedef struct InputState {
   int len;
   int cursor;
   int max_len;
-  bool is_task; /* true for task [ ], false for note - */
+  bool is_task;          /* true for task [ ], false for note - */
+  int pending_parent_id; /* -1 for root, >= 0 for child */
   struct {
     int start;
     int end;
@@ -81,10 +82,10 @@ void SelectPreviousItem(AppData* app);
 void TogglePause(AppData* app);
 
 /* Vim-like mode switching */
-void SwitchToInsertMode(AppData* app); /* 'i' key */
+void SwitchToInsertMode(AppData* app);       /* 'i' key */
 void SwitchToInsertModeAppend(AppData* app); /* 'a' key */
-void SwitchToVisualMode(AppData* app); /* 'v' key */
-void SwitchToNormalMode(AppData* app); /* ESC key */
+void SwitchToVisualMode(AppData* app);       /* 'v' key */
+void SwitchToNormalMode(AppData* app);       /* ESC key */
 
 /* Update animation mode */
 void ChangeDebugAnimation(AppData* app, int step);
@@ -124,8 +125,10 @@ void NoteDownApp(AppData* app);
 void NoteUpApp(AppData* app);
 void ToggleTaskAtNotes(AppData* app);
 void DeleteNoteAtNotes(AppData* app);
-void AddNewTask(AppData* app); /* Add task with [ ] prefix */
-void AddNewNote(AppData* app); /* Add note with - prefix */
+void AddNewTask(AppData* app);      /* Add task with [ ] prefix */
+void AddNewNote(AppData* app);      /* Add note with - prefix */
+void AddSubtask(AppData* app);      /* Add subtask under selected node */
+void AddSubnote(AppData* app);      /* Add subnote under selected node */
 void EditCurrentNote(AppData* app); /* Edit selected node, NORMAL mode */
 
 /* Popup navigation wrappers */

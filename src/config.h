@@ -136,6 +136,8 @@ static const char* SEPARATOR =
   "---------------------------------------------------------------------------";
 /* sets the fps app runs (default: 120) */
 static const int FPS = 120;
+/* maximum depth for hierarchical notes/subtasks (default: 1, valid: 0-3) */
+static const int MAX_NOTE_DEPTH = 1;
 
 /* Scene types bitmask for key binding filters */
 #define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
@@ -190,8 +192,10 @@ static const KeyFunction keys[] = {
   {KEY_DOWN, NoteDownApp, DEFAULT, SCENE_NOTES},
   {KEY_UP, NoteUpApp, DEFAULT, SCENE_NOTES},
   {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
-  {'a', AddNewTask, DEFAULT, SCENE_NOTES},
-  {'A', AddNewNote, DEFAULT, SCENE_NOTES},
+  {'t', AddNewTask, DEFAULT, SCENE_NOTES},
+  {'n', AddNewNote, DEFAULT, SCENE_NOTES},
+  {'T', AddSubtask, DEFAULT, SCENE_NOTES},
+  {'N', AddSubnote, DEFAULT, SCENE_NOTES},
   {'e', EditCurrentNote, DEFAULT, SCENE_NOTES},
   {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
   {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},

@@ -116,8 +116,58 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
   GapBufferSetText(item->text, text);
   item->state = state;
   item->id = get_next_id(notes);
+  item->parent_id = -1;
+  item->depth = 0;
 
   notes->items[notes->count++] = item;
+  notes->current_id = item->id;
+  notes->total_lines += new_note_lines;
+}
+
+void AddChildNote(NotesData* notes, int parent_id, const char* text,
+                  NoteState state) {
+  if (!notes || !text || parent_id < 0) return;
+
+  NoteItem* parent = find_by_id(notes, parent_id);
+  if (!parent) return;
+
+  if (parent->depth >= MAX_NOTE_DEPTH) return;
+
+  int new_note_lines =
+    GetNoteLinesFromText(text, notes->render_width - (parent->depth + 1) * 2);
+  if (notes->max_lines > 0 &&
+      notes->total_lines + new_note_lines > notes->max_lines)
+    return;
+  if (notes->count >= notes->capacity) grow_items(notes);
+
+  NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
+  if (!item) return;
+
+  item->text = GapBufferCreate();
+  if (!item->text) {
+    free(item);
+    return;
+  }
+
+  GapBufferSetText(item->text, text);
+  item->state = state;
+  item->id = get_next_id(notes);
+  item->parent_id = parent_id;
+  item->depth = parent->depth + 1;
+
+  int parent_idx = get_index_by_id(notes, parent_id);
+  int insert_idx = parent_idx + 1;
+  for (int i = parent_idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->parent_id == parent_id) insert_idx = i + 1;
+    if (notes->items[i]->depth <= parent->depth) break;
+  }
+
+  for (int i = notes->count; i > insert_idx; i--) {
+    notes->items[i] = notes->items[i - 1];
+  }
+  notes->items[insert_idx] = item;
+  notes->count++;
+
   notes->current_id = item->id;
   notes->total_lines += new_note_lines;
 }
@@ -325,31 +375,28 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
   notes->render_width = max_width;
   notes->total_lines = 0;
 
-  bool is_editing = ((mode == NORMAL || mode == INSERT || mode == VISUAL) &&
-                     notes->current_id >= 0);
+  bool is_editing =
+    ((mode == NORMAL || mode == INSERT || mode == VISUAL) &&
+     (notes->current_id >= 0 || (input && input->pending_parent_id >= 0)));
+
+  int pending_depth = 0;
+  int pending_already_rendered = 0;
+  int pending_insert_after = -1;
+  if (is_editing && input && input->pending_parent_id >= 0) {
+    NoteItem* parent = find_by_id(notes, input->pending_parent_id);
+    if (parent) pending_depth = parent->depth + 1;
+  }
 
   for (int i = 0; i < notes->count; i++) {
     bool is_selected = (notes->items[i]->id == notes->current_id);
-    if (is_editing && is_selected) {
-      const char* prefix;
-      switch (notes->items[i]->state) {
-        case NOTE_DONE:
-        case NOTE_UNDONE:
-          prefix = "[ ] ";
-          break;
-        case NOTE_PLAIN:
-        default:
-          prefix = " - ";
-      }
-      int prefix_len = (int)strlen(prefix);
-      int item_wrap_width = max_width - prefix_len;
-      notes->total_lines += GetNoteLines(notes->items[i], item_wrap_width);
-      continue;
-    }
+    int depth = notes->items[i]->depth;
+    int indent = depth * 2;
 
     const char* prefix;
     switch (notes->items[i]->state) {
       case NOTE_DONE:
+        prefix = "[ ] ";
+        break;
       case NOTE_UNDONE:
         prefix = "[ ] ";
         break;
@@ -357,16 +404,36 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
       default:
         prefix = " - ";
     }
+
     int prefix_len = (int)strlen(prefix);
-    int item_wrap_width = max_width - prefix_len;
+    int item_wrap_width = max_width - prefix_len - indent;
+    if (item_wrap_width <= 0) item_wrap_width = 1;
+
+    if (is_editing && is_selected) {
+      notes->total_lines += GetNoteLines(notes->items[i], item_wrap_width);
+      continue;
+    }
+
     notes->total_lines += GetNoteLines(notes->items[i], item_wrap_width);
   }
+
+  if (pending_depth > 0 && input && input->len > 0) {
+    const char* prefix = input->is_task ? "[ ] " : " - ";
+    int prefix_len = (int)strlen(prefix);
+    int indent = pending_depth * 2;
+    int item_wrap_width = max_width - prefix_len - indent;
+    if (item_wrap_width <= 0) item_wrap_width = 1;
+    notes->total_lines += GetNoteLinesFromText(input->buffer, item_wrap_width);
+  } else if (pending_depth > 0 && (!input || input->len == 0))
+    notes->total_lines += 1;
 
   int render_width = notes->render_width;
   int render_y = start_y;
 
   for (int i = 0; i < notes->count && render_y < end_y; i++) {
     bool is_selected = (notes->items[i]->id == notes->current_id);
+    int depth = notes->items[i]->depth;
+    int indent = depth * 2;
 
     if (is_editing && is_selected) {
       SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
@@ -386,7 +453,8 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
         const char* prefix = edit_prefix;
         if (input && input->len > 0) {
           int prefix_len = (int)strlen(prefix);
-          int input_wrap_width = max_width - prefix_len;
+          int input_wrap_width = max_width - prefix_len - indent;
+          if (input_wrap_width <= 0) input_wrap_width = 1;
           char** wrapped_input = NULL;
           int num_input_lines =
             WrapText(input->buffer, input_wrap_width, &wrapped_input);
@@ -406,11 +474,11 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
               const char* right_part = input->buffer + input->cursor;
               snprintf(buffer, max_width + 1, "%s%s|%s", prefix, left_part,
                        right_part);
-              mvprintw(render_y, start_x, "%s", buffer);
+              mvprintw(render_y, start_x + indent, "%s", buffer);
             } else {
               const char* line =
                 wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "";
-              mvprintw(render_y, start_x + strlen(prefix), "%s", line);
+              mvprintw(render_y, start_x + indent + strlen(prefix), "%s", line);
             }
             render_y++;
           }
@@ -418,7 +486,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
             if (wrapped_input[wl]) free(wrapped_input[wl]);
           free(wrapped_input);
         } else {
-          mvprintw(render_y, start_x, "%s", INSERT_CURSOR_ICON);
+          mvprintw(render_y, start_x + indent, "%s", INSERT_CURSOR_ICON);
           render_y++;
         }
         SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
@@ -428,7 +496,8 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
         if (input && input->len > 0) {
           const char* prefix = edit_prefix;
           int prefix_len = (int)strlen(prefix);
-          int input_wrap_width = max_width - prefix_len;
+          int input_wrap_width = max_width - prefix_len - indent;
+          if (input_wrap_width <= 0) input_wrap_width = 1;
 
           char** wrapped_input = NULL;
           int num_input_lines =
@@ -456,7 +525,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
             int line_char_offset = wl * input_wrap_width;
             int line_len = (int)strlen(
               wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "");
-            if (wl == 0) mvprintw(render_y, start_x, "%s", prefix);
+            if (wl == 0) mvprintw(render_y, start_x + indent, "%s", prefix);
             for (int ci = 0; ci < line_len; ci++) {
               int abs_pos = line_char_offset + ci;
               bool in_selection =
@@ -464,7 +533,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
               bool is_cursor = (mode == NORMAL && abs_pos == input->cursor);
               if (is_cursor || in_selection)
                 SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
-              mvaddch(render_y, start_x + prefix_len + ci,
+              mvaddch(render_y, start_x + indent + prefix_len + ci,
                       wrapped_input[wl][ci] ? wrapped_input[wl][ci] : ' ');
               if (is_cursor || in_selection)
                 SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
@@ -474,7 +543,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
             if (input->cursor > cursor_line_end && wl == num_input_lines - 1) {
               bool is_cursor = (mode == NORMAL);
               if (is_cursor) SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
-              mvaddch(render_y, start_x + prefix_len + line_len, ' ');
+              mvaddch(render_y, start_x + indent + prefix_len + line_len, ' ');
               if (is_cursor) SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
             }
             render_y++;
@@ -506,7 +575,8 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
         break;
     }
     int prefix_len = (int)strlen(prefix);
-    int item_wrap_width = max_width - prefix_len;
+    int item_wrap_width = max_width - prefix_len - indent;
+    if (item_wrap_width <= 0) item_wrap_width = 1;
 
     char** wrapped_lines = NULL;
     int num_lines = WrapText(text, item_wrap_width, &wrapped_lines);
@@ -528,23 +598,138 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
         char buffer[max_width + 1];
         snprintf(buffer, max_width + 1, "%s%s", prefix,
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
-        mvprintw(render_y, start_x, "%s", buffer);
+        mvprintw(render_y, start_x + indent, "%s", buffer);
       } else
-        mvprintw(render_y, start_x + prefix_len, "%s",
+        mvprintw(render_y, start_x + indent + prefix_len, "%s",
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
       render_y++;
     }
     for (int wl = 0; wl < num_lines; wl++)
       if (wrapped_lines[wl]) free(wrapped_lines[wl]);
     free(wrapped_lines);
+
+    if (input && input->pending_parent_id >= 0 &&
+        notes->items[i]->id == input->pending_parent_id) {
+      NoteItem* parent = notes->items[i];
+      int parent_depth = parent->depth;
+      int last_child_idx = i;
+      for (int j = i + 1; j < notes->count; j++) {
+        if (notes->items[j]->parent_id == input->pending_parent_id)
+          last_child_idx = j;
+        if (notes->items[j]->depth <= parent_depth) break;
+      }
+      pending_insert_after = last_child_idx;
+    }
+
+    if (pending_depth > 0 && input && input->pending_parent_id >= 0 &&
+        i == pending_insert_after && !pending_already_rendered) {
+      int indent = pending_depth * 2;
+      const char* prefix = input->is_task ? "[ ] " : " - ";
+      if (mode == INSERT) {
+        if (input->len > 0) {
+          int prefix_len = (int)strlen(prefix);
+          int input_wrap_width = max_width - prefix_len - indent;
+          if (input_wrap_width <= 0) input_wrap_width = 1;
+          char** wrapped_input = NULL;
+          int num_input_lines =
+            WrapText(input->buffer, input_wrap_width, &wrapped_input);
+          if (num_input_lines == 0) {
+            num_input_lines = 1;
+            wrapped_input = (char**)malloc(sizeof(char*));
+            if (wrapped_input) wrapped_input[0] = (char*)"";
+          }
+          for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
+            if (wl == 0) {
+              char buffer[max_width + 1];
+              int left_len =
+                (input->cursor <= input->len) ? input->cursor : input->len;
+              char left_part[left_len + 1];
+              strncpy(left_part, input->buffer, left_len);
+              left_part[left_len] = '\0';
+              const char* right_part = input->buffer + input->cursor;
+              snprintf(buffer, max_width + 1, "%s%s|%s", prefix, left_part,
+                       right_part);
+              mvprintw(render_y, start_x + indent, "%s", buffer);
+            } else {
+              const char* line =
+                wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "";
+              mvprintw(render_y, start_x + indent + strlen(prefix), "%s", line);
+            }
+            render_y++;
+          }
+          for (int wl = 0; wl < num_input_lines; wl++)
+            if (wrapped_input[wl]) free(wrapped_input[wl]);
+          free(wrapped_input);
+        } else {
+          char buffer[max_width + 1];
+          snprintf(buffer, max_width + 1, "%s%s", prefix, INSERT_CURSOR_ICON);
+          mvprintw(render_y, start_x + indent, "%s", buffer);
+          render_y++;
+        }
+      } else if ((mode == NORMAL || mode == VISUAL) && input) {
+        if (input->len > 0) {
+          int prefix_len = (int)strlen(prefix);
+          int input_wrap_width = max_width - prefix_len - indent;
+          if (input_wrap_width <= 0) input_wrap_width = 1;
+          char** wrapped_input = NULL;
+          int num_input_lines =
+            WrapText(input->buffer, input_wrap_width, &wrapped_input);
+          if (num_input_lines == 0) {
+            num_input_lines = 1;
+            wrapped_input = (char**)malloc(sizeof(char*));
+            if (wrapped_input) wrapped_input[0] = (char*)"";
+          }
+          int sel_start = 0;
+          int sel_end = 0;
+          if (mode == VISUAL && input) {
+            sel_start = input->selection.start;
+            sel_end = input->cursor;
+            if (sel_start > sel_end) {
+              int tmp = sel_start;
+              sel_start = sel_end;
+              sel_end = tmp;
+            }
+          }
+          for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
+            int line_char_offset = wl * input_wrap_width;
+            int line_len = (int)strlen(
+              wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "");
+            if (wl == 0) mvprintw(render_y, start_x + indent, "%s", prefix);
+            for (int ci = 0; ci < line_len; ci++) {
+              int abs_pos = line_char_offset + ci;
+              bool is_cursor = (mode == NORMAL && abs_pos == input->cursor);
+              bool in_selection =
+                (mode == VISUAL && abs_pos >= sel_start && abs_pos <= sel_end);
+              if (is_cursor || in_selection)
+                SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+              mvaddch(render_y, start_x + indent + prefix_len + ci,
+                      wrapped_input[wl][ci] ? wrapped_input[wl][ci] : ' ');
+              if (is_cursor || in_selection)
+                SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+            }
+            render_y++;
+          }
+          for (int wl = 0; wl < num_input_lines; wl++)
+            if (wrapped_input[wl]) free(wrapped_input[wl]);
+          free(wrapped_input);
+        } else {
+          mvprintw(render_y, start_x + indent, "%s%s", prefix,
+                   INSERT_CURSOR_ICON);
+          render_y++;
+        }
+      }
+      pending_already_rendered = 1;
+    }
   }
 
   const char* input_buffer = input ? input->buffer : NULL;
   int input_len = input ? input->len : 0;
   int input_cursor_pos = input ? input->cursor : 0;
 
-  bool input_already_rendered = is_editing && notes->current_id >= 0 &&
-                                ((input && input->len > 0) || mode == INSERT);
+  bool input_already_rendered =
+    is_editing &&
+    (notes->current_id >= 0 || (input && input->pending_parent_id >= 0)) &&
+    ((input && input->len > 0) || mode == INSERT);
 
   if (!input_already_rendered && render_y < end_y &&
       (input_len > 0 || mode == INSERT)) {

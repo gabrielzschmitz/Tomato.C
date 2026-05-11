@@ -18,6 +18,8 @@ struct NoteItem {
   GapBuffer* text;
   NoteState state;
   int id;
+  int parent_id;
+  int depth;
 };
 
 typedef struct {
@@ -36,7 +38,10 @@ void SetNotesMaxLines(NotesData* notes, int max_lines);
 int GetNoteLines(NoteItem* item, int render_width);
 int GetNoteLinesFromText(const char* text, int render_width);
 void AddNote(NotesData* notes, const char* text, NoteState state);
-void UpdateNote(NotesData* notes, int note_id, const char* text, NoteState state);
+void AddChildNote(NotesData* notes, int parent_id, const char* text,
+                  NoteState state);
+void UpdateNote(NotesData* notes, int note_id, const char* text,
+                NoteState state);
 void DeleteNote(NotesData* notes);
 void ToggleTask(NotesData* notes);
 void NoteUp(NotesData* notes);

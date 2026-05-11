@@ -304,7 +304,8 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
         break;
     }
 
-    fprintf(file, "%d|%c|", item->id, state_char);
+    fprintf(file, "%d|%d|%d|%c|", item->id, item->depth, item->parent_id,
+            state_char);
 
     for (size_t j = 0; j < strlen(text); j++) {
       if (text[j] == '|')
@@ -350,6 +351,14 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
     if (end == p || *end != '|') continue;
     p = end + 1;
 
+    long depth = strtol(p, &end, 10);
+    if (end == p || *end != '|') continue;
+    p = end + 1;
+
+    long parent_id = strtol(p, &end, 10);
+    if (end == p || *end != '|') continue;
+    p = end + 1;
+
     if (*p == '\0') continue;
     NoteState state = char_to_state(*p);
     p++;
@@ -378,6 +387,8 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
     if (!item) continue;
 
     item->id = (int)id;
+    item->depth = (int)depth;
+    item->parent_id = (int)parent_id;
     item->state = state;
     item->text = GapBufferCreate();
     if (!item->text) {
