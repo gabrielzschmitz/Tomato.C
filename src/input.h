@@ -30,6 +30,7 @@ typedef struct InputState {
   int max_len;
   bool is_task;          /* true for task [ ], false for note - */
   int pending_parent_id; /* -1 for root, >= 0 for child */
+  int insert_after_id;   /* note ID to insert after, -1 for none */
   struct {
     int start;
     int end;
@@ -130,6 +131,15 @@ void AddNewNote(AppData* app);      /* Add note with - prefix */
 void AddSubtask(AppData* app);      /* Add subtask under selected node */
 void AddSubnote(AppData* app);      /* Add subnote under selected node */
 void EditCurrentNote(AppData* app); /* Edit selected node, NORMAL mode */
+
+/* Move mode functions */
+void ToggleMoveMode(AppData* app);
+void ExitMoveMode(AppData* app);
+void MoveNoteUpWrapper(AppData* app);
+void MoveNoteDownWrapper(AppData* app);
+void PromoteNoteWrapper(AppData* app);
+void DemoteNoteWrapper(AppData* app);
+void QuitAppNotes(AppData* app);
 
 /* Popup navigation wrappers */
 void ChangeSelectedItemLeft(AppData* app);

@@ -28,6 +28,7 @@ NotesData* CreateNotesData(void) {
   notes->total_lines = 0;
   notes->max_lines = 0;
   notes->render_width = 0;
+  notes->is_move_mode = false;
 
   return notes;
 }
@@ -172,6 +173,59 @@ void AddChildNote(NotesData* notes, int parent_id, const char* text,
   notes->total_lines += new_note_lines;
 }
 
+static void get_subtree_range(NotesData* notes, int idx, int* start, int* end);
+
+void AddNoteAfter(NotesData* notes, int after_id, const char* text, NoteState state) {
+  if (!notes || !text) return;
+  if (after_id < 0) {
+    AddNote(notes, text, state);
+    return;
+  }
+
+  int after_idx = get_index_by_id(notes, after_id);
+  if (after_idx < 0) {
+    AddNote(notes, text, state);
+    return;
+  }
+
+  NoteItem* after_note = notes->items[after_idx];
+
+  int subtree_start, subtree_end;
+  get_subtree_range(notes, after_idx, &subtree_start, &subtree_end);
+
+  int new_note_lines = GetNoteLinesFromText(text, notes->render_width);
+  if (notes->max_lines > 0 &&
+      notes->total_lines + new_note_lines > notes->max_lines)
+    return;
+  if (notes->count >= notes->capacity) grow_items(notes);
+
+  NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
+  if (!item) return;
+
+  item->text = GapBufferCreate();
+  if (!item->text) {
+    free(item);
+    return;
+  }
+
+  GapBufferSetText(item->text, text);
+  item->state = state;
+  item->id = get_next_id(notes);
+  item->parent_id = after_note->parent_id;
+  item->depth = after_note->depth;
+
+  int insert_idx = subtree_end + 1;
+
+  for (int i = notes->count; i > insert_idx; i--) {
+    notes->items[i] = notes->items[i - 1];
+  }
+  notes->items[insert_idx] = item;
+  notes->count++;
+
+  notes->current_id = item->id;
+  notes->total_lines += new_note_lines;
+}
+
 void UpdateNote(NotesData* notes, int note_id, const char* text,
                 NoteState state) {
   if (!notes || !text || note_id < 0) return;
@@ -263,6 +317,181 @@ void NoteDownApp(AppData* app) {
     return;
   }
   NoteDown(app->notes);
+}
+
+static int get_prev_sibling_index(NotesData* notes, int idx) {
+  if (!notes || idx <= 0) return -1;
+  int parent_id = notes->items[idx]->parent_id;
+  int current_depth = notes->items[idx]->depth;
+  for (int i = idx - 1; i >= 0; i--) {
+    if (notes->items[i]->parent_id == parent_id && notes->items[i]->depth == current_depth) return i;
+    if (notes->items[i]->depth < current_depth) break;
+  }
+  return -1;
+}
+
+static int get_next_sibling_index(NotesData* notes, int idx) {
+  if (!notes || idx >= notes->count - 1) return -1;
+  int parent_id = notes->items[idx]->parent_id;
+  int current_depth = notes->items[idx]->depth;
+  for (int i = idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->parent_id == parent_id && notes->items[i]->depth == current_depth) return i;
+    if (notes->items[i]->depth < current_depth) break;
+  }
+  return -1;
+}
+
+static void get_subtree_range(NotesData* notes, int idx, int* start, int* end) {
+  *start = idx;
+  *end = idx;
+  if (!notes || idx < 0 || idx >= notes->count) return;
+  int parent_depth = notes->items[idx]->depth;
+  for (int i = idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->depth > parent_depth)
+      *end = i;
+    else
+      break;
+  }
+}
+
+static void reinsert_note_at(NotesData* notes, int from_idx, int to_idx) {
+  if (!notes || from_idx == to_idx) return;
+  if (from_idx < 0 || to_idx < 0 || from_idx >= notes->count || to_idx > notes->count) return;
+
+  int subtree_start, subtree_end;
+  get_subtree_range(notes, from_idx, &subtree_start, &subtree_end);
+  int subtree_size = subtree_end - subtree_start + 1;
+
+  NoteItem** copy = (NoteItem**)malloc(sizeof(NoteItem*) * notes->count);
+  if (!copy) return;
+  memcpy(copy, notes->items, sizeof(NoteItem*) * notes->count);
+
+  if (from_idx < to_idx) {
+    int idx = 0;
+    for (int i = 0; i < subtree_start; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = subtree_end + 1; i < to_idx; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = subtree_start; i <= subtree_end; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = to_idx; i < notes->count; i++)
+      notes->items[idx++] = copy[i];
+  } else {
+    int idx = 0;
+    for (int i = 0; i < to_idx; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = subtree_start; i <= subtree_end; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = to_idx; i < subtree_start; i++)
+      notes->items[idx++] = copy[i];
+    for (int i = subtree_end + 1; i < notes->count; i++)
+      notes->items[idx++] = copy[i];
+  }
+
+  free(copy);
+}
+
+void ToggleMoveMode(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  app->notes->is_move_mode = !app->notes->is_move_mode;
+}
+
+void ExitMoveMode(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->notes->is_move_mode) {
+    app->notes->is_move_mode = false;
+  } else {
+    if (app->user_input == app->last_input) app->running = false;
+  }
+  app->user_input = -1;
+  app->last_input = -1;
+}
+
+void MoveNoteUp(NotesData* notes) {
+  if (!notes || notes->count == 0 || notes->current_id < 0) return;
+  int idx = get_index_by_id(notes, notes->current_id);
+  if (idx < 0) return;
+  int prev_sibling = get_prev_sibling_index(notes, idx);
+  if (prev_sibling < 0) return;
+  reinsert_note_at(notes, idx, prev_sibling);
+}
+
+void MoveNoteDown(NotesData* notes) {
+  if (!notes || notes->count == 0 || notes->current_id < 0) return;
+  int idx = get_index_by_id(notes, notes->current_id);
+  if (idx < 0) return;
+  int next_sibling = get_next_sibling_index(notes, idx);
+  int to_idx;
+  if (next_sibling >= 0) {
+    int sibling_subtree_start, sibling_subtree_end;
+    get_subtree_range(notes, next_sibling, &sibling_subtree_start, &sibling_subtree_end);
+    to_idx = sibling_subtree_end + 1;
+  } else {
+    int subtree_start, subtree_end;
+    get_subtree_range(notes, idx, &subtree_start, &subtree_end);
+    to_idx = notes->count;
+  }
+  if (to_idx <= idx) return;
+  reinsert_note_at(notes, idx, to_idx);
+}
+
+static int find_root_ancestor_index(NotesData* notes, int idx) {
+  if (!notes || idx < 0 || idx >= notes->count) return -1;
+  NoteItem* note = notes->items[idx];
+  if (note->parent_id < 0) return idx;
+  int parent_idx = get_index_by_id(notes, note->parent_id);
+  if (parent_idx < 0) return idx;
+  NoteItem* parent = notes->items[parent_idx];
+  if (parent->depth == 0) return parent_idx;
+  return find_root_ancestor_index(notes, parent_idx);
+}
+
+void PromoteNote(NotesData* notes) {
+  if (!notes || notes->count == 0 || notes->current_id < 0) return;
+  int idx = get_index_by_id(notes, notes->current_id);
+  if (idx < 0) return;
+  NoteItem* note = notes->items[idx];
+  if (note->parent_id < 0) return;
+  int parent_idx = get_index_by_id(notes, note->parent_id);
+  if (parent_idx < 0) return;
+  NoteItem* parent = notes->items[parent_idx];
+  int grandparent_id = parent->parent_id;
+  int new_depth = (grandparent_id < 0) ? 0 : parent->depth;
+  int new_parent_id = grandparent_id;
+  if (new_depth > 0 && grandparent_id >= 0) {
+    int root_idx = find_root_ancestor_index(notes, parent_idx);
+    if (root_idx >= 0 && root_idx != parent_idx) {
+      new_parent_id = notes->items[root_idx]->id;
+    }
+  }
+  note->parent_id = new_parent_id;
+  note->depth = new_depth;
+  int subtree_start, subtree_end;
+  get_subtree_range(notes, idx, &subtree_start, &subtree_end);
+  for (int i = subtree_start + 1; i <= subtree_end; i++) {
+    notes->items[i]->parent_id = note->id;
+    notes->items[i]->depth = notes->items[i]->depth - 1;
+  }
+}
+
+void DemoteNote(NotesData* notes) {
+  if (!notes || notes->count == 0 || notes->current_id < 0) return;
+  int idx = get_index_by_id(notes, notes->current_id);
+  if (idx < 0) return;
+  NoteItem* note = notes->items[idx];
+  int prev_sibling = get_prev_sibling_index(notes, idx);
+  if (prev_sibling < 0) return;
+  NoteItem* new_parent = notes->items[prev_sibling];
+  if (new_parent->depth >= MAX_NOTE_DEPTH) return;
+  note->parent_id = new_parent->id;
+  note->depth = new_parent->depth + 1;
+  int subtree_start, subtree_end;
+  get_subtree_range(notes, idx, &subtree_start, &subtree_end);
+  for (int i = subtree_start + 1; i <= subtree_end; i++) {
+    notes->items[i]->parent_id = note->id;
+    notes->items[i]->depth = notes->items[i]->depth + 1;
+  }
 }
 
 int GetSelectedNoteIndex(NotesData* notes) {
@@ -377,7 +606,7 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
 
   bool is_editing =
     ((mode == NORMAL || mode == INSERT || mode == VISUAL) &&
-     (notes->current_id >= 0 || (input && input->pending_parent_id >= 0)));
+     (notes->current_id >= 0 || (input && (input->pending_parent_id >= 0 || input->insert_after_id >= 0))));
 
   int pending_depth = 0;
   int pending_already_rendered = 0;
@@ -589,7 +818,9 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
     }
 
     for (int wl = 0; wl < num_lines && render_y < end_y; wl++) {
-      if (is_selected)
+      if (is_selected && notes->is_move_mode)
+        SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+      else if (is_selected)
         SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
       else
         SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
@@ -621,8 +852,23 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
       pending_insert_after = last_child_idx;
     }
 
-    if (pending_depth > 0 && input && input->pending_parent_id >= 0 &&
-        i == pending_insert_after && !pending_already_rendered) {
+    if (input && input->insert_after_id >= 0 &&
+        notes->items[i]->id == input->insert_after_id) {
+      NoteItem* note = notes->items[i];
+      int note_depth = note->depth;
+      pending_depth = note_depth;
+      int last_descendant_idx = i;
+      for (int j = i + 1; j < notes->count; j++) {
+        if (notes->items[j]->depth > note_depth)
+          last_descendant_idx = j;
+        else
+          break;
+      }
+      pending_insert_after = last_descendant_idx;
+    }
+
+    if (input && (input->pending_parent_id >= 0 || input->insert_after_id >= 0) &&
+        pending_depth >= 0 && i == pending_insert_after && !pending_already_rendered) {
       int indent = pending_depth * 2;
       const char* prefix = input->is_task ? "[ ] " : " - ";
       if (mode == INSERT) {
@@ -722,13 +968,46 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
     }
   }
 
+  if (input && input->insert_after_id >= 0 && pending_insert_after < 0 && notes->count == 0) {
+    pending_depth = 0;
+    pending_insert_after = -1;
+  }
+
+  if (input && input->insert_after_id >= 0 && pending_insert_after < 0 && notes->count > 0) {
+    for (int i = 0; i < notes->count; i++) {
+      if (notes->items[i]->id == input->insert_after_id) {
+        int note_depth = notes->items[i]->depth;
+        pending_depth = note_depth;
+        int last_descendant_idx = i;
+        for (int j = i + 1; j < notes->count; j++) {
+          if (notes->items[j]->depth > note_depth)
+            last_descendant_idx = j;
+          else
+            break;
+        }
+        pending_insert_after = last_descendant_idx;
+        break;
+      }
+    }
+  }
+
+  if (input && input->insert_after_id >= 0 && pending_insert_after < 0) {
+    if (notes->count > 0) {
+      pending_depth = 0;
+      pending_insert_after = notes->count - 1;
+    } else {
+      pending_depth = 0;
+      pending_insert_after = -1;
+    }
+  }
+
   const char* input_buffer = input ? input->buffer : NULL;
   int input_len = input ? input->len : 0;
   int input_cursor_pos = input ? input->cursor : 0;
 
   bool input_already_rendered =
     is_editing &&
-    (notes->current_id >= 0 || (input && input->pending_parent_id >= 0)) &&
+    (notes->current_id >= 0 || (input && (input->pending_parent_id >= 0 || input->insert_after_id >= 0))) &&
     ((input && input->len > 0) || mode == INSERT);
 
   if (!input_already_rendered && render_y < end_y &&

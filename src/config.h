@@ -187,10 +187,15 @@ static const KeyFunction keys[] = {
   {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
 
   /* Scene-specific keybindings - Before ALL_SCENES keys */
-  {'j', NoteDownApp, DEFAULT, SCENE_NOTES},
-  {'k', NoteUpApp, DEFAULT, SCENE_NOTES},
-  {KEY_DOWN, NoteDownApp, DEFAULT, SCENE_NOTES},
-  {KEY_UP, NoteUpApp, DEFAULT, SCENE_NOTES},
+  {'V', ToggleMoveMode, DEFAULT, SCENE_NOTES}, /* Shift+V: toggle move mode */
+  {'j', MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
+  {'k', MoveNoteUpWrapper, DEFAULT, SCENE_NOTES},
+  {KEY_DOWN, MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
+  {KEY_UP, MoveNoteUpWrapper, DEFAULT, SCENE_NOTES},
+  {'h', PromoteNoteWrapper, DEFAULT, SCENE_NOTES},
+  {KEY_LEFT, PromoteNoteWrapper, DEFAULT, SCENE_NOTES},
+  {'l', DemoteNoteWrapper, DEFAULT, SCENE_NOTES},
+  {KEY_RIGHT, DemoteNoteWrapper, DEFAULT, SCENE_NOTES},
   {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
   {'t', AddNewTask, DEFAULT, SCENE_NOTES},
   {'n', AddNewNote, DEFAULT, SCENE_NOTES},
@@ -198,6 +203,8 @@ static const KeyFunction keys[] = {
   {'N', AddSubnote, DEFAULT, SCENE_NOTES},
   {'e', EditCurrentNote, DEFAULT, SCENE_NOTES},
   {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
+  {ESC, QuitAppNotes, DEFAULT, SCENE_NOTES},
+  {'q', QuitAppNotes, DEFAULT, SCENE_NOTES},
   {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
   {KEY_UP, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
   {KEY_RIGHT, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},

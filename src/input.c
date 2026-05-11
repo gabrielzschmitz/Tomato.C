@@ -166,6 +166,7 @@ InputState* InputStateCreate(void) {
     s->max_len = sizeof(s->buffer) - 1;
     s->is_task = true;
     s->pending_parent_id = -1;
+    s->insert_after_id = -1;
     s->selection.start = 0;
     s->selection.end = 0;
   }
@@ -340,6 +341,8 @@ void InputCommit(AppData* app) {
 
   if (app->notes->current_id >= 0) {
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
+  } else if (input->insert_after_id >= 0) {
+    AddNoteAfter(app->notes, input->insert_after_id, input->buffer, state);
   } else if (input->pending_parent_id >= 0) {
     AddChildNote(app->notes, input->pending_parent_id, input->buffer, state);
   } else {
@@ -350,6 +353,7 @@ void InputCommit(AppData* app) {
   input->buffer[0] = '\0';
   input->is_task = true;
   input->pending_parent_id = -1;
+  input->insert_after_id = -1;
   app->screen->panels[app->screen->current_panel].mode = DEFAULT;
   app->user_input = -1;
   app->last_input = -1;
@@ -501,6 +505,7 @@ void ChangeDebugAnimation(AppData* app, int step) {
 
 /* Quit the program - requires double press of same key */
 void QuitApp(AppData* app) {
+  if (app->notes && app->notes->is_move_mode) return;
   if (app->user_input == app->last_input) app->running = false;
 }
 
@@ -645,6 +650,7 @@ void AddNewTask(AppData* app) {
       app->notes->total_lines >= app->notes->max_lines)
     return;
 
+  int insert_after = app->notes->current_id;
   app->notes->current_id = -1;
 
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -653,6 +659,8 @@ void AddNewTask(AppData* app) {
     input->cursor = 0;
     input->buffer[0] = '\0';
     input->is_task = true;
+    input->pending_parent_id = -1;
+    input->insert_after_id = insert_after;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
@@ -663,6 +671,7 @@ void AddNewNote(AppData* app) {
       app->notes->total_lines >= app->notes->max_lines)
     return;
 
+  int insert_after = app->notes->current_id;
   app->notes->current_id = -1;
 
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -671,6 +680,8 @@ void AddNewNote(AppData* app) {
     input->cursor = 0;
     input->buffer[0] = '\0';
     input->is_task = false;
+    input->pending_parent_id = -1;
+    input->insert_after_id = insert_after;
   }
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
@@ -791,4 +802,47 @@ void ChangeSelectedItemRight(AppData* app) {
     flushinp();
   } else
     SelectNextItem(app);
+}
+
+/* Move mode wrapper functions */
+void MoveNoteUpWrapper(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode)
+    MoveNoteUp(app->notes);
+  else
+    NoteUp(app->notes);
+}
+
+void MoveNoteDownWrapper(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode)
+    MoveNoteDown(app->notes);
+  else
+    NoteDown(app->notes);
+}
+
+void PromoteNoteWrapper(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode) PromoteNote(app->notes);
+}
+
+void DemoteNoteWrapper(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode)
+    DemoteNote(app->notes);
+}
+
+void QuitAppNotes(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->notes->is_move_mode) {
+    app->notes->is_move_mode = false;
+    app->user_input = -1;
+    app->last_input = -1;
+    return;
+  }
+  if (app->user_input == app->last_input) app->running = false;
 }

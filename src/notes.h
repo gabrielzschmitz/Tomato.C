@@ -30,6 +30,7 @@ typedef struct {
   int max_lines;
   int total_lines;
   int render_width;
+  bool is_move_mode;
 } NotesData;
 
 NotesData* CreateNotesData(void);
@@ -40,6 +41,7 @@ int GetNoteLinesFromText(const char* text, int render_width);
 void AddNote(NotesData* notes, const char* text, NoteState state);
 void AddChildNote(NotesData* notes, int parent_id, const char* text,
                   NoteState state);
+void AddNoteAfter(NotesData* notes, int after_id, const char* text, NoteState state);
 void UpdateNote(NotesData* notes, int note_id, const char* text,
                 NoteState state);
 void DeleteNote(NotesData* notes);
@@ -49,6 +51,12 @@ void NoteDown(NotesData* notes);
 void NoteUpApp(AppData* app);
 void NoteDownApp(AppData* app);
 int GetSelectedNoteIndex(NotesData* notes);
+void ToggleMoveMode(AppData* app);
+void ExitMoveMode(AppData* app);
+void MoveNoteUp(NotesData* notes);
+void MoveNoteDown(NotesData* notes);
+void PromoteNote(NotesData* notes);
+void DemoteNote(NotesData* notes);
 void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
                  int end_y, InputState* input, int mode);
 int WrapText(const char* text, int max_width, char*** out_lines);

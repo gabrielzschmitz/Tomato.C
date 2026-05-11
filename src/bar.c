@@ -490,10 +490,20 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
     if (app->notes->count > 0) {
       if (app->notes->current_id < 0) {
         int input_lines = 0;
+        int input_indent = 0;
+        if (current_mode == INSERT && input && input->insert_after_id >= 0) {
+          for (int i = 0; i < app->notes->count; i++) {
+            if (app->notes->items[i]->id == input->insert_after_id) {
+              input_indent = app->notes->items[i]->depth * 2;
+              break;
+            }
+          }
+        }
         if (current_mode == INSERT && input && input->len > 0) {
           const char* input_prefix = input->is_task ? "[ ] " : " - ";
           int input_prefix_len = (int)strlen(input_prefix);
-          int input_wrap_width = app->notes->render_width - input_prefix_len;
+          int input_wrap_width = app->notes->render_width - input_prefix_len - input_indent;
+          if (input_wrap_width <= 0) input_wrap_width = 1;
           input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
         }
         if (input_lines > 1)
@@ -515,9 +525,12 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
               break;
           }
           int prefix_len = (int)strlen(prefix);
-          int item_wrap_width = app->notes->render_width - prefix_len;
+          int depth = app->notes->items[i]->depth;
+          int indent = depth * 2;
+          int item_wrap_width = app->notes->render_width - prefix_len - indent;
+          if (item_wrap_width <= 0) item_wrap_width = 1;
           if (app->notes->items[i]->id == app->notes->current_id) {
-            line++;
+            line += GetNoteLines(app->notes->items[i], item_wrap_width);
             break;
           }
           line += GetNoteLines(app->notes->items[i], item_wrap_width);
@@ -525,10 +538,20 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
       }
     } else if (current_mode == INSERT) {
       int input_lines = 0;
+      int input_indent = 0;
+      if (input && input->insert_after_id >= 0) {
+        for (int i = 0; i < app->notes->count; i++) {
+          if (app->notes->items[i]->id == input->insert_after_id) {
+            input_indent = app->notes->items[i]->depth * 2;
+            break;
+          }
+        }
+      }
       if (input && input->len > 0) {
         const char* input_prefix = input->is_task ? "[ ] " : " - ";
         int input_prefix_len = (int)strlen(input_prefix);
-        int input_wrap_width = app->notes->render_width - input_prefix_len;
+        int input_wrap_width = app->notes->render_width - input_prefix_len - input_indent;
+        if (input_wrap_width <= 0) input_wrap_width = 1;
         input_lines = GetNoteLinesFromText(input->buffer, input_wrap_width);
       }
       if (input_lines > 1)
