@@ -3,17 +3,21 @@
 
 #include "error.h"
 
-/* Define a struct to hold notification data */
+/**
+ * Notification data structure containing notification content.
+ * Used to send system notifications to the user.
+ */
 typedef struct {
-  const char* title;
-  const char* description;
-  const char* audio_path;
+  const char* title;       /* Notification title */
+  const char* description; /* Detailed description text */
+  const char* audio_path;  /* Path to audio file to play (or NULL) */
 } Notification;
 
-/* Send a notification to the user */
-ErrorType SendNotification(const char* title, const char* description);
-
-/* Notify with sound using a Notification struct */
+/**
+ * Send a notification with sound using a Notification struct.
+ * @param notification Pointer to the notification data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
 ErrorType Notify(const Notification* notification);
 
 #endif /* NOTIFY_H */
