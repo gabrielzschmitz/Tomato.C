@@ -4,6 +4,7 @@
 #include <ncurses.h>
 
 typedef struct AppData AppData;
+#define NO_COLOR -1
 
 /* Enum for different types of icons */
 typedef enum {

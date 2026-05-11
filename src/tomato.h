@@ -9,7 +9,6 @@
 #include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
-#define NO_COLOR -1
 #define MAX_ANIMATIONS 7
 #define MAX_MENUS 2
 #define MAX_INPUT_MODES 3
