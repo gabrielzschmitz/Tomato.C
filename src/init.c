@@ -99,6 +99,8 @@ ErrorType EndApp(AppData* app) {
   FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
   if (NOTEPAD_LOG) SaveNotes(NOTES_LOG, app->notes);
+  if (WORK_LOG && app->pomodoro_data.current_step != MAIN_MENU)
+    SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
   FreeNotesData(app->notes);
   FreeScreen(app->screen);
   return NO_ERROR;
@@ -275,18 +277,59 @@ static ErrorType initAnimations(AppData* app) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 static ErrorType initPomodoroData(AppData* app) {
-  if (DEBUG)
-    app->pomodoro_data.total_cycles = 2;
-  else
-    app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
-  app->pomodoro_data.work_time = WORKTIME_TIME;
-  app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
-  app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;
-  app->pomodoro_data.current_cycle = 0;
-  app->pomodoro_data.current_step = MAIN_MENU;
-  app->pomodoro_data.last_step_time = -1;
-  app->pomodoro_data.current_step_time = 0;
-  app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+  bool pomodoro_loaded = false;
+  int loaded_status = -1;
+
+  if (WORK_LOG) {
+    FILE* file = fopen(POMODORO_LOG, "r");
+    if (file) {
+      fseek(file, 0, SEEK_END);
+      long size = ftell(file);
+      fclose(file);
+      if (size > 0) {
+        if (LoadPomodoro(POMODORO_LOG, &app->pomodoro_data) == NO_ERROR) {
+          loaded_status = app->pomodoro_data.status;
+          if (loaded_status == 0) {
+            app->pomodoro_data.current_step = MAIN_MENU;
+            app->pomodoro_data.current_cycle = 0;
+            app->pomodoro_data.current_step_time = 0;
+            app->pomodoro_data.total_elapsed = 0;
+            app->pomodoro_data.session_index = 0;
+          } else if (loaded_status == 1) {
+            if (app->pomodoro_data.current_step == WORK_TIME ||
+                app->pomodoro_data.current_step == SHORT_PAUSE ||
+                app->pomodoro_data.current_step == LONG_PAUSE) {
+              app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+              pomodoro_loaded = true;
+              app->pomodoro_data.last_step_time = -1;
+              app->pomodoro_data.session_index = app->pomodoro_data.session_index > 0 ? app->pomodoro_data.session_index : 1;
+              ExecuteHistory(app->screen->panels[0].scene_history,
+                             app->pomodoro_data.current_step);
+              app->screen->panels[0].menu_index = -1;
+              return NO_ERROR;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!pomodoro_loaded) {
+    if (DEBUG)
+      app->pomodoro_data.total_cycles = 2;
+    else
+      app->pomodoro_data.total_cycles = POMODOROS_AMOUNT;
+    app->pomodoro_data.work_time = WORKTIME_TIME;
+    app->pomodoro_data.short_pause_time = SHORT_PAUSE_TIME;
+    app->pomodoro_data.long_pause_time = LONG_PAUSE_TIME;
+    app->pomodoro_data.current_cycle = 0;
+    app->pomodoro_data.current_step = MAIN_MENU;
+    app->pomodoro_data.last_step_time = -1;
+    app->pomodoro_data.current_step_time = 0;
+    app->pomodoro_data.total_elapsed = 0;
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+    app->pomodoro_data.session_index = 0;
+  }
 
   return NO_ERROR;
 }

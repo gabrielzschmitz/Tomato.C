@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "bar.h"
 #include "notes.h"
@@ -33,8 +34,12 @@ typedef struct {
   int current_step;     /* Current step (0=work, 1=short pause, 2=long pause) */
   int current_step_time; /* Elapsed time in current step (seconds) */
   int last_step_time;    /* Time from previous step for comparison */
+  int total_elapsed;     /* Total elapsed time across all steps (seconds) */
   double
     delta_time_ms; /* Elapsed time in milliseconds since last frame update */
+  int session_index; /* Current session index for log entries */
+  time_t step_start_time; /* Timestamp when current step started */
+  int status; /* 0 = completed, 1 = uncompleted */
 } PomodoroData;
 
 /**

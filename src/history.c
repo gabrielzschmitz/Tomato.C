@@ -79,13 +79,10 @@ void HistoryPush(History* history, void* data, void (*free_fn)(void*),
   if (stack_count >= HISTORY_MAX_STACK) {
     /* Remove oldest */
     HistoryNode* oldest = *stack;
-    while (oldest->next && oldest->next->next) {
-      oldest = oldest->next;
-    }
+    while (oldest->next && oldest->next->next) oldest = oldest->next;
     if (oldest->next) {
-      if (oldest->next->free_fn && oldest->next->data) {
+      if (oldest->next->free_fn && oldest->next->data)
         oldest->next->free_fn(oldest->next->data);
-      }
       free(oldest->next);
       oldest->next = NULL;
     }

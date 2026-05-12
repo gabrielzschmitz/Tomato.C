@@ -71,4 +71,44 @@ ErrorType SaveNotes(const char* path, const NotesData* notes);
  */
 ErrorType LoadNotes(const char* path, NotesData* notes);
 
+/**
+ * ---------------------------------------------------------------------------
+ * Pomodoro
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Save current pomodoro state to a log file.
+ * Writes timestamp and all pomodoro data fields.
+ * @param path File path for the pomodoro log
+ * @param data Pointer to the pomodoro data to save
+ * @param append If true, append new line; if false, update last line
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType SavePomodoro(const char* path, const PomodoroData* data, bool append);
+
+/**
+ * Get the last used index from the pomodoro log.
+ * @param path File path for the pomodoro log
+ * @return Last used index (1 if file is empty)
+ */
+int GetLastLogIndexOnly(const char* path);
+
+/**
+ * Remove uncompleted entries for a given index.
+ * @param path File path for the pomodoro log
+ * @param index Index to remove uncompleted entries for
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType RemoveUncompletedEntries(const char* path, int index);
+
+/**
+ * Load pomodoro state from a log file.
+ * Reads the last line and restores pomodoro data.
+ * @param path File path for the pomodoro log
+ * @param data Pointer to the pomodoro data to populate
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType LoadPomodoro(const char* path, PomodoroData* data);
+
 #endif /* LOG_H_ */

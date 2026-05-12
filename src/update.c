@@ -11,11 +11,13 @@
 #include "ui.h"
 #include "util.h"
 
-/* PRIVATE ANIM FUNCTIONS */
+/* PRIVATE UPDATE FUNCTIONS */
 /* Pomodoro */
 static void updatePomodoroTime(AppData* app);
+static void updatePomodoroLog(AppData* app);
 static void updateTimerLog(AppData* app, const int* steps,
                            const size_t steps_count);
+static bool skip_auto_save = false;
 
 /**
  * ---------------------------------------------------------------------------
@@ -71,6 +73,8 @@ ErrorType UpdateApp(AppData* app) {
   const size_t steps_count = sizeof(steps) / sizeof(steps[0]);
   updateTimerLog(app, steps, steps_count);
 
+  updatePomodoroLog(app);
+
   return status;
 }
 
@@ -105,6 +109,11 @@ void UpdateWorkTime(AppData* app) {
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
                   app->pomodoro_data.work_time)) {
+    if (WORK_LOG) {
+      skip_auto_save = true;
+      SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
+      skip_auto_save = false;
+    }
     if (app->pomodoro_data.current_cycle >=
         app->pomodoro_data.total_cycles - 1) {
       ExecuteHistory(app->screen->panels[0].scene_history, LONG_PAUSE);
@@ -112,8 +121,9 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step = LONG_PAUSE;
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
+      app->pomodoro_data.step_start_time = time(NULL);
       Notification notification = {
-        .title = " Long Pause Break",
+        .title = "Long Pause Break",
         .description = "You have some time to chill",
         .audio_path = "./sounds/pausenotify.mp3",
       };
@@ -124,8 +134,9 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step = SHORT_PAUSE;
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
+      app->pomodoro_data.step_start_time = time(NULL);
       Notification notification = {
-        .title = " Pause Break",
+        .title = "Pause Break",
         .description = "You have some time to chill",
         .audio_path = "./sounds/pausenotify.mp3",
       };
@@ -135,7 +146,7 @@ void UpdateWorkTime(AppData* app) {
 }
 
 /**
- * Update SHORT_PAUSE scene - timer countdown and animations.
+ * Update LONG_PAUSE scene - timer countdown and animations.
  * @param app Pointer to the application data
  */
 void UpdateShortPause(AppData* app) {
@@ -147,14 +158,20 @@ void UpdateShortPause(AppData* app) {
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
                   app->pomodoro_data.short_pause_time)) {
+    if (WORK_LOG) {
+      skip_auto_save = true;
+      SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
+      skip_auto_save = false;
+    }
     ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
     app->screen->panels[0].menu_index = -1;
     app->pomodoro_data.current_step = WORK_TIME;
     app->pomodoro_data.current_cycle += 1;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     app->pomodoro_data.current_step_time = 0;
+    app->pomodoro_data.step_start_time = time(NULL);
     Notification notification = {
-      .title = " Work!",
+      .title = "Work!",
       .description = "You need to focus",
       .audio_path = "./sounds/dfltnotify.mp3",
     };
@@ -175,14 +192,21 @@ void UpdateLongPause(AppData* app) {
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
                   app->pomodoro_data.long_pause_time)) {
+    if (WORK_LOG) {
+      skip_auto_save = true;
+      app->pomodoro_data.status = 0;
+      SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
+      skip_auto_save = false;
+    }
     ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
     app->screen->panels[0].menu_index = MAIN_MENU_MENU;
     app->pomodoro_data.current_step = MAIN_MENU;
     app->pomodoro_data.current_cycle = 0;
     app->pomodoro_data.current_step_time = 0;
+    app->pomodoro_data.total_elapsed = 0;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     Notification notification = {
-      .title = " End of Pomodoro Cycle",
+      .title = "End of Pomodoro Cycle",
       .description = "Feel free to start another!",
       .audio_path = "./sounds/endnotify.mp3",
     };
@@ -245,9 +269,49 @@ static void updatePomodoroTime(AppData* app) {
   if (delta_time >= 1000.0 / speed_multiplier) {
     app->pomodoro_data.delta_time_ms = current_time;
     app->pomodoro_data.current_step_time += 1;
+    app->pomodoro_data.total_elapsed += 1;
     if (app->pomodoro_data.current_step_time ==
         app->pomodoro_data.last_step_time + 10)
       app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
+  }
+}
+
+/**
+ * Update pomodoro log file with current state.
+ * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
+ * @param app Pointer to the application data
+ */
+static void updatePomodoroLog(AppData* app) {
+  if (!WORK_LOG || skip_auto_save) return;
+
+  static int last_logged_step = -1;
+  static int last_logged_minute = -1;
+
+  int speed_multiplier = 1;
+  if (DEBUG) speed_multiplier = 100;
+
+  int current_step = app->pomodoro_data.current_step;
+  int step_time = app->pomodoro_data.current_step_time;
+  int current_minute = step_time / (60 * speed_multiplier);
+
+  if (current_step == MAIN_MENU) {
+    last_logged_step = -1;
+    last_logged_minute = -1;
+    return;
+  }
+
+  if (current_step != WORK_TIME && current_step != SHORT_PAUSE &&
+      current_step != LONG_PAUSE) {
+    return;
+  }
+
+  if (last_logged_step == -1 || last_logged_step != current_step) {
+    SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
+    last_logged_step = current_step;
+    last_logged_minute = current_minute;
+  } else if (current_minute != last_logged_minute && current_minute > 0) {
+    SavePomodoro(POMODORO_LOG, &app->pomodoro_data, false);
+    last_logged_minute = current_minute;
   }
 }
 

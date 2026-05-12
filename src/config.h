@@ -90,6 +90,8 @@ static const int WIND_VOLUME = 50;
 static const int THUNDER_VOLUME = 50;
 
 /* Logging Settings --------------------------------------------------------- */
+/* the file path for the pomodoro log (default: /tmp/tomato_pomodoro.log) */
+static const char* POMODORO_LOG = "/tmp/tomato_pomodoro.log";
 /* the file path for the notes log (default: /tmp/tomato_notes.log) */
 static const char* NOTES_LOG = "/tmp/tomato_notes.log";
 /* the file path for the errors log (default: /tmp/tomato_errors.log) */
