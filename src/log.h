@@ -111,4 +111,10 @@ ErrorType RemoveUncompletedEntries(const char* path, int index);
  */
 ErrorType LoadPomodoro(const char* path, PomodoroData* data);
 
+/**
+ * Print pomodoro history statistics from the log file.
+ * @param path File path for the pomodoro log
+ */
+void GetPomodoroHistory(const char* path);
+
 #endif /* LOG_H_ */

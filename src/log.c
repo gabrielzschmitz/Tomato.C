@@ -37,6 +37,12 @@ typedef struct __attribute__((packed)) {
 
 /* Notes */
 static NoteState charToNoteState(char c);
+/* Pomodoro */
+static void printRow(int w1, int w2, const char* label, const char* value);
+static int strwidth(const char* s);
+static void printLine(int w1, int w2, int is_top);
+static void printLineBottom(int w1, int w2);
+static void formatTime(char* buf, int size, int hours, int minutes);
 
 /**
  * ---------------------------------------------------------------------------
@@ -626,4 +632,240 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   data->delta_time_ms = GetCurrentTimeMS();
 
   return NO_ERROR;
+}
+
+void GetPomodoroHistory(const char* path) {
+  FILE* file = fopen(path, "rb");
+  if (!file) {
+    printf("No pomodoro history found.\n");
+    return;
+  }
+
+  PomodoroLogRecord records[1000];
+  int count = 0;
+
+  while (fread(&records[count], sizeof(PomodoroLogRecord), 1, file) == 1) {
+    count++;
+    if (count >= 1000) break;
+  }
+  fclose(file);
+
+  if (count == 0) {
+    printf("No pomodoro history found.\n");
+    return;
+  }
+
+  int total_sessions = 0;
+  int completed_sessions = 0;
+  int total_work_seconds = 0;
+  int total_session_seconds = 0;
+  int last_session = -1;
+
+  for (int i = 0; i < count; i++) {
+    if (records[i].session_index > 0 &&
+        records[i].session_index != (unsigned int)last_session) {
+      total_sessions++;
+      last_session = records[i].session_index;
+    }
+    if (records[i].status == 0) {
+      completed_sessions++;
+      int cycles = records[i].total_cycles;
+      int work = records[i].work_time * 60;
+      int short_p = records[i].short_pause_time * 60;
+      int long_p = records[i].long_pause_time * 60;
+      total_session_seconds +=
+        (cycles * work) + ((cycles - 1) * short_p) + long_p;
+    }
+    if (records[i].current_step == WORK_TIME && records[i].current_cycle > 0)
+      total_work_seconds += records[i].current_step_time;
+  }
+
+  int unique_sessions = 0;
+  int session_indices[1000];
+  for (int i = 0; i < count; i++) {
+    if (records[i].session_index > 0) {
+      int already_counted = 0;
+      for (int j = 0; j < unique_sessions; j++) {
+        if (session_indices[j] == records[i].session_index) {
+          already_counted = 1;
+          break;
+        }
+      }
+      if (!already_counted)
+        session_indices[unique_sessions++] = records[i].session_index;
+    }
+  }
+
+  int num_recent = unique_sessions > 3 ? 3 : unique_sessions;
+  int start_idx = unique_sessions > 3 ? unique_sessions - 3 : 0;
+
+  int total_work_minutes = total_work_seconds / 60;
+  int work_hours = total_work_minutes / 60;
+  int work_mins = total_work_minutes % 60;
+
+  int total_session_minutes = total_session_seconds / 60;
+  int session_hours = total_session_minutes / 60;
+  int session_mins = total_session_minutes % 60;
+
+  int max_label_w = 16;
+  int max_value_w = 7;
+
+  if (total_sessions > 0 && max_value_w < 1) max_value_w = 1;
+  if (completed_sessions > 0 && max_value_w < 1) max_value_w = 1;
+  char tmp[64];
+  snprintf(tmp, sizeof(tmp), "%d min", total_work_minutes);
+  int len = strwidth(tmp);
+  if (len > max_value_w) max_value_w = len;
+  formatTime(tmp, sizeof(tmp), work_hours, work_mins);
+  len = strwidth(tmp);
+  if (len > max_value_w) max_value_w = len;
+  snprintf(tmp, sizeof(tmp), "%d min", total_session_minutes);
+  len = strwidth(tmp);
+  if (len > max_value_w) max_value_w = len;
+  formatTime(tmp, sizeof(tmp), session_hours, session_mins);
+  len = strwidth(tmp);
+  if (len > max_value_w) max_value_w = len;
+
+  if (num_recent > 0) {
+    char tmpbuf[64];
+    for (int idx = start_idx; idx < unique_sessions; idx++) {
+      int sess = session_indices[idx];
+      int len = snprintf(tmpbuf, sizeof(tmpbuf), "#%d", sess);
+      uint8_t cycle = 0, total_cycles = 0, status = 1;
+      for (int i = 0; i < count; i++) {
+        if (records[i].session_index == sess) {
+          cycle = records[i].current_cycle;
+          total_cycles = records[i].total_cycles;
+          status = records[i].status;
+        }
+      }
+      if (status == 0)
+        len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len, " %d/%d done 99m",
+                        cycle, total_cycles);
+      else
+        len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len,
+                        " %d/%d cycle 99m left", cycle, total_cycles);
+      if (len > max_label_w) max_label_w = len;
+    }
+  }
+
+  int W1 = max_label_w;
+  int W2 = max_value_w;
+  char buf[64];
+
+  printLine(W1, W2, 1);
+  printRow(W1, W2, "POMODORO HISTORY", "");
+  printLine(W1, W2, 0);
+
+  snprintf(buf, sizeof(buf), "%d", total_sessions);
+  printRow(W1, W2, "Total sessions", buf);
+
+  snprintf(buf, sizeof(buf), "%d", completed_sessions);
+  printRow(W1, W2, "Completed sessions", buf);
+
+  snprintf(buf, sizeof(buf), "%d min", total_work_minutes);
+  printRow(W1, W2, "Total work time", buf);
+
+  formatTime(buf, sizeof(buf), work_hours, work_mins);
+  printRow(W1, W2, "", buf);
+
+  snprintf(buf, sizeof(buf), "%d min", total_session_minutes);
+  printRow(W1, W2, "Total session time", buf);
+
+  formatTime(buf, sizeof(buf), session_hours, session_mins);
+  printRow(W1, W2, "", buf);
+
+  if (num_recent > 0) {
+    printLine(W1, W2, 0);
+    snprintf(buf, sizeof(buf), "Last %d session%s", num_recent,
+             num_recent > 1 ? "s" : "");
+    printRow(W1, W2, buf, "");
+    for (int idx = start_idx; idx < unique_sessions; idx++) {
+      int sess = session_indices[idx];
+      uint32_t total_elapsed = 0;
+      uint8_t step = 0, cycle = 0, total_cycles = 0, work_time = 0, status = 1;
+      uint8_t short_pause = 0, long_pause = 0;
+      for (int i = 0; i < count; i++) {
+        if (records[i].session_index == sess) {
+          total_elapsed += records[i].current_step_time;
+          step = records[i].current_step;
+          cycle = records[i].current_cycle;
+          total_cycles = records[i].total_cycles;
+          work_time = records[i].work_time;
+          status = records[i].status;
+          short_pause = records[i].short_pause_time;
+          long_pause = records[i].long_pause_time;
+        }
+      }
+      int mins = total_elapsed / 60;
+      if (status == 0) {
+        int work = work_time * 60;
+        int session_mins =
+          (cycle * work + (cycle - 1) * short_pause * 60 + long_pause * 60) /
+          60;
+        snprintf(buf, sizeof(buf), "#%d %d/%d done %dm", sess, cycle,
+                 total_cycles, session_mins);
+      } else if (step == WORK_TIME) {
+        int remaining = (work_time * 60) - (total_elapsed % (work_time * 60));
+        if (remaining > 0) {
+          int rem_mins = remaining / 60;
+          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm left", sess, cycle,
+                   total_cycles, rem_mins);
+        } else
+          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", sess, cycle,
+                   total_cycles, mins);
+      } else
+        snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", sess, cycle,
+                 total_cycles, mins);
+      printRow(W1, W2, buf, "");
+    }
+  }
+
+  printLineBottom(W1, W2);
+}
+
+static int strwidth(const char* s) {
+  int w = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 128 || c >= 192) w++;
+    s++;
+  }
+  return w;
+}
+
+static void printLine(int w1, int w2, int is_top) {
+  const char* tl = is_top ? "┌" : "├";
+  const char* tr = is_top ? "┐" : "┤";
+  const char* ml = is_top ? "┬" : "┼";
+  const char* mr = "┤";
+  const char* hz = "─";
+
+  printf("%s", tl);
+  for (int i = 0; i < w1 + 2; i++) printf("%s", hz);
+  printf("%s", ml);
+  for (int i = 0; i < w2 + 2; i++) printf("%s", hz);
+  printf("%s\n", tr);
+}
+
+static void printLineBottom(int w1, int w2) {
+  printf("└");
+  for (int i = 0; i < w1 + 2; i++) printf("─");
+  printf("┴");
+  for (int i = 0; i < w2 + 2; i++) printf("─");
+  printf("┘\n");
+}
+
+static void printRow(int w1, int w2, const char* label, const char* value) {
+  int label_w = strwidth(label);
+  int value_w = strwidth(value);
+  printf("│ %s%*s │ %s%*s │\n", label, w1 - label_w, "", value, w2 - value_w,
+         "");
+}
+
+static void formatTime(char* buf, int size, int hours, int minutes) {
+  if (hours > 0)
+    snprintf(buf, size, "%dh %2dm", hours, minutes);
+  else
+    snprintf(buf, size, "%d min", minutes);
 }

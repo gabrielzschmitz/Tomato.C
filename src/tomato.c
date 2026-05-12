@@ -26,8 +26,15 @@ int main(int argc, char* argv[]) {
     if (TIMER_LOG == 1) return GetTimerLog(TIMER_FILE, true);
     printf("enable timer log to use [-t]\n");
     return 1;
+  } else if (argc == 2 && !strcmp("-h", argv[1])) {
+    if (WORK_LOG == 1) {
+      GetPomodoroHistory(POMODORO_LOG);
+      return 0;
+    }
+    printf("enable work log to use [-h]\n");
+    return 1;
   } else if (argc != 1) {
-    printf("usage: tomato [-t]\n");
+    printf("usage: tomato [-t] [-h]\n");
     return 0;
   }
 
