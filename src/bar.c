@@ -367,9 +367,15 @@ void InputModeModule(AppData* app, StatusBarModule* module, Panel* panel) {
 
   switch (panel->mode) {
     case DEFAULT:
-      mode = (char*)"DEFAULT";
-      icon = (char*)DEFAULT_MODE_ICONS[icon_type];
-      color = COLOR_MAGENTA;
+      if (app->notes && app->notes->is_move_mode) {
+        icon = (char*)DEFAULT_MODE_ICONS[icon_type];
+        color = COLOR_YELLOW;
+        mode = (char*)"V-LINE";
+      } else {
+        mode = (char*)"DEFAULT";
+        icon = (char*)DEFAULT_MODE_ICONS[icon_type];
+        color = COLOR_MAGENTA;
+      }
       break;
     case NORMAL:
       mode = (char*)"NORMAL";
@@ -476,15 +482,9 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
       content = (char*)"LONG PAUSE";
       break;
     case NOTES:
-      if (app->notes && app->notes->is_move_mode) {
-        icon = (char*)NOTES_ICONS[icon_type];
-        color = COLOR_YELLOW;
-        content = (char*)"MOVE NOTE";
-      } else {
-        icon = (char*)NOTES_ICONS[icon_type];
-        color = COLOR_YELLOW;
-        content = (char*)"NOTES";
-      }
+      icon = (char*)NOTES_ICONS[icon_type];
+      color = COLOR_YELLOW;
+      content = (char*)"NOTES";
       break;
     case HELP:
       icon = (char*)HELP_ICONS[icon_type];

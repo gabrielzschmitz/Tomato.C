@@ -2,6 +2,7 @@
 #define UI_H_
 
 #include "anim.h"
+#include "history.h"
 #include "util.h"
 
 #define MAX_PANELS 2
@@ -10,8 +11,6 @@
 typedef struct Border Border;
 typedef struct Screen Screen;
 typedef struct Panel Panel;
-typedef struct History History;
-typedef struct HistoryNode HistoryNode;
 typedef struct Menu Menu;
 typedef struct MenuItem MenuItem;
 typedef struct FloatingDialog FloatingDialog;
@@ -63,25 +62,6 @@ typedef enum {
   HELP_MENU,
   CONTINUE_MENU,
 } MenuType;
-
-/**
- * Structure for storing a single history node.
- * Represents a scene in the history stack.
- */
-struct HistoryNode {
-  HistoryNode* next; /* Pointer to the next node in the stack */
-  int scene;         /* SceneType identifier for this history entry */
-};
-
-/**
- * Structure for managing undo/redo history stacks.
- * Tracks past scenes for undo and future scenes for redo.
- */
-struct History {
-  HistoryNode* future_stack; /* Stack of scenes for redo operations */
-  HistoryNode* past_stack;   /* Stack of scenes for undo operations */
-  int present;               /* SceneType of the current scene */
-};
 
 /**
  * Structure for storing panel properties and state.

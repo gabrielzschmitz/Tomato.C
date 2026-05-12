@@ -165,3 +165,18 @@ static void ensureCapacity(GapBuffer* gb, size_t needed) {
     gb->capacity = new_cap;
   }
 }
+
+/**
+ * Create a deep copy of a gap buffer.
+ * @param gb Pointer to the gap buffer to clone
+ * @return New gap buffer with identical content, or NULL on failure
+ */
+GapBuffer* GapBufferClone(const GapBuffer* gb) {
+  if (!gb) return NULL;
+
+  GapBuffer* clone = GapBufferCreate();
+  if (!clone) return NULL;
+
+  GapBufferSetText(clone, gb->buffer);
+  return clone;
+}

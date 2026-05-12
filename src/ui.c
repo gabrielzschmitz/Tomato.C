@@ -23,12 +23,6 @@ static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
                                 int container_width);
 /* Floating Dialog */
 static void renderFloatingDialogBorder(FloatingDialog* dialog);
-/* History */
-static History* createHistory(void);
-static void freeHistory(History* history);
-static void pushHistory(HistoryNode** stack, int scene);
-static int popHistory(HistoryNode** stack);
-static void clearStack(HistoryNode** stack);
 
 /**
  * ---------------------------------------------------------------------------
@@ -230,7 +224,7 @@ static Panel createPanel(Dimensions size, Vector2D position) {
   panel.size = size;
   panel.visible = true;
   panel.position = position;
-  panel.scene_history = createHistory();
+  panel.scene_history = CreateHistory();
 
   return panel;
 }
@@ -241,7 +235,7 @@ static Panel createPanel(Dimensions size, Vector2D position) {
  */
 static void freePanel(Panel* panel) {
   if (panel == NULL) return;
-  freeHistory(panel->scene_history);
+  FreeHistory(panel->scene_history, NULL);
 }
 
 /**
@@ -282,14 +276,26 @@ static void renderAtPanelCenter(Panel* panel, const char* content,
  * @param history Pointer to the history manager
  */
 void UndoHistory(History* history) {
-  if (history->past_stack == NULL) {
+  if (!history || !history->past) {
     printf("No scenes in past stack to undo.\n");
     return;
   }
 
-  pushHistory(&history->future_stack, history->present);
+  /* Save current to future */
+  if (history->present >= 0) {
+    int* scene_ptr = (int*)malloc(sizeof(int));
+    if (scene_ptr) {
+      *scene_ptr = history->present;
+      HistoryPush(history, scene_ptr, free, true);
+    }
+  }
 
-  history->present = popHistory(&history->past_stack);
+  /* Pop from past */
+  int* prev = (int*)HistoryPop(history, true);
+  if (prev) {
+    history->present = *prev;
+    free(prev);
+  }
 }
 
 /**
@@ -298,14 +304,26 @@ void UndoHistory(History* history) {
  * @param history Pointer to the history manager
  */
 void RedoHistory(History* history) {
-  if (history->future_stack == NULL) {
+  if (!history || !history->future) {
     printf("No scenes in future stack to redo.\n");
     return;
   }
 
-  pushHistory(&history->past_stack, history->present);
+  /* Save current to past */
+  if (history->present >= 0) {
+    int* scene_ptr = (int*)malloc(sizeof(int));
+    if (scene_ptr) {
+      *scene_ptr = history->present;
+      HistoryPush(history, scene_ptr, free, false);
+    }
+  }
 
-  history->present = popHistory(&history->future_stack);
+  /* Pop from future */
+  int* next = (int*)HistoryPop(history, false);
+  if (next) {
+    history->present = *next;
+    free(next);
+  }
 }
 
 /**
@@ -315,82 +333,24 @@ void RedoHistory(History* history) {
  * @param new_scene SceneType to execute
  */
 void ExecuteHistory(History* history, int new_scene) {
-  if (history->present >= 0)
-    pushHistory(&history->past_stack, history->present);
+  if (!history) return;
+
+  /* Save current to past */
+  if (history->present >= 0) {
+    int* scene_ptr = (int*)malloc(sizeof(int));
+    if (scene_ptr) {
+      *scene_ptr = history->present;
+      HistoryPush(history, scene_ptr, free, false);
+    }
+  }
 
   history->present = new_scene;
 
-  clearStack(&history->future_stack);
-}
-
-/**
- * Create and initialize a new History struct.
- * @return Pointer to the created History, or NULL on allocation failure
- */
-static History* createHistory(void) {
-  History* history = (History*)malloc(sizeof(History));
-  if (history == NULL) {
-    fprintf(stderr, "Memory allocation failed\n");
-    return NULL;
+  /* Clear future stack */
+  while (history->future) {
+    int* data = (int*)HistoryPop(history, false);
+    if (data) free(data);
   }
-  history->future_stack = NULL;
-  history->past_stack = NULL;
-  history->present = -1;
-  return history;
-}
-
-/**
- * Free the memory of a History struct and its stacks.
- * @param history Pointer to the history to free
- */
-static void freeHistory(History* history) {
-  if (history == NULL) return;
-
-  clearStack(&history->future_stack);
-  clearStack(&history->past_stack);
-
-  free(history);
-}
-
-/**
- * Push a scene onto a history stack.
- * @param stack Pointer to the stack pointer (can be NULL)
- * @param scene SceneType to push onto the stack
- */
-static void pushHistory(HistoryNode** stack, int scene) {
-  HistoryNode* new_node = (HistoryNode*)malloc(sizeof(HistoryNode));
-  if (new_node == NULL) {
-    fprintf(stderr, "Memory allocation failed\n");
-    exit(EXIT_FAILURE);
-  }
-  new_node->scene = scene;
-  new_node->next = *stack;
-  *stack = new_node;
-}
-
-/**
- * Pop a scene from a history stack.
- * @param stack Pointer to the stack pointer
- * @return SceneType that was popped, or -1 if stack is empty
- */
-static int popHistory(HistoryNode** stack) {
-  if (*stack == NULL) {
-    fprintf(stderr, "Stack underflow\n");
-    exit(EXIT_FAILURE);
-  }
-  HistoryNode* temp = *stack;
-  int scene = temp->scene;
-  *stack = temp->next;
-  free(temp);
-  return scene;
-}
-
-/**
- * Clear all nodes from a stack.
- * @param stack Pointer to the stack pointer to clear
- */
-static void clearStack(HistoryNode** stack) {
-  while (*stack != NULL) popHistory(stack);
 }
 
 /* ---------------------------------------------------------------------------

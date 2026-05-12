@@ -49,6 +49,8 @@ NotesData* CreateNotesData(void) {
   notes->max_lines = 0;
   notes->render_width = 0;
   notes->is_move_mode = false;
+  notes->history = CreateHistory();
+  notes->last_affected_id = -1;
 
   return notes;
 }
@@ -65,6 +67,7 @@ void FreeNotesData(NotesData* notes) {
     free(notes->items[i]);
   }
   free(notes->items);
+  FreeHistory(notes->history, FreeClonedNotesData);
   free(notes);
 }
 
@@ -76,6 +79,8 @@ void FreeNotesData(NotesData* notes) {
  */
 void AddNote(NotesData* notes, const char* text, NoteState state) {
   if (!notes || !text) return;
+
+  SaveNotesToHistory(notes, -1);
 
   int new_note_lines = GetNoteLinesFromText(text, notes->render_width);
   if (notes->max_lines > 0 &&
@@ -113,6 +118,8 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
 void AddChildNote(NotesData* notes, int parent_id, const char* text,
                   NoteState state) {
   if (!notes || !text || parent_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
 
   NoteItem* parent = findByID(notes, parent_id);
   if (!parent) return;
@@ -174,6 +181,8 @@ void AddNoteAfter(NotesData* notes, int after_id, const char* text,
     return;
   }
 
+  SaveNotesToHistory(notes, -1);
+
   int after_idx = getIndexByID(notes, after_id);
   if (after_idx < 0) {
     AddNote(notes, text, state);
@@ -229,6 +238,8 @@ void UpdateNote(NotesData* notes, int note_id, const char* text,
                 NoteState state) {
   if (!notes || !text || note_id < 0) return;
 
+  SaveNotesToHistory(notes, -1);
+
   NoteItem* note = findByID(notes, note_id);
   if (!note) return;
 
@@ -250,6 +261,8 @@ void UpdateNote(NotesData* notes, int note_id, const char* text,
  */
 void DeleteNote(NotesData* notes) {
   if (!notes || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
 
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
@@ -277,6 +290,8 @@ void DeleteNote(NotesData* notes) {
  */
 void ToggleTask(NotesData* notes) {
   if (!notes || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
 
   NoteItem* item = findByID(notes, notes->current_id);
   if (!item || item->state == NOTE_PLAIN) return;
@@ -464,6 +479,9 @@ static int findRootAncestorIndex(NotesData* notes, int idx) {
  */
 void MoveNoteUp(NotesData* notes) {
   if (!notes || notes->count == 0 || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
+
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
   int prev_sibling = getPrevSiblingIndex(notes, idx);
@@ -477,6 +495,9 @@ void MoveNoteUp(NotesData* notes) {
  */
 void MoveNoteDown(NotesData* notes) {
   if (!notes || notes->count == 0 || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
+
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
   int next_sibling = getNextSiblingIndex(notes, idx);
@@ -501,6 +522,9 @@ void MoveNoteDown(NotesData* notes) {
  */
 void PromoteNote(NotesData* notes) {
   if (!notes || notes->count == 0 || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
+
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
   NoteItem* note = notes->items[idx];
@@ -532,6 +556,9 @@ void PromoteNote(NotesData* notes) {
  */
 void DemoteNote(NotesData* notes) {
   if (!notes || notes->count == 0 || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
+
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
   NoteItem* note = notes->items[idx];
@@ -546,6 +573,121 @@ void DemoteNote(NotesData* notes) {
   for (int i = subtree_start + 1; i <= subtree_end; i++) {
     notes->items[i]->parent_id = note->id;
     notes->items[i]->depth = notes->items[i]->depth + 1;
+  }
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * History
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Free cloned NotesData for history cleanup.
+ * @param data Pointer to NotesData to free
+ */
+void FreeClonedNotesData(void* data) {
+  NotesData* notes = (NotesData*)data;
+  if (!notes) return;
+
+  for (int i = 0; i < notes->count; i++) {
+    GapBufferFree(notes->items[i]->text);
+    free(notes->items[i]);
+  }
+  free(notes->items);
+  free(notes);
+}
+
+/**
+ * Create a deep copy of NotesData for history snapshots.
+ * @param src Source NotesData to clone
+ * @return New NotesData copy, or NULL on failure
+ */
+NotesData* CloneNotesData(const NotesData* src) {
+  NotesData* dst = (NotesData*)malloc(sizeof(NotesData));
+  if (!dst) return NULL;
+
+  dst->items = (NoteItem**)malloc(sizeof(NoteItem*) * src->capacity);
+  if (!dst->items) {
+    free(dst);
+    return NULL;
+  }
+
+  dst->count = src->count;
+  dst->capacity = src->capacity;
+  dst->current_id = src->current_id;
+  dst->max_lines = src->max_lines;
+  dst->total_lines = src->total_lines;
+  dst->render_width = src->render_width;
+  dst->is_move_mode = src->is_move_mode;
+  dst->history = NULL;
+  dst->last_affected_id = src->last_affected_id;
+  dst->saved_cursor = src->saved_cursor;
+
+  for (int i = 0; i < src->count; i++) {
+    NoteItem* srcItem = src->items[i];
+    NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
+    if (!dstItem) break;
+    dstItem->text = GapBufferClone(srcItem->text);
+    dstItem->state = srcItem->state;
+    dstItem->id = srcItem->id;
+    dstItem->parent_id = srcItem->parent_id;
+    dstItem->depth = srcItem->depth;
+    dst->items[i] = dstItem;
+  }
+
+  return dst;
+}
+
+/**
+ * Save current NotesData state to history for undo.
+ * @param notes Pointer to NotesData
+ */
+void SaveNotesToHistory(NotesData* notes, int cursor) {
+  if (!notes || !notes->history) return;
+  NotesData* snapshot = CloneNotesData(notes);
+  snapshot->last_affected_id = notes->current_id;
+  snapshot->saved_cursor = cursor;
+  HistoryPush(notes->history, snapshot, FreeClonedNotesData, false);
+}
+
+/**
+ * Restore NotesData from a history snapshot.
+ * @param notes Pointer to NotesData to restore into
+ * @param data Pointer to cloned NotesData snapshot
+ */
+void RestoreNotesData(NotesData* notes, void* data) {
+  NotesData* snapshot = (NotesData*)data;
+  if (!notes || !snapshot) return;
+
+  /* Free current items */
+  for (int i = 0; i < notes->count; i++) {
+    GapBufferFree(notes->items[i]->text);
+    free(notes->items[i]);
+  }
+
+  /* Restore from snapshot - deep copy */
+  notes->count = snapshot->count;
+  notes->capacity = snapshot->capacity;
+  notes->current_id = snapshot->current_id;
+  notes->max_lines = snapshot->max_lines;
+  notes->total_lines = snapshot->total_lines;
+  notes->render_width = snapshot->render_width;
+  notes->is_move_mode = snapshot->is_move_mode;
+
+  /* Reallocate and deep copy items */
+  free(notes->items);
+  notes->items = (NoteItem**)malloc(sizeof(NoteItem*) * notes->capacity);
+  for (int i = 0; i < snapshot->count; i++) {
+    NoteItem* srcItem = snapshot->items[i];
+    NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
+    if (!dstItem) break;
+    dstItem->text = GapBufferClone(srcItem->text);
+    dstItem->state = srcItem->state;
+    dstItem->id = srcItem->id;
+    dstItem->parent_id = srcItem->parent_id;
+    dstItem->depth = srcItem->depth;
+    notes->items[i] = dstItem;
   }
 }
 
@@ -1180,6 +1322,78 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
 
   *out_lines = lines;
   return line_count;
+}
+
+/**
+ * Render history debug info in top-right corner.
+ * Only renders if DEBUG is defined.
+ * @param notes Pointer to NotesData
+ * @param start_x Left boundary of render area
+ * @param start_y Top boundary of render area
+ */
+void RenderNotesHistoryDebug(NotesData* notes, int start_x, int start_y) {
+  if (!notes || !notes->history) return;
+
+  History* h = notes->history;
+  int x = start_x - 22;
+  int y = start_y + 2;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(y, x, "HISTORY DEBUG");
+  y++;
+
+  /* Count stacks */
+  const int max_per_stack = 5;
+  int past_count = 0;
+  HistoryNode* node = h->past;
+  while (node) {
+    past_count++;
+    node = node->next;
+  }
+
+  int future_count = 0;
+  node = h->future;
+  while (node) {
+    future_count++;
+    node = node->next;
+  }
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y++, x, "past: %d, future: %d", past_count, future_count);
+  mvprintw(y++, x, "current_id: %d", notes->current_id);
+  mvprintw(y++, x, "last_affected: %d", notes->last_affected_id);
+
+  /* Show past stack (top is most recent) */
+  if (past_count > 0) {
+    SetColor(COLOR_CYAN, NO_COLOR, A_NORMAL);
+    mvprintw(y++, x, "PAST:");
+    node = h->past;
+    int idx = 0;
+    while (node && idx < max_per_stack) {
+      NotesData* snap = (NotesData*)node->data;
+      if (snap)
+        mvprintw(y++, x, "  [%d] id:%d cnt:%d", idx, snap->last_affected_id,
+                 snap->count);
+      node = node->next;
+      idx++;
+    }
+  }
+
+  /* Show future stack */
+  if (future_count > 0) {
+    SetColor(COLOR_MAGENTA, NO_COLOR, A_NORMAL);
+    mvprintw(y++, x, "FUTURE:");
+    node = h->future;
+    int idx = 0;
+    while (node && idx < max_per_stack) {
+      NotesData* snap = (NotesData*)node->data;
+      if (snap)
+        mvprintw(y++, x, "  [%d] id:%d cnt:%d", idx, snap->last_affected_id,
+                 snap->count);
+      node = node->next;
+      idx++;
+    }
+  }
 }
 
 /**

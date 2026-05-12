@@ -265,6 +265,10 @@ static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation) {
   InputState* input = panel->input;
 
   RenderNotes(app->notes, start_x, start_y, end_x, end_y, input, current_mode);
+
+  if (DEBUG)
+    RenderNotesHistoryDebug(app->notes, panel->position.x + panel->size.width,
+                            panel->position.y);
 }
 
 /**

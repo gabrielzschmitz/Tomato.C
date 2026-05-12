@@ -386,6 +386,9 @@ void InputBackspace(AppData* app) {
 void InputDeleteChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
+
+  SaveNotesToHistory(app->notes, input->cursor);
+
   if (input->cursor < input->len) {
     for (int i = input->cursor; i < input->len - 1; i++)
       input->buffer[i] = input->buffer[i + 1];
@@ -413,6 +416,9 @@ void InputDeleteChar(AppData* app) {
 void InputVisualDelete(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
+
+  SaveNotesToHistory(app->notes, input->cursor);
+
   int start_sel = (input->selection.start < input->cursor)
                     ? input->selection.start
                     : input->cursor;
@@ -484,14 +490,22 @@ void InputCommit(AppData* app) {
   } else
     state = input->is_task ? NOTE_UNDONE : NOTE_PLAIN;
 
-  if (app->notes->current_id >= 0)
+  if (app->notes->current_id >= 0) {
+    app->notes->last_affected_id = app->notes->current_id;
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
-  else if (input->insert_after_id >= 0)
+  } else if (input->insert_after_id >= 0) {
+    app->notes->last_affected_id = -1;
     AddNoteAfter(app->notes, input->insert_after_id, input->buffer, state);
-  else if (input->pending_parent_id >= 0)
+    app->notes->last_affected_id = app->notes->current_id;
+  } else if (input->pending_parent_id >= 0) {
+    app->notes->last_affected_id = input->pending_parent_id;
     AddChildNote(app->notes, input->pending_parent_id, input->buffer, state);
-  else
+    app->notes->last_affected_id = app->notes->current_id;
+  } else {
+    app->notes->last_affected_id = -1;
     AddNote(app->notes, input->buffer, state);
+    app->notes->last_affected_id = app->notes->current_id;
+  }
   input->len = 0;
   input->cursor = 0;
   input->buffer[0] = '\0';
@@ -1051,6 +1065,150 @@ void EditCurrentNote(AppData* app) {
 
   free(text);
   app->screen->panels[app->screen->current_panel].mode = NORMAL;
+}
+
+/**
+ * Undo last note operation.
+ * @param app Pointer to the application data
+ */
+void UndoNotes(AppData* app) {
+  if (!app || !app->notes) return;
+  if (!HistoryCanUndo(app->notes->history)) return;
+
+  /* Don't allow undo in Move Mode */
+  if (app->notes->is_move_mode) return;
+
+  /* Check if in NORMAL mode - only allow undo if action was on current note */
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
+  if (current_mode == NORMAL) {
+    void* snapshot = HistoryPop(app->notes->history, true);
+    NotesData* snap = (NotesData*)snapshot;
+    if (snap && snap->last_affected_id != app->notes->current_id) {
+      /* Not allowed - push back and return */
+      HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, true);
+      return;
+    }
+    /* Allowed - push it back for the normal undo flow */
+    HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, true);
+  }
+
+  NotesData* current = CloneNotesData(app->notes);
+  void* prev = HistoryPop(app->notes->history, true);
+  HistoryPush(app->notes->history, current, FreeClonedNotesData, true);
+  RestoreNotesData(app->notes, prev);
+
+  /* Force stay in DEFAULT mode, not Move Mode */
+  app->notes->is_move_mode = false;
+
+  /* Restore input buffer and cursor to match restored note */
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input && app->notes->current_id >= 0) {
+    NotesData* snap = (NotesData*)prev;
+    NoteItem* note = NULL;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == app->notes->current_id) {
+        note = app->notes->items[i];
+        break;
+      }
+    }
+    if (note) {
+      char* text = GapBufferToString(note->text);
+      if (text) {
+        int len = strlen(text);
+        if (len >= input->max_len) len = input->max_len - 1;
+        memcpy(input->buffer, text, len);
+        input->buffer[len] = '\0';
+        input->len = len;
+        /* Restore cursor - clamp to valid range */
+        if (snap && snap->saved_cursor >= 0) {
+          input->cursor = snap->saved_cursor;
+        } else {
+          input->cursor = len;
+        }
+        /* Clamp to valid range for current mode */
+        int max_cursor =
+          (app->screen->panels[app->screen->current_panel].mode == INSERT)
+            ? len
+            : (len > 0 ? len - 1 : 0);
+        if (input->cursor > max_cursor) input->cursor = max_cursor;
+        if (input->cursor < 0) input->cursor = 0;
+        free(text);
+      }
+    }
+  }
+
+  FreeClonedNotesData(prev);
+}
+
+/**
+ * Redo last undone note operation.
+ * @param app Pointer to the application data
+ */
+void RedoNotes(AppData* app) {
+  if (!app || !app->notes) return;
+  if (!HistoryCanRedo(app->notes->history)) return;
+
+  /* Don't allow redo in Move Mode */
+  if (app->notes->is_move_mode) return;
+
+  /* Check if in NORMAL mode - only allow redo if action was on current note */
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
+  if (current_mode == NORMAL) {
+    void* snapshot = HistoryPop(app->notes->history, false);
+    NotesData* snap = (NotesData*)snapshot;
+    if (snap && snap->last_affected_id != app->notes->current_id) {
+      HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, false);
+      return;
+    }
+    HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, false);
+  }
+
+  NotesData* current = CloneNotesData(app->notes);
+  void* next = HistoryPop(app->notes->history, false);
+  HistoryPush(app->notes->history, current, FreeClonedNotesData, false);
+  RestoreNotesData(app->notes, next);
+
+  /* Force stay in DEFAULT mode, not Move Mode */
+  app->notes->is_move_mode = false;
+
+  /* Restore input buffer and cursor to match restored note */
+  InputState* input = app->screen->panels[app->screen->current_panel].input;
+  if (input && app->notes->current_id >= 0) {
+    NotesData* snap = (NotesData*)next;
+    NoteItem* note = NULL;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == app->notes->current_id) {
+        note = app->notes->items[i];
+        break;
+      }
+    }
+    if (note) {
+      char* text = GapBufferToString(note->text);
+      if (text) {
+        int len = strlen(text);
+        if (len >= input->max_len) len = input->max_len - 1;
+        memcpy(input->buffer, text, len);
+        input->buffer[len] = '\0';
+        input->len = len;
+        /* Restore cursor - clamp to valid range */
+        if (snap && snap->saved_cursor >= 0) {
+          input->cursor = snap->saved_cursor;
+        } else {
+          input->cursor = len;
+        }
+        /* Clamp to valid range for current mode */
+        int max_cursor =
+          (app->screen->panels[app->screen->current_panel].mode == INSERT)
+            ? len
+            : (len > 0 ? len - 1 : 0);
+        if (input->cursor > max_cursor) input->cursor = max_cursor;
+        if (input->cursor < 0) input->cursor = 0;
+        free(text);
+      }
+    }
+  }
+
+  FreeClonedNotesData(next);
 }
 
 /**

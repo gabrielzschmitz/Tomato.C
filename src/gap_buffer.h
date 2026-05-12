@@ -91,4 +91,11 @@ char* GapBufferToString(const GapBuffer* gb);
  */
 void GapBufferClear(GapBuffer* gb);
 
+/**
+ * Create a deep copy of a gap buffer.
+ * @param gb Pointer to the gap buffer to clone
+ * @return New gap buffer with identical content, or NULL on failure
+ */
+GapBuffer* GapBufferClone(const GapBuffer* gb);
+
 #endif /* GAP_BUFFER_H_ */

@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "gap_buffer.h"
+#include "history.h"
 
 typedef struct AppData AppData;
 typedef struct NoteItem NoteItem;
@@ -35,14 +36,17 @@ struct NoteItem {
  * Manages the collection of notes and rendering parameters.
  */
 typedef struct {
-  NoteItem** items;  /* Dynamic array of note item pointers */
-  int count;         /* Number of notes currently stored */
-  int capacity;      /* Current capacity of the items array */
-  int current_id;    /* Next ID to assign to a new note */
-  int max_lines;     /* Maximum lines available for rendering */
-  int total_lines;   /* Total lines occupied by all notes when rendered */
-  int render_width;  /* Width available for rendering notes */
-  bool is_move_mode; /* Whether move mode is currently active */
+  NoteItem** items;     /* Dynamic array of note item pointers */
+  int count;            /* Number of notes currently stored */
+  int capacity;         /* Current capacity of the items array */
+  int current_id;       /* Next ID to assign to a new note */
+  int max_lines;        /* Maximum lines available for rendering */
+  int total_lines;      /* Total lines occupied by all notes when rendered */
+  int render_width;     /* Width available for rendering notes */
+  bool is_move_mode;    /* Whether move mode is currently active */
+  History* history;     /* History manager for undo/redo */
+  int last_affected_id; /* ID of last affected note */
+  int saved_cursor;     /* Cursor position at time of history save */
 } NotesData;
 
 /**
@@ -171,6 +175,39 @@ void DemoteNote(NotesData* notes);
 
 /**
  * ---------------------------------------------------------------------------
+ * History 
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create a deep copy of NotesData for history snapshots.
+ * @param src Source NotesData to clone
+ * @return New NotesData copy, or NULL on failure
+ */
+NotesData* CloneNotesData(const NotesData* src);
+
+/**
+ * Restore NotesData from a history snapshot.
+ * @param notes Pointer to NotesData to restore into
+ * @param data Pointer to cloned NotesData snapshot
+ */
+void RestoreNotesData(NotesData* notes, void* data);
+
+/**
+ * Free cloned NotesData for history cleanup.
+ * @param data Pointer to NotesData to free
+ */
+void FreeClonedNotesData(void* data);
+
+/**
+ * Save current notes state to history for undo.
+ * @param notes Pointer to NotesData
+ * @param cursor Cursor position at time of save
+ */
+void SaveNotesToHistory(NotesData* notes, int cursor);
+
+/**
+ * ---------------------------------------------------------------------------
  * Rendering
  * ---------------------------------------------------------------------------
  */
@@ -196,6 +233,15 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
  * @return Number of lines created, or -1 on failure
  */
 int WrapText(const char* text, int max_width, char*** out_lines);
+
+/**
+ * Render history debug info in top-right corner.
+ * Only renders if DEBUG is defined.
+ * @param notes Pointer to NotesData
+ * @param start_x Left boundary of render area
+ * @param start_y Top boundary of render area
+ */
+void RenderNotesHistoryDebug(NotesData* notes, int start_x, int start_y);
 
 /**
  * ---------------------------------------------------------------------------

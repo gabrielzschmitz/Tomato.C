@@ -458,6 +458,18 @@ void AddSubnote(AppData* app); /* Add subnote under selected node */
 void EditCurrentNote(AppData* app); /* Edit selected node, NORMAL mode */
 
 /**
+ * Undo last note operation.
+ * @param app Pointer to the application data
+ */
+void UndoNotes(AppData* app);
+
+/**
+ * Redo last undone note operation.
+ * @param app Pointer to the application data
+ */
+void RedoNotes(AppData* app);
+
+/**
  * ---------------------------------------------------------------------------
  * Move Mode Actions
  * ---------------------------------------------------------------------------

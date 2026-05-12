@@ -152,6 +152,8 @@ static const KeyFunction keys[] = {
   {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
   {'a', SwitchToInsertModeAppend, NORMAL, SCENE_NOTES},
   {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
+  {'u', UndoNotes, NORMAL, SCENE_NOTES},
+  {CTRLR, RedoNotes, NORMAL, SCENE_NOTES},
 
   /* INSERT mode keys */
   {KEY_LEFT, InputCursorLeft, INSERT, SCENE_NOTES},
@@ -195,6 +197,8 @@ static const KeyFunction keys[] = {
   {'N', AddSubnote, DEFAULT, SCENE_NOTES},
   {'e', EditCurrentNote, DEFAULT, SCENE_NOTES},
   {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
+  {'u', UndoNotes, DEFAULT, SCENE_NOTES},
+  {CTRLR, RedoNotes, DEFAULT, SCENE_NOTES},
   {ESC, QuitAppNotes, DEFAULT, SCENE_NOTES},
   {'q', QuitAppNotes, DEFAULT, SCENE_NOTES},
   {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
