@@ -3,6 +3,7 @@
 #include "log.h"
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,13 +20,23 @@
 #include "notes.h"
 #include "tomato.h"
 
-/* PRIVATE ANIM FUNCTIONS */
+/* PRIVATE LOG FUNCTIONS */
+typedef struct __attribute__((packed)) {
+  uint16_t session_index;
+  uint8_t current_step;
+  uint8_t current_cycle;
+  uint8_t total_cycles;
+  uint8_t work_time;
+  uint8_t short_pause_time;
+  uint8_t long_pause_time;
+  uint32_t total_elapsed;
+  uint32_t current_step_time;
+  uint8_t status;
+  uint8_t padding[3];
+} PomodoroLogRecord;
+
 /* Notes */
 static NoteState charToNoteState(char c);
-/* Pomodoro */
-static int calculateCycleTotal(const PomodoroData* data);
-static const char* getStepName(int step);
-static int getStepFromName(const char* name);
 
 /**
  * ---------------------------------------------------------------------------
@@ -483,58 +494,49 @@ static NoteState charToNoteState(char c) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 static int GetLastLogIndex(const char* path) {
-  FILE* file = fopen(path, "r");
+  FILE* file = fopen(path, "rb");
   if (!file) return 1;
 
-  char line[256];
+  PomodoroLogRecord record;
   int last_index = 0;
-  while (fgets(line, sizeof(line), file)) {
-    int idx = atoi(line);
-    if (idx > last_index) last_index = idx;
+  while (fread(&record, sizeof(record), 1, file) == 1) {
+    if (record.session_index > last_index) last_index = record.session_index;
   }
   fclose(file);
   return last_index + 1;
 }
 
 int GetLastLogIndexOnly(const char* path) {
-  FILE* file = fopen(path, "r");
+  FILE* file = fopen(path, "rb");
   if (!file) return 0;
 
-  char line[256];
+  PomodoroLogRecord record;
   int last_index = 0;
-  while (fgets(line, sizeof(line), file)) {
-    int idx = atoi(line);
-    if (idx > last_index) last_index = idx;
+  while (fread(&record, sizeof(record), 1, file) == 1) {
+    if (record.session_index > last_index) last_index = record.session_index;
   }
   fclose(file);
   return last_index;
 }
 
 ErrorType RemoveUncompletedEntries(const char* path, int index) {
-  FILE* read_file = fopen(path, "r");
+  FILE* read_file = fopen(path, "rb");
   if (!read_file) return NO_ERROR;
 
   char temp_path[256];
   snprintf(temp_path, sizeof(temp_path), "%s.tmp", path);
-  FILE* write_file = fopen(temp_path, "w");
+  FILE* write_file = fopen(temp_path, "wb");
   if (!write_file) {
     fclose(read_file);
     return NO_ERROR;
   }
 
-  char line[256];
-  while (fgets(line, sizeof(line), read_file)) {
-    size_t len = strlen(line);
-    if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
-
-    char* token = strtok(line, "|");
-    int idx = token ? atoi(token) : 0;
-    char* step = strtok(NULL, "|");
-
-    if (idx == index && step && strcmp(step, "COMPLETED_POMODORO") != 0) {
+  PomodoroLogRecord record;
+  while (fread(&record, sizeof(record), 1, read_file) == 1) {
+    if (record.session_index == index && record.status == 0) {
       continue;
     }
-    fprintf(write_file, "%s\n", line);
+    fwrite(&record, sizeof(record), 1, write_file);
   }
 
   fclose(read_file);
@@ -547,28 +549,26 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
                        bool append) {
   if (!path || !data) return NO_ERROR;
 
-  int index = data->session_index > 0 ? data->session_index : GetLastLogIndex(path);
+  int index =
+    data->session_index > 0 ? data->session_index : GetLastLogIndex(path);
 
-  time_t now = time(NULL);
-  struct tm* tm_info = localtime(&now);
-  char end_time[32];
-  strftime(end_time, sizeof(end_time), "%Y-%m-%dT%H:%M:%S", tm_info);
+  PomodoroLogRecord record = {
+    .session_index = (uint16_t)index,
+    .current_step = (uint8_t)data->current_step,
+    .current_cycle = (uint8_t)(data->current_cycle + 1),
+    .total_cycles = (uint8_t)data->total_cycles,
+    .work_time = (uint8_t)data->work_time,
+    .short_pause_time = (uint8_t)data->short_pause_time,
+    .long_pause_time = (uint8_t)data->long_pause_time,
+    .total_elapsed = (uint32_t)data->total_elapsed,
+    .current_step_time = (uint32_t)data->current_step_time,
+    .status = (uint8_t)data->status,
+    .padding = {0, 0, 0}};
 
-  char start_time[32];
-  tm_info = localtime(&data->step_start_time);
-  strftime(start_time, sizeof(start_time), "%Y-%m-%dT%H:%M:%S", tm_info);
-
-  int cycle_total = calculateCycleTotal(data);
-
-  const char* step_name = getStepName(data->current_step);
-
-  FILE* file = fopen(path, append ? "a" : "w");
+  FILE* file = fopen(path, append ? "ab" : "wb");
   if (!file) return NO_ERROR;
 
-  fprintf(file, "%d|%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%d\n", index, start_time,
-          end_time, step_name, data->current_cycle + 1, data->total_cycles,
-          data->work_time, data->short_pause_time, data->long_pause_time,
-          data->total_elapsed, cycle_total, data->status);
+  fwrite(&record, sizeof(record), 1, file);
 
   fclose(file);
   return NO_ERROR;
@@ -576,7 +576,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
 
 /**
  * Load pomodoro state from a log file.
- * Reads the last line and restores pomodoro data.
+ * Reads the last record and restores pomodoro data.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to populate
  * @return ErrorType NO_ERROR on success, or an error code on failure
@@ -584,117 +584,46 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
 ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   if (!path || !data) return NO_ERROR;
 
-  FILE* file = fopen(path, "r");
+  FILE* file = fopen(path, "rb");
   if (!file) return NO_ERROR;
 
-  char line[256];
-  char* last_line = NULL;
-  while (fgets(line, sizeof(line), file)) {
-    size_t len = strlen(line);
-    if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
-    if (len > 1) {
-      if (last_line) free(last_line);
-      last_line = strdup(line);
-    }
+  PomodoroLogRecord record;
+  PomodoroLogRecord last_record = {0};
+
+  while (fread(&record, sizeof(record), 1, file) == 1) {
+    last_record = record;
   }
   fclose(file);
 
-  if (!last_line) return NO_ERROR;
+  if (last_record.session_index == 0) return NO_ERROR;
 
-  int token_count = 0;
-  char* tokens[12] = {0};
-
-  char* token = strtok(last_line, "|");
-  while (token && token_count < 12) {
-    tokens[token_count++] = token;
-    token = strtok(NULL, "|");
-  }
-
-  if (token_count < 11) {
-    free(last_line);
-    return NO_ERROR;
-  }
-
-  data->session_index = atoi(tokens[0]);
+  data->session_index = last_record.session_index;
   data->step_start_time = time(NULL);
-
-  data->current_step = getStepFromName(tokens[3]);
-  data->current_cycle = atoi(tokens[4]) - 1;
-  data->total_cycles = atoi(tokens[5]);
+  data->current_step = last_record.current_step;
+  data->current_cycle = last_record.current_cycle - 1;
+  data->total_cycles = last_record.total_cycles;
 
   if (data->total_cycles < 1 || data->total_cycles > 8) {
-    free(last_line);
     return NO_ERROR;
   }
 
-  data->work_time = atoi(tokens[6]);
+  if (data->current_step != WORK_TIME && data->current_step != SHORT_PAUSE &&
+      data->current_step != LONG_PAUSE) {
+    return NO_ERROR;
+  }
+
+  data->work_time = last_record.work_time;
   if (data->work_time < 1 || data->work_time > 120) {
-    free(last_line);
     return NO_ERROR;
   }
 
-  data->short_pause_time = atoi(tokens[7]);
-  data->long_pause_time = atoi(tokens[8]);
-  data->total_elapsed = atoi(tokens[9]);
-  data->status = atoi(tokens[11]);
-
-  int cycle_total = atoi(tokens[10]);
-  int elapsed_in_current_step = data->total_elapsed % cycle_total;
-  data->current_step_time = elapsed_in_current_step;
+  data->short_pause_time = last_record.short_pause_time;
+  data->long_pause_time = last_record.long_pause_time;
+  data->total_elapsed = last_record.total_elapsed;
+  data->current_step_time = last_record.current_step_time;
+  data->status = last_record.status;
 
   data->delta_time_ms = GetCurrentTimeMS();
 
-  free(last_line);
   return NO_ERROR;
-}
-
-/**
- * Calculate total cycle time in seconds.
- * Formula: (total_cycles * work_time + (total_cycles - 1) * short_pause + long_pause) * 60
- * @param data Pointer to the pomodoro data
- * @return Total cycle time in seconds
- */
-static int calculateCycleTotal(const PomodoroData* data) {
-  int cycles = data->total_cycles;
-  int total = (cycles * data->work_time +
-               (cycles - 1) * data->short_pause_time + data->long_pause_time) *
-              60;
-  return total;
-}
-
-/**
- * Get step name string from step enum.
- * @param step Current step enum value
- * @return String representation of step
- */
-static const char* getStepName(int step) {
-  switch (step) {
-    case WORK_TIME:
-      return "WORK_TIME";
-    case SHORT_PAUSE:
-      return "SHORT_PAUSE";
-    case LONG_PAUSE:
-      return "LONG_PAUSE";
-    case -1:
-      return "COMPLETED_POMODORO";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-/**
- * Get step enum from step name string.
- * @param name Step name string
- * @return Step enum value
- */
-static int getStepFromName(const char* name) {
-  if (strcmp(name, "WORK_TIME") == 0)
-    return WORK_TIME;
-  else if (strcmp(name, "SHORT_PAUSE") == 0)
-    return SHORT_PAUSE;
-  else if (strcmp(name, "LONG_PAUSE") == 0)
-    return LONG_PAUSE;
-  else if (strcmp(name, "COMPLETED_POMODORO") == 0)
-    return -1;
-  return MAIN_MENU;
 }

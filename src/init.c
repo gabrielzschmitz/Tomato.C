@@ -281,7 +281,7 @@ static ErrorType initPomodoroData(AppData* app) {
   int loaded_status = -1;
 
   if (WORK_LOG) {
-    FILE* file = fopen(POMODORO_LOG, "r");
+    FILE* file = fopen(POMODORO_LOG, "rb");
     if (file) {
       fseek(file, 0, SEEK_END);
       long size = ftell(file);
