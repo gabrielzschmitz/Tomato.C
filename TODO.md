@@ -37,19 +37,23 @@ extensible, terminal-based Pomodoro timer written in C.
 ### ⚙️ Configuration
 - [X] Modular config system for durations, break types, and user settings
 
+### 📝 Simple note taking with vim-motions
+- [X] Add and remove tasks
+- [X] Move through tasks
+- [X] Toggle tasks on/off
+- [X] Manage breaklines and large lines
+- [X] Edit tasks
+- [X] Add and remove subtasks (max depth 1)
+- [X] Move notes up and down
+- [X] Undo and redo edits
+- [ ] Add a page system
+
 ---
 
 ## 🚧 In Progress
-
-- [ ] Simple in-app note-taking
-  - [X] Add and remove tasks
-  - [X] Move through tasks
-  - [X] Toggle tasks on/off
-  - [X] Manage breaklines and large lines
-  - [X] Edit tasks
-  - [X] Add and remove subtasks (max depth 1)
-  - [X] Move notes up and down
-  - [ ] Undo and redo tasks
+### 🛠️ User Preferences
+- [ ] Save/load current session state
+- [ ] Modular preferences system
 
 ---
 
@@ -59,16 +63,12 @@ extensible, terminal-based Pomodoro timer written in C.
 - [ ] Welcome screen
 - [ ] Mouse interaction
 
-### 🛠️ User Preferences
-- [ ] Save/load current session state
-- [ ] Modular preferences system
-
 ### 🧩 Extra Features
 - [ ] White noise playback for focus sessions
 - [ ] Work history log (git-style commits)
 
 ### ⚙️ Configuration
-- [ ] Move configuration from compile time to run time paradigma
+- [ ] Move configuration from compiled to runtime paradigma
 
 ---
 
@@ -82,6 +82,6 @@ extensible, terminal-based Pomodoro timer written in C.
 
 ## 📚 Documentation
 
+- [X] Inline documentation for all modules
 - [ ] Updated README with install, usage, and config details
-- [ ] Inline documentation for all modules
 - [ ] Changelog for version tracking

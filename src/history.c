@@ -1,55 +1,18 @@
 #include "history.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
-/**
- * Push a node onto a stack.
- * @param stack Pointer to the stack pointer
- * @param data Data to push
- * @param free_fn Function to free the data
- */
-static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*)) {
-  HistoryNode* node = (HistoryNode*)malloc(sizeof(HistoryNode));
-  if (!node) {
-    if (free_fn) free_fn(data);
-    return;
-  }
-  node->data = data;
-  node->free_fn = free_fn;
-  node->next = *stack;
-  *stack = node;
-}
+/* PRIVATE ANIM FUNCTIONS */
+/* History Operations */
+static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*));
+static HistoryNode* popStack(HistoryNode** stack);
+static int getStackCount(const HistoryNode* stack);
 
 /**
- * Pop a node from a stack.
- * @param stack Pointer to the stack pointer
- * @return The popped node (caller takes ownership of data), or NULL
+ * ---------------------------------------------------------------------------
+ * History Lifecycle
+ * ---------------------------------------------------------------------------
  */
-static HistoryNode* popStack(HistoryNode** stack) {
-  if (!*stack) return NULL;
-  HistoryNode* node = *stack;
-  *stack = node->next;
-  return node;
-}
-
-/**
- * Get the count of nodes in a stack.
- * @param stack Pointer to the stack
- * @return Number of nodes
- */
-static int getStackCount(const HistoryNode* stack) {
-  int count = 0;
-  while (stack) {
-    count++;
-    stack = stack->next;
-  }
-  return count;
-}
-
-/* ---------------------------------------------------------------------------
- * Lifecycle
- * --------------------------------------------------------------------------- */
 
 /**
  * Create a new History manager.
@@ -91,9 +54,11 @@ void FreeHistory(History* history, void (*free_fn)(void*)) {
   free(history);
 }
 
-/* ---------------------------------------------------------------------------
- * Generic Operations
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History Operations
+ * ---------------------------------------------------------------------------
+ */
 
 /**
  * Push current state to history.
@@ -165,4 +130,48 @@ bool HistoryCanUndo(const History* history) {
  */
 bool HistoryCanRedo(const History* history) {
   return history && history->future != NULL;
+}
+
+/**
+ * Push a node onto a stack.
+ * @param stack Pointer to the stack pointer
+ * @param data Data to push
+ * @param free_fn Function to free the data
+ */
+static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*)) {
+  HistoryNode* node = (HistoryNode*)malloc(sizeof(HistoryNode));
+  if (!node) {
+    if (free_fn) free_fn(data);
+    return;
+  }
+  node->data = data;
+  node->free_fn = free_fn;
+  node->next = *stack;
+  *stack = node;
+}
+
+/**
+ * Pop a node from a stack.
+ * @param stack Pointer to the stack pointer
+ * @return The popped node (caller takes ownership of data), or NULL
+ */
+static HistoryNode* popStack(HistoryNode** stack) {
+  if (!*stack) return NULL;
+  HistoryNode* node = *stack;
+  *stack = node->next;
+  return node;
+}
+
+/**
+ * Get the count of nodes in a stack.
+ * @param stack Pointer to the stack
+ * @return Number of nodes
+ */
+static int getStackCount(const HistoryNode* stack) {
+  int count = 0;
+  while (stack) {
+    count++;
+    stack = stack->next;
+  }
+  return count;
 }

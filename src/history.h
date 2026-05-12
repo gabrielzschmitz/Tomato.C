@@ -2,18 +2,19 @@
 #define HISTORY_H_
 
 #include <stdbool.h>
-#include <stddef.h>
 
 typedef struct HistoryNode HistoryNode;
 typedef struct History History;
+
+#define HISTORY_MAX_STACK 128
 
 /**
  * History node containing data and cleanup function.
  */
 struct HistoryNode {
-  void* data;                       /* Generic data pointer */
-  void (*free_fn)(void*);           /* Function to free the data */
-  HistoryNode* next;                /* Pointer to next node */
+  void* data;             /* Generic data pointer */
+  void (*free_fn)(void*); /* Function to free the data */
+  HistoryNode* next;      /* Pointer to next node */
 };
 
 /**
@@ -21,16 +22,16 @@ struct HistoryNode {
  * Uses generic void* data with custom cleanup functions.
  */
 struct History {
-  HistoryNode* past;    /* Stack of past states (for undo) */
-  HistoryNode* future;  /* Stack of future states (for redo) */
-  int present;          /* Current state value (for scene history) */
+  HistoryNode* past;   /* Stack of past states (for undo) */
+  HistoryNode* future; /* Stack of future states (for redo) */
+  int present;         /* Current state value (for scene history) */
 };
 
-#define HISTORY_MAX_STACK 128
-
-/* ---------------------------------------------------------------------------
- * Lifecycle
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History Lifecycle
+ * ---------------------------------------------------------------------------
+ */
 
 /**
  * Create a new History manager.
@@ -45,9 +46,11 @@ History* CreateHistory(void);
  */
 void FreeHistory(History* history, void (*free_fn)(void*));
 
-/* ---------------------------------------------------------------------------
- * Generic Operations (for Notes undo/redo)
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History Operations
+ * ---------------------------------------------------------------------------
+ */
 
 /**
  * Push current state to history.
@@ -56,7 +59,8 @@ void FreeHistory(History* history, void (*free_fn)(void*));
  * @param free_fn Function to free the data (can be NULL)
  * @param to_future If true, push to future stack; if false, push to past stack
  */
-void HistoryPush(History* history, void* data, void (*free_fn)(void*), bool to_future);
+void HistoryPush(History* history, void* data, void (*free_fn)(void*),
+                 bool to_future);
 
 /**
  * Pop state from history stack.
