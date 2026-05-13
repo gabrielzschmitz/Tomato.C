@@ -33,7 +33,33 @@ typedef struct __attribute__((packed)) {
   uint32_t current_step_time;
   uint8_t status;
   uint8_t padding[3];
-} PomodoroLogRecord;
+} pomodoroLogRecord;
+
+typedef struct {
+  int sessionIndex;
+  int cycle;
+  int totalCycles;
+  int workTime;
+  int shortPause;
+  int longPause;
+  int totalElapsed;
+  int step;
+  int status;
+  int sessionMins;
+} recentSessionInfo;
+
+typedef struct {
+  int totalSessions;
+  int completedSessions;
+  int totalWorkMinutes;
+  int workHours;
+  int workMins;
+  int totalSessionMinutes;
+  int sessionHours;
+  int sessionMins;
+  int numRecent;
+  recentSessionInfo recentSessions[MAX_RECENT_SESSIONS];
+} pomodoroHistoryStats;
 
 /* Notes */
 static NoteState charToNoteState(char c);
@@ -43,6 +69,8 @@ static int strwidth(const char* s);
 static void printLine(int w1, int w2, int is_top);
 static void printLineBottom(int w1, int w2);
 static void formatTime(char* buf, int size, int hours, int minutes);
+static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
+                                                       int maxRecent);
 
 /**
  * ---------------------------------------------------------------------------
@@ -503,11 +531,10 @@ static int GetLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return 1;
 
-  PomodoroLogRecord record;
+  pomodoroLogRecord record;
   int last_index = 0;
-  while (fread(&record, sizeof(record), 1, file) == 1) {
+  while (fread(&record, sizeof(record), 1, file) == 1)
     if (record.session_index > last_index) last_index = record.session_index;
-  }
   fclose(file);
   return last_index + 1;
 }
@@ -516,11 +543,10 @@ int GetLastLogIndexOnly(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return 0;
 
-  PomodoroLogRecord record;
+  pomodoroLogRecord record;
   int last_index = 0;
-  while (fread(&record, sizeof(record), 1, file) == 1) {
+  while (fread(&record, sizeof(record), 1, file) == 1)
     if (record.session_index > last_index) last_index = record.session_index;
-  }
   fclose(file);
   return last_index;
 }
@@ -537,11 +563,9 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
     return NO_ERROR;
   }
 
-  PomodoroLogRecord record;
+  pomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, read_file) == 1) {
-    if (record.session_index == index && record.status == 0) {
-      continue;
-    }
+    if (record.session_index == index && record.status == 0) continue;
     fwrite(&record, sizeof(record), 1, write_file);
   }
 
@@ -558,7 +582,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
   int index =
     data->session_index > 0 ? data->session_index : GetLastLogIndex(path);
 
-  PomodoroLogRecord record = {
+  pomodoroLogRecord record = {
     .session_index = (uint16_t)index,
     .current_step = (uint8_t)data->current_step,
     .current_cycle = (uint8_t)(data->current_cycle + 1),
@@ -593,12 +617,10 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   FILE* file = fopen(path, "rb");
   if (!file) return NO_ERROR;
 
-  PomodoroLogRecord record;
-  PomodoroLogRecord last_record = {0};
+  pomodoroLogRecord record;
+  pomodoroLogRecord last_record = {0};
 
-  while (fread(&record, sizeof(record), 1, file) == 1) {
-    last_record = record;
-  }
+  while (fread(&record, sizeof(record), 1, file) == 1) last_record = record;
   fclose(file);
 
   if (last_record.session_index == 0) return NO_ERROR;
@@ -609,9 +631,7 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   data->current_cycle = last_record.current_cycle - 1;
   data->total_cycles = last_record.total_cycles;
 
-  if (data->total_cycles < 1 || data->total_cycles > 8) {
-    return NO_ERROR;
-  }
+  if (data->total_cycles < 1 || data->total_cycles > 8) return NO_ERROR;
 
   if (data->current_step != WORK_TIME && data->current_step != SHORT_PAUSE &&
       data->current_step != LONG_PAUSE) {
@@ -619,9 +639,7 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   }
 
   data->work_time = last_record.work_time;
-  if (data->work_time < 1 || data->work_time > 120) {
-    return NO_ERROR;
-  }
+  if (data->work_time < 1 || data->work_time > 120) return NO_ERROR;
 
   data->short_pause_time = last_record.short_pause_time;
   data->long_pause_time = last_record.long_pause_time;
@@ -635,188 +653,115 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
 }
 
 void GetPomodoroHistory(const char* path) {
-  FILE* file = fopen(path, "rb");
-  if (!file) {
+  pomodoroHistoryStats stats =
+    createPomodoroHistoryStats(path, MAX_RECENT_SESSIONS);
+
+  if (stats.totalSessions == 0) {
     printf("No pomodoro history found.\n");
     return;
   }
 
-  PomodoroLogRecord records[1000];
-  int count = 0;
+  int maxLabelW = 16;
+  int maxValueW = 7;
 
-  while (fread(&records[count], sizeof(PomodoroLogRecord), 1, file) == 1) {
-    count++;
-    if (count >= 1000) break;
-  }
-  fclose(file);
-
-  if (count == 0) {
-    printf("No pomodoro history found.\n");
-    return;
-  }
-
-  int total_sessions = 0;
-  int completed_sessions = 0;
-  int total_work_seconds = 0;
-  int total_session_seconds = 0;
-  int last_session = -1;
-
-  for (int i = 0; i < count; i++) {
-    if (records[i].session_index > 0 &&
-        records[i].session_index != (unsigned int)last_session) {
-      total_sessions++;
-      last_session = records[i].session_index;
-    }
-    if (records[i].status == 0) {
-      completed_sessions++;
-      int cycles = records[i].total_cycles;
-      int work = records[i].work_time * 60;
-      int short_p = records[i].short_pause_time * 60;
-      int long_p = records[i].long_pause_time * 60;
-      total_session_seconds +=
-        (cycles * work) + ((cycles - 1) * short_p) + long_p;
-    }
-    if (records[i].current_step == WORK_TIME && records[i].current_cycle > 0)
-      total_work_seconds += records[i].current_step_time;
-  }
-
-  int unique_sessions = 0;
-  int session_indices[1000];
-  for (int i = 0; i < count; i++) {
-    if (records[i].session_index > 0) {
-      int already_counted = 0;
-      for (int j = 0; j < unique_sessions; j++) {
-        if (session_indices[j] == records[i].session_index) {
-          already_counted = 1;
-          break;
-        }
-      }
-      if (!already_counted)
-        session_indices[unique_sessions++] = records[i].session_index;
-    }
-  }
-
-  int num_recent = unique_sessions > 3 ? 3 : unique_sessions;
-  int start_idx = unique_sessions > 3 ? unique_sessions - 3 : 0;
-
-  int total_work_minutes = total_work_seconds / 60;
-  int work_hours = total_work_minutes / 60;
-  int work_mins = total_work_minutes % 60;
-
-  int total_session_minutes = total_session_seconds / 60;
-  int session_hours = total_session_minutes / 60;
-  int session_mins = total_session_minutes % 60;
-
-  int max_label_w = 16;
-  int max_value_w = 7;
-
-  if (total_sessions > 0 && max_value_w < 1) max_value_w = 1;
-  if (completed_sessions > 0 && max_value_w < 1) max_value_w = 1;
+  if (stats.totalSessions > 0 && maxValueW < 1) maxValueW = 1;
+  if (stats.completedSessions > 0 && maxValueW < 1) maxValueW = 1;
   char tmp[64];
-  snprintf(tmp, sizeof(tmp), "%d min", total_work_minutes);
+  snprintf(tmp, sizeof(tmp), "%d min", stats.totalWorkMinutes);
   int len = strwidth(tmp);
-  if (len > max_value_w) max_value_w = len;
-  formatTime(tmp, sizeof(tmp), work_hours, work_mins);
+  if (len > maxValueW) maxValueW = len;
+  formatTime(tmp, sizeof(tmp), stats.workHours, stats.workMins);
   len = strwidth(tmp);
-  if (len > max_value_w) max_value_w = len;
-  snprintf(tmp, sizeof(tmp), "%d min", total_session_minutes);
+  if (len > maxValueW) maxValueW = len;
+  snprintf(tmp, sizeof(tmp), "%d min", stats.totalSessionMinutes);
   len = strwidth(tmp);
-  if (len > max_value_w) max_value_w = len;
-  formatTime(tmp, sizeof(tmp), session_hours, session_mins);
+  if (len > maxValueW) maxValueW = len;
+  formatTime(tmp, sizeof(tmp), stats.sessionHours, stats.sessionMins);
   len = strwidth(tmp);
-  if (len > max_value_w) max_value_w = len;
+  if (len > maxValueW) maxValueW = len;
 
-  if (num_recent > 0) {
+  if (stats.numRecent > 0) {
     char tmpbuf[64];
-    for (int idx = start_idx; idx < unique_sessions; idx++) {
-      int sess = session_indices[idx];
-      int len = snprintf(tmpbuf, sizeof(tmpbuf), "#%d", sess);
-      uint8_t cycle = 0, total_cycles = 0, status = 1;
-      for (int i = 0; i < count; i++) {
-        if (records[i].session_index == sess) {
-          cycle = records[i].current_cycle;
-          total_cycles = records[i].total_cycles;
-          status = records[i].status;
-        }
-      }
-      if (status == 0)
+    for (int i = 0; i < stats.numRecent; i++) {
+      recentSessionInfo* rs = &stats.recentSessions[i];
+      int len = snprintf(tmpbuf, sizeof(tmpbuf), "#%d", rs->sessionIndex);
+      if (rs->status == 0)
         len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len, " %d/%d done 99m",
-                        cycle, total_cycles);
+                        rs->cycle, rs->totalCycles);
       else
         len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len,
-                        " %d/%d cycle 99m left", cycle, total_cycles);
-      if (len > max_label_w) max_label_w = len;
+                        " %d/%d cycle 99m left", rs->cycle, rs->totalCycles);
+      if (len > maxLabelW) maxLabelW = len;
     }
   }
 
-  int W1 = max_label_w;
-  int W2 = max_value_w;
+  int W1 = maxLabelW;
+  int W2 = maxValueW;
   char buf[64];
 
   printLine(W1, W2, 1);
   printRow(W1, W2, "POMODORO HISTORY", "");
   printLine(W1, W2, 0);
 
-  snprintf(buf, sizeof(buf), "%d", total_sessions);
+  snprintf(buf, sizeof(buf), "%d", stats.totalSessions);
   printRow(W1, W2, "Total sessions", buf);
 
-  snprintf(buf, sizeof(buf), "%d", completed_sessions);
+  snprintf(buf, sizeof(buf), "%d", stats.completedSessions);
   printRow(W1, W2, "Completed sessions", buf);
 
-  snprintf(buf, sizeof(buf), "%d min", total_work_minutes);
+  snprintf(buf, sizeof(buf), "%d min", stats.totalWorkMinutes);
   printRow(W1, W2, "Total work time", buf);
 
-  formatTime(buf, sizeof(buf), work_hours, work_mins);
+  formatTime(buf, sizeof(buf), stats.workHours, stats.workMins);
   printRow(W1, W2, "", buf);
 
-  snprintf(buf, sizeof(buf), "%d min", total_session_minutes);
+  snprintf(buf, sizeof(buf), "%d min", stats.totalSessionMinutes);
   printRow(W1, W2, "Total session time", buf);
 
-  formatTime(buf, sizeof(buf), session_hours, session_mins);
+  formatTime(buf, sizeof(buf), stats.sessionHours, stats.sessionMins);
   printRow(W1, W2, "", buf);
 
-  if (num_recent > 0) {
+  if (stats.numRecent > 0) {
     printLine(W1, W2, 0);
-    snprintf(buf, sizeof(buf), "Last %d session%s", num_recent,
-             num_recent > 1 ? "s" : "");
+    snprintf(buf, sizeof(buf), "Last %d session%s", stats.numRecent,
+             stats.numRecent > 1 ? "s" : "");
     printRow(W1, W2, buf, "");
-    for (int idx = start_idx; idx < unique_sessions; idx++) {
-      int sess = session_indices[idx];
-      uint32_t total_elapsed = 0;
-      uint8_t step = 0, cycle = 0, total_cycles = 0, work_time = 0, status = 1;
-      uint8_t short_pause = 0, long_pause = 0;
-      for (int i = 0; i < count; i++) {
-        if (records[i].session_index == sess) {
-          total_elapsed += records[i].current_step_time;
-          step = records[i].current_step;
-          cycle = records[i].current_cycle;
-          total_cycles = records[i].total_cycles;
-          work_time = records[i].work_time;
-          status = records[i].status;
-          short_pause = records[i].short_pause_time;
-          long_pause = records[i].long_pause_time;
+    for (int i = 0; i < stats.numRecent; i++) {
+      recentSessionInfo* rs = &stats.recentSessions[i];
+      int mins = rs->totalElapsed / 60;
+      if (rs->status == 0) {
+        snprintf(buf, sizeof(buf), "#%d %d/%d done %dm", rs->sessionIndex,
+                 rs->cycle, rs->totalCycles, rs->sessionMins);
+      } else {
+        int remaining = 0;
+        if (rs->step == WORK_TIME) {
+          int currentWorkElapsed = rs->totalElapsed % (rs->workTime * 60);
+          remaining += (rs->workTime * 60) - currentWorkElapsed;
+          for (int c = rs->cycle; c < rs->totalCycles; c++)
+            remaining += rs->shortPause * 60;
+          if (rs->totalCycles > 1) remaining += rs->longPause * 60;
+          for (int c = rs->cycle + 1; c <= rs->totalCycles; c++)
+            remaining += rs->workTime * 60;
+        } else if (rs->step == SHORT_PAUSE) {
+          int currentPauseElapsed = rs->totalElapsed % (rs->shortPause * 60);
+          remaining += (rs->shortPause * 60) - currentPauseElapsed;
+          for (int c = rs->cycle + 1; c <= rs->totalCycles; c++)
+            remaining += rs->workTime * 60;
+          for (int c = rs->cycle + 1; c < rs->totalCycles; c++)
+            remaining += rs->shortPause * 60;
+          if (rs->totalCycles > 1) remaining += rs->longPause * 60;
+        } else {
+          int currentPauseElapsed = rs->totalElapsed % (rs->longPause * 60);
+          remaining += (rs->longPause * 60) - currentPauseElapsed;
         }
-      }
-      int mins = total_elapsed / 60;
-      if (status == 0) {
-        int work = work_time * 60;
-        int session_mins =
-          (cycle * work + (cycle - 1) * short_pause * 60 + long_pause * 60) /
-          60;
-        snprintf(buf, sizeof(buf), "#%d %d/%d done %dm", sess, cycle,
-                 total_cycles, session_mins);
-      } else if (step == WORK_TIME) {
-        int remaining = (work_time * 60) - (total_elapsed % (work_time * 60));
         if (remaining > 0) {
-          int rem_mins = remaining / 60;
-          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm left", sess, cycle,
-                   total_cycles, rem_mins);
+          int remMins = remaining / 60;
+          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm left",
+                   rs->sessionIndex, rs->cycle, rs->totalCycles, remMins);
         } else
-          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", sess, cycle,
-                   total_cycles, mins);
-      } else
-        snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", sess, cycle,
-                 total_cycles, mins);
+          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", rs->sessionIndex,
+                   rs->cycle, rs->totalCycles, mins);
+      }
       printRow(W1, W2, buf, "");
     }
   }
@@ -868,4 +813,102 @@ static void formatTime(char* buf, int size, int hours, int minutes) {
     snprintf(buf, size, "%dh %2dm", hours, minutes);
   else
     snprintf(buf, size, "%d min", minutes);
+}
+
+static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
+                                                       int maxRecent) {
+  pomodoroHistoryStats stats = {0};
+
+  FILE* file = fopen(path, "rb");
+  if (!file) return stats;
+
+  pomodoroLogRecord records[1000];
+  int count = 0;
+
+  while (fread(&records[count], sizeof(pomodoroLogRecord), 1, file) == 1) {
+    count++;
+    if (count >= 1000) break;
+  }
+  fclose(file);
+
+  if (count == 0) return stats;
+
+  int totalWorkSeconds = 0;
+  int totalSessionSeconds = 0;
+  int lastSession = -1;
+
+  for (int i = 0; i < count; i++) {
+    if (records[i].session_index > 0 &&
+        records[i].session_index != (unsigned int)lastSession) {
+      stats.totalSessions++;
+      lastSession = records[i].session_index;
+    }
+    if (records[i].status == 0) {
+      stats.completedSessions++;
+      int cycles = records[i].total_cycles;
+      int work = records[i].work_time * 60;
+      int shortP = records[i].short_pause_time * 60;
+      int longP = records[i].long_pause_time * 60;
+      totalSessionSeconds += (cycles * work) + ((cycles - 1) * shortP) + longP;
+    }
+    if (records[i].current_step == WORK_TIME && records[i].current_cycle > 0)
+      totalWorkSeconds += records[i].current_step_time;
+  }
+
+  int uniqueSessions = 0;
+  int sessionIndices[1000];
+  for (int i = 0; i < count; i++) {
+    if (records[i].session_index > 0) {
+      int alreadyCounted = 0;
+      for (int j = 0; j < uniqueSessions; j++) {
+        if (sessionIndices[j] == records[i].session_index) {
+          alreadyCounted = 1;
+          break;
+        }
+      }
+      if (!alreadyCounted)
+        sessionIndices[uniqueSessions++] = records[i].session_index;
+    }
+  }
+
+  stats.numRecent = uniqueSessions > maxRecent ? maxRecent : uniqueSessions;
+  int startIdx = uniqueSessions > maxRecent ? uniqueSessions - maxRecent : 0;
+
+  stats.totalWorkMinutes = totalWorkSeconds / 60;
+  stats.workHours = stats.totalWorkMinutes / 60;
+  stats.workMins = stats.totalWorkMinutes % 60;
+
+  totalSessionSeconds /= 60;
+  stats.totalSessionMinutes = totalSessionSeconds;
+  stats.sessionHours = totalSessionSeconds / 60;
+  stats.sessionMins = totalSessionSeconds % 60;
+
+  for (int i = 0; i < stats.numRecent; i++) {
+    int idx = startIdx + i;
+    int sess = sessionIndices[idx];
+    recentSessionInfo* rs = &stats.recentSessions[i];
+    rs->sessionIndex = sess;
+
+    for (int j = 0; j < count; j++) {
+      if (records[j].session_index == sess) {
+        rs->totalElapsed += records[j].current_step_time;
+        rs->step = records[j].current_step;
+        rs->cycle = records[j].current_cycle;
+        rs->totalCycles = records[j].total_cycles;
+        rs->workTime = records[j].work_time;
+        rs->status = records[j].status;
+        rs->shortPause = records[j].short_pause_time;
+        rs->longPause = records[j].long_pause_time;
+      }
+    }
+
+    if (rs->status == 0) {
+      rs->sessionMins =
+        (rs->cycle * rs->workTime * 60 + (rs->cycle - 1) * rs->shortPause * 60 +
+         rs->longPause * 60) /
+        60;
+    }
+  }
+
+  return stats;
 }

@@ -13,6 +13,7 @@
 #define MAX_ANIMATIONS 7
 #define MAX_MENUS 2
 #define MAX_INPUT_MODES 3
+#define MAX_RECENT_SESSIONS 3
 #define FPMS 1000.0 / FPS
 
 #ifdef DEBUG_FLAG
