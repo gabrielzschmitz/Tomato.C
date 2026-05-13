@@ -665,6 +665,9 @@ void ForcefullyQuitApp(AppData* app) { app->running = false; }
  * @param app Pointer to the application data
  */
 void StartPomodoro(AppData* app) {
+  if (app->screen->panels[app->screen->current_panel].scene_history->present !=
+      MAIN_MENU)
+    return;
   ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
   app->screen->panels[0].menu_index = -1;
   app->pomodoro_data.current_step = WORK_TIME;
@@ -673,12 +676,10 @@ void StartPomodoro(AppData* app) {
     app->pomodoro_data.step_start_time = time(NULL);
   }
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-  if (app->pomodoro_data.session_index == 0) {
+  if (app->pomodoro_data.session_index == 0)
     app->pomodoro_data.session_index = GetLastLogIndexOnly(POMODORO_LOG) + 1;
-  }
-  if (app->pomodoro_data.step_start_time == 0) {
+  if (app->pomodoro_data.step_start_time == 0)
     app->pomodoro_data.step_start_time = time(NULL);
-  }
   app->pomodoro_data.status = 1;
 
   Notification notification = {

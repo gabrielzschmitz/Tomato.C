@@ -302,7 +302,10 @@ static ErrorType initPomodoroData(AppData* app) {
               app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
               pomodoro_loaded = true;
               app->pomodoro_data.last_step_time = -1;
-              app->pomodoro_data.session_index = app->pomodoro_data.session_index > 0 ? app->pomodoro_data.session_index : 1;
+              app->pomodoro_data.session_index =
+                app->pomodoro_data.session_index > 0
+                  ? app->pomodoro_data.session_index
+                  : 1;
               ExecuteHistory(app->screen->panels[0].scene_history,
                              app->pomodoro_data.current_step);
               app->screen->panels[0].menu_index = -1;
