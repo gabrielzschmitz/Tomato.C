@@ -53,7 +53,8 @@ extensible, terminal-based Pomodoro timer written in C.
 ## 🚧 In Progress
 ### 🛠️ User Preferences
 - [X] Save/load current session state
-    - [ ] Transform logging to be less data consuming (maybe binary)
+    - [X] Transform logging to be less data consuming (maybe binary)
+    - [X] Add more interesting data about sessions to GetPomodoroLog
 - [ ] Modular preferences system
 
 ---
@@ -84,5 +85,6 @@ extensible, terminal-based Pomodoro timer written in C.
 ## 📚 Documentation
 
 - [X] Inline documentation for all modules
+- [X] Documentation to HTML pages
 - [ ] Updated README with install, usage, and config details
 - [ ] Changelog for version tracking

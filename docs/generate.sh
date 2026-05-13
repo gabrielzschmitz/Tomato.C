@@ -10,7 +10,7 @@ mkdir -p docs/output
 
 echo "[DOCS] Generating documentation..."
 
-doxygen docs/Doxyfile -w html
+doxygen docs/Doxyfile
 
 echo "[DOCS] Done."
 echo "[DOCS] Open: docs/output/html/index.html"
