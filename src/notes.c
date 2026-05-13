@@ -642,6 +642,7 @@ NotesData* CloneNotesData(const NotesData* src) {
 /**
  * Save current NotesData state to history for undo.
  * @param notes Pointer to NotesData
+ * @param cursor Current cursor position
  */
 void SaveNotesToHistory(NotesData* notes, int cursor) {
   if (!notes || !notes->history) return;

@@ -524,7 +524,7 @@ static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
 /**
  * Create a FloatingDialog on given position.
  * @param position Vector2D of where to initialize the dialog
- * @param dimensions Dimensions size of the dialog
+ * @param size Dimensions size of the dialog
  * @param border Border character configuration
  * @param menu Menu to display in the dialog
  * @param message Message text to display
