@@ -1,0 +1,656 @@
+html {
+  color-scheme: dark;
+
+  --page-background-color: #0d1117;
+  --page-foreground-color: #e6edf3;
+  --page-link-color: #ff7b72;
+  --page-visited-link-color: #ff7b72;
+  --page-external-link-color: #ffa657;
+
+  --index-odd-item-bg-color: #161b22;
+  --index-even-item-bg-color: #0d1117;
+  --index-header-color: #f0f6fc;
+  --index-separator-color: #30363d;
+
+  --header-background-color: #161b22;
+  --header-separator-color: #30363d;
+  --group-header-separator-color: #21262d;
+  --group-header-color: #ff7b72;
+
+  --footer-foreground-color: #8b949e;
+  --footer-logo-width: 60px;
+  --citation-label-color: #ff7b72;
+  --glow-color: rgba(255,123,114,0.4);
+
+  --title-background-color: #0d1117;
+  --title-separator-color: #30363d;
+
+  --blockquote-background-color: #161b22;
+  --blockquote-border-color: #30363d;
+
+  --scrollbar-thumb-color: #484f58;
+  --scrollbar-background-color: #0d1117;
+
+  --icon-background-color: #21262d;
+  --icon-foreground-color: #e6edf3;
+  --icon-folder-open-fill-color: #ff7b72;
+  --icon-folder-fill-color: #d29922;
+  --icon-folder-border-color: #e6edf3;
+  --icon-doc-fill-color: #58a6ff;
+  --icon-doc-border-color: #e6edf3;
+
+  --memdecl-background-color: #161b22;
+  --memdecl-foreground-color: #e6edf3;
+  --memdecl-template-color: #ff7b72;
+  --memdecl-border-color: #30363d;
+
+  --memdef-border-color: #30363d;
+  --memdef-title-background-color: #21262d;
+  --memdef-proto-background-color: #161b22;
+  --memdef-proto-text-color: #ff7b72;
+  --memdef-param-name-color: #ffa657;
+  --memdef-template-color: #ff7b72;
+
+  --table-cell-border-color: #30363d;
+  --table-header-background-color: #21262d;
+  --table-header-foreground-color: #e6edf3;
+
+  --label-background-color: #21262d;
+  --label-left-top-border-color: #30363d;
+  --label-right-bottom-border-color: #30363d;
+  --label-foreground-color: #e6edf3;
+
+  --nav-background-color: #161b22;
+  --nav-foreground-color: #8b949e;
+  --nav-border-color: #30363d;
+  --nav-breadcrumb-separator-color: #30363d;
+  --nav-breadcrumb-active-bg: #21262d;
+  --nav-breadcrumb-color: #ff7b72;
+  --nav-splitbar-bg-color: #30363d;
+  --nav-splitbar-handle-color: #484f58;
+  --nav-font-size-level1: 13px;
+  --nav-font-size-level2: 10px;
+  --nav-font-size-level3: 9px;
+  --nav-text-normal-color: #8b949e;
+  --nav-menu-button-color: #e6edf3;
+  --nav-menu-background-color: #161b22;
+  --nav-menu-foreground-color: #e6edf3;
+  --nav-menu-active-bg: #21262d;
+  --nav-menu-active-color: #ff7b72;
+  --nav-arrow-color: #484f58;
+  --nav-arrow-selected-color: #ff7b72;
+
+  --sync-icon-border-color: #30363d;
+  --sync-icon-background-color: #161b22;
+  --sync-icon-selected-background-color: #21262d;
+  --sync-icon-color: #484f58;
+  --sync-icon-selected-color: #ff7b72;
+
+  --toc-background-color: #161b22;
+  --toc-border-color: #30363d;
+  --toc-header-color: #ff7b72;
+
+  --search-background-color: #0d1117;
+  --search-foreground-color: #8b949e;
+  --search-active-color: #e6edf3;
+  --search-filter-background-color: #161b22;
+  --search-filter-foreground-color: #ff7b72;
+  --search-filter-backdrop-filter: none;
+  --search-filter-border-color: #30363d;
+  --search-filter-highlight-text-color: #e6edf3;
+  --search-filter-highlight-bg-color: #ff7b72;
+  --search-results-background-color: #161b22;
+  --search-results-foreground-color: #ff7b72;
+  --search-results-backdrop-filter: none;
+  --search-results-border-color: #30363d;
+  --search-box-border-color: #30363d;
+  --search-close-icon-bg-color: #484f58;
+  --search-close-icon-fg-color: #0d1117;
+
+  --code-keyword-color: #ff7b72;
+  --code-type-keyword-color: #ffa657;
+  --code-flow-keyword-color: #d29922;
+  --code-comment-color: #8b949e;
+  --code-preprocessor-color: #79c0ff;
+  --code-string-literal-color: #a5d6ff;
+  --code-char-literal-color: #a5d6ff;
+  --code-xml-cdata-color: #e6edf3;
+  --fragment-foreground-color: #e6edf3;
+  --fragment-background-color: #161b22;
+  --fragment-border-color: #30363d;
+  --fragment-lineno-border-color: #30363d;
+  --fragment-lineno-background-color: #0d1117;
+  --fragment-lineno-foreground-color: #8b949e;
+  --fragment-lineno-link-fg-color: #8b949e;
+  --fragment-lineno-link-bg-color: transparent;
+  --fragment-lineno-link-hover-fg-color: #e6edf3;
+  --fragment-lineno-link-hover-bg-color: #21262d;
+  --fragment-copy-ok-color: #3fb950;
+  --fragment-highlight-filter: 5;
+  --tooltip-foreground-color: #e6edf3;
+  --tooltip-background-color: #21262d;
+  --tooltip-arrow-background-color: #21262d;
+  --tooltip-backdrop-filter: none;
+  --tooltip-border-color: #30363d;
+  --tooltip-doc-color: #8b949e;
+  --tooltip-declaration-color: #3fb950;
+  --tooltip-link-color: #ff7b72;
+  --tooltip-shadow: 0 8px 24px rgba(0,0,0,0.4);
+
+  --fold-line-color: #484f58;
+
+  --font-family-normal: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-family-monospace: "JetBrains Mono", "SF Mono", "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-family-nav: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-family-title: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-family-toc: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-family-search: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-family-icon: Arial, Helvetica;
+  --font-family-tooltip: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+
+  --warning-color-bg: #2d1b1b;
+  --warning-color-hl: #f85149;
+  --warning-color-text: #f0c6c6;
+  --note-color-bg: #1c271c;
+  --note-color-hl: #3fb950;
+  --note-color-text: #b1e4b1;
+  --todo-color-bg: #0d1b2e;
+  --todo-color-hl: #58a6ff;
+  --todo-color-text: #c8e1ff;
+  --test-color-bg: #1c1c3a;
+  --test-color-hl: #bc8cff;
+  --test-color-text: #d9c9ff;
+  --deprecated-color-bg: #1c1c1c;
+  --deprecated-color-hl: #8b949e;
+  --deprecated-color-text: #8b949e;
+  --bug-color-bg: #2d1b2d;
+  --bug-color-hl: #bc8cff;
+  --bug-color-text: #d9c9ff;
+  --invariant-color-bg: #0d2d1b;
+  --invariant-color-hl: #3fb950;
+  --invariant-color-text: #b1e4b1;
+}
+
+#side-nav {
+  background-color: var(--nav-background-color);
+}
+
+#nav-tree {
+  background-color: var(--page-background-color);
+}
+
+#nav-tree .selected {
+  background-color: var(--nav-menu-active-bg);
+  border-radius: 6px;
+}
+
+#nav-tree .label a {
+  padding: 4px 8px;
+}
+
+#nav-tree .item {
+  padding: 2px 0;
+}
+
+#main-menu a {
+  padding: 8px 16px;
+}
+
+.sm-dox a {
+  padding: 8px 16px;
+  transition: background-color 0.2s ease;
+}
+
+.sm-dox a:hover {
+  background-color: var(--nav-menu-active-bg);
+}
+
+.titlearea {
+  border-bottom: 1px solid var(--title-separator-color);
+}
+
+#projectname {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f0f6fc;
+}
+
+#projectnumber {
+  font-size: 14px;
+  color: #8b949e;
+}
+
+#projectbrief {
+  font-size: 13px;
+  color: #8b949e;
+  margin-top: 2px;
+}
+
+#projectlogo img {
+  max-height: 48px;
+  margin: 8px;
+}
+
+div.header {
+  margin: 0;
+  padding: 12px 0;
+}
+
+div.headertitle {
+  padding: 8px 12px;
+}
+
+div.headertitle .title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #f0f6fc;
+  margin: 0;
+  line-height: 1.3;
+}
+
+div.contents {
+  margin: 16px 24px;
+  line-height: 1.6;
+}
+
+h2.groupheader {
+  color: var(--group-header-color);
+  font-size: 18px;
+  font-weight: 600;
+  padding-top: 12px;
+  padding-bottom: 6px;
+  margin-top: 24px;
+}
+
+a.el {
+  font-weight: 500;
+  color: var(--page-link-color);
+}
+
+a.el:hover {
+  text-decoration: underline;
+}
+
+a {
+  transition: color 0.2s ease;
+}
+
+.memberdecls {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.memberdecls td {
+  transition: background-color 0.2s ease;
+}
+
+.memItemLeft, .memItemRight {
+  background-color: var(--memdecl-background-color);
+  border: 1px solid var(--memdecl-border-color);
+  padding: 6px 12px;
+}
+
+.memItemLeft {
+  white-space: nowrap;
+  border-right: none;
+  text-align: right;
+  font-weight: 500;
+}
+
+.memItemRight {
+  width: 100%;
+  border-left: none;
+}
+
+.mdescLeft, .mdescRight {
+  background-color: var(--memdecl-background-color);
+  border: 1px solid var(--memdecl-border-color);
+  padding: 4px 12px 6px;
+  color: var(--memdecl-foreground-color);
+  font-size: 13px;
+}
+
+.mdescLeft {
+  border-right: none;
+  border-top: none;
+}
+
+.mdescRight {
+  border-left: none;
+  border-top: none;
+}
+
+table.memberdecls tr:first-child td.memItemLeft,
+table.memberdecls tr:first-child td.memItemRight {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+table.memberdecls tr:last-child td.memItemLeft,
+table.memberdecls tr:last-child td.memItemRight {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.memitem {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--memdecl-background-color);
+  border: 1px solid var(--memdef-border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: box-shadow 0.2s ease;
+}
+
+.memitem:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.memproto {
+  background-color: var(--memdef-proto-background-color);
+  border: none;
+  border-bottom: 1px solid var(--memdef-border-color);
+  padding: 10px 12px;
+  border-radius: 0;
+  color: var(--memdef-proto-text-color);
+}
+
+.memname {
+  font-family: var(--font-family-monospace);
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 0;
+}
+
+.memname td {
+  padding: 2px 4px;
+}
+
+.paramname em {
+  color: var(--memdef-param-name-color);
+}
+
+.memdoc {
+  padding: 12px 16px;
+  border: none;
+  background-color: var(--memdecl-background-color);
+}
+
+.memtitle {
+  background-color: var(--memdef-title-background-color);
+  border: none;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-family-monospace);
+  margin-bottom: 0;
+  box-shadow: none;
+  float: none;
+  border-radius: 0;
+  color: var(--page-foreground-color);
+}
+
+.memtitle:after {
+  display: none;
+}
+
+.permalink {
+  font-family: var(--font-family-monospace);
+  font-size: 15px;
+  color: var(--page-link-color);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.memitem:hover .permalink {
+  opacity: 1;
+}
+
+span.arrowhead {
+  border-right: 2px solid var(--nav-arrow-color);
+  border-bottom: 2px solid var(--nav-arrow-color);
+}
+
+.contents table.doxtable {
+  width: auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.contents table.doxtable th {
+  background-color: var(--table-header-background-color);
+  color: var(--table-header-foreground-color);
+  padding: 8px 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.contents table.doxtable td {
+  padding: 6px 12px;
+  border: 1px solid var(--table-cell-border-color);
+}
+
+div.fragment {
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid var(--fragment-border-color);
+  background-color: var(--fragment-background-color);
+}
+
+pre.fragment {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+div.line {
+  font-size: 13px;
+  line-height: 1.5;
+  padding-left: 64px;
+  text-indent: -64px;
+}
+
+span.lineno {
+  padding-right: 8px;
+  margin-right: 8px;
+  border-right: 1px solid var(--fragment-lineno-border-color);
+  color: var(--fragment-lineno-foreground-color);
+  background-color: transparent;
+}
+
+span.lineno a {
+  color: var(--fragment-lineno-link-fg-color);
+  background-color: transparent;
+}
+
+.clipboard {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.fragment:hover .clipboard {
+  opacity: 0.6;
+}
+
+.clipboard:hover {
+  opacity: 1 !important;
+}
+
+blockquote {
+  border-left: 3px solid var(--blockquote-border-color);
+  background-color: var(--blockquote-background-color);
+  padding: 8px 16px;
+  margin: 12px 24px 12px 4px;
+  border-radius: 0 4px 4px 0;
+}
+
+#nav-path ul {
+  border-top: 1px solid var(--nav-border-color);
+  border-bottom: none;
+}
+
+#main-nav {
+  border-bottom: 1px solid var(--nav-border-color);
+}
+
+.navpath li.navelem a {
+  color: var(--nav-breadcrumb-color);
+}
+
+.navpath li.footer {
+  font-size: 11px;
+  color: var(--footer-foreground-color);
+}
+
+.navpath li.footer img {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.navpath li.footer:hover img {
+  opacity: 1;
+}
+
+#doc-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-background-color);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #58606a;
+}
+
+#side-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+#nav-tree img {
+  border-radius: 3px;
+}
+
+.icon {
+  border-radius: 4px;
+}
+
+.textblock {
+  line-height: 1.7;
+}
+
+.textblock p {
+  margin: 8px 0;
+}
+
+.textblock code {
+  background-color: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  font-family: var(--font-family-monospace);
+}
+
+div.groupHeader {
+  color: var(--group-header-color);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+dl.warning, dl.attention, dl.important,
+dl.note, dl.remark,
+dl.todo, dl.test,
+dl.bug, dl.deprecated, dl.invariant {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+
+span.mlabel {
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.directory tr.odd {
+  background-color: var(--index-odd-item-bg-color);
+}
+
+.directory tr.even {
+  background-color: var(--index-even-item-bg-color);
+}
+
+#titlearea table {
+  width: 100%;
+}
+
+#projectrow td {
+  padding: 4px 8px;
+}
+
+#MSearchBox {
+  border: 1px solid var(--search-box-border-color);
+  border-radius: 6px;
+  background-color: var(--search-background-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#MSearchBox:hover {
+  border-color: var(--page-link-color);
+}
+
+#MSearchBox .MSearchBoxInactive {
+  border-color: var(--search-box-border-color);
+}
+
+#MSearchField {
+  background-color: transparent;
+  color: var(--search-foreground-color);
+}
+
+.search-icon {
+  color: var(--search-foreground-color);
+}
+
+#page-nav.page-nav-panel {
+  background-color: var(--toc-background-color);
+  border-left: 1px solid var(--toc-border-color);
+}
+
+.page-nav-panel .page-nav-tree {
+  padding: 8px;
+}
+
+#splitbar {
+  background-color: var(--nav-splitbar-bg-color);
+}
+
+#splitbar:hover {
+  background-color: var(--nav-splitbar-handle-color);
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background-color: var(--group-header-separator-color);
+  margin: 24px 0;
+}
+
+hr.footer {
+  height: 1px;
+  background-color: var(--group-header-separator-color);
+}
