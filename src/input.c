@@ -501,15 +501,15 @@ void InputCommit(AppData* app) {
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
   } else if (input->insert_after_id >= 0) {
     app->notes->last_affected_id = -1;
-    AddNoteAfter(app->notes, input->insert_after_id, input->buffer, state);
+    AddNoteAfter(app, app->notes, input->insert_after_id, input->buffer, state);
     app->notes->last_affected_id = app->notes->current_id;
   } else if (input->pending_parent_id >= 0) {
     app->notes->last_affected_id = input->pending_parent_id;
-    AddChildNote(app->notes, input->pending_parent_id, input->buffer, state);
+    AddChildNote(app, app->notes, input->pending_parent_id, input->buffer, state);
     app->notes->last_affected_id = app->notes->current_id;
   } else {
     app->notes->last_affected_id = -1;
-    AddNote(app->notes, input->buffer, state);
+    AddNote(app, app->notes, input->buffer, state);
     app->notes->last_affected_id = app->notes->current_id;
   }
   input->len = 0;
@@ -693,7 +693,7 @@ void StartPomodoro(AppData* app) {
     .audio_path = "./sounds/dfltnotify.mp3",
   };
   if (Notify(&notification) != NO_ERROR)
-    LogError("Sending start notification", NOTIFICATION_SEND_ERROR);
+    SetError(app, "Sending start notification", NOTIFICATION_SEND_ERROR);
 }
 
 /**

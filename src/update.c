@@ -93,7 +93,7 @@ void UpdateMainMenu(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[MAIN_MENU];
     if (animation == NULL)
-      LogError("UpdateMainMenu", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateMainMenu", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -108,7 +108,7 @@ void UpdateWorkTime(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[WORK_TIME];
     if (animation == NULL)
-      LogError("UpdateWorkTime", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateWorkTime", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -118,7 +118,7 @@ void UpdateWorkTime(AppData* app) {
     if (WORK_LOG) {
       skip_auto_save = true;
       if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
-        LogError("Saving pomodoro on work end", TIMER_LOG_ERROR);
+        SetError(app, "Saving pomodoro on work end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
     if (app->pomodoro_data.current_cycle >=
@@ -135,7 +135,7 @@ void UpdateWorkTime(AppData* app) {
         .audio_path = "./sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
-        LogError("Sending long pause notification", NOTIFICATION_SEND_ERROR);
+        SetError(app, "Sending long pause notification", NOTIFICATION_SEND_ERROR);
     } else {
       ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
       app->screen->panels[0].menu_index = -1;
@@ -149,7 +149,7 @@ void UpdateWorkTime(AppData* app) {
         .audio_path = "./sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
-        LogError("Sending short pause notification", NOTIFICATION_SEND_ERROR);
+        SetError(app, "Sending short pause notification", NOTIFICATION_SEND_ERROR);
     }
   }
 }
@@ -163,7 +163,7 @@ void UpdateShortPause(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[SHORT_PAUSE];
     if (animation == NULL)
-      LogError("UpdateShortPause", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateShortPause", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -173,7 +173,7 @@ void UpdateShortPause(AppData* app) {
     if (WORK_LOG) {
       skip_auto_save = true;
       if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
-        LogError("Saving pomodoro on pause end", TIMER_LOG_ERROR);
+        SetError(app, "Saving pomodoro on pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
     ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
@@ -189,7 +189,7 @@ void UpdateShortPause(AppData* app) {
       .audio_path = "./sounds/dfltnotify.mp3",
     };
     if (Notify(&notification) != NO_ERROR)
-      LogError("Sending work notification", NOTIFICATION_SEND_ERROR);
+      SetError(app, "Sending work notification", NOTIFICATION_SEND_ERROR);
   }
 }
 
@@ -202,7 +202,7 @@ void UpdateLongPause(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[LONG_PAUSE];
     if (animation == NULL)
-      LogError("UpdateLongPause", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateLongPause", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -213,7 +213,7 @@ void UpdateLongPause(AppData* app) {
       skip_auto_save = true;
       app->pomodoro_data.status = 0;
       if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
-        LogError("Saving pomodoro on long pause end", TIMER_LOG_ERROR);
+        SetError(app, "Saving pomodoro on long pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
     ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
@@ -229,7 +229,7 @@ void UpdateLongPause(AppData* app) {
       .audio_path = "./sounds/endnotify.mp3",
     };
     if (Notify(&notification) != NO_ERROR)
-      LogError("Sending end notification", NOTIFICATION_SEND_ERROR);
+      SetError(app, "Sending end notification", NOTIFICATION_SEND_ERROR);
   }
 }
 
@@ -242,7 +242,7 @@ void UpdateNotes(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[NOTES];
     if (animation == NULL)
-      LogError("UpdateNotes", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateNotes", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -257,7 +257,7 @@ void UpdateHelp(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[HELP];
     if (animation == NULL)
-      LogError("UpdateHelp", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateHelp", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -272,7 +272,7 @@ void UpdateContinue(AppData* app) {
   if (ANIMATIONS && !app->is_paused) {
     Rollfilm* animation = app->animations[CONTINUE];
     if (animation == NULL)
-      LogError("UpdateContinue", ANIMATION_EQUAL_NULL);
+      SetError(app, "UpdateContinue", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
   }
@@ -335,12 +335,12 @@ static void updatePomodoroLog(AppData* app) {
 
   if (last_logged_step == -1 || last_logged_step != current_step) {
     if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
-      LogError("Logging pomodoro step change", TIMER_LOG_ERROR);
+      SetError(app, "Logging pomodoro step change", TIMER_LOG_ERROR);
     last_logged_step = current_step;
     last_logged_minute = current_minute;
   } else if (current_minute != last_logged_minute && current_minute > 0) {
     if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, false) != NO_ERROR)
-      LogError("Logging pomodoro minute", TIMER_LOG_ERROR);
+      SetError(app, "Logging pomodoro minute", TIMER_LOG_ERROR);
     last_logged_minute = current_minute;
   }
 }

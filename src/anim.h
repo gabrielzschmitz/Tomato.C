@@ -6,6 +6,7 @@
 
 #define MAX_FRAME_WIDTH 120
 
+typedef struct AppData AppData;
 typedef struct Rollfilm Rollfilm;
 typedef void (*AnimationUpdate)(struct Rollfilm*);
 typedef void (*AnimationRender)(struct Rollfilm*, int start_y, int start_x);
@@ -75,12 +76,13 @@ Rollfilm* CreateRollfilm(int N, int M);
 
 /**
  * Set the loop variable for a list of Rollfilms.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param film Pointer to array of rollfilm pointers
  * @param list_to_update Array of indices to update
  * @param list_size Number of indices in list_to_update
  * @param loop true to enable looping, false to disable
  */
-void SetRollfilmLoop(Rollfilm** film, const int* list_to_update,
+void SetRollfilmLoop(AppData* app, Rollfilm** film, const int* list_to_update,
                      size_t list_size, bool loop);
 
 /**

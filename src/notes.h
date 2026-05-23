@@ -69,32 +69,35 @@ void FreeNotesData(NotesData* notes);
 
 /**
  * Add a new note at the end of the list.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param text Initial text content for the note
  * @param state Initial state of the note
  */
-void AddNote(NotesData* notes, const char* text, NoteState state);
+void AddNote(AppData* app, NotesData* notes, const char* text, NoteState state);
 
 /**
  * Add a child note under a parent note.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param parent_id ID of the parent note
  * @param text Initial text content
  * @param state Initial state
  */
-void AddChildNote(NotesData* notes, int parent_id, const char* text,
-                  NoteState state);
+void AddChildNote(AppData* app, NotesData* notes, int parent_id,
+                  const char* text, NoteState state);
 
 /**
  * Add a note after a specific note in the list.
  * Used for inserting notes at a specific position.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param after_id ID of the note to insert after
  * @param text Initial text content
  * @param state Initial state
  */
-void AddNoteAfter(NotesData* notes, int after_id, const char* text,
-                  NoteState state);
+void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
+                  const char* text, NoteState state);
 
 /**
  * Update an existing note's content and/or state.

@@ -12,7 +12,7 @@
 
 /* PRIVATE NOTES FUNCTIONS */
 /* Utility */
-static void growItems(NotesData* notes);
+static void growItems(AppData* app, NotesData* notes);
 static int getNextID(NotesData* notes);
 static NoteItem* findByID(NotesData* notes, int id);
 static int getIndexByID(NotesData* notes, int id);
@@ -74,11 +74,13 @@ void FreeNotesData(NotesData* notes) {
 
 /**
  * Add a new note at the end of the list.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param text Initial text content for the note
  * @param state Initial state of the note
  */
-void AddNote(NotesData* notes, const char* text, NoteState state) {
+void AddNote(AppData* app, NotesData* notes, const char* text,
+             NoteState state) {
   if (!notes || !text) return;
 
   SaveNotesToHistory(notes, -1);
@@ -87,17 +89,17 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(notes);
+  if (notes->count >= notes->capacity) growItems(app, notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
-    LogError("AddNote", MALLOC_ERROR);
+    SetError(app, "AddNote", MALLOC_ERROR);
     return;
   }
 
   item->text = GapBufferCreate();
   if (!item->text) {
-    LogError("AddNote", MALLOC_ERROR);
+    SetError(app, "AddNote", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -115,13 +117,14 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
 
 /**
  * Add a child note under a parent note.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param parent_id ID of the parent note
  * @param text Initial text content
  * @param state Initial state
  */
-void AddChildNote(NotesData* notes, int parent_id, const char* text,
-                  NoteState state) {
+void AddChildNote(AppData* app, NotesData* notes, int parent_id,
+                  const char* text, NoteState state) {
   if (!notes || !text || parent_id < 0) return;
 
   SaveNotesToHistory(notes, -1);
@@ -136,17 +139,17 @@ void AddChildNote(NotesData* notes, int parent_id, const char* text,
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(notes);
+  if (notes->count >= notes->capacity) growItems(app, notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
-    LogError("AddChildNote", MALLOC_ERROR);
+    SetError(app, "AddChildNote", MALLOC_ERROR);
     return;
   }
 
   item->text = GapBufferCreate();
   if (!item->text) {
-    LogError("AddChildNote", MALLOC_ERROR);
+    SetError(app, "AddChildNote", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -177,16 +180,17 @@ void AddChildNote(NotesData* notes, int parent_id, const char* text,
 /**
  * Add a note after a specific note in the list.
  * Used for inserting notes at a specific position.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  * @param after_id ID of the note to insert after
  * @param text Initial text content
  * @param state Initial state
  */
-void AddNoteAfter(NotesData* notes, int after_id, const char* text,
-                  NoteState state) {
+void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
+                  const char* text, NoteState state) {
   if (!notes || !text) return;
   if (after_id < 0) {
-    AddNote(notes, text, state);
+    AddNote(app, notes, text, state);
     return;
   }
 
@@ -194,7 +198,7 @@ void AddNoteAfter(NotesData* notes, int after_id, const char* text,
 
   int after_idx = getIndexByID(notes, after_id);
   if (after_idx < 0) {
-    AddNote(notes, text, state);
+    AddNote(app, notes, text, state);
     return;
   }
 
@@ -207,17 +211,17 @@ void AddNoteAfter(NotesData* notes, int after_id, const char* text,
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(notes);
+  if (notes->count >= notes->capacity) growItems(app, notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
-    LogError("AddNoteAfter", MALLOC_ERROR);
+    SetError(app, "AddNoteAfter", MALLOC_ERROR);
     return;
   }
 
   item->text = GapBufferCreate();
   if (!item->text) {
-    LogError("AddNoteAfter", MALLOC_ERROR);
+    SetError(app, "AddNoteAfter", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -1499,9 +1503,10 @@ int GetNoteLinesFromText(const char* text, int render_width) {
 
 /**
  * Double the capacity of the items array to accommodate more notes.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  */
-static void growItems(NotesData* notes) {
+static void growItems(AppData* app, NotesData* notes) {
   int new_capacity = notes->capacity * 2;
   NoteItem** new_items =
     (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
@@ -1509,7 +1514,7 @@ static void growItems(NotesData* notes) {
     notes->items = new_items;
     notes->capacity = new_capacity;
   } else {
-    LogError("growItems", MALLOC_ERROR);
+    SetError(app, "growItems", MALLOC_ERROR);
   }
 }
 

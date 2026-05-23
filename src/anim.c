@@ -83,17 +83,18 @@ Rollfilm* CreateRollfilm(int N, int M) {
 
 /**
  * Set the loop variable for a list of Rollfilms.
+ * @param app Pointer to application data (used for SetError on alloc failure)
  * @param film Pointer to array of rollfilm pointers
  * @param list_to_update Array of indices to update
  * @param list_size Number of indices in list_to_update
  * @param loop true to enable looping, false to disable
  */
-void SetRollfilmLoop(Rollfilm** film, const int* list_to_update,
+void SetRollfilmLoop(AppData* app, Rollfilm** film, const int* list_to_update,
                      size_t list_size, bool loop) {
   for (size_t i = 0; i < list_size; i++) {
     int index = list_to_update[i];
     if (film[index] == NULL) {
-      LogError("SetRollfilmLoop", ANIMATION_EQUAL_NULL);
+      SetError(app, "SetRollfilmLoop", ANIMATION_EQUAL_NULL);
       continue;
     }
     film[index]->loop = loop;
