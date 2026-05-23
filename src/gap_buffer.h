@@ -11,9 +11,9 @@
  * The buffer is split into two parts: before and after the gap.
  */
 typedef struct GapBuffer {
-  char* buffer;    /* The underlying character buffer containing text and gap */
-  size_t len;      /* Total length of text (excluding gap) */
-  size_t capacity; /* Total allocated capacity (including gap) */
+  char* buffer; /**< The underlying character buffer containing text and gap */
+  size_t len;   /**< Total length of text (excluding gap) */
+  size_t capacity; /**< Total allocated capacity (including gap) */
 } GapBuffer;
 
 /**

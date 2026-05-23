@@ -18,9 +18,9 @@
  * Contains all parameters needed to play audio asynchronously.
  */
 static struct playbackData {
-  char audio_path[512]; /* Path to the audio file to play */
-  float volume;         /* Volume level for playback (0.0 to 1.0) */
-  bool loop;            /* true to loop playback, false to play once */
+  char audio_path[512]; /**< Path to the audio file to play */
+  float volume;         /**< Volume level for playback (0.0 to 1.0) */
+  bool loop;            /**< true to loop playback, false to play once */
 } playbackData;
 
 /**

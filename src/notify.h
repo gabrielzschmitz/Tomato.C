@@ -8,9 +8,9 @@
  * Used to send system notifications to the user.
  */
 typedef struct {
-  const char* title;       /* Notification title */
-  const char* description; /* Detailed description text */
-  const char* audio_path;  /* Path to audio file to play (or NULL) */
+  const char* title;       /**< Notification title */
+  const char* description; /**< Detailed description text */
+  const char* audio_path;  /**< Path to audio file to play (or NULL) */
 } Notification;
 
 /**

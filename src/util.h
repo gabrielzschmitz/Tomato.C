@@ -12,9 +12,9 @@ typedef struct AppData AppData;
  * Determines which icon set to use (Nerd Fonts, emojis, or ASCII).
  */
 typedef enum {
-  NERD_ICONS, /* Icons using Nerd Font symbols */
-  EMOJIS,     /* Icons represented by emojis */
-  ASCII,      /* Icons using ASCII characters */
+  NERD_ICONS, /**< Icons using Nerd Font symbols */
+  EMOJIS,     /**< Icons represented by emojis */
+  ASCII,      /**< Icons using ASCII characters */
 } IconType;
 
 /**
@@ -22,8 +22,8 @@ typedef enum {
  * Used for screen coordinates and offsets.
  */
 typedef struct {
-  int x; /* Horizontal coordinate */
-  int y; /* Vertical coordinate */
+  int x; /**< Horizontal coordinate */
+  int y; /**< Vertical coordinate */
 } Vector2D;
 
 /**
@@ -31,8 +31,8 @@ typedef struct {
  * Used for sizing panels, dialogs, and other elements.
  */
 typedef struct {
-  int width;  /* Horizontal dimension */
-  int height; /* Vertical dimension */
+  int width;  /**< Horizontal dimension */
+  int height; /**< Vertical dimension */
 } Dimensions;
 
 /**

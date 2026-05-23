@@ -21,14 +21,14 @@ typedef enum { LEFT, CENTER, RIGHT } StatusBarModulePosition;
  * A module represents a single segment of the status bar (e.g., time, mode).
  */
 struct StatusBarModule {
-  StatusBarModule* next;            /* Pointer to the next module in the list */
-  StatusBarModulePosition position; /* Position of module within bar */
-  char* content;                    /* Content to be displayed in the module */
-  int content_length;               /* Length of the content string */
-  int fg_color;                     /* Foreground color of the module text */
-  int bg_color;                     /* Background color of the module */
-  int id;                           /* Unique identifier for the module */
-  ModuleUpdate update; /* Function pointer for updating the module */
+  StatusBarModule* next; /**< Pointer to the next module in the list */
+  StatusBarModulePosition position; /**< Position of module within bar */
+  char* content;       /**< Content to be displayed in the module */
+  int content_length;  /**< Length of the content string */
+  int fg_color;        /**< Foreground color of the module text */
+  int bg_color;        /**< Background color of the module */
+  int id;              /**< Unique identifier for the module */
+  ModuleUpdate update; /**< Function pointer for updating the module */
 };
 
 /**
@@ -36,10 +36,10 @@ struct StatusBarModule {
  * Contains position and linked lists of modules organized by position.
  */
 struct StatusBar {
-  StatusBarPosition position; /* Position of the status bar (TOP or BOTTOM) */
-  StatusBarModule* left_modules;   /* List of modules positioned on left */
-  StatusBarModule* center_modules; /* List of modules on center */
-  StatusBarModule* right_modules;  /* List of modules on right */
+  StatusBarPosition position; /**< Position of the status bar (TOP or BOTTOM) */
+  StatusBarModule* left_modules;   /**< List of modules positioned on left */
+  StatusBarModule* center_modules; /**< List of modules on center */
+  StatusBarModule* right_modules;  /**< List of modules on right */
 };
 
 /**

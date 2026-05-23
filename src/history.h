@@ -12,9 +12,9 @@ typedef struct History History;
  * History node containing data and cleanup function.
  */
 struct HistoryNode {
-  void* data;             /* Generic data pointer */
-  void (*free_fn)(void*); /* Function to free the data */
-  HistoryNode* next;      /* Pointer to next node */
+  void* data;             /**< Generic data pointer */
+  void (*free_fn)(void*); /**< Function to free the data */
+  HistoryNode* next;      /**< Pointer to next node */
 };
 
 /**
@@ -22,9 +22,9 @@ struct HistoryNode {
  * Uses generic void* data with custom cleanup functions.
  */
 struct History {
-  HistoryNode* past;   /* Stack of past states (for undo) */
-  HistoryNode* future; /* Stack of future states (for redo) */
-  int present;         /* Current state value (for scene history) */
+  HistoryNode* past;   /**< Stack of past states (for undo) */
+  HistoryNode* future; /**< Stack of future states (for redo) */
+  int present;         /**< Current state value (for scene history) */
 };
 
 /**

@@ -30,10 +30,10 @@ typedef struct KeyFunction KeyFunction;
  * Determines how keyboard input is interpreted.
  */
 typedef enum {
-  DEFAULT = 1 << 0, /* Default mode for menu navigation */
-  NORMAL = 1 << 1,  /* Normal mode for text commands and navigation */
-  INSERT = 1 << 2,  /* Insert mode for text input */
-  VISUAL = 1 << 3,  /* Visual mode for text selection */
+  DEFAULT = 1 << 0, /**< Default mode for menu navigation */
+  NORMAL = 1 << 1,  /**< Normal mode for text commands and navigation */
+  INSERT = 1 << 2,  /**< Insert mode for text input */
+  VISUAL = 1 << 3,  /**< Visual mode for text selection */
 } InputMode;
 
 /**
@@ -41,13 +41,13 @@ typedef enum {
  * Used for routing input and determining which UI to display.
  */
 typedef enum {
-  MAIN_MENU,   /* Main menu scene */
-  WORK_TIME,   /* Work session timer scene */
-  SHORT_PAUSE, /* Short break timer scene */
-  LONG_PAUSE,  /* Long break timer scene */
-  NOTES,       /* Notes/text editor scene */
-  HELP,        /* Help screen scene */
-  CONTINUE,    /* Continue/pause scene */
+  MAIN_MENU,   /**< Main menu scene */
+  WORK_TIME,   /**< Work session timer scene */
+  SHORT_PAUSE, /**< Short break timer scene */
+  LONG_PAUSE,  /**< Long break timer scene */
+  NOTES,       /**< Notes/text editor scene */
+  HELP,        /**< Help screen scene */
+  CONTINUE,    /**< Continue/pause scene */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -64,18 +64,18 @@ typedef enum {
  * Manages text buffer, cursor position, and selection for the text editor.
  */
 struct InputState {
-  char buffer[256]; /* Character buffer for input text */
-  int len;          /* Current length of text in buffer */
-  int cursor;       /* Current cursor position (0 to len) */
-  int max_len;      /* Maximum buffer length (typically 255) */
-  bool is_task;     /* true for task [ ], false for note - */
+  char buffer[256]; /**< Character buffer for input text */
+  int len;          /**< Current length of text in buffer */
+  int cursor;       /**< Current cursor position (0 to len) */
+  int max_len;      /**< Maximum buffer length (typically 255) */
+  bool is_task;     /**< true for task [ ], false for note - */
   int
-    pending_parent_id; /* ID of parent note for pending insertion (-1 for root) */
-  int insert_after_id; /* Note ID to insert after (-1 for none) */
+    pending_parent_id; /**< ID of parent note for pending insertion (-1 for root) */
+  int insert_after_id; /**< Note ID to insert after (-1 for none) */
   struct {
-    int start; /* Start position of visual selection */
-    int end;   /* End position of visual selection */
-  } selection; /* Visual mode selection range */
+    int start; /**< Start position of visual selection */
+    int end;   /**< End position of visual selection */
+  } selection; /**< Visual mode selection range */
 };
 
 /**
@@ -83,10 +83,10 @@ struct InputState {
  * Used for defining keyboard shortcuts in the application.
  */
 struct KeyFunction {
-  int key;                      /* The key code */
-  void (*action)(AppData* app); /* Function to execute when key's pressed */
-  int modes;       /* Bitmask of input modes where this key is active */
-  int scene_types; /* Bitmask of scene types where this key is active */
+  int key;                      /**< The key code */
+  void (*action)(AppData* app); /**< Function to execute when key's pressed */
+  int modes;       /**< Bitmask of input modes where this key is active */
+  int scene_types; /**< Bitmask of scene types where this key is active */
 };
 
 /**

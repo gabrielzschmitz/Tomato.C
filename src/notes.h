@@ -24,11 +24,12 @@ typedef enum { NOTE_UNDONE, NOTE_DONE, NOTE_PLAIN } NoteState;
  * Contains text content, state, and hierarchical positioning.
  */
 struct NoteItem {
-  GapBuffer* text; /* Text content stored as gap buffer for efficient editing */
-  NoteState state; /* Current state: undone, done, or plain */
-  int id;          /* Unique identifier for this note */
-  int parent_id;   /* ID of parent note (-1 for root-level notes) */
-  int depth; /* Nesting depth level (0 for root, increments for children) */
+  GapBuffer*
+    text; /**< Text content stored as gap buffer for efficient editing */
+  NoteState state; /**< Current state: undone, done, or plain */
+  int id;          /**< Unique identifier for this note */
+  int parent_id;   /**< ID of parent note (-1 for root-level notes) */
+  int depth; /**< Nesting depth level (0 for root, increments for children) */
 };
 
 /**
@@ -36,17 +37,17 @@ struct NoteItem {
  * Manages the collection of notes and rendering parameters.
  */
 typedef struct {
-  NoteItem** items;     /* Dynamic array of note item pointers */
-  int count;            /* Number of notes currently stored */
-  int capacity;         /* Current capacity of the items array */
-  int current_id;       /* Next ID to assign to a new note */
-  int max_lines;        /* Maximum lines available for rendering */
-  int total_lines;      /* Total lines occupied by all notes when rendered */
-  int render_width;     /* Width available for rendering notes */
-  bool is_move_mode;    /* Whether move mode is currently active */
-  History* history;     /* History manager for undo/redo */
-  int last_affected_id; /* ID of last affected note */
-  int saved_cursor;     /* Cursor position at time of history save */
+  NoteItem** items;     /**< Dynamic array of note item pointers */
+  int count;            /**< Number of notes currently stored */
+  int capacity;         /**< Current capacity of the items array */
+  int current_id;       /**< Next ID to assign to a new note */
+  int max_lines;        /**< Maximum lines available for rendering */
+  int total_lines;      /**< Total lines occupied by all notes when rendered */
+  int render_width;     /**< Width available for rendering notes */
+  bool is_move_mode;    /**< Whether move mode is currently active */
+  History* history;     /**< History manager for undo/redo */
+  int last_affected_id; /**< ID of last affected note */
+  int saved_cursor;     /**< Cursor position at time of history save */
 } NotesData;
 
 /**

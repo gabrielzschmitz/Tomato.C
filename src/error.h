@@ -15,11 +15,11 @@ typedef struct AppData AppData;
  * DEBUG < INFO < WARNING < ERROR < CRITICAL
  */
 typedef enum {
-  ERROR_LEVEL_DEBUG,   /* Debug: green, internal debugging messages */
-  ERROR_LEVEL_INFO,    /* Informational: white, non-critical info */
-  ERROR_LEVEL_WARNING, /* Warning: yellow, needs attention but not critical */
-  ERROR_LEVEL_ERROR,   /* Error: red, critical issue requiring attention */
-  ERROR_LEVEL_CRITICAL /* Critical: white on red, failure requiring immediate
+  ERROR_LEVEL_DEBUG,   /**< Debug: green, internal debugging messages */
+  ERROR_LEVEL_INFO,    /**< Informational: white, non-critical info */
+  ERROR_LEVEL_WARNING, /**< Warning: yellow, needs attention but not critical */
+  ERROR_LEVEL_ERROR,   /**< Error: red, critical issue requiring attention */
+  ERROR_LEVEL_CRITICAL /**< Critical: white on red, failure requiring immediate
                          attention and app freeze */
 } ErrorLevel;
 
@@ -28,9 +28,9 @@ typedef enum {
  * Contains timestamp, severity level, and error message.
  */
 typedef struct {
-  time_t timestamp;  /* Timestamp when error was recorded */
-  ErrorLevel level;  /* Severity level of the error */
-  char message[256]; /* Error message content */
+  time_t timestamp;  /**< Timestamp when error was recorded */
+  ErrorLevel level;  /**< Severity level of the error */
+  char message[256]; /**< Error message content */
 } ErrorEntry;
 
 /**
@@ -38,60 +38,62 @@ typedef struct {
  * Categorized by subsystem and severity.
  */
 typedef enum {
-  NO_ERROR = 0, /* No error, default state */
+  NO_ERROR = 0, /**< No error, default state */
 
   /* Memory and resource allocation errors */
-  MALLOC_ERROR = 1,           /* Critical: Memory allocation failure */
-  NULL_POINTER_ERROR = 2,     /* Critical: Null pointer at function */
-  FORK_ERROR = 3,             /* Critical: Fork creation failure */
-  PTHREAD_CREATION_ERROR = 4, /* Critical: Pthread creation failure */
-  PTHREAD_DETACH_ERROR = 5,   /* Critical: Pthread detach failure */
+  MALLOC_ERROR = 1,           /**< Critical: Memory allocation failure */
+  NULL_POINTER_ERROR = 2,     /**< Critical: Null pointer at function */
+  FORK_ERROR = 3,             /**< Critical: Fork creation failure */
+  PTHREAD_CREATION_ERROR = 4, /**< Critical: Pthread creation failure */
+  PTHREAD_DETACH_ERROR = 5,   /**< Critical: Pthread detach failure */
 
   /* Initialization errors */
-  INVALID_CONFIG = 6, /* Critical: Invalid configuration (prevents app start) */
-  FILE_ERROR = 7,     /* Critical: General file failure */
-  INIT_ERROR = 8,     /* Critical: General initialization failure */
-  WINDOW_CREATION_ERROR = 9, /* Error: Error during window creation */
+  INVALID_CONFIG =
+    6,            /**< Critical: Invalid configuration (prevents app start) */
+  FILE_ERROR = 7, /**< Critical: General file failure */
+  INIT_ERROR = 8, /**< Critical: General initialization failure */
+  WINDOW_CREATION_ERROR = 9, /**< Error: Error during window creation */
   ANIMATION_DESERIALIZATION_ERROR =
-    10, /* Error: Error during animation deserialization */
+    10, /**< Error: Error during animation deserialization */
   ANIMATION_EQUAL_NULL =
-    11, /* Error: Animation rollfilm is NULL after deserialization */
+    11, /**< Error: Animation rollfilm is NULL after deserialization */
 
   /* Input and user interaction errors */
-  INVALID_INPUT = 12,          /* Warning: Invalid user input */
-  INVALID_ARGUMENT_ERROR = 13, /* Warning: Invalid argument error */
-  TOO_SMALL_SCREEN = 14,       /* Info: Screen size is too small for the app */
+  INVALID_INPUT = 12,          /**< Warning: Invalid user input */
+  INVALID_ARGUMENT_ERROR = 13, /**< Warning: Invalid argument error */
+  TOO_SMALL_SCREEN = 14, /**< Info: Screen size is too small for the app */
   ERROR_EXECUTING_SELECTED_ACTION =
-    15, /* Warning: Error during selected action execution */
+    15, /**< Warning: Error during selected action execution */
 
   /* Update errors */
-  UPDATE_ERROR = 16, /* Error: Error during application update */
-  DRAW_ERROR = 17,   /* Error: Error while drawing the screen */
-  INPUT_ERROR = 18,  /* Error: Error during input handling */
+  UPDATE_ERROR = 16, /**< Error: Error during application update */
+  DRAW_ERROR = 17,   /**< Error: Error while drawing the screen */
+  INPUT_ERROR = 18,  /**< Error: Error during input handling */
 
   /* Cleanup and deletion errors */
-  WINDOW_DELETION_ERROR = 19, /* Info: Error during window deletion */
-  END_SCREEN_ERROR = 20,      /* Info: Error during screen cleanup */
-  END_APP_ERROR = 21,         /* Info: Error during app cleanup */
+  WINDOW_DELETION_ERROR = 19, /**< Info: Error during window deletion */
+  END_SCREEN_ERROR = 20,      /**< Info: Error during screen cleanup */
+  END_APP_ERROR = 21,         /**< Info: Error during app cleanup */
 
   /* Log and socket errors */
-  TIMER_LOG_ERROR = 22, /* Error: Timer log creation or handling failure */
-  SOCKET_CREATION_ERROR = 23,   /* Error: Socket creation failed */
-  SOCKET_CONNECTION_ERROR = 24, /* Error: Failed to connect to socket */
-  SOCKET_BIND_ERROR = 25,       /* Error: Binding the socket failed */
-  SOCKET_LISTEN_ERROR = 26,     /* Error: Listening on the socket failed */
-  SOCKET_ACCEPT_ERROR = 27, /* Warning: Accepting a client connection failed */
-  SOCKET_READ_ERROR = 28,   /* Warning: Failed to read from socket */
-  SOCKET_WRITE_ERROR = 29,  /* Warning: Failed to write to socket */
-  SOCKET_CLOSE_ERROR = 30,  /* Info: Socket closing error */
-  UNLINK_ERROR = 31,        /* Info: Unlinking the socket path failed */
+  TIMER_LOG_ERROR = 22, /**< Error: Timer log creation or handling failure */
+  SOCKET_CREATION_ERROR = 23,   /**< Error: Socket creation failed */
+  SOCKET_CONNECTION_ERROR = 24, /**< Error: Failed to connect to socket */
+  SOCKET_BIND_ERROR = 25,       /**< Error: Binding the socket failed */
+  SOCKET_LISTEN_ERROR = 26,     /**< Error: Listening on the socket failed */
+  SOCKET_ACCEPT_ERROR =
+    27,                    /**< Warning: Accepting a client connection failed */
+  SOCKET_READ_ERROR = 28,  /**< Warning: Failed to read from socket */
+  SOCKET_WRITE_ERROR = 29, /**< Warning: Failed to write to socket */
+  SOCKET_CLOSE_ERROR = 30, /**< Info: Socket closing error */
+  UNLINK_ERROR = 31,       /**< Info: Unlinking the socket path failed */
 
   /* Notification-related errors */
-  NOTIFICATION_SEND_ERROR = 32, /* Error: Failed to send notification */
-  AUDIO_PLAYBACK_ERROR = 33,    /* Error: Failed to play audio */
+  NOTIFICATION_SEND_ERROR = 32, /**< Error: Failed to send notification */
+  AUDIO_PLAYBACK_ERROR = 33,    /**< Error: Failed to play audio */
 
   /* Test errors */
-  TEST_ERROR /* Error: Test error for testing purposes */
+  TEST_ERROR /**< Error: Test error for testing purposes */
 } ErrorType;
 
 /**

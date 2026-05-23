@@ -30,8 +30,8 @@ typedef void (*MenuAction)(AppData* app);
  * Contains display label and associated action function.
  */
 struct MenuItem {
-  const char* label; /* Display text for the menu item */
-  MenuAction action; /* Function to execute when item is selected */
+  const char* label; /**< Display text for the menu item */
+  MenuAction action; /**< Function to execute when item is selected */
 };
 
 /**
@@ -39,13 +39,13 @@ struct MenuItem {
  * Handles item selection and styling.
  */
 struct Menu {
-  MenuItem* items;                /* Dynamic array of menu items */
-  int selected_item;              /* Index of currently selected item */
-  int focused_color;              /* ncurses color pair for selected item */
-  int unfocused_color;            /* ncurses color pair for unselected items */
-  const char* select_style_left;  /* Prefix string for selected item */
-  const char* select_style_right; /* Suffix string for selected item */
-  int item_count;                 /* Number of items in the menu */
+  MenuItem* items;               /**< Dynamic array of menu items */
+  int selected_item;             /**< Index of currently selected item */
+  int focused_color;             /**< ncurses color pair for selected item */
+  int unfocused_color;           /**< ncurses color pair for unselected items */
+  const char* select_style_left; /**< Prefix string for selected item */
+  const char* select_style_right; /**< Suffix string for selected item */
+  int item_count;                 /**< Number of items in the menu */
 };
 
 /**
@@ -68,13 +68,13 @@ typedef enum {
  * A panel is a rectangular region of the screen containing content.
  */
 struct Panel {
-  History* scene_history; /* History manager for this panel's scenes */
-  Dimensions size;        /* Width and height of the panel */
-  Vector2D position;      /* Top-left position of the panel on screen */
-  int mode;               /* Current mode/state of the panel */
-  int menu_index;         /* Index of the active menu for this panel */
-  bool visible;           /* Whether the panel should be rendered */
-  InputState* input;      /* Text input state (NULL in DEFAULT mode) */
+  History* scene_history; /**< History manager for this panel's scenes */
+  Dimensions size;        /**< Width and height of the panel */
+  Vector2D position;      /**< Top-left position of the panel on screen */
+  int mode;               /**< Current mode/state of the panel */
+  int menu_index;         /**< Index of the active menu for this panel */
+  bool visible;           /**< Whether the panel should be rendered */
+  InputState* input;      /**< Text input state (NULL in DEFAULT mode) */
 };
 
 /**
@@ -82,11 +82,11 @@ struct Panel {
  * Represents the entire application window.
  */
 struct Screen {
-  Panel panels[MAX_PANELS];  /* Array of panels on the screen */
-  Dimensions size;           /* Total dimensions of the screen */
-  Dimensions min_panel_size; /* Minimum dimensions for each panel */
-  int rendered_panel_count;  /* Number of panels currently visible */
-  int current_panel;         /* Index of the focused panel */
+  Panel panels[MAX_PANELS];  /**< Array of panels on the screen */
+  Dimensions size;           /**< Total dimensions of the screen */
+  Dimensions min_panel_size; /**< Minimum dimensions for each panel */
+  int rendered_panel_count;  /**< Number of panels currently visible */
+  int current_panel;         /**< Index of the focused panel */
 };
 
 /**
@@ -94,12 +94,12 @@ struct Screen {
  * Each field contains a single character (possibly multi-byte UTF-8).
  */
 struct Border {
-  const char* top_left;     /* Character for top-left corner */
-  const char* top_right;    /* Character for top-right corner */
-  const char* bottom_left;  /* Character for bottom-left corner */
-  const char* bottom_right; /* Character for bottom-right corner */
-  const char* horizontal;   /* Character for horizontal borders */
-  const char* vertical;     /* Character for vertical borders */
+  const char* top_left;     /**< Character for top-left corner */
+  const char* top_right;    /**< Character for top-right corner */
+  const char* bottom_left;  /**< Character for bottom-left corner */
+  const char* bottom_right; /**< Character for bottom-right corner */
+  const char* horizontal;   /**< Character for horizontal borders */
+  const char* vertical;     /**< Character for vertical borders */
 };
 
 /**
@@ -107,12 +107,12 @@ struct Border {
  * Modal dialog that overlays the main content.
  */
 struct FloatingDialog {
-  Dimensions size;   /* Width and height of the dialog */
-  Vector2D position; /* Top-left position on screen */
-  Border border;     /* Border characters for the dialog frame */
-  Menu menu;         /* Menu displayed inside the dialog */
-  char* message;     /* Message text displayed in the dialog */
-  bool visible;      /* Whether the dialog is currently shown */
+  Dimensions size;   /**< Width and height of the dialog */
+  Vector2D position; /**< Top-left position on screen */
+  Border border;     /**< Border characters for the dialog frame */
+  Menu menu;         /**< Menu displayed inside the dialog */
+  char* message;     /**< Message text displayed in the dialog */
+  bool visible;      /**< Whether the dialog is currently shown */
 };
 
 /**
