@@ -21,6 +21,10 @@
 #include "tomato.h"
 
 /* PRIVATE LOG FUNCTIONS */
+/* Retry configuration for socket connections */
+#define SOCKET_RETRY_COUNT 3
+#define SOCKET_RETRY_DELAY_NS 1000000000L /* 1000ms */
+
 typedef struct __attribute__((packed)) {
   uint16_t session_index;
   uint8_t current_step;
@@ -71,6 +75,11 @@ static void printLineBottom(int w1, int w2);
 static void formatTime(char* buf, int size, int hours, int minutes);
 static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
                                                        int maxRecent);
+/* Socket */
+static void socketRetryDelay(void) {
+  struct timespec ts = {0, SOCKET_RETRY_DELAY_NS};
+  nanosleep(&ts, NULL);
+}
 
 /**
  * ---------------------------------------------------------------------------
@@ -133,6 +142,7 @@ ErrorType CreateTimerLog(const char* path) {
     working_set = master_set;
 
     if (select(max_sd + 1, &working_set, NULL, NULL, NULL) < 0) {
+      if (errno == EINTR) continue;
       LogError("CreateTimerLog", SOCKET_READ_ERROR);
       break;
     }
@@ -143,7 +153,8 @@ ErrorType CreateTimerLog(const char* path) {
           /* Accept new connection */
           client_sock = accept(server_sock, NULL, NULL);
           if (client_sock == -1) {
-            LogError("CreateTimerLog", SOCKET_ACCEPT_ERROR);
+            if (errno != EINTR && errno != ECONNABORTED)
+              LogError("CreateTimerLog", SOCKET_ACCEPT_ERROR);
             continue;
           }
           FD_SET(client_sock, &master_set);
@@ -163,7 +174,8 @@ ErrorType CreateTimerLog(const char* path) {
             for (int j = 0; j <= max_sd; j++) {
               if (FD_ISSET(j, &master_set) && j != server_sock && j != i) {
                 if (send(j, last_message, strlen(last_message), 0) == -1) {
-                  LogError("CreateTimerLog", SOCKET_WRITE_ERROR);
+                  if (errno != EINTR && errno != ECONNRESET && errno != EPIPE)
+                    LogError("CreateTimerLog", SOCKET_WRITE_ERROR);
                   close(j);
                   FD_CLR(j, &master_set);
                 }
@@ -174,7 +186,8 @@ ErrorType CreateTimerLog(const char* path) {
             close(i);
             FD_CLR(i, &master_set);
           } else {
-            LogError("CreateTimerLog", SOCKET_READ_ERROR);
+            if (errno != EINTR && errno != ECONNRESET)
+              LogError("CreateTimerLog", SOCKET_READ_ERROR);
             close(i);
             FD_CLR(i, &master_set);
           }
@@ -196,28 +209,36 @@ ErrorType CreateTimerLog(const char* path) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 ErrorType GetTimerLog(const char* path, bool loop) {
-  int sock;
-  struct sockaddr_un addr;
   const int buffer_size = 32;
   char buffer[buffer_size];
   ssize_t n;
 
   /* Create socket */
-  sock = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (sock == -1) {
-    LogError("GetTimerLog", SOCKET_CREATION_ERROR);
-    return SOCKET_CREATION_ERROR;
-  }
+  int sock;
+  struct sockaddr_un addr;
+  int retries = 0;
 
-  /* Set up the address structure */
-  memset(&addr, 0, sizeof(addr));
-  addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+  do {
+    sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sock == -1) {
+      LogError("GetTimerLog", SOCKET_CREATION_ERROR);
+      return SOCKET_CREATION_ERROR;
+    }
 
-  /* Connect to the server */
-  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-    LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+
     close(sock);
+    sock = -1;
+    retries++;
+    if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
+  } while (retries < SOCKET_RETRY_COUNT);
+
+  if (sock == -1) {
+    LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
     return SOCKET_CONNECTION_ERROR;
   }
 
@@ -275,20 +296,29 @@ ErrorType SetTimerLog(const char* path, const char* log) {
 
   int sock;
   struct sockaddr_un addr;
+  int retries = 0;
 
-  sock = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (sock == -1) {
-    LogError("SetTimerLog", SOCKET_CREATION_ERROR);
-    return SOCKET_CREATION_ERROR;
-  }
+  do {
+    sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sock == -1) {
+      LogError("SetTimerLog", SOCKET_CREATION_ERROR);
+      return SOCKET_CREATION_ERROR;
+    }
 
-  memset(&addr, 0, sizeof(addr));
-  addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
-  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-    LogError("SetTimerLog", SOCKET_CONNECTION_ERROR);
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+
     close(sock);
+    sock = -1;
+    retries++;
+    if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
+  } while (retries < SOCKET_RETRY_COUNT);
+
+  if (sock == -1) {
+    LogError("SetTimerLog", SOCKET_CONNECTION_ERROR);
     return SOCKET_CONNECTION_ERROR;
   }
 
