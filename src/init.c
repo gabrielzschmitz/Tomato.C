@@ -64,9 +64,9 @@ ErrorType InitApp(AppData* app) {
 
   /* Add some example notes */
   if (DEBUG && app->notes->count == 0) {
-    AddNote(app->notes, "Buy groceries", NOTE_UNDONE);
-    AddNote(app->notes, "Read a book", NOTE_DONE);
-    AddNote(app->notes, "This is a note", NOTE_PLAIN);
+    AddNote(app, app->notes, "Buy groceries", NOTE_UNDONE);
+    AddNote(app, app->notes, "Read a book", NOTE_DONE);
+    AddNote(app, app->notes, "This is a note", NOTE_PLAIN);
   }
 
   if (app->notes->count > 0 && app->notes->current_id < 0)
@@ -272,7 +272,7 @@ static ErrorType initAnimations(AppData* app) {
 
   const int dont_loop[] = {NOTES, HELP, CONTINUE};
   size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
-  SetRollfilmLoop(app->animations, dont_loop, list_size, false);
+  SetRollfilmLoop(app, app->animations, dont_loop, list_size, false);
 
   return NO_ERROR;
 }
