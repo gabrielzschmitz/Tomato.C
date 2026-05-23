@@ -206,14 +206,17 @@ bool HasErrors(void) { return error_count > 0; }
 
 /**
  * Test function to add an error to the error line display.
- * Useful for testing error rendering - call from tomato.c and comment/uncomment.
- * Adds 3 equal errors at the end of the stack with different timestamps (0, 2, 4 seconds ago).
- * If level is CRITICAL, also freezes the app and shows quit dialog.
- * Only runs once per app execution.
+ * Adds error to the display stack at the current timestamp.
+ * If level is CRITICAL, also freezes the app.
+ * If full_flow is true, also logs to file and (for CRITICAL) renders quit dialog.
+ * Only adds up to 10 unique messages per app execution.
+ * @param app Pointer to application data (used for CRITICAL freeze when full_flow)
  * @param message The error message to display
  * @param level The error level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+ * @param full_flow If true, also logs to file and (for CRITICAL) freezes app + shows quit dialog
  */
-void TestErrorLine(const char* message, ErrorLevel level) {
+void TestErrorLine(AppData* app, const char* message, ErrorLevel level,
+                   bool full_flow) {
   static int total_added = 0;
   if (total_added >= 10) return;
 
@@ -234,7 +237,24 @@ void TestErrorLine(const char* message, ErrorLevel level) {
   error_count++;
   total_added++;
 
-  if (level == ERROR_LEVEL_CRITICAL) app_frozen = true;
+  if (level == ERROR_LEVEL_CRITICAL) {
+    app_frozen = true;
+    if (full_flow && app != NULL) {
+      app->frozen = true;
+      RenderCriticalQuitConfirmation(app);
+    }
+  }
+
+  if (full_flow) {
+    const char* level_str = getErrorLevelMessage(level);
+    char log_msg[256];
+    snprintf(log_msg, sizeof(log_msg), "[%s] Test: %s", level_str, message);
+    FILE* logFile = fopen(ERROR_LOG, "a");
+    if (logFile != NULL) {
+      fprintf(logFile, "%s\n", log_msg);
+      fclose(logFile);
+    }
+  }
 }
 
 /**
@@ -325,6 +345,9 @@ static const char* getErrorMessage(ErrorType error) {
     case AUDIO_PLAYBACK_ERROR:
       return "Failed to play audio";
 
+    case TEST_ERROR:
+      return "Test error";
+
     default:
       return "Unknown error";
   }
@@ -376,6 +399,9 @@ static ErrorLevel getErrorLevel(ErrorType error) {
     case SOCKET_CLOSE_ERROR:
     case UNLINK_ERROR:
       return ERROR_LEVEL_DEBUG;
+
+    case TEST_ERROR:
+      return ERROR_LEVEL_INFO;
 
     default:
       return ERROR_LEVEL_INFO; /* Default to INFO if error type is unknown */

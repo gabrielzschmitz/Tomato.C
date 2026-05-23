@@ -60,21 +60,15 @@ int main(int argc, char* argv[]) {
 
   if (DEBUG) {
     /* TEST ERROR LINE - uncomment to test */
-    // TestErrorLine("Test INFO message", ERROR_LEVEL_INFO);
-    // TestErrorLine("Test WARNING message", ERROR_LEVEL_WARNING);
-    // TestErrorLine("Test ERROR message", ERROR_LEVEL_ERROR);
-    // TestErrorLine("Test DEBUG message", ERROR_LEVEL_DEBUG);
-    // TestErrorLine("Test CRITICAL message", ERROR_LEVEL_CRITICAL);
+    // TestErrorLine(&app, "Test INFO message", ERROR_LEVEL_INFO, true);
+    // TestErrorLine(&app, "Test WARNING message", ERROR_LEVEL_WARNING, true);
+    // TestErrorLine(&app, "Test ERROR message", ERROR_LEVEL_ERROR, true);
+    // TestErrorLine(&app, "Test DEBUG message", ERROR_LEVEL_DEBUG, true);
+    // TestErrorLine(&app, "Test CRITICAL message", ERROR_LEVEL_CRITICAL, true);
   }
 
   /* Main application loop */
   while (app.running) {
-    if (DEBUG) {
-      /* TEST ERROR LINE - uncomment to test */
-      // app.frozen = true;
-      // RenderCriticalQuitConfirmation(&app);
-    }
-
     if (UpdateApp(&app) != NO_ERROR)
       handleErrorAndExit("Updating app", UPDATE_ERROR, &app, pid);
     if (HandleInputs(&app) != NO_ERROR)

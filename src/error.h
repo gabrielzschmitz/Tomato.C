@@ -84,7 +84,10 @@ typedef enum {
 
   /* Notification-related errors */
   NOTIFICATION_SEND_ERROR, /* Error: Failed to send notification */
-  AUDIO_PLAYBACK_ERROR     /* Error: Failed to play audio */
+  AUDIO_PLAYBACK_ERROR,    /* Error: Failed to play audio */
+
+  /* Test errors */
+  TEST_ERROR /* Error: Test error for testing purposes */
 } ErrorType;
 
 /**
@@ -134,9 +137,12 @@ bool HasErrors(void);
 /**
  * Test function to add an error to the error line display.
  * Useful for testing error rendering - call from tomato.c and comment/uncomment.
+ * @param app Pointer to application data (used for CRITICAL freeze when full_flow)
  * @param message The error message to display
  * @param level The error level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+ * @param full_flow If true, also logs to file and (for CRITICAL) freezes app + shows quit dialog
  */
-void TestErrorLine(const char* message, ErrorLevel level);
+void TestErrorLine(AppData* app, const char* message, ErrorLevel level,
+                   bool full_flow);
 
 #endif /* ERROR_H */
