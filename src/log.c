@@ -380,7 +380,7 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
   if (!path || !notes) return NO_ERROR;
 
   FILE* file = fopen(path, "w");
-  if (!file) return NO_ERROR;
+  if (!file) return FILE_ERROR;
 
   for (int i = 0; i < notes->count; i++) {
     NoteItem* item = notes->items[i];
@@ -529,7 +529,7 @@ static NoteState charToNoteState(char c) {
  */
 static int GetLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
-  if (!file) return 1;
+  if (!file) return FILE_ERROR;
 
   pomodoroLogRecord record;
   int last_index = 0;
@@ -541,7 +541,7 @@ static int GetLastLogIndex(const char* path) {
 
 int GetLastLogIndexOnly(const char* path) {
   FILE* file = fopen(path, "rb");
-  if (!file) return 0;
+  if (!file) return FILE_ERROR;
 
   pomodoroLogRecord record;
   int last_index = 0;
@@ -553,14 +553,15 @@ int GetLastLogIndexOnly(const char* path) {
 
 ErrorType RemoveUncompletedEntries(const char* path, int index) {
   FILE* read_file = fopen(path, "rb");
-  if (!read_file) return NO_ERROR;
+  if (!read_file) return TIMER_LOG_ERROR;
 
   char temp_path[256];
   snprintf(temp_path, sizeof(temp_path), "%s.tmp", path);
   FILE* write_file = fopen(temp_path, "wb");
+  if (!write_file) return FILE_ERROR;
   if (!write_file) {
     fclose(read_file);
-    return NO_ERROR;
+    return TIMER_LOG_ERROR;
   }
 
   pomodoroLogRecord record;
@@ -571,7 +572,10 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
 
   fclose(read_file);
   fclose(write_file);
-  rename(temp_path, path);
+  if (rename(temp_path, path) != 0) {
+    remove(temp_path);
+    return TIMER_LOG_ERROR;
+  }
   return NO_ERROR;
 }
 
@@ -596,9 +600,12 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
     .padding = {0, 0, 0}};
 
   FILE* file = fopen(path, append ? "ab" : "wb");
-  if (!file) return NO_ERROR;
+  if (!file) return TIMER_LOG_ERROR;
 
-  fwrite(&record, sizeof(record), 1, file);
+  if (fwrite(&record, sizeof(record), 1, file) != 1) {
+    fclose(file);
+    return TIMER_LOG_ERROR;
+  }
 
   fclose(file);
   return NO_ERROR;

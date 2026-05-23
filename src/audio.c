@@ -112,7 +112,7 @@ ErrorType PlayAudio(const char* audio_path, const float volume,
 
   /* Detach the thread to allow self-cleanup */
   if (pthread_detach(thread) != 0) {
-    free(data);
+    pthread_join(thread, NULL);
     return PTHREAD_DETACH_ERROR;
   }
 

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "error.h"
 #include "gap_buffer.h"
 #include "input.h"
 #include "util.h"
@@ -89,10 +90,14 @@ void AddNote(NotesData* notes, const char* text, NoteState state) {
   if (notes->count >= notes->capacity) growItems(notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
-  if (!item) return;
+  if (!item) {
+    LogError("AddNote", MALLOC_ERROR);
+    return;
+  }
 
   item->text = GapBufferCreate();
   if (!item->text) {
+    LogError("AddNote", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -134,10 +139,14 @@ void AddChildNote(NotesData* notes, int parent_id, const char* text,
   if (notes->count >= notes->capacity) growItems(notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
-  if (!item) return;
+  if (!item) {
+    LogError("AddChildNote", MALLOC_ERROR);
+    return;
+  }
 
   item->text = GapBufferCreate();
   if (!item->text) {
+    LogError("AddChildNote", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -201,10 +210,14 @@ void AddNoteAfter(NotesData* notes, int after_id, const char* text,
   if (notes->count >= notes->capacity) growItems(notes);
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
-  if (!item) return;
+  if (!item) {
+    LogError("AddNoteAfter", MALLOC_ERROR);
+    return;
+  }
 
   item->text = GapBufferCreate();
   if (!item->text) {
+    LogError("AddNoteAfter", MALLOC_ERROR);
     free(item);
     return;
   }
@@ -627,8 +640,26 @@ NotesData* CloneNotesData(const NotesData* src) {
   for (int i = 0; i < src->count; i++) {
     NoteItem* srcItem = src->items[i];
     NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
-    if (!dstItem) break;
+    if (!dstItem) {
+      for (int j = 0; j < i; j++) {
+        GapBufferFree(dst->items[j]->text);
+        free(dst->items[j]);
+      }
+      free(dst->items);
+      free(dst);
+      return NULL;
+    }
     dstItem->text = GapBufferClone(srcItem->text);
+    if (!dstItem->text) {
+      free(dstItem);
+      for (int j = 0; j < i; j++) {
+        GapBufferFree(dst->items[j]->text);
+        free(dst->items[j]);
+      }
+      free(dst->items);
+      free(dst);
+      return NULL;
+    }
     dstItem->state = srcItem->state;
     dstItem->id = srcItem->id;
     dstItem->parent_id = srcItem->parent_id;
@@ -677,19 +708,38 @@ void RestoreNotesData(NotesData* notes, void* data) {
   notes->is_move_mode = snapshot->is_move_mode;
 
   /* Reallocate and deep copy items */
-  free(notes->items);
-  notes->items = (NoteItem**)malloc(sizeof(NoteItem*) * notes->capacity);
+  NoteItem** new_items =
+    (NoteItem**)malloc(sizeof(NoteItem*) * notes->capacity);
+  if (!new_items) return;
   for (int i = 0; i < snapshot->count; i++) {
     NoteItem* srcItem = snapshot->items[i];
     NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
-    if (!dstItem) break;
+    if (!dstItem) {
+      for (int j = 0; j < i; j++) {
+        GapBufferFree(new_items[j]->text);
+        free(new_items[j]);
+      }
+      free(new_items);
+      return;
+    }
     dstItem->text = GapBufferClone(srcItem->text);
+    if (!dstItem->text) {
+      free(dstItem);
+      for (int j = 0; j < i; j++) {
+        GapBufferFree(new_items[j]->text);
+        free(new_items[j]);
+      }
+      free(new_items);
+      return;
+    }
     dstItem->state = srcItem->state;
     dstItem->id = srcItem->id;
     dstItem->parent_id = srcItem->parent_id;
     dstItem->depth = srcItem->depth;
-    notes->items[i] = dstItem;
+    new_items[i] = dstItem;
   }
+  free(notes->items);
+  notes->items = new_items;
 }
 
 /**
@@ -1452,10 +1502,15 @@ int GetNoteLinesFromText(const char* text, int render_width) {
  * @param notes Pointer to the NotesData
  */
 static void growItems(NotesData* notes) {
-  notes->capacity *= 2;
+  int new_capacity = notes->capacity * 2;
   NoteItem** new_items =
-    (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * notes->capacity);
-  if (new_items) notes->items = new_items;
+    (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
+  if (new_items) {
+    notes->items = new_items;
+    notes->capacity = new_capacity;
+  } else {
+    LogError("growItems", MALLOC_ERROR);
+  }
 }
 
 /**

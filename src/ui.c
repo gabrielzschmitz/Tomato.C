@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "error.h"
 #include "init.h"
 #include "input.h"
 #include "tomato.h"
@@ -81,7 +82,8 @@ void UpdateScreen(Screen* screen, bool has_error_line) {
   getmaxyx(stdscr, screen->size.height, screen->size.width);
 
   int panels_width = screen->size.width / MAX_PANELS;
-  int panels_height = has_error_line ? screen->size.height - 1 : screen->size.height;
+  int panels_height =
+    has_error_line ? screen->size.height - 1 : screen->size.height;
   int remainder_width = screen->size.width % MAX_PANELS;
 
   /* Check if the screen can display all panels */
@@ -191,10 +193,12 @@ void RenderScreenSizeError(Screen* screen, Panel* panel) {
                              screen->size.width, screen->size.height) +
                     1;
   content = (char*)malloc(required_length);
-  snprintf(content, required_length, "Width = %2d Height = %2d",
-           screen->size.width, screen->size.height);
-  renderAtPanelCenter(panel, content, (Vector2D){0, -1});
-  free(content);
+  if (content != NULL) {
+    snprintf(content, required_length, "Width = %2d Height = %2d",
+             screen->size.width, screen->size.height);
+    renderAtPanelCenter(panel, content, (Vector2D){0, -1});
+    free(content);
+  }
 
   SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
   renderAtPanelCenter(panel, "SIZE NEEDED IN CURRENT CONFIG", (Vector2D){0, 0});
@@ -205,10 +209,12 @@ void RenderScreenSizeError(Screen* screen, Panel* panel) {
              screen->min_panel_size.height) +
     1;
   content = (char*)malloc(required_length);
-  snprintf(content, required_length, "Width = %2d Height = %2d",
-           screen->min_panel_size.width, screen->min_panel_size.height);
-  renderAtPanelCenter(panel, content, (Vector2D){0, 1});
-  free(content);
+  if (content != NULL) {
+    snprintf(content, required_length, "Width = %2d Height = %2d",
+             screen->min_panel_size.width, screen->min_panel_size.height);
+    renderAtPanelCenter(panel, content, (Vector2D){0, 1});
+    free(content);
+  }
 }
 
 /**
@@ -226,6 +232,7 @@ static Panel createPanel(Dimensions size, Vector2D position) {
   panel.visible = true;
   panel.position = position;
   panel.scene_history = CreateHistory();
+  if (panel.scene_history == NULL) LogError("createPanel", MALLOC_ERROR);
 
   return panel;
 }
@@ -548,19 +555,44 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   dialog->menu.unfocused_color = menu.unfocused_color;
   dialog->menu.select_style_left = strdup(menu.select_style_left);
   dialog->menu.select_style_right = strdup(menu.select_style_right);
+  if (!dialog->menu.select_style_left || !dialog->menu.select_style_right) {
+    free((char*)dialog->menu.select_style_left);
+    free((char*)dialog->menu.select_style_right);
+    free(dialog);
+    return NULL;
+  }
 
   dialog->menu.items = (MenuItem*)malloc(menu.item_count * sizeof(MenuItem));
   if (!dialog->menu.items) {
+    free((char*)dialog->menu.select_style_left);
+    free((char*)dialog->menu.select_style_right);
     free(dialog);
     return NULL;
   }
 
   for (int i = 0; i < menu.item_count; i++) {
     dialog->menu.items[i].label = strdup(menu.items[i].label);
+    if (!dialog->menu.items[i].label) {
+      for (int j = 0; j < i; j++) free((char*)dialog->menu.items[j].label);
+      free(dialog->menu.items);
+      free((char*)dialog->menu.select_style_left);
+      free((char*)dialog->menu.select_style_right);
+      free(dialog);
+      return NULL;
+    }
     dialog->menu.items[i].action = menu.items[i].action;
   }
 
   dialog->message = strdup(message);
+  if (!dialog->message) {
+    for (int i = 0; i < menu.item_count; i++)
+      free((char*)dialog->menu.items[i].label);
+    free(dialog->menu.items);
+    free((char*)dialog->menu.select_style_left);
+    free((char*)dialog->menu.select_style_right);
+    free(dialog);
+    return NULL;
+  }
   dialog->visible = true;
 
   return dialog;

@@ -282,6 +282,8 @@ static const char* getErrorMessage(ErrorType error) {
       /* Initialization errors */
     case INVALID_CONFIG:
       return "Invalid configuration";
+    case FILE_ERROR:
+      return "Error while managing file";
     case INIT_ERROR:
       return "Initialization failure";
     case WINDOW_CREATION_ERROR:
@@ -366,6 +368,7 @@ static ErrorLevel getErrorLevel(ErrorType error) {
     case PTHREAD_CREATION_ERROR:
     case PTHREAD_DETACH_ERROR:
     case INVALID_CONFIG:
+    case FILE_ERROR:
     case INIT_ERROR:
       return ERROR_LEVEL_CRITICAL;
 

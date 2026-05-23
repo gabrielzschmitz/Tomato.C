@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "error.h"
+
 /* PRIVATE GAP BUFFER FUNCTIONS */
 /* Utility */
 static void ensureCapacity(GapBuffer* gb, size_t needed);
@@ -163,7 +165,8 @@ static void ensureCapacity(GapBuffer* gb, size_t needed) {
   if (new_buf) {
     gb->buffer = new_buf;
     gb->capacity = new_cap;
-  }
+  } else
+    LogError("ensureCapacity", MALLOC_ERROR);
 }
 
 /**

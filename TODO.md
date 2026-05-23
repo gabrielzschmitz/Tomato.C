@@ -55,6 +55,7 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Save/load current session state
     - [X] Transform logging to be less data consuming (maybe binary)
     - [X] Add more interesting data about sessions to GetPomodoroLog
+- [X] Add error stack and UI error line
 - [ ] Modular preferences system
 
 ---

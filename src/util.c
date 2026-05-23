@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "error.h"
 #include "tomato.h"
 
 /**
@@ -69,7 +70,12 @@ double GetCurrentTimeMS(void) {
   const double NANOSECONDS_TO_MILLISECONDS = 1.0 / 1000000.0;
 
   struct timespec current_time;
-  clock_gettime(CLOCK_MONOTONIC, &current_time);
+  if (clock_gettime(CLOCK_MONOTONIC, &current_time) != 0) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec * SECONDS_TO_MILLISECONDS) +
+           (tv.tv_usec * NANOSECONDS_TO_MILLISECONDS * 1000.0);
+  }
 
   double ms = (current_time.tv_sec * SECONDS_TO_MILLISECONDS) +
               (current_time.tv_nsec * NANOSECONDS_TO_MILLISECONDS);
@@ -285,6 +291,7 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
   int tallest = 0;
 
   for (int i = 0; i < MAX_ANIMATIONS; i++) {
+    if (app->animations[i] == NULL) continue;
     if (app->animations[i]->frame_width > widest)
       widest = app->animations[i]->frame_width;
     if (app->animations[i]->frame_height > tallest)

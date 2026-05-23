@@ -84,7 +84,7 @@ static void renderPopups(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   bool is_default_mode =
     (current_mode == DEFAULT) || (input && input->len == 0);
-  if (is_default_mode && !app->notes->is_move_mode &&
+  if (is_default_mode && app->notes != NULL && !app->notes->is_move_mode &&
       IsKeyAssignedToAction(app->user_input, QuitApp))
     RenderQuitConfirmation(app);
 

@@ -29,8 +29,9 @@ ErrorType EndApp(AppData* app);
 /**
  * Initialize ncurses screen and configure settings.
  * Sets up terminal for curses mode with required features.
+ * @return ErrorType NO_ERROR on success, or WINDOW_CREATION_ERROR on failure
  */
-void InitScreen(void);
+ErrorType InitScreen(void);
 
 /**
  * End ncurses screen and clean up default window.

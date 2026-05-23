@@ -28,9 +28,9 @@ typedef enum {
  * Contains timestamp, severity level, and error message.
  */
 typedef struct {
-  time_t timestamp;    /* Timestamp when error was recorded */
-  ErrorLevel level;    /* Severity level of the error */
-  char message[256];   /* Error message content */
+  time_t timestamp;  /* Timestamp when error was recorded */
+  ErrorLevel level;  /* Severity level of the error */
+  char message[256]; /* Error message content */
 } ErrorEntry;
 
 /**
@@ -49,6 +49,7 @@ typedef enum {
 
   /* Initialization errors */
   INVALID_CONFIG, /* Critical: Invalid configuration (prevents app start) */
+  FILE_ERROR,     /* Critical: General file failure */
   INIT_ERROR,     /* Critical: General initialization failure */
   WINDOW_CREATION_ERROR,           /* Error: Error during window creation */
   ANIMATION_DESERIALIZATION_ERROR, /* Error: Error during animation deserialization */

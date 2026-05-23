@@ -99,9 +99,12 @@ ErrorType EndApp(AppData* app) {
   }
   FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
-  if (NOTEPAD_LOG) SaveNotes(NOTES_LOG, app->notes);
+  if (NOTEPAD_LOG)
+    if (SaveNotes(NOTES_LOG, app->notes) != NO_ERROR)
+      LogError("Saving notes on exit", END_APP_ERROR);
   if (WORK_LOG && app->pomodoro_data.current_step != MAIN_MENU)
-    SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true);
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+      LogError("Saving pomodoro data on exit", END_APP_ERROR);
   FreeNotesData(app->notes);
   FreeScreen(app->screen);
   return NO_ERROR;
@@ -110,29 +113,30 @@ ErrorType EndApp(AppData* app) {
 /**
  * Initialize ncurses screen and configure settings.
  * Sets up terminal for curses mode with required features.
+ * @return ErrorType NO_ERROR on success, or INIT_ERROR on failure
  */
-void InitScreen(void) {
+ErrorType InitScreen(void) {
 #ifdef XCURSES
   Xinitscr(argc, argv);
 #else
-  initscr();
+  if (initscr() == NULL) return WINDOW_CREATION_ERROR;
 #endif
   if (has_colors()) {
     if (BG_TRANSPARENCY == 1) use_default_colors();
-    start_color();
+    if (start_color() == ERR) return WINDOW_CREATION_ERROR;
 
     /* Initialize pairs with both foreground and background colors */
     for (int bg = 0; bg < PALETTE_SIZE; bg++) {
       for (int fg = 0; fg < PALETTE_SIZE; fg++) {
         int pair_number = (bg * PALETTE_SIZE) + fg + 1;
-        init_pair(pair_number, fg, bg);
+        if (init_pair(pair_number, fg, bg) == ERR) return WINDOW_CREATION_ERROR;
       }
     }
 
     /* Initialize pairs with foreground colors and transparent background */
     for (int fg = 0; fg < PALETTE_SIZE; fg++) {
       int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
-      init_pair(pair_number, fg, -1);
+      if (init_pair(pair_number, fg, -1) == ERR) return WINDOW_CREATION_ERROR;
     }
   }
   /* Disable echoing user input */
@@ -149,6 +153,7 @@ void InitScreen(void) {
   nodelay(stdscr, TRUE);
   /* Enable keypad mode for extended keyboard input */
   keypad(stdscr, TRUE);
+  return NO_ERROR;
 }
 
 /**
@@ -283,35 +288,34 @@ static ErrorType initPomodoroData(AppData* app) {
 
   if (WORK_LOG) {
     FILE* file = fopen(POMODORO_LOG, "rb");
-    if (file) {
-      fseek(file, 0, SEEK_END);
-      long size = ftell(file);
-      fclose(file);
-      if (size > 0) {
-        if (LoadPomodoro(POMODORO_LOG, &app->pomodoro_data) == NO_ERROR) {
-          loaded_status = app->pomodoro_data.status;
-          if (loaded_status == 0) {
-            app->pomodoro_data.current_step = MAIN_MENU;
-            app->pomodoro_data.current_cycle = 0;
-            app->pomodoro_data.current_step_time = 0;
-            app->pomodoro_data.total_elapsed = 0;
-            app->pomodoro_data.session_index = 0;
-          } else if (loaded_status == 1) {
-            if (app->pomodoro_data.current_step == WORK_TIME ||
-                app->pomodoro_data.current_step == SHORT_PAUSE ||
-                app->pomodoro_data.current_step == LONG_PAUSE) {
-              app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-              pomodoro_loaded = true;
-              app->pomodoro_data.last_step_time = -1;
-              app->pomodoro_data.session_index =
-                app->pomodoro_data.session_index > 0
-                  ? app->pomodoro_data.session_index
-                  : 1;
-              ExecuteHistory(app->screen->panels[0].scene_history,
-                             app->pomodoro_data.current_step);
-              app->screen->panels[0].menu_index = -1;
-              return NO_ERROR;
-            }
+    if (!file) return FILE_ERROR;
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fclose(file);
+    if (size > 0) {
+      if (LoadPomodoro(POMODORO_LOG, &app->pomodoro_data) == NO_ERROR) {
+        loaded_status = app->pomodoro_data.status;
+        if (loaded_status == 0) {
+          app->pomodoro_data.current_step = MAIN_MENU;
+          app->pomodoro_data.current_cycle = 0;
+          app->pomodoro_data.current_step_time = 0;
+          app->pomodoro_data.total_elapsed = 0;
+          app->pomodoro_data.session_index = 0;
+        } else if (loaded_status == 1) {
+          if (app->pomodoro_data.current_step == WORK_TIME ||
+              app->pomodoro_data.current_step == SHORT_PAUSE ||
+              app->pomodoro_data.current_step == LONG_PAUSE) {
+            app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+            pomodoro_loaded = true;
+            app->pomodoro_data.last_step_time = -1;
+            app->pomodoro_data.session_index =
+              app->pomodoro_data.session_index > 0
+                ? app->pomodoro_data.session_index
+                : 1;
+            ExecuteHistory(app->screen->panels[0].scene_history,
+                           app->pomodoro_data.current_step);
+            app->screen->panels[0].menu_index = -1;
+            return NO_ERROR;
           }
         }
       }

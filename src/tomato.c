@@ -44,7 +44,8 @@ int main(int argc, char* argv[]) {
 
   /* Init everything */
   AppData app;
-  InitScreen();
+  if (InitScreen() != NO_ERROR)
+    handleErrorAndExit("Initializing screen", WINDOW_CREATION_ERROR, NULL, 0);
   if (InitApp(&app) != NO_ERROR)
     handleErrorAndExit("Initializing app data", INIT_ERROR, NULL, 0);
 
@@ -79,8 +80,10 @@ int main(int argc, char* argv[]) {
   }
 
   /* Cleanup */
-  kill(pid, SIGTERM);
-  waitpid(pid, NULL, 0);
+  if (kill(pid, SIGTERM) != 0)
+    LogError("Killing timer log process", END_APP_ERROR);
+  if (waitpid(pid, NULL, 0) < 0)
+    LogError("Waiting for timer log process", END_APP_ERROR);
 
   if (EndScreen() != NO_ERROR) LogError("Ending app screen", END_SCREEN_ERROR);
   if (EndApp(&app) != NO_ERROR) LogError("Ending app", END_APP_ERROR);
@@ -101,8 +104,10 @@ static void handleErrorAndExit(const char* context, ErrorType error,
                                AppData* app, pid_t pid) {
   if (app) EndApp(app);
   if (pid > 0) {
-    kill(pid, SIGTERM);
-    waitpid(pid, NULL, 0);
+    if (kill(pid, SIGTERM) != 0)
+      LogError("Killing child process on exit", END_APP_ERROR);
+    if (waitpid(pid, NULL, 0) < 0)
+      LogError("Waiting for child process on exit", END_APP_ERROR);
   }
   endwin();
   LogError(context, error);

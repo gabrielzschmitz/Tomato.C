@@ -1,5 +1,6 @@
 #include "anim.h"
 
+#include <ctype.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #include <time.h>
 
 #include "config.h"
+#include "error.h"
 #include "tomato.h"
 #include "util.h"
 
@@ -90,6 +92,10 @@ void SetRollfilmLoop(Rollfilm** film, const int* list_to_update,
                      size_t list_size, bool loop) {
   for (size_t i = 0; i < list_size; i++) {
     int index = list_to_update[i];
+    if (film[index] == NULL) {
+      LogError("SetRollfilmLoop", ANIMATION_EQUAL_NULL);
+      continue;
+    }
     film[index]->loop = loop;
   }
 }
@@ -578,6 +584,10 @@ static int handleUnicode(const char* src, char** dest) {
   strncpy(utf_char, src + 2, 4);
   utf_char[4] = '\0';
 
+  /* Validate hex digits */
+  for (int i = 0; i < 4; i++)
+    if (!isxdigit((unsigned char)utf_char[i])) return 0;
+
   /* Convert the hexadecimal digits to an integer */
   int unicode_value = (int)strtol(utf_char, NULL, 16);
 
@@ -814,6 +824,7 @@ static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
  * @param rollfilm Pointer to the rollfilm to update
  */
 static void updateAnimation(Rollfilm* rollfilm) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) return;
   if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
     return;
   double current_time = GetCurrentTimeMS();
