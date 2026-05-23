@@ -8,3 +8,4 @@ tomatonoise
 compile_commands.json
 .cache/
 **/result
+docs/output/
