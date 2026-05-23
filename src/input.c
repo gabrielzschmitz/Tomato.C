@@ -84,6 +84,11 @@ ErrorType HandleInputs(AppData* app) {
   if (app->user_input != -1) app->last_input = app->user_input;
   app->user_input = getch();
 
+  if (app->frozen) {
+    if (app->popup_dialog) HandlePopupInput(app, app->user_input);
+    return status;
+  }
+
   int key = app->user_input;
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
 

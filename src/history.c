@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-/* PRIVATE ANIM FUNCTIONS */
+/* PRIVATE HISTORY FUNCTIONS */
 /* History Operations */
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*));
 static HistoryNode* popStack(HistoryNode** stack);

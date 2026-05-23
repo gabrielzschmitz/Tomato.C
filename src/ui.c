@@ -75,12 +75,13 @@ void FreeScreen(Screen* screen) {
 /**
  * Update panel positions and dimensions based on screen layout.
  * @param screen Pointer to the screen to update
+ * @param has_error_line If true, reduce panel height to leave room for error line
  */
-void UpdateScreen(Screen* screen) {
+void UpdateScreen(Screen* screen, bool has_error_line) {
   getmaxyx(stdscr, screen->size.height, screen->size.width);
 
   int panels_width = screen->size.width / MAX_PANELS;
-  int panels_height = screen->size.height;
+  int panels_height = has_error_line ? screen->size.height - 1 : screen->size.height;
   int remainder_width = screen->size.width % MAX_PANELS;
 
   /* Check if the screen can display all panels */
@@ -621,6 +622,22 @@ void FreeFloatingDialog(FloatingDialog* dialog) {
 }
 
 /**
+ * Update a FloatingDialog to be centered on the current screen.
+ * Call this before rendering to handle screen resize.
+ * @param dialog Pointer to the dialog to update
+ * @param screen Pointer to the screen for current dimensions
+ */
+void UpdateFloatingDialog(FloatingDialog* dialog, Screen* screen) {
+  if (!dialog || !screen) return;
+
+  int width = dialog->size.width;
+  int height = dialog->size.height;
+
+  dialog->position.x = (screen->size.width - width) / 2;
+  dialog->position.y = (screen->size.height - height) / 2;
+}
+
+/**
  * Render a FloatingDialog using ncurses.
  * @param dialog Pointer to the dialog to render
  */
@@ -709,6 +726,33 @@ void RenderQuitConfirmation(AppData* app) {
       CreateCenterFloatingDialog(app->screen, menu, message, border);
   }
 
+  UpdateFloatingDialog(app->popup_dialog, app->screen);
+  RenderFloatingDialog(app->popup_dialog);
+}
+
+/**
+ * Render a critical error quit confirmation - no cancel option.
+ * Used when app is frozen due to critical error.
+ * @param app Pointer to the application data
+ */
+void RenderCriticalQuitConfirmation(AppData* app) {
+  if (app->popup_dialog == NULL) {
+    const char* message = "Critical error - app must quit";
+    MenuItem menu_items[] = {{"Quit", ForcefullyQuitApp}};
+    Menu menu = {.items = menu_items,
+                 .selected_item = 0,
+                 .focused_color = COLOR_WHITE,
+                 .unfocused_color = COLOR_WHITE,
+                 .select_style_left = "<",
+                 .select_style_right = ">",
+                 .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+    Border border = InitBorder();
+
+    app->popup_dialog =
+      CreateCenterFloatingDialog(app->screen, menu, message, border);
+  }
+
+  UpdateFloatingDialog(app->popup_dialog, app->screen);
   RenderFloatingDialog(app->popup_dialog);
 }
 
@@ -738,6 +782,7 @@ void RenderResetMenu(AppData* app) {
       CreateCenterFloatingDialog(app->screen, menu, message, border);
   }
 
+  UpdateFloatingDialog(app->popup_dialog, app->screen);
   RenderFloatingDialog(app->popup_dialog);
 }
 
@@ -764,6 +809,7 @@ void RenderSkipConfirmation(AppData* app) {
       CreateCenterFloatingDialog(app->screen, menu, message, border);
   }
 
+  UpdateFloatingDialog(app->popup_dialog, app->screen);
   RenderFloatingDialog(app->popup_dialog);
 }
 

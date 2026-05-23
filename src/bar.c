@@ -217,12 +217,21 @@ static void renderStatusBarModule(const StatusBarModule* module, int start_y,
  * Render the entire status bar with all its modules.
  * @param status_bar Pointer to the status bar to render
  * @param screen Pointer to the screen for dimensions
+ * @param has_error_line If true, render status bar one line above bottom
  */
-void RenderStatusBar(const StatusBar* status_bar, const Screen* screen) {
+void RenderStatusBar(const StatusBar* status_bar, const Screen* screen,
+                     bool has_error_line) {
   if (status_bar == NULL || screen == NULL) return;
 
   int bar_width = screen->size.width;
-  int bar_y = (status_bar->position == TOP) ? 0 : screen->size.height - 1;
+  int bar_y;
+  if (status_bar->position == TOP) {
+    bar_y = 0;
+  } else if (has_error_line) {
+    bar_y = screen->size.height - 2;
+  } else {
+    bar_y = screen->size.height - 1;
+  }
 
   /* Fill background */
   SetColor(COLOR_BLACK, COLOR_BLACK, A_BOLD);

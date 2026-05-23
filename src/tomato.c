@@ -14,6 +14,7 @@
 #include "init.h"
 #include "input.h"
 #include "log.h"
+#include "ui.h"
 #include "update.h"
 #include "util.h"
 
@@ -57,8 +58,23 @@ int main(int argc, char* argv[]) {
   } else if (pid < 0)
     handleErrorAndExit("Forking the main process", FORK_ERROR, NULL, 0);
 
+  if (DEBUG) {
+    /* TEST ERROR LINE - uncomment to test */
+    // TestErrorLine("Test INFO message", ERROR_LEVEL_INFO);
+    // TestErrorLine("Test WARNING message", ERROR_LEVEL_WARNING);
+    // TestErrorLine("Test ERROR message", ERROR_LEVEL_ERROR);
+    // TestErrorLine("Test DEBUG message", ERROR_LEVEL_DEBUG);
+    // TestErrorLine("Test CRITICAL message", ERROR_LEVEL_CRITICAL);
+  }
+
   /* Main application loop */
   while (app.running) {
+    if (DEBUG) {
+      /* TEST ERROR LINE - uncomment to test */
+      // app.frozen = true;
+      // RenderCriticalQuitConfirmation(&app);
+    }
+
     if (UpdateApp(&app) != NO_ERROR)
       handleErrorAndExit("Updating app", UPDATE_ERROR, &app, pid);
     if (HandleInputs(&app) != NO_ERROR)

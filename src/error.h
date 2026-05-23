@@ -1,13 +1,37 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-/* Defining error levels */
+#include <stdbool.h>
+#include <time.h>
+
+/**
+ * Forward declaration of AppData.
+ * Required for SetError function that interacts with app state.
+ */
+typedef struct AppData AppData;
+
+/**
+ * Error level enum defining severity hierarchy.
+ * DEBUG < INFO < WARNING < ERROR < CRITICAL
+ */
 typedef enum {
-  ERROR_LEVEL_INFO,    /* Informational: non-critical */
-  ERROR_LEVEL_WARNING, /* Warning: needs attention but not critical */
-  ERROR_LEVEL_ERROR,   /* Error: critical issue */
-  ERROR_LEVEL_CRITICAL /* Critical: failure requiring immediate attention */
+  ERROR_LEVEL_DEBUG,   /* Debug: green, internal debugging messages */
+  ERROR_LEVEL_INFO,    /* Informational: white, non-critical info */
+  ERROR_LEVEL_WARNING, /* Warning: yellow, needs attention but not critical */
+  ERROR_LEVEL_ERROR,   /* Error: red, critical issue requiring attention */
+  ERROR_LEVEL_CRITICAL /* Critical: white on red, failure requiring immediate
+                         attention and app freeze */
 } ErrorLevel;
+
+/**
+ * Structure representing a single error entry in the error stack.
+ * Contains timestamp, severity level, and error message.
+ */
+typedef struct {
+  time_t timestamp;    /* Timestamp when error was recorded */
+  ErrorLevel level;    /* Severity level of the error */
+  char message[256];   /* Error message content */
+} ErrorEntry;
 
 /**
  * Enum for defining error types throughout the application.
@@ -70,5 +94,49 @@ typedef enum {
  * @param error The error type
  */
 void LogError(const char* context, ErrorType error);
+
+/**
+ * Set and display an error at the bottom of the screen.
+ * Adds error to the display stack and logs to file.
+ * If error level is CRITICAL, freezes the app and shows quit confirmation.
+ * @param app Pointer to application data (used for CRITICAL freeze)
+ * @param context String describing where the error occurred
+ * @param type The error type
+ */
+void SetError(AppData* app, const char* context, ErrorType type);
+
+/**
+ * Clear all errors from the error stack.
+ * Resets the error display and allows normal app operation.
+ */
+void ClearErrors(void);
+
+/**
+ * Render all errors in the stack at the bottom line of the screen.
+ * Displays up to ERROR_STACK_SIZE errors with appropriate colors.
+ * Auto-clears based on timeout: INFO=5s, WARNING=15s, ERROR/DEBUG=30s,
+ * CRITICAL=never.
+ */
+void RenderErrorLine(void);
+
+/**
+ * Check if a critical error has occurred and app is frozen.
+ * @return true if app is in frozen state due to critical error, false otherwise
+ */
+bool IsCriticalError(void);
+
+/**
+ * Check if there are any errors currently in the stack.
+ * @return true if there are errors to display, false otherwise
+ */
+bool HasErrors(void);
+
+/**
+ * Test function to add an error to the error line display.
+ * Useful for testing error rendering - call from tomato.c and comment/uncomment.
+ * @param message The error message to display
+ * @param level The error level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+ */
+void TestErrorLine(const char* message, ErrorLevel level);
 
 #endif /* ERROR_H */

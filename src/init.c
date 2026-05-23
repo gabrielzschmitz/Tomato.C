@@ -75,6 +75,7 @@ ErrorType InitApp(AppData* app) {
   app->user_input = -1;
   app->last_input = -1;
   app->block_input = false;
+  app->frozen = false;
 
   status = initPomodoroData(app);
   if (status != NO_ERROR) return status;

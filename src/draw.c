@@ -45,11 +45,12 @@ ErrorType DrawScreen(AppData* app) {
   Border border = InitBorder();
   renderPanel(app, border);
 
-  RenderStatusBar(app->status_bar, app->screen);
+  RenderStatusBar(app->status_bar, app->screen, HasErrors());
   renderDialogPopups(app);
 
   if (DEBUG) renderDebugInfo(app);
 
+  RenderErrorLine();
   refresh();
   return status;
 }

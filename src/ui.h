@@ -137,8 +137,9 @@ void FreeScreen(Screen* screen);
 /**
  * Update panel positions and dimensions based on screen layout.
  * @param screen Pointer to the screen to update
+ * @param has_error_line If true, reduce panel height to leave room for error line
  */
-void UpdateScreen(Screen* screen);
+void UpdateScreen(Screen* screen, bool has_error_line);
 
 /**
  * Render a border around a panel using ncurses.
@@ -271,6 +272,14 @@ void FreeFloatingDialog(FloatingDialog* dialog);
  */
 void RenderFloatingDialog(FloatingDialog* dialog);
 
+/**
+ * Update a FloatingDialog to be centered on the current screen.
+ * Call this before rendering to handle screen resize.
+ * @param dialog Pointer to the dialog to update
+ * @param screen Pointer to the screen for current dimensions
+ */
+void UpdateFloatingDialog(FloatingDialog* dialog, Screen* screen);
+
 /* ---------------------------------------------------------------------------
  * Popups
  * --------------------------------------------------------------------------- */
@@ -280,6 +289,13 @@ void RenderFloatingDialog(FloatingDialog* dialog);
  * @param app Pointer to the application data
  */
 void RenderQuitConfirmation(AppData* app);
+
+/**
+ * Render a critical error quit confirmation - no cancel option.
+ * Used when app is frozen due to critical error.
+ * @param app Pointer to the application data
+ */
+void RenderCriticalQuitConfirmation(AppData* app);
 
 /**
  * Render a reset pomodoro menu at the center of the screen.

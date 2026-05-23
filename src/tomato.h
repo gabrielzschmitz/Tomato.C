@@ -14,6 +14,7 @@
 #define MAX_MENUS 2
 #define MAX_INPUT_MODES 3
 #define MAX_RECENT_SESSIONS 3
+#define MAX_ERROR_ENTRIES 128
 #define FPMS 1000.0 / FPS
 
 #ifdef DEBUG_FLAG
@@ -57,6 +58,7 @@ struct AppData {
   int user_input;   /* Most recent user keypress */
   int last_input;   /* Previous keypress for edge detection */
   bool block_input; /* True to ignore user input temporarily */
+  bool frozen;      /* True if app is frozen due to critical error */
 
   struct Rollfilm*
     animations[MAX_ANIMATIONS]; /* Loaded animations for scenes */

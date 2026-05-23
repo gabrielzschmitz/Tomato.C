@@ -80,8 +80,10 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
  * Render the entire status bar with all its modules.
  * @param status_bar Pointer to the status bar to render
  * @param screen Pointer to the screen for dimensions
+ * @param has_error_line If true, render status bar one line above bottom
  */
-void RenderStatusBar(const StatusBar* status_bar, const Screen* screen);
+void RenderStatusBar(const StatusBar* status_bar, const Screen* screen,
+                     bool has_error_line);
 
 /**
  * Update all modules in the status bar.

@@ -34,7 +34,7 @@ static bool skip_auto_save = false;
 ErrorType UpdateApp(AppData* app) {
   ErrorType status = NO_ERROR;
 
-  UpdateScreen(app->screen);
+  UpdateScreen(app->screen, HasErrors());
 
   Panel* current_panel = &app->screen->panels[app->screen->current_panel];
 
