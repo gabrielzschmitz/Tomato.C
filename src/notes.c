@@ -53,6 +53,9 @@ NotesData* CreateNotesData(void) {
   notes->is_move_mode = false;
   notes->history = CreateHistory();
   notes->last_affected_id = -1;
+  notes->drag_note_id = -1;
+  notes->drag_start_y = 0;
+  notes->drag_moved = false;
 
   return notes;
 }
@@ -641,6 +644,9 @@ NotesData* CloneNotesData(const NotesData* src) {
   dst->history = NULL;
   dst->last_affected_id = src->last_affected_id;
   dst->saved_cursor = src->saved_cursor;
+  dst->drag_note_id = src->drag_note_id;
+  dst->drag_start_y = src->drag_start_y;
+  dst->drag_moved = src->drag_moved;
 
   for (int i = 0; i < src->count; i++) {
     NoteItem* srcItem = src->items[i];

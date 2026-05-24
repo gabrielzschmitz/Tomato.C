@@ -48,6 +48,9 @@ typedef struct {
   History* history;     /**< History manager for undo/redo */
   int last_affected_id; /**< ID of last affected note */
   int saved_cursor;     /**< Cursor position at time of history save */
+  int drag_note_id;     /**< Note ID being dragged (-1 = none) */
+  int drag_start_y;     /**< Y position where drag started */
+  bool drag_moved;      /**< true if actual movement happened during drag */
 } NotesData;
 
 /**
