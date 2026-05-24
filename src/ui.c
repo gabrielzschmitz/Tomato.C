@@ -286,10 +286,10 @@ void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
                          int item_index, int note_id) {
   if (app->click_region_count >= MAX_CLICK_REGIONS) return;
   ClickRegion* r = &app->click_regions[app->click_region_count++];
-  r->x = x;
-  r->y = y;
-  r->width = width;
-  r->height = height;
+  r->pos.x = x;
+  r->pos.y = y;
+  r->size.width = width;
+  r->size.height = height;
   r->type = type;
   r->action = action;
   r->menu_index = menu_index;

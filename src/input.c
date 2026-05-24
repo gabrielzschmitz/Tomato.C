@@ -104,8 +104,8 @@ ErrorType HandleInputs(AppData* app) {
       if ((event.bstate & BUTTON1_PRESSED) && app->notes) {
         for (int j = 0; j < app->click_region_count; j++) {
           ClickRegion* r = &app->click_regions[j];
-          if (event.x >= r->x && event.x < r->x + r->width && event.y >= r->y &&
-              event.y < r->y + r->height && r->type == REGION_NOTE_ITEM &&
+          if (event.x >= r->pos.x && event.x < r->pos.x + r->size.width && event.y >= r->pos.y &&
+              event.y < r->pos.y + r->size.height && r->type == REGION_NOTE_ITEM &&
               r->note_id >= 0) {
             app->notes->drag_note_id = r->note_id;
             app->notes->drag_start_y = event.y;
@@ -232,8 +232,8 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
   if (is_hover) {
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
-      if (event->x < r->x || event->x >= r->x + r->width) continue;
-      if (event->y < r->y || event->y >= r->y + r->height) continue;
+      if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
 
       if (r->type == REGION_MENU_ITEM && r->menu_index >= 0 &&
           r->menu_index < MAX_MENUS &&
@@ -255,8 +255,8 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
   if (b1_press) {
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
-      if (event->x < r->x || event->x >= r->x + r->width) continue;
-      if (event->y < r->y || event->y >= r->y + r->height) continue;
+      if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
 
       if (r->type == REGION_DIRECT) {
         if (app->notes) {

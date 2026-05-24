@@ -131,8 +131,8 @@ typedef enum {
  * Registered during rendering, tested against mouse events.
  */
 typedef struct {
-  int x, y;          /**< Top-left position */
-  int width, height; /**< Region dimensions */
+  Vector2D pos;      /**< Top-left position */
+  Dimensions size;   /**< Region dimensions */
   RegionType type;   /**< Type of region */
   MenuAction action; /**< Action for REGION_DIRECT */
   int menu_index;    /**< Menu index for REGION_MENU_ITEM */
