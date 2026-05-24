@@ -76,6 +76,10 @@ ErrorType InitApp(AppData* app) {
   app->last_input = -1;
   app->block_input = false;
   app->frozen = false;
+  app->debug_last_key = -1;
+  app->debug_mouse_x = -1;
+  app->debug_mouse_y = -1;
+  app->debug_mouse_bstate = 0;
 
   status = initPomodoroData(app);
   if (status != NO_ERROR) return status;
@@ -143,6 +147,8 @@ ErrorType InitScreen(void) {
   noecho();
   /* Enable reporting mouse movement events */
   mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+  /* Enable xterm mouse tracking so terminal sends motion events */
+  printf("\033[?1003h\n");
   /* Set mouse input to be immediately available */
   mouseinterval(0);
   /* Enable raw mode to receive input character-by-character */

@@ -218,6 +218,7 @@ void SaveNotesToHistory(NotesData* notes, int cursor);
 
 /**
  * Render all notes in the specified area.
+ * @param app Pointer to the application data (for click region registration)
  * @param notes Pointer to the NotesData
  * @param start_x Left boundary of render area
  * @param start_y Top boundary of render area
@@ -226,8 +227,8 @@ void SaveNotesToHistory(NotesData* notes, int cursor);
  * @param input Pointer to input state for cursor display
  * @param mode Current input mode affecting rendering
  */
-void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
-                 int end_y, InputState* input, int mode);
+void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
+                 int end_x, int end_y, InputState* input, int mode);
 
 /**
  * Wrap text to fit within a maximum width.

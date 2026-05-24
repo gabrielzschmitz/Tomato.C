@@ -6,6 +6,7 @@
 #include "util.h"
 
 #define MAX_PANELS 2
+#define MAX_CLICK_REGIONS 32
 
 /* UI specific structs */
 typedef struct Border Border;
@@ -116,6 +117,30 @@ struct FloatingDialog {
 };
 
 /**
+ * Mouse click region types.
+ */
+typedef enum {
+  REGION_DIRECT,     /**< Direct action (skip/pause buttons) */
+  REGION_MENU_ITEM,  /**< Regular menu item */
+  REGION_POPUP_ITEM, /**< Popup dialog menu item */
+  REGION_NOTE_ITEM,  /**< Note/task item in the notes panel */
+} RegionType;
+
+/**
+ * Structure for tracking clickable screen regions.
+ * Registered during rendering, tested against mouse events.
+ */
+typedef struct {
+  int x, y;          /**< Top-left position */
+  int width, height; /**< Region dimensions */
+  RegionType type;   /**< Type of region */
+  MenuAction action; /**< Action for REGION_DIRECT */
+  int menu_index;    /**< Menu index for REGION_MENU_ITEM */
+  int item_index;    /**< Item index within menu */
+  int note_id;       /**< Note item ID for REGION_NOTE_ITEM */
+} ClickRegion;
+
+/**
  * ---------------------------------------------------------------------------
  * Screen / Panel
  * ---------------------------------------------------------------------------
@@ -217,12 +242,13 @@ void FreeMenu(Menu* menu);
 
 /**
  * Print a menu centered on screen with offset and line spacing.
+ * @param app Pointer to the application data (for click region tracking)
  * @param panel Pointer to the panel containing the menu
  * @param menu Pointer to the menu to print
  * @param offset Offset from screen center
  * @param line_spacing Extra lines between items
  */
-void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
+void PrintMenuAtCenter(AppData* app, Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing);
 
 /**
@@ -231,6 +257,34 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
  * @param direction 1 for next, -1 for previous
  */
 void ChangeSelectedItem(Menu* menu, int direction);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Click Regions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Clear all registered click regions for the current frame.
+ * @param app Pointer to the application data
+ */
+void ClearClickRegions(AppData* app);
+
+/**
+ * Register a clickable screen region for mouse interaction.
+ * @param app Pointer to the application data
+ * @param x Top-left x coordinate
+ * @param y Top-left y coordinate
+ * @param width Region width in characters
+ * @param height Region height in characters
+ * @param type Region type (DIRECT, MENU_ITEM, POPUP_ITEM)
+ * @param action Action function (for REGION_DIRECT)
+ * @param menu_index Menu index (for REGION_MENU_ITEM)
+ * @param item_index Item index within menu
+ */
+void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
+                         RegionType type, MenuAction action, int menu_index,
+                         int item_index, int note_id);
 
 /* ---------------------------------------------------------------------------
  * Floating Dialog
@@ -268,9 +322,10 @@ void FreeFloatingDialog(FloatingDialog* dialog);
 
 /**
  * Render a FloatingDialog using ncurses.
+ * @param app Pointer to the application data (for click region tracking)
  * @param dialog Pointer to the dialog to render
  */
-void RenderFloatingDialog(FloatingDialog* dialog);
+void RenderFloatingDialog(AppData* app, FloatingDialog* dialog);
 
 /**
  * Update a FloatingDialog to be centered on the current screen.

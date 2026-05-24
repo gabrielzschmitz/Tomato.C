@@ -119,6 +119,16 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*));
 ErrorType HandleInputs(AppData* app);
 
 /**
+ * Handle mouse events. In DEFAULT mode: hover updates menu selection +
+ * switches panel focus on REQUEST_MOUSE_POSITION, clicks execute actions or
+ * switch panels. In non-DEFAULT mode: movement is ignored, first click goes
+ * directly to DEFAULT mode.
+ * @param app Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
+void HandleMouseEvent(AppData* app, MEVENT* event);
+
+/**
  * Handle input in DEFAULT mode (menu navigation, pomodoro control).
  * @param app Pointer to the application data
  * @param key The key code that was pressed

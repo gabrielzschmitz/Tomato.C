@@ -20,8 +20,8 @@ static void updatePanel(Panel* panel, Dimensions size, Vector2D position);
 static void renderAtPanelCenter(Panel* panel, const char* content,
                                 Vector2D offset);
 /* Menu */
-static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
-                                int container_width);
+static void printMenuSideBySide(AppData* app, Menu* menu, Vector2D offset,
+                                int spacing, int container_width);
 /* Floating Dialog */
 static void renderFloatingDialogBorder(FloatingDialog* dialog);
 
@@ -258,6 +258,46 @@ static void updatePanel(Panel* panel, Dimensions size, Vector2D position) {
 }
 
 /**
+ * ---------------------------------------------------------------------------
+ * Click Regions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Clear all registered click regions for the current frame.
+ * @param app Pointer to the application data
+ */
+void ClearClickRegions(AppData* app) { app->click_region_count = 0; }
+
+/**
+ * Register a clickable screen region for mouse interaction.
+ * @param app Pointer to the application data
+ * @param x Top-left x coordinate
+ * @param y Top-left y coordinate
+ * @param width Region width in characters
+ * @param height Region height in characters
+ * @param type Region type (DIRECT, MENU_ITEM, POPUP_ITEM)
+ * @param action Action function (for REGION_DIRECT)
+ * @param menu_index Menu index (for REGION_MENU_ITEM)
+ * @param item_index Item index within menu
+ */
+void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
+                         RegionType type, MenuAction action, int menu_index,
+                         int item_index, int note_id) {
+  if (app->click_region_count >= MAX_CLICK_REGIONS) return;
+  ClickRegion* r = &app->click_regions[app->click_region_count++];
+  r->x = x;
+  r->y = y;
+  r->width = width;
+  r->height = height;
+  r->type = type;
+  r->action = action;
+  r->menu_index = menu_index;
+  r->item_index = item_index;
+  r->note_id = note_id;
+}
+
+/**
  * Render content string at the center of a panel.
  * @param panel Pointer to the panel
  * @param content String to render
@@ -423,13 +463,17 @@ void FreeMenu(Menu* menu) {
 
 /**
  * Print a menu centered on screen with offset and line spacing.
+ * @param app Pointer to the application data (for click region tracking)
  * @param panel Pointer to the panel containing the menu
  * @param menu Pointer to the menu to print
  * @param offset Offset from screen center
  * @param line_spacing Extra lines between items
  */
-void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
+void PrintMenuAtCenter(AppData* app, Panel* panel, Menu* menu, Vector2D offset,
                        int line_spacing) {
+  int panel_center_x = panel->position.x + panel->size.width / 2;
+  int panel_center_y = panel->position.y + panel->size.height / 2;
+
   for (int i = 0; i < menu->item_count; i++) {
     const char* item_label = menu->items[i].label;
 
@@ -454,6 +498,19 @@ void PrintMenuAtCenter(Panel* panel, Menu* menu, Vector2D offset,
       renderAtPanelCenter(panel, item_label, offset);
     }
 
+    int content_x = panel_center_x - strlen(item_label) / 2 + offset.x;
+    int content_y = panel_center_y + offset.y;
+    int menu_idx = -1;
+    for (int m = 0; m < MAX_MENUS; m++) {
+      if (menu == app->menus[m]) {
+        menu_idx = m;
+        break;
+      }
+    }
+    RegisterClickRegion(app, content_x, content_y, strlen(item_label), 1,
+                        REGION_MENU_ITEM, menu->items[i].action, menu_idx, i,
+                        -1);
+
     offset.y += line_spacing + 1;
   }
 }
@@ -473,13 +530,14 @@ void ChangeSelectedItem(Menu* menu, int direction) {
 
 /**
  * Print a menu side by side (e.g., for work/pause display).
+ * @param app Pointer to the application data (for click region tracking)
  * @param menu Pointer to the menu to print
  * @param offset Offset from screen top-left
  * @param spacing Space between items
  * @param container_width Total width available
  */
-static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
-                                int container_width) {
+static void printMenuSideBySide(AppData* app, Menu* menu, Vector2D offset,
+                                int spacing, int container_width) {
   if (!container_width % 2 == 0) container_width += 1;
   int total_width = 0;
 
@@ -497,6 +555,8 @@ static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
   /* Render each menu item */
   for (int i = 0; i < menu->item_count; i++) {
     const char* item_label = menu->items[i].label;
+    int item_x = offset.x;
+    int item_y = offset.y;
 
     if (i == menu->selected_item) {
       SetColor(menu->focused_color, NO_COLOR, A_BOLD);
@@ -518,6 +578,9 @@ static void printMenuSideBySide(Menu* menu, Vector2D offset, int spacing,
       SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
       mvprintw(offset.y, offset.x, "%s", item_label);
     }
+
+    RegisterClickRegion(app, item_x, item_y, strlen(item_label), 1,
+                        REGION_POPUP_ITEM, NULL, -1, i, -1);
 
     /* Move the offset horizontally to the right for the next menu item */
     offset.x += strlen(item_label) + strlen(menu->select_style_left) +
@@ -671,9 +734,10 @@ void UpdateFloatingDialog(FloatingDialog* dialog, Screen* screen) {
 
 /**
  * Render a FloatingDialog using ncurses.
+ * @param app Pointer to the application data (for click region tracking)
  * @param dialog Pointer to the dialog to render
  */
-void RenderFloatingDialog(FloatingDialog* dialog) {
+void RenderFloatingDialog(AppData* app, FloatingDialog* dialog) {
   if (!dialog || !dialog->visible) return;
 
   int x = dialog->position.x;
@@ -697,7 +761,7 @@ void RenderFloatingDialog(FloatingDialog* dialog) {
   /* Render menu */
   Vector2D menu_offset = {x, y + 3};
   int menu_spacing = 4;
-  printMenuSideBySide(&dialog->menu, menu_offset, menu_spacing, width);
+  printMenuSideBySide(app, &dialog->menu, menu_offset, menu_spacing, width);
 }
 
 /**
@@ -759,7 +823,7 @@ void RenderQuitConfirmation(AppData* app) {
   }
 
   UpdateFloatingDialog(app->popup_dialog, app->screen);
-  RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app, app->popup_dialog);
 }
 
 /**
@@ -785,7 +849,7 @@ void RenderCriticalQuitConfirmation(AppData* app) {
   }
 
   UpdateFloatingDialog(app->popup_dialog, app->screen);
-  RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app, app->popup_dialog);
 }
 
 /**
@@ -815,7 +879,7 @@ void RenderResetMenu(AppData* app) {
   }
 
   UpdateFloatingDialog(app->popup_dialog, app->screen);
-  RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app, app->popup_dialog);
 }
 
 /**
@@ -842,7 +906,7 @@ void RenderSkipConfirmation(AppData* app) {
   }
 
   UpdateFloatingDialog(app->popup_dialog, app->screen);
-  RenderFloatingDialog(app->popup_dialog);
+  RenderFloatingDialog(app, app->popup_dialog);
 }
 
 /* ---------------------------------------------------------------------------
@@ -953,6 +1017,11 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
     skip_length -= 2;
   else if (icon_type == ASCII)
     skip_length++;
+
+  RegisterClickRegion(app, pos.x, pos.y, skip_length, 1, REGION_DIRECT,
+                      ForcefullySkipPomodoroStep, -1, -1, -1);
+  RegisterClickRegion(app, pos.x + skip_length, pos.y, strlen(pause_icon), 1,
+                      REGION_DIRECT, TogglePause, -1, -1, -1);
 
   SetColor(app->is_paused ? color : COLOR_BLACK, NO_COLOR, A_BOLD);
   mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);

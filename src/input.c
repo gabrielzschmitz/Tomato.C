@@ -90,6 +90,36 @@ ErrorType HandleInputs(AppData* app) {
   }
 
   int key = app->user_input;
+  app->debug_last_key = key;
+
+  /* Handle mouse events — drain queue, keep only last position */
+  if (key == KEY_MOUSE) {
+    MEVENT event, last_event;
+    bool valid = false;
+    while (getmouse(&event) == OK) {
+      last_event = event;
+      valid = true;
+      key = getch();
+      if (key != KEY_MOUSE) {
+        if (key != ERR) ungetch(key);
+        break;
+      }
+    }
+    if (valid) {
+      app->debug_mouse_x = last_event.x;
+      app->debug_mouse_y = last_event.y;
+      app->debug_mouse_bstate = last_event.bstate;
+      HandleMouseEvent(app, &last_event);
+    }
+    flushinp();
+    app->user_input = -1;
+    return status;
+  }
+
+  app->debug_mouse_x = -1;
+  app->debug_mouse_y = -1;
+  app->debug_mouse_bstate = 0;
+
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
 
   /* Dispatch to mode-specific handler */
@@ -110,6 +140,108 @@ ErrorType HandleInputs(AppData* app) {
   flushinp();
 
   return status;
+}
+
+/**
+ * Handle mouse events. In DEFAULT mode: hover updates menu selection +
+ * switches panel focus on REQUEST_MOUSE_POSITION, clicks execute actions or
+ * switch panels. In non-DEFAULT mode: movement is ignored, first click goes
+ * directly to DEFAULT mode.
+ * @param app Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
+void HandleMouseEvent(AppData* app, MEVENT* event) {
+  int current_mode = app->screen->panels[app->screen->current_panel].mode;
+
+  /* In non-DEFAULT mode, ignore movement, only cancel editing on click */
+  if (current_mode != DEFAULT) {
+    if (!(event->bstate & BUTTON1_PRESSED)) return;
+    /* Go directly to DEFAULT mode (skip NORMAL intermediate) */
+    Panel* p = &app->screen->panels[app->screen->current_panel];
+    InputState* input = p->input;
+    if (input) {
+      input->len = 0;
+      input->cursor = 0;
+      input->buffer[0] = '\0';
+      input->pending_parent_id = -1;
+    }
+    if (app->notes && app->notes->count > 0)
+      app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
+    p->mode = DEFAULT;
+    noecho();
+    curs_set(0);
+    app->user_input = -1;
+    app->last_input = -1;
+    move(LINES - 1, 0);
+    clrtoeol();
+    refresh();
+    return;
+  }
+
+  /* --- DEFAULT mode below --- */
+
+  /* Switch panel on any mouse event (move or click) */
+  for (int i = 0; i < MAX_PANELS; i++) {
+    Panel* p = &app->screen->panels[i];
+    if (p->visible && i != app->screen->current_panel &&
+        event->x >= p->position.x && event->x < p->position.x + p->size.width &&
+        event->y >= p->position.y &&
+        event->y < p->position.y + p->size.height) {
+      app->screen->current_panel = i;
+      app->current_menu = p->menu_index;
+      break;
+    }
+  }
+
+  /* Hover: update menu/popup selection */
+  if (event->bstate & REPORT_MOUSE_POSITION) {
+    for (int i = 0; i < app->click_region_count; i++) {
+      ClickRegion* r = &app->click_regions[i];
+      if (event->x < r->x || event->x >= r->x + r->width) continue;
+      if (event->y < r->y || event->y >= r->y + r->height) continue;
+
+      if (r->type == REGION_MENU_ITEM && r->menu_index >= 0 &&
+          r->menu_index < MAX_MENUS &&
+          r->item_index < app->menus[r->menu_index]->item_count) {
+        app->current_menu = r->menu_index;
+        app->menus[r->menu_index]->selected_item = r->item_index;
+      } else if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
+                 r->item_index < app->popup_dialog->menu.item_count) {
+        app->popup_dialog->menu.selected_item = r->item_index;
+      } else if (r->type == REGION_NOTE_ITEM && app->notes && r->note_id >= 0) {
+        app->notes->current_id = r->note_id;
+      }
+      break;
+    }
+    return;
+  }
+
+  /* Click: execute the action under the cursor */
+  if (event->bstate & BUTTON1_PRESSED) {
+    for (int i = 0; i < app->click_region_count; i++) {
+      ClickRegion* r = &app->click_regions[i];
+      if (event->x < r->x || event->x >= r->x + r->width) continue;
+      if (event->y < r->y || event->y >= r->y + r->height) continue;
+
+      if (r->type == REGION_DIRECT) {
+        if (r->action) r->action(app);
+      } else if (r->type == REGION_MENU_ITEM && r->menu_index >= 0 &&
+                 r->menu_index < MAX_MENUS &&
+                 r->item_index < app->menus[r->menu_index]->item_count) {
+        app->current_menu = r->menu_index;
+        app->menus[r->menu_index]->selected_item = r->item_index;
+        ExecuteMenuAction(app);
+      } else if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
+                 r->item_index < app->popup_dialog->menu.item_count) {
+        app->popup_dialog->menu.selected_item = r->item_index;
+        ExecuteMenuAction(app);
+      } else if (r->type == REGION_NOTE_ITEM && app->notes && r->note_id >= 0) {
+        app->notes->current_id = r->note_id;
+        ToggleTask(app->notes);
+      }
+      break;
+    }
+  }
 }
 
 /**
@@ -505,7 +637,8 @@ void InputCommit(AppData* app) {
     app->notes->last_affected_id = app->notes->current_id;
   } else if (input->pending_parent_id >= 0) {
     app->notes->last_affected_id = input->pending_parent_id;
-    AddChildNote(app, app->notes, input->pending_parent_id, input->buffer, state);
+    AddChildNote(app, app->notes, input->pending_parent_id, input->buffer,
+                 state);
     app->notes->last_affected_id = app->notes->current_id;
   } else {
     app->notes->last_affected_id = -1;

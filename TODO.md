@@ -48,15 +48,18 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Undo and redo edits
 - [ ] Add a page system
 
----
-
-## 🚧 In Progress
 ### 🛠️ User Preferences
 - [X] Save/load current session state
     - [X] Transform logging to be less data consuming (maybe binary)
     - [X] Add more interesting data about sessions to GetPomodoroLog
 - [X] Add error stack and UI error line
-- [ ] Modular preferences system
+
+---
+
+## 🚧 In Progress
+### 🧩 Extra Features
+- [ ] White noise playback for focus sessions
+- [ ] Work history log (git-style commits)
 
 ---
 
@@ -66,12 +69,9 @@ extensible, terminal-based Pomodoro timer written in C.
 - [ ] Welcome screen
 - [ ] Mouse interaction
 
-### 🧩 Extra Features
-- [ ] White noise playback for focus sessions
-- [ ] Work history log (git-style commits)
-
 ### ⚙️ Configuration
 - [ ] Move configuration from compiled to runtime paradigma
+- [ ] Modular preferences system
 
 ---
 

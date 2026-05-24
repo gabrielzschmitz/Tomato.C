@@ -8,6 +8,7 @@
 #include "error.h"
 #include "gap_buffer.h"
 #include "input.h"
+#include "ui.h"
 #include "util.h"
 
 /* PRIVATE NOTES FUNCTIONS */
@@ -754,6 +755,7 @@ void RestoreNotesData(NotesData* notes, void* data) {
 
 /**
  * Render all notes in the specified area.
+ * @param app Pointer to the application data (for click region registration)
  * @param notes Pointer to the NotesData
  * @param start_x Left boundary of render area
  * @param start_y Top boundary of render area
@@ -762,8 +764,8 @@ void RestoreNotesData(NotesData* notes, void* data) {
  * @param input Pointer to input state for cursor display
  * @param mode Current input mode affecting rendering
  */
-void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
-                 int end_y, InputState* input, int mode) {
+void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
+                 int end_x, int end_y, InputState* input, int mode) {
   if (!notes) return;
 
   int max_width = end_x - start_x;
@@ -1005,6 +1007,10 @@ void RenderNotes(NotesData* notes, int start_x, int start_y, int end_x,
       } else
         mvprintw(render_y, start_x + indent + prefix_len, "%s",
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
+
+      RegisterClickRegion(app, start_x + indent, render_y, max_width - indent,
+                          1, REGION_NOTE_ITEM, NULL, -1, -1,
+                          notes->items[i]->id);
       render_y++;
     }
     for (int wl = 0; wl < num_lines; wl++)

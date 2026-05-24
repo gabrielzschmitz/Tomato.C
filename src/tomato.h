@@ -67,6 +67,14 @@ struct AppData {
 
   PomodoroData pomodoro_data; /**< Pomodoro timer state */
   NotesData* notes;           /**< Notes/text editor data */
+
+  ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
+  int click_region_count; /**< Number of registered click regions */
+
+  int debug_last_key;     /**< Last raw key from getch() (for debug display) */
+  int debug_mouse_x;      /**< Last mouse x coordinate */
+  int debug_mouse_y;      /**< Last mouse y coordinate */
+  int debug_mouse_bstate; /**< Last mouse button state */
 };
 
 #endif /* TOMATO_H_ */

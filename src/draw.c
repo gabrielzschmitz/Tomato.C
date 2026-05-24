@@ -38,6 +38,7 @@ ErrorType DrawScreen(AppData* app) {
   ErrorType status = NO_ERROR;
   erase();
 
+  ClearClickRegions(app);
   renderPopups(app);
 
   if (!ValidateAndRenderScreenSize(app)) return status;
@@ -134,9 +135,18 @@ static void renderPanel(AppData* app, Border border) {
 
     renderPanelScene(app, current_panel, animation, size, position);
 
-    if (DEBUG && current_panel->visible)
-      mvprintw(1, 2, "CS%d - %c/%c - %dcm", app->pomodoro_data.current_step,
-               app->user_input, app->last_input, app->current_menu);
+    if (DEBUG && current_panel->visible) {
+      if (app->debug_mouse_x >= 0)
+        mvprintw(1, 2, "M:%d,%d[%d] CS:%d K:%d L:%c CM:%d RG:%d",
+                 app->debug_mouse_x, app->debug_mouse_y,
+                 app->debug_mouse_bstate, app->pomodoro_data.current_step,
+                 app->debug_last_key, app->last_input, app->current_menu,
+                 app->click_region_count);
+      else
+        mvprintw(1, 2, "M:-- CS:%d K:%d L:%d CM:%d RG:%d",
+                 app->pomodoro_data.current_step, app->debug_last_key,
+                 app->last_input, app->current_menu, app->click_region_count);
+    }
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
                                                : UNFOCUSED_PANEL_COLOR,
@@ -166,10 +176,10 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
         RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
       }
       if (DEBUG)
-        PrintMenuAtCenter(panel, app->menus[0],
+        PrintMenuAtCenter(app, panel, app->menus[0],
                           (Vector2D){0, animation->frame_height / 2 + 3}, 0);
       else
-        PrintMenuAtCenter(panel, app->menus[0],
+        PrintMenuAtCenter(app, panel, app->menus[0],
                           (Vector2D){0, animation->frame_height / 2 + 2}, 0);
       break;
     case WORK_TIME:
@@ -265,7 +275,7 @@ static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation) {
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   InputState* input = panel->input;
 
-  RenderNotes(app->notes, start_x, start_y, end_x, end_y, input, current_mode);
+  RenderNotes(app, app->notes, start_x, start_y, end_x, end_y, input, current_mode);
 
   if (DEBUG)
     RenderNotesHistoryDebug(app->notes, panel->position.x + panel->size.width,
