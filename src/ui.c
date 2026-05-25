@@ -1646,17 +1646,7 @@ static void renderSlideControls(AppData* app, int x, int y, int h,
                                 int slide_idx, SlideDef* def) {
   int nav_y = y + h - 2;
   bool is_last = (slide_idx == WELCOME_SLIDE_COUNT - 1);
-
-  if (!is_last) {
-    const char* close = "[Close]";
-    int close_w = utf8DisplayWidth(close);
-    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
-    if (def->hovered == 3) attron(A_REVERSE);
-    mvprintw(nav_y, cx, "%s", close);
-    if (def->hovered == 3) attroff(A_REVERSE);
-    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
-                        -1, 3, 0);
-  }
+  bool is_first = (slide_idx == 0);
 
   if (is_last) {
     const char* gs = "[ Get Started ]";
@@ -1667,13 +1657,38 @@ static void renderSlideControls(AppData* app, int x, int y, int h,
     if (def->hovered == 2) attroff(A_REVERSE);
     RegisterClickRegion(app, gx, nav_y, gs_w, 1, REGION_WELCOME_NAV, NULL, -1,
                         2, 0);
+  } else if (is_first) {
+    const char* close = "[Close]";
+    const char* next = "Next  >";
+    int close_w = utf8DisplayWidth(close);
+    int nw = utf8DisplayWidth(next);
+    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
+    int nx = x + SLIDE_W - 2 - nw;
+    if (def->hovered == 3) attron(A_REVERSE);
+    mvprintw(nav_y, cx, "%s", close);
+    if (def->hovered == 3) attroff(A_REVERSE);
+    if (def->hovered == 1) attron(A_REVERSE);
+    mvprintw(nav_y, nx, "%s", next);
+    if (def->hovered == 1) attroff(A_REVERSE);
+    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
+                        -1, 3, 0);
+    RegisterClickRegion(app, nx, nav_y, nw, 1, REGION_WELCOME_NAV, NULL, -1, 1,
+                        0);
   } else {
+    const char* close = "[Close]";
     const char* prev = "<  Prev";
     const char* next = "Next  >";
+    int close_w = utf8DisplayWidth(close);
     int pw = utf8DisplayWidth(prev);
     int nw = utf8DisplayWidth(next);
+    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
     int px = x + 2;
     int nx = x + SLIDE_W - 2 - nw;
+    if (def->hovered == 3) attron(A_REVERSE);
+    mvprintw(nav_y, cx, "%s", close);
+    if (def->hovered == 3) attroff(A_REVERSE);
+    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
+                        -1, 3, 0);
     if (def->hovered == 0) attron(A_REVERSE);
     mvprintw(nav_y, px, "%s", prev);
     if (def->hovered == 0) attroff(A_REVERSE);
