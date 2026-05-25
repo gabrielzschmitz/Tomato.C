@@ -701,6 +701,9 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   }
   dialog->visible = true;
   dialog->is_welcome = false;
+  dialog->slides = NULL;
+  dialog->slideCount = 0;
+  dialog->currentSlide = 0;
 
   return dialog;
 }
