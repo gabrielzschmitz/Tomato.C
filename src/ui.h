@@ -114,16 +114,18 @@ struct FloatingDialog {
   Menu menu;         /**< Menu displayed inside the dialog */
   char* message;     /**< Message text displayed in the dialog */
   bool visible;      /**< Whether the dialog is currently shown */
+  bool is_welcome;   /**< True if this is the welcome dialog */
 };
 
 /**
  * Mouse click region types.
  */
 typedef enum {
-  REGION_DIRECT,     /**< Direct action (skip/pause buttons) */
-  REGION_MENU_ITEM,  /**< Regular menu item */
-  REGION_POPUP_ITEM, /**< Popup dialog menu item */
-  REGION_NOTE_ITEM,  /**< Note/task item in the notes panel */
+  REGION_DIRECT,      /**< Direct action (skip/pause buttons) */
+  REGION_MENU_ITEM,   /**< Regular menu item */
+  REGION_POPUP_ITEM,  /**< Popup dialog menu item */
+  REGION_NOTE_ITEM,   /**< Note/task item in the notes panel */
+  REGION_WELCOME_NAV, /**< Welcome dialog navigation control */
 } RegionType;
 
 /**

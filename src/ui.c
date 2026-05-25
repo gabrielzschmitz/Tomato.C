@@ -657,6 +657,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
     return NULL;
   }
   dialog->visible = true;
+  dialog->is_welcome = false;
 
   return dialog;
 }
@@ -934,10 +935,9 @@ void RenderSkipConfirmation(AppData* app) {
  * @return Pointer to the created dialog, or NULL on failure
  */
 FloatingDialog* CreateWelcomeDialog(AppData* app) {
-  const char* message =
-    "Welcome to Tomato.C!\n"
-    "A terminal pomodoro timer.\n"
-    "Press Enter to begin.";
+  (void)app;
+  Dimensions size = {.width = 38, .height = 26};
+  Vector2D pos = {.x = 0, .y = 0};
   MenuItem items[] = {{"Get Started", ClosePopup}};
   Menu menu = {.items = items,
                .selected_item = 0,
@@ -946,7 +946,10 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
                .select_style_left = "[",
                .select_style_right = "]",
                .item_count = 1};
-  return CreateCenterFloatingDialog(app->screen, menu, message, InitBorder());
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (dialog != NULL) dialog->is_welcome = true;
+  return dialog;
 }
 
 /**

@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #define MAX_FRAME_WIDTH 120
+#define WELCOME_SLIDE_COUNT 5
 
 typedef struct AppData AppData;
 typedef struct Rollfilm Rollfilm;
@@ -139,5 +140,20 @@ bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
  * @return true if found, false if not found
  */
 bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Welcome Slides
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render a welcome screen slide at the dialog position.
+ * Retrieves the slide definition (lines + dimensions) from get_slide(),
+ * clears the dialog area, then draws the box, progress, content, and nav.
+ * Called from draw.c when popup_dialog->is_welcome is true.
+ * @param app Pointer to the application data
+ */
+void RenderWelcomeDialog(AppData* app);
 
 #endif /* ANIM_H */

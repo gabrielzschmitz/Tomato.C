@@ -71,6 +71,8 @@ struct AppData {
   ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
   int click_region_count; /**< Number of registered click regions */
 
+  int welcome_slide_index;    /**< Current welcome slide (0-4), -1 if closed */
+  int welcome_hovered_control; /**< Hovered nav control (0=prev,1=next,2=start) or -1 */
   int debug_last_key;     /**< Last raw key from getch() (for debug display) */
   int debug_mouse_x;      /**< Last mouse x coordinate */
   int debug_mouse_y;      /**< Last mouse y coordinate */

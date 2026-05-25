@@ -56,6 +56,8 @@ ErrorType InitApp(AppData* app) {
   app->screen->panels[1].mode = DEFAULT;
   app->is_paused = false;
   app->popup_dialog = NULL;
+  app->welcome_slide_index = 0;
+  app->welcome_hovered_control = -1;
 
   app->notes = CreateNotesData();
   if (app->notes == NULL) return MALLOC_ERROR;

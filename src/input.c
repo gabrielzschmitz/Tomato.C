@@ -216,11 +216,43 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
                     event->y >= pos.y && event->y < pos.y + size.height);
   }
-  if (is_click && !inside_popup) {
+  if (is_click && !inside_popup && !app->popup_dialog->is_welcome) {
     ClosePopup(app);
     return;
   }
   if (inside_popup) {
+    if (app->popup_dialog->is_welcome) {
+      if (event->bstate & REPORT_MOUSE_POSITION) {
+        app->welcome_hovered_control = -1;
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_WELCOME_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            app->welcome_hovered_control = r->item_index;
+            break;
+          }
+        }
+      }
+      if (is_click) {
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_WELCOME_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            if (r->item_index == 0 && app->welcome_slide_index > 0)
+              app->welcome_slide_index--;
+            else if (r->item_index == 1 &&
+                     app->welcome_slide_index < WELCOME_SLIDE_COUNT - 1)
+              app->welcome_slide_index++;
+            else if (r->item_index == 2 || r->item_index == 3)
+              ClosePopup(app);
+            break;
+          }
+        }
+      }
+      return;
+    }
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
       if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
@@ -463,6 +495,25 @@ ErrorType HandleVisualMode(AppData* app, int key) {
  */
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
+
+  /* Welcome screen navigation */
+  if (app->popup_dialog->is_welcome) {
+    if (key == KEY_LEFT || key == 'h') {
+      if (app->welcome_slide_index > 0) app->welcome_slide_index--;
+      return true;
+    }
+    if (key == KEY_RIGHT || key == 'l' || key == ' ') {
+      if (app->welcome_slide_index < WELCOME_SLIDE_COUNT - 1)
+        app->welcome_slide_index++;
+      return true;
+    }
+    if (key == ENTER || key == '\r' || key == KEY_ENTER ||
+        key == 'q' || key == 27) {
+      ClosePopup(app);
+      return true;
+    }
+    return true; /* consume all keys while welcome is active */
+  }
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
    * scene-specific keys (like ToggleTaskAtNotes) intercepting popup input */
