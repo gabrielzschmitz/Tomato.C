@@ -13,6 +13,49 @@
 #include "util.h"
 
 /* PRIVATE UI FUNCTIONS */
+/* Welcome Slides */
+/**
+ * Line prototype for building a single slide row.
+ * Each entry specifies the row offset, optional static text, color, alignment,
+ * and an optional builder callback that produces the final text per icon type.
+ */
+typedef struct {
+  int y;            /**< Row offset relative to slide top */
+  const char* text; /**< Static text (passed to builder if non-NULL) */
+  int color;        /**< Text color (NO_COLOR for default) */
+  SlideAlign align; /**< Alignment: LEFT, CENTER, or RIGHT */
+  void (*builder)(char* buf, size_t size, int icon_type, const char* text);
+} lineProto;
+
+/** Sentinel terminator for lineProto arrays. */
+#define PROTO_END {0, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, NULL}
+#define SLIDE_W 41
+#define SLIDE_INNER_W (SLIDE_W - 2)
+static int iconWidth(const char* s);
+static int strDisplayWidth(const char* s);
+static int utf8DisplayWidth(const char* s);
+static void padIcon(char* dst, size_t size, const char* icon);
+static void buildPlain(char* buf, size_t size, int icon_type, const char* text);
+static void buildIconWork(char* buf, size_t size, int icon_type,
+                          const char* text);
+static void buildIconNotes(char* buf, size_t size, int icon_type,
+                           const char* text);
+static void buildIconMode(char* buf, size_t size, int icon_type,
+                          const char* text);
+static void buildS1IconTask(char* buf, size_t size, int icon_type,
+                            const char* text);
+static void buildS1IconsControls(char* buf, size_t size, int icon_type,
+                                 const char* text);
+static SlideDef* buildSlide(const lineProto* protos, int w, int h,
+                            int icon_type);
+static void welcomeRender(AppData* app, SlideDef* def);
+static void welcomeUpdate(AppData* app, SlideDef* def);
+static void renderSlideBox(int x, int y, int w, int h);
+static void renderSlideProgress(int x, int y, int w, int slide_idx,
+                                int icon_type);
+static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines);
+static void renderSlideControls(AppData* app, int x, int y, int h,
+                                int slide_idx, SlideDef* def);
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
 static void freePanel(Panel* panel);
@@ -724,6 +767,12 @@ void FreeFloatingDialog(FloatingDialog* dialog) {
   /* Free message */
   free(dialog->message);
 
+  /* Free welcome slides if present */
+  if (dialog->slides) {
+    FreeWelcomeSlides(dialog->slides, dialog->slideCount);
+    dialog->slides = NULL;
+  }
+
   /* Free the dialog itself */
   free(dialog);
 }
@@ -948,7 +997,12 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
                .item_count = 1};
   FloatingDialog* dialog =
     CreateFloatingDialog(pos, size, InitBorder(), menu, "");
-  if (dialog != NULL) dialog->is_welcome = true;
+  if (dialog != NULL) {
+    dialog->is_welcome = true;
+    dialog->slides = BuildWelcomeSlides();
+    dialog->slideCount = 3 * WELCOME_SLIDE_COUNT;
+    dialog->currentSlide = 0;
+  }
   return dialog;
 }
 
@@ -1089,4 +1143,546 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
 
   SetColor(app->is_paused ? color : COLOR_BLACK, NO_COLOR, A_BOLD);
   mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Welcome Slides
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Build all welcome slide definitions for all icon types.
+ * Allocates 3 * WELCOME_SLIDE_COUNT SlideDef instances, one per icon
+ * type per slide. Index with [iconType * WELCOME_SLIDE_COUNT + slideIdx].
+ * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
+ */
+SlideDef** BuildWelcomeSlides(void) {
+  static const lineProto s0[] = {
+    {4, "  Tomato.C", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildIconWork},
+    {6, "Pomodoro + notes in", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
+    {7, "your terminal", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
+    {9, "Stay focused. Stay fast", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
+     buildPlain},
+    PROTO_END};
+
+  static const lineProto s1[] = {
+    {4, "   ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓  ", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {5, "   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {6, "   ┃             ┃                 ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {7, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, buildS1IconsControls},
+    {8, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, buildS1IconTask},
+    {9, "   ┃    24:59    ┃ ─ Note          ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {10, "   ┗━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━┛  ", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {12, "   • SPACE → switch focus", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {13, "   • Responsive terminal layout", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {14, "   • Mouse support available", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    PROTO_END};
+  static const lineProto s2[] = {
+    {4, " POMODORO WORKFLOW", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildIconWork},
+    {6, "Work → Break → Work → Long Break", NO_COLOR, ALIGN_SLIDE_CENTER,
+     buildPlain},
+    {8, "   • Pause / resume", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {9, "   • Auto-save sessions", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {10, "   • Notifications + sound", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {11, "   • Continue unfinished timers", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {13, "[p] pause   [s] skip   [Ctrl+r] reset", NO_COLOR, ALIGN_SLIDE_CENTER,
+     buildPlain},
+    PROTO_END};
+  static const lineProto s3[] = {
+    {4, " HIERARCHICAL NOTES", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
+     buildIconNotes},
+    {6, "       • - Plain notes", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {7, "       • [ ] Tasks", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {8, "       • [X] Completed tasks", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {10, "  ──────────────────────", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
+    {11, "  VIM-LIKE EDITING", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
+     buildIconMode},
+    {13, "       • DEFAULT → manage", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {14, "       • NORMAL  → navigate", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {15, "       • INSERT  → type", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {16, "       • VISUAL  → select", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
+    {18, "   [n/t] add    [u/Ctrl+r] undo/redo", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    {19, "   [e]   edit   [V]        move", NO_COLOR, ALIGN_SLIDE_LEFT,
+     buildPlain},
+    PROTO_END};
+  static const lineProto s4[] = {
+    {4, "Ready to focus?", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildPlain},
+    {6, "Start your first cycle", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
+    {7, "and organize your work", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
+    PROTO_END};
+
+  static const struct {
+    const lineProto* protos;
+    int h;
+  } slideData[WELCOME_SLIDE_COUNT] = {
+    {s0, 14}, {s1, 19}, {s2, 18}, {s3, 24}, {s4, 12},
+  };
+
+  int total = 3 * WELCOME_SLIDE_COUNT;
+  SlideDef** slides = (SlideDef**)calloc(total, sizeof(SlideDef*));
+  if (!slides) return NULL;
+
+  for (int ic = 0; ic < 3; ic++) {
+    for (int si = 0; si < WELCOME_SLIDE_COUNT; si++) {
+      int idx = ic * WELCOME_SLIDE_COUNT + si;
+      slides[idx] =
+        buildSlide(slideData[si].protos, SLIDE_W, slideData[si].h, ic);
+      if (!slides[idx]) {
+        FreeWelcomeSlides(slides, total);
+        return NULL;
+      }
+    }
+  }
+
+  return slides;
+}
+
+/**
+ * Free all memory associated with a welcome slide array.
+ * @param slides Pointer to the slide array
+ * @param count Number of SlideDef pointers in the array
+ */
+void FreeWelcomeSlides(SlideDef** slides, int count) {
+  if (!slides) return;
+  for (int i = 0; i < count; i++) {
+    if (slides[i]) {
+      if (slides[i]->lines) {
+        for (SlideLine* l = slides[i]->lines; l->text; l++) free(l->text);
+        free(slides[i]->lines);
+      }
+      free(slides[i]);
+    }
+  }
+  free(slides);
+}
+
+/**
+ * Measure the display width of a single icon character.
+ * @param s The icon string (first byte examined)
+ * @return 2 for 4-byte UTF-8 (e.g. emoji), 1 for smaller encodings, 0 if NULL or empty
+ */
+static int iconWidth(const char* s) {
+  if (!s || !*s) return 0;
+  unsigned char c = (unsigned char)*s;
+  return (c >= 0xF0) ? 2 : 1;
+}
+
+/**
+ * Measure the total display width of a UTF-8 string.
+ * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
+ * @param s The UTF-8 input string
+ * @return Display width in terminal columns
+ */
+static int strDisplayWidth(const char* s) {
+  int total = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      total++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      total += (c >= 0xF0) ? 2 : 1;
+      s += len;
+    }
+  }
+  return total;
+}
+
+/**
+ * Count the number of visible characters in a UTF-8 string.
+ * Each multi-byte sequence counts as a single character regardless of byte width.
+ * @param s The UTF-8 input string
+ * @return Number of visible characters
+ */
+static int utf8DisplayWidth(const char* s) {
+  int w = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      w++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      s += len;
+      w++;
+    }
+  }
+  return w;
+}
+
+/**
+ * Pad an icon with trailing spaces so it occupies exactly iconWidth columns.
+ * @param dst  Output buffer
+ * @param size Buffer size
+ * @param icon Icon string to pad
+ */
+static void padIcon(char* dst, size_t size, const char* icon) {
+  int w = iconWidth(icon);
+  if (w < 1)
+    snprintf(dst, size, "%s%*s", icon, 1 - w, "");
+  else
+    snprintf(dst, size, "%s", icon);
+}
+
+/**
+ * Copy text verbatim into the output buffer (icon_type is ignored).
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon type (unused)
+ * @param text      Static text to copy
+ */
+static void buildPlain(char* buf, size_t size, int icon_type,
+                       const char* text) {
+  (void)icon_type;
+  snprintf(buf, size, "%s", text);
+}
+
+/**
+ * Prepend a work-mode icon to the provided text.
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon-type index for WORK_ICONS lookup
+ * @param text      Text to append after the icon
+ */
+static void buildIconWork(char* buf, size_t size, int icon_type,
+                          const char* text) {
+  char ic[16];
+  padIcon(ic, sizeof(ic), WORK_ICONS[icon_type]);
+  snprintf(buf, size, "%s%s", ic, text);
+}
+
+/**
+ * Prepend a notes icon to the provided text.
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon-type index for NOTES_ICONS lookup
+ * @param text      Text to append after the icon
+ */
+static void buildIconNotes(char* buf, size_t size, int icon_type,
+                           const char* text) {
+  char ic[16];
+  padIcon(ic, sizeof(ic), NOTES_ICONS[icon_type]);
+  snprintf(buf, size, "%s%s", ic, text);
+}
+
+/**
+ * Prepend a mode icon to the provided text.
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon-type index for DEFAULT_MODE_ICONS lookup
+ * @param text      Text to append after the icon
+ */
+static void buildIconMode(char* buf, size_t size, int icon_type,
+                          const char* text) {
+  char ic[16];
+  padIcon(ic, sizeof(ic), DEFAULT_MODE_ICONS[icon_type]);
+  snprintf(buf, size, "%s%s", ic, text);
+}
+
+/**
+ * Build the slide-1 task row showing a completed-task indicator inside the
+ * split-panel ASCII frame.
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon-type index for WORK_ICONS lookup
+ * @param text      Unused (the row layout is hardcoded)
+ */
+static void buildS1IconTask(char* buf, size_t size, int icon_type,
+                            const char* text) {
+  (void)text;
+  char ic[16];
+  padIcon(ic, sizeof(ic), WORK_ICONS[icon_type]);
+  int iw = iconWidth(ic);
+  int left_pad = (iw >= 2) ? 4 : 5;
+  snprintf(buf, size, "   ┃ %*s%s      ┃ [X] Done task   ┃   ", left_pad, "",
+           ic);
+}
+
+/**
+ * Build the slide-1 control row showing skip/pause icons inside the
+ * split-panel ASCII frame.
+ * @param buf       Output buffer
+ * @param size      Buffer size
+ * @param icon_type Icon-type index for SKIP_ICONS / PAUSE_ICONS lookup
+ * @param text      Unused (the row layout is hardcoded)
+ */
+static void buildS1IconsControls(char* buf, size_t size, int icon_type,
+                                 const char* text) {
+  (void)text;
+  char ic1[16], ic2[16];
+  padIcon(ic1, sizeof(ic1), SKIP_ICONS[icon_type]);
+  padIcon(ic2, sizeof(ic2), PAUSE_ICONS[icon_type]);
+  snprintf(buf, size, "   ┃ %s %s   01/04 ┃ [ ] Undone task ┃   ", ic1, ic2);
+  int dw = strDisplayWidth(buf);
+  while (dw > SLIDE_INNER_W) {
+    int blen = strlen(buf);
+    if (blen > 0 && buf[blen - 1] == ' ')
+      buf[--blen] = '\0';
+    else
+      break;
+    dw = strDisplayWidth(buf);
+  }
+}
+
+/**
+ * Allocate and populate a SlideDef from a lineProto array for a given icon type.
+ * @param protos   Null-terminated array of lineProto entries
+ * @param w        Slide width in columns
+ * @param h        Slide height in rows
+ * @param icon_type Icon-type index (0=ASCII, 1=UTF-8, 2=color)
+ * @return Pointer to the allocated SlideDef, or NULL on allocation failure
+ */
+static SlideDef* buildSlide(const lineProto* protos, int w, int h,
+                            int icon_type) {
+  int count = 0;
+  for (const lineProto* p = protos; p->builder || p->text; p++) count++;
+
+  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+  if (!def) return NULL;
+
+  def->lines = (SlideLine*)calloc(count + 1, sizeof(SlideLine));
+  if (!def->lines) {
+    free(def);
+    return NULL;
+  }
+
+  def->size.width = w;
+  def->size.height = h;
+  def->render = welcomeRender;
+  def->update = welcomeUpdate;
+  def->hovered = -1;
+
+  int idx = 0;
+  for (const lineProto* p = protos; p->builder || p->text; p++, idx++) {
+    char buf[256];
+    if (p->builder)
+      p->builder(buf, sizeof(buf), icon_type, p->text);
+    else
+      snprintf(buf, sizeof(buf), "%s", p->text);
+
+    def->lines[idx].y = p->y;
+    def->lines[idx].text = strdup(buf);
+    def->lines[idx].color = p->color;
+    def->lines[idx].align = p->align;
+  }
+
+  return def;
+}
+
+/**
+ * Render the current welcome slide into the popup dialog.
+ * Draws the box frame, progress indicator, content lines, and nav controls.
+ * @param app Application state (provides popup_dialog, screen)
+ * @param def Slide definition to render
+ */
+static void welcomeRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  int slide_idx = d->currentSlide;
+  int icon_type = GetConfigIconType();
+  int w = def->size.width;
+  int h = def->size.height;
+
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  renderSlideBox(x, y, w, h);
+  renderSlideProgress(x, y, w, slide_idx, icon_type);
+  renderSlideContent(x, y, w, h, def->lines);
+  renderSlideControls(app, x, y, h, slide_idx, def);
+}
+
+/**
+ * Track mouse hover over the nav controls (prev/next/close/start) on the
+ * current slide and update def->hovered accordingly.
+ * @param app Application state (provides click_regions, debug_mouse coordinates)
+ * @param def Slide definition whose hovered field to update
+ */
+static void welcomeUpdate(AppData* app, SlideDef* def) {
+  def->hovered = -1;
+  for (int i = 0; i < app->click_region_count; i++) {
+    ClickRegion* r = &app->click_regions[i];
+    if (r->type != REGION_WELCOME_NAV) continue;
+    if (app->debug_mouse_x >= r->pos.x &&
+        app->debug_mouse_x < r->pos.x + r->size.width &&
+        app->debug_mouse_y >= r->pos.y &&
+        app->debug_mouse_y < r->pos.y + r->size.height) {
+      def->hovered = r->item_index;
+      break;
+    }
+  }
+}
+
+/**
+ * Draw the dialog frame with ACS line-drawing characters.
+ * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
+ * @param x X position of the dialog
+ * @param y Y position of the dialog
+ * @param w Width of the dialog
+ * @param h Height of the dialog
+ */
+static void renderSlideBox(int x, int y, int w, int h) {
+  mvaddch(y, x, ACS_ULCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y, x + i, ACS_HLINE);
+  mvaddch(y, x + w - 1, ACS_URCORNER);
+
+  mvaddch(y + h - 3, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 3, x + i, ACS_HLINE);
+  mvaddch(y + h - 3, x + w - 1, ACS_RTEE);
+
+  mvaddch(y + h - 1, x, ACS_LLCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 1, x + i, ACS_HLINE);
+  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
+
+  mvaddch(y + 2, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + 2, x + i, ACS_HLINE);
+  mvaddch(y + 2, x + w - 1, ACS_RTEE);
+
+  for (int i = 0; i < h; i++) {
+    if (i == 0 || i == 2 || i == h - 3 || i == h - 1) continue;
+    mvaddch(y + i, x, ACS_VLINE);
+    mvaddch(y + i, x + w - 1, ACS_VLINE);
+  }
+}
+
+/**
+ * Draw the progress indicator at the top of the dialog.
+ * Shows "Welcome 1/5" in ASCII mode, or filled/empty dots in UTF-8 mode.
+ * @param x         X position of the dialog
+ * @param y         Y position of the dialog
+ * @param w         Width of the dialog (unused, derived from SLIDE_W)
+ * @param slide_idx Zero-based index of the current slide
+ * @param icon_type Icon-type (ASCII shows numeric, otherwise dots)
+ */
+static void renderSlideProgress(int x, int y, int w, int slide_idx,
+                                int icon_type) {
+  (void)w;
+  char buf[64];
+  if (icon_type == ASCII)
+    snprintf(buf, sizeof(buf), "Welcome %d/%d", slide_idx + 1,
+             WELCOME_SLIDE_COUNT);
+  else {
+    char* p = buf;
+    p += sprintf(p, "Welcome ");
+    for (int i = 0; i < WELCOME_SLIDE_COUNT; i++)
+      p += sprintf(p, "%s", i <= slide_idx ? "●" : "○");
+    *p = '\0';
+  }
+  int dot_w = utf8DisplayWidth(buf);
+  mvprintw(y + 1, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
+}
+
+/**
+ * Draw the content-area lines between the two horizontal rules of the dialog.
+ * Fills each row with spaces and vertical-side characters, then draws each
+ * line from the SlideLine array with appropriate alignment and colour.
+ * @param x     X position of the dialog
+ * @param y     Y position of the dialog
+ * @param w     Width of the dialog (unused, derived from SLIDE_W)
+ * @param h     Height of the dialog
+ * @param lines Null-terminated array of SlideLine entries to render
+ */
+static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines) {
+  (void)w;
+  for (int row = y + 3; row <= y + h - 4; row++) {
+    mvaddch(row, x, ACS_VLINE);
+    for (int ci = 1; ci < SLIDE_W - 1; ci++) mvaddch(row, x + ci, ' ');
+    mvaddch(row, x + SLIDE_W - 1, ACS_VLINE);
+  }
+
+  for (SlideLine* l = lines; l->text; l++) {
+    int display_w = strDisplayWidth(l->text);
+    int pad =
+      (l->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2 : 0;
+
+    if (l->color != NO_COLOR)
+      SetColor(l->color, NO_COLOR, A_BOLD);
+    else
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+
+    mvprintw(y + l->y, x + 1 + pad, "%s", l->text);
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  }
+}
+
+/**
+ * Draw navigation controls (prev/next/close/get-started) at the bottom of the
+ * dialog and register click regions for mouse interaction.
+ *
+ * For non-last slides: [Close] centered, or [< Prev] / [Next >] on the sides.
+ * For the last slide:  [ Get Started ] centered.
+ *
+ * @param app       Application state (for RegisterClickRegion)
+ * @param x         X position of the dialog
+ * @param y         Y position of the dialog
+ * @param h         Height of the dialog
+ * @param slide_idx Zero-based index of the current slide
+ * @param def       Slide definition (hovered field controls A_REVERSE highlight)
+ */
+static void renderSlideControls(AppData* app, int x, int y, int h,
+                                int slide_idx, SlideDef* def) {
+  int nav_y = y + h - 2;
+  bool is_last = (slide_idx == WELCOME_SLIDE_COUNT - 1);
+
+  if (!is_last) {
+    const char* close = "[Close]";
+    int close_w = utf8DisplayWidth(close);
+    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
+    if (def->hovered == 3) attron(A_REVERSE);
+    mvprintw(nav_y, cx, "%s", close);
+    if (def->hovered == 3) attroff(A_REVERSE);
+    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
+                        -1, 3, 0);
+  }
+
+  if (is_last) {
+    const char* gs = "[ Get Started ]";
+    int gs_w = utf8DisplayWidth(gs);
+    int gx = x + 1 + (SLIDE_INNER_W - gs_w) / 2;
+    if (def->hovered == 2) attron(A_REVERSE);
+    mvprintw(nav_y, gx, "%s", gs);
+    if (def->hovered == 2) attroff(A_REVERSE);
+    RegisterClickRegion(app, gx, nav_y, gs_w, 1, REGION_WELCOME_NAV, NULL, -1,
+                        2, 0);
+  } else {
+    const char* prev = "<  Prev";
+    const char* next = "Next  >";
+    int pw = utf8DisplayWidth(prev);
+    int nw = utf8DisplayWidth(next);
+    int px = x + 2;
+    int nx = x + SLIDE_W - 2 - nw;
+    if (def->hovered == 0) attron(A_REVERSE);
+    mvprintw(nav_y, px, "%s", prev);
+    if (def->hovered == 0) attroff(A_REVERSE);
+    if (def->hovered == 1) attron(A_REVERSE);
+    mvprintw(nav_y, nx, "%s", next);
+    if (def->hovered == 1) attroff(A_REVERSE);
+    RegisterClickRegion(app, px, nav_y, pw, 1, REGION_WELCOME_NAV, NULL, -1, 0,
+                        0);
+    RegisterClickRegion(app, nx, nav_y, nw, 1, REGION_WELCOME_NAV, NULL, -1, 1,
+                        0);
+  }
 }

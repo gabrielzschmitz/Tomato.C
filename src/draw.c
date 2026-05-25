@@ -306,7 +306,10 @@ static void renderDialogPopups(AppData* app) {
            (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
   else if (app->popup_dialog->is_welcome) {
-    RenderWelcomeDialog(app);
+    int icon_type = GetConfigIconType();
+    int idx = icon_type * WELCOME_SLIDE_COUNT + app->popup_dialog->currentSlide;
+    SlideDef* def = app->popup_dialog->slides[idx];
+    def->render(app, def);
   } else {
     UpdateFloatingDialog(app->popup_dialog, app->screen);
     RenderFloatingDialog(app, app->popup_dialog);

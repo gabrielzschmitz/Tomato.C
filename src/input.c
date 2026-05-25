@@ -222,17 +222,11 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
   }
   if (inside_popup) {
     if (app->popup_dialog->is_welcome) {
+      FloatingDialog* d = app->popup_dialog;
+      int icon_type = GetConfigIconType();
+      SlideDef* def = d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
       if (event->bstate & REPORT_MOUSE_POSITION) {
-        app->welcome_hovered_control = -1;
-        for (int i = 0; i < app->click_region_count; i++) {
-          ClickRegion* r = &app->click_regions[i];
-          if (r->type != REGION_WELCOME_NAV) continue;
-          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
-              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
-            app->welcome_hovered_control = r->item_index;
-            break;
-          }
-        }
+        def->update(app, def);
       }
       if (is_click) {
         for (int i = 0; i < app->click_region_count; i++) {
@@ -240,11 +234,11 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           if (r->type != REGION_WELCOME_NAV) continue;
           if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
               event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
-            if (r->item_index == 0 && app->welcome_slide_index > 0)
-              app->welcome_slide_index--;
+            if (r->item_index == 0 && d->currentSlide > 0)
+              d->currentSlide--;
             else if (r->item_index == 1 &&
-                     app->welcome_slide_index < WELCOME_SLIDE_COUNT - 1)
-              app->welcome_slide_index++;
+                     d->currentSlide < WELCOME_SLIDE_COUNT - 1)
+              d->currentSlide++;
             else if (r->item_index == 2 || r->item_index == 3)
               ClosePopup(app);
             break;
@@ -498,13 +492,14 @@ bool HandlePopupInput(AppData* app, int key) {
 
   /* Welcome screen navigation */
   if (app->popup_dialog->is_welcome) {
+    FloatingDialog* d = app->popup_dialog;
     if (key == KEY_LEFT || key == 'h') {
-      if (app->welcome_slide_index > 0) app->welcome_slide_index--;
+      if (d->currentSlide > 0) d->currentSlide--;
       return true;
     }
     if (key == KEY_RIGHT || key == 'l' || key == ' ') {
-      if (app->welcome_slide_index < WELCOME_SLIDE_COUNT - 1)
-        app->welcome_slide_index++;
+      if (d->currentSlide < WELCOME_SLIDE_COUNT - 1)
+        d->currentSlide++;
       return true;
     }
     if (key == ENTER || key == '\r' || key == KEY_ENTER ||

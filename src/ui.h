@@ -7,6 +7,7 @@
 
 #define MAX_PANELS 2
 #define MAX_CLICK_REGIONS 32
+#define WELCOME_SLIDE_COUNT 5
 
 /* UI specific structs */
 typedef struct Border Border;
@@ -15,10 +16,43 @@ typedef struct Panel Panel;
 typedef struct Menu Menu;
 typedef struct MenuItem MenuItem;
 typedef struct FloatingDialog FloatingDialog;
+typedef struct SlideDef SlideDef;
 
-/* Forward declaration */
+/* Forward declarations */
 typedef struct AppData AppData;
 typedef struct InputState InputState;
+
+/**
+ * Alignment for slide content lines.
+ */
+typedef enum {
+  ALIGN_SLIDE_LEFT,   /**< Left-aligned */
+  ALIGN_SLIDE_CENTER, /**< Centered */
+  ALIGN_SLIDE_RIGHT   /**< Right-aligned */
+} SlideAlign;
+
+/**
+ * A single pre-formatted line in a welcome slide.
+ */
+typedef struct {
+  int y;            /**< Row offset from slide top (0 = border row) */
+  char* text;       /**< Pre-formatted display text (allocated) */
+  int color;        /**< Ncurses color pair, NO_COLOR for default */
+  SlideAlign align; /**< Horizontal alignment */
+} SlideLine;
+
+/**
+ * Definition of a single welcome slide.
+ * Contains pre-built lines for one icon type, render/update callbacks,
+ * and per-frame hover state.
+ */
+struct SlideDef {
+  SlideLine* lines; /**< NULL-terminated array of pre-formatted lines */
+  Dimensions size;  /**< Slide width and height in columns/rows */
+  void (*render)(AppData* app, SlideDef* def); /**< Render this slide */
+  void (*update)(AppData* app, SlideDef* def); /**< Update hover state */
+  int hovered; /**< Currently hovered nav control (-1 = none) */
+};
 
 /**
  * Type definition for menu item action functions.
@@ -115,6 +149,11 @@ struct FloatingDialog {
   char* message;     /**< Message text displayed in the dialog */
   bool visible;      /**< Whether the dialog is currently shown */
   bool is_welcome;   /**< True if this is the welcome dialog */
+  SlideDef**
+    slides; /**< Pre-built slides [iconType * WELCOME_SLIDE_COUNT + slideIdx] */
+  int slideCount; /**< Total slides in array (3 * WELCOME_SLIDE_COUNT) */
+  int
+    currentSlide; /**< Currently displayed slide index (0 to WELCOME_SLIDE_COUNT-1) */
 };
 
 /**
@@ -399,5 +438,26 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
  * @param pos Position to render controls
  */
 void RenderPomodoroControls(AppData* app, Vector2D pos);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Welcome Slides
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Build all welcome slide definitions for all icon types.
+ * Allocates 3 * WELCOME_SLIDE_COUNT SlideDef instances, one per icon
+ * type per slide. Index with [iconType * WELCOME_SLIDE_COUNT + slideIdx].
+ * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
+ */
+SlideDef** BuildWelcomeSlides(void);
+
+/**
+ * Free all memory associated with a welcome slides array.
+ * @param slides Array of SlideDef pointers to free
+ * @param count Number of elements in the array
+ */
+void FreeWelcomeSlides(SlideDef** slides, int count);
 
 #endif /* UI_H_ */
