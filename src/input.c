@@ -14,6 +14,14 @@
 #include "ui.h"
 #include "util.h"
 
+/* PRIVATE INPUT FUNCTIONS */
+/* Mouse Handlers */
+static void handleMousePanel(AppData* app, MEVENT* event);
+static void handleMouseNotes(AppData* app, MEVENT* event);
+static void handleMousePanelSwitch(AppData* app, MEVENT* event);
+static void handleMousePopup(AppData* app, MEVENT* event);
+static void handleMouseCancelEdit(AppData* app, MEVENT* event);
+
 /**
  * ---------------------------------------------------------------------------
  * Input Dispatching
@@ -100,21 +108,6 @@ ErrorType HandleInputs(AppData* app) {
       last_event = event;
       valid = true;
 
-      /* Capture BUTTON1_PRESSED on a note for drag tracking */
-      if ((event.bstate & BUTTON1_PRESSED) && app->notes) {
-        for (int j = 0; j < app->click_region_count; j++) {
-          ClickRegion* r = &app->click_regions[j];
-          if (event.x >= r->pos.x && event.x < r->pos.x + r->size.width && event.y >= r->pos.y &&
-              event.y < r->pos.y + r->size.height && r->type == REGION_NOTE_ITEM &&
-              r->note_id >= 0) {
-            app->notes->drag_note_id = r->note_id;
-            app->notes->drag_start_y = event.y;
-            app->notes->drag_moved = false;
-            break;
-          }
-        }
-      }
-
       key = getch();
       if (key != KEY_MOUSE) {
         if (key != ERR) ungetch(key);
@@ -125,7 +118,8 @@ ErrorType HandleInputs(AppData* app) {
       app->debug_mouse_x = last_event.x;
       app->debug_mouse_y = last_event.y;
       app->debug_mouse_bstate = last_event.bstate;
-      HandleMouseEvent(app, &last_event);
+      ErrorType merr = HandleMouseEvent(app, &last_event);
+      if (merr != NO_ERROR) status = merr;
     }
     flushinp();
     app->user_input = -1;
@@ -159,81 +153,91 @@ ErrorType HandleInputs(AppData* app) {
 }
 
 /**
- * Handle mouse events. In DEFAULT mode: hover updates menu/note selection,
- * press on note starts drag tracking, drag move reorders notes, release
- * ends drag or toggles task. Non-notes execute immediately on press.
- * In non-DEFAULT mode: movement ignored, first click goes directly to DEFAULT.
+ * ---------------------------------------------------------------------------
+ * Mouse Handlers
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Handle mouse events. In DEFAULT mode: hover updates menu selection +
+ * switches panel focus on REQUEST_MOUSE_POSITION, clicks execute actions or
+ * switch panels. In non-DEFAULT mode: movement is ignored, first click goes
+ * directly to DEFAULT mode.
  * @param app Pointer to the application data
  * @param event Pointer to the ncurses mouse event
+ * @return ErrorType NO_ERROR on success, or an error code on failure
  */
-void HandleMouseEvent(AppData* app, MEVENT* event) {
-  int current_mode = app->screen->panels[app->screen->current_panel].mode;
-  bool b1_press = event->bstate & BUTTON1_PRESSED;
-  bool b1_release = event->bstate & BUTTON1_RELEASED;
-  bool is_hover = (event->bstate & REPORT_MOUSE_POSITION) && !b1_press;
-
-  /* In non-DEFAULT mode, ignore movement, only cancel editing on click */
-  if (current_mode != DEFAULT) {
-    if (!(event->bstate & BUTTON1_PRESSED)) return;
-    Panel* p = &app->screen->panels[app->screen->current_panel];
-    InputState* input = p->input;
-    if (input) {
-      input->len = 0;
-      input->cursor = 0;
-      input->buffer[0] = '\0';
-      input->pending_parent_id = -1;
-    }
-    if (app->notes && app->notes->count > 0)
-      app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
-    p->mode = DEFAULT;
-    noecho();
-    curs_set(0);
-    app->user_input = -1;
-    app->last_input = -1;
-    move(LINES - 1, 0);
-    clrtoeol();
-    refresh();
-    return;
+ErrorType HandleMouseEvent(AppData* app, MEVENT* event) {
+  ErrorType status = NO_ERROR;
+  if (app->screen->panels[app->screen->current_panel].mode != DEFAULT) {
+    handleMouseCancelEdit(app, event);
+    return status;
   }
-
-  /* --- DEFAULT mode below --- */
-
-  /* Popup active: filter mouse to popup only */
   if (app->popup_dialog) {
-    bool inside_popup = false;
-    { /* scope for pos/size */
-      Vector2D pos = app->popup_dialog->position;
-      Dimensions size = app->popup_dialog->size;
-      inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
-                      event->y >= pos.y && event->y < pos.y + size.height);
-    }
-    /* Click outside popup closes it */
-    if ((event->bstate & BUTTON1_PRESSED) && !inside_popup) {
-      ClosePopup(app);
-      return;
-    }
-    /* Inside popup: hover updates selection, click executes action */
-    if (inside_popup) {
-      for (int i = 0; i < app->click_region_count; i++) {
-        ClickRegion* r = &app->click_regions[i];
-        if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
-        if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
-        if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
-            r->item_index < app->popup_dialog->menu.item_count) {
-          if (event->bstate & REPORT_MOUSE_POSITION) {
-            app->popup_dialog->menu.selected_item = r->item_index;
-          } else if (event->bstate & BUTTON1_PRESSED) {
-            app->popup_dialog->menu.selected_item = r->item_index;
-            ExecuteMenuAction(app);
-          }
-        }
-        break;
-      }
-    }
+    handleMousePopup(app, event);
+    return status;
+  }
+  handleMousePanelSwitch(app, event);
+  handleMouseNotes(app, event);
+  handleMousePanel(app, event);
+  return status;
+}
+
+static void handleMouseCancelEdit(AppData* app, MEVENT* event) {
+  if (!(event->bstate & BUTTON1_PRESSED)) return;
+  Panel* p = &app->screen->panels[app->screen->current_panel];
+  InputState* input = p->input;
+  if (input) {
+    input->len = 0;
+    input->cursor = 0;
+    input->buffer[0] = '\0';
+    input->pending_parent_id = -1;
+  }
+  if (app->notes && app->notes->count > 0)
+    app->notes->current_id = app->notes->items[app->notes->count - 1]->id;
+  p->mode = DEFAULT;
+  noecho();
+  curs_set(0);
+  app->user_input = -1;
+  app->last_input = -1;
+  move(LINES - 1, 0);
+  clrtoeol();
+  refresh();
+}
+
+static void handleMousePopup(AppData* app, MEVENT* event) {
+  bool inside_popup = false;
+  {
+    Vector2D pos = app->popup_dialog->position;
+    Dimensions size = app->popup_dialog->size;
+    inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
+                    event->y >= pos.y && event->y < pos.y + size.height);
+  }
+  if ((event->bstate & BUTTON1_PRESSED) && !inside_popup) {
+    ClosePopup(app);
     return;
   }
+  if (inside_popup) {
+    for (int i = 0; i < app->click_region_count; i++) {
+      ClickRegion* r = &app->click_regions[i];
+      if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height)
+        continue;
+      if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
+          r->item_index < app->popup_dialog->menu.item_count) {
+        if (event->bstate & REPORT_MOUSE_POSITION)
+          app->popup_dialog->menu.selected_item = r->item_index;
+        else if (event->bstate & BUTTON1_PRESSED) {
+          app->popup_dialog->menu.selected_item = r->item_index;
+          ExecuteMenuAction(app);
+        }
+      }
+      break;
+    }
+  }
+}
 
-  /* Switch panel on any mouse event (move or click) */
+static void handleMousePanelSwitch(AppData* app, MEVENT* event) {
   for (int i = 0; i < MAX_PANELS; i++) {
     Panel* p = &app->screen->panels[i];
     if (p->visible && i != app->screen->current_panel &&
@@ -245,8 +249,26 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
       break;
     }
   }
+}
 
-  /* Drag move: reorder note while button is held (check before hover) */
+static void handleMouseNotes(AppData* app, MEVENT* event) {
+  bool b1_press = event->bstate & BUTTON1_PRESSED;
+  bool b1_release = event->bstate & BUTTON1_RELEASED;
+
+  int hit_note_id = -1;
+  if (app->notes) {
+    for (int i = 0; i < app->click_region_count; i++) {
+      ClickRegion* r = &app->click_regions[i];
+      if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height)
+        continue;
+      if (r->type == REGION_NOTE_ITEM && r->note_id >= 0) {
+        hit_note_id = r->note_id;
+        break;
+      }
+    }
+  }
+
   if (app->notes && app->notes->drag_note_id >= 0 &&
       (event->bstate & REPORT_MOUSE_POSITION)) {
     if (event->y <= app->notes->drag_start_y - 1) {
@@ -263,12 +285,44 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
     return;
   }
 
-  /* Hover: update menu/popup/note selection (no button held) */
-  if (is_hover) {
+  if ((event->bstate & REPORT_MOUSE_POSITION) && !b1_press &&
+      hit_note_id >= 0) {
+    app->notes->current_id = hit_note_id;
+    return;
+  }
+
+  if (b1_press && hit_note_id >= 0) {
+    app->notes->current_id = hit_note_id;
+    app->notes->drag_note_id = hit_note_id;
+    app->notes->drag_start_y = event->y;
+    app->notes->drag_moved = false;
+    return;
+  }
+
+  if (b1_release && app->notes) {
+    app->notes->is_move_mode = false;
+    if (!app->notes->drag_moved) {
+      int target_id = (app->notes->drag_note_id >= 0) ? app->notes->drag_note_id
+                                                      : hit_note_id;
+      if (target_id >= 0) {
+        app->notes->current_id = target_id;
+        ToggleTask(app->notes);
+      }
+    }
+    app->notes->drag_note_id = -1;
+    app->notes->drag_moved = false;
+  }
+}
+
+static void handleMousePanel(AppData* app, MEVENT* event) {
+  bool b1_press = event->bstate & BUTTON1_PRESSED;
+
+  if ((event->bstate & REPORT_MOUSE_POSITION) && !b1_press) {
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
       if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
-      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height)
+        continue;
 
       if (r->type == REGION_MENU_ITEM && r->menu_index >= 0 &&
           r->menu_index < MAX_MENUS &&
@@ -276,22 +330,19 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
         app->current_menu = r->menu_index;
         app->menus[r->menu_index]->selected_item = r->item_index;
       } else if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
-                 r->item_index < app->popup_dialog->menu.item_count) {
+                 r->item_index < app->popup_dialog->menu.item_count)
         app->popup_dialog->menu.selected_item = r->item_index;
-      } else if (r->type == REGION_NOTE_ITEM && app->notes && r->note_id >= 0) {
-        app->notes->current_id = r->note_id;
-      }
       break;
     }
     return;
   }
 
-  /* BUTTON1_PRESSED: execute action for non-note regions, start drag for notes */
   if (b1_press) {
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
       if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
-      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
+      if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height)
+        continue;
 
       if (r->type == REGION_DIRECT) {
         if (app->notes) {
@@ -317,33 +368,17 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
         }
         app->popup_dialog->menu.selected_item = r->item_index;
         ExecuteMenuAction(app);
-      } else if (r->type == REGION_NOTE_ITEM && app->notes && r->note_id >= 0) {
-        /* Start drag tracking (don't toggle yet — wait for release) */
-        app->notes->current_id = r->note_id;
-        app->notes->drag_note_id = r->note_id;
-        app->notes->drag_start_y = event->y;
-        app->notes->drag_moved = false;
       }
       break;
     }
-    return;
-  }
-
-  /* BUTTON1_RELEASED: end drag or execute click on note */
-  if (b1_release && app->notes && app->notes->drag_note_id >= 0) {
-    app->notes->is_move_mode = false;
-    if (app->notes->drag_moved) {
-      /* Was a drag — just finish, no toggle */
-    } else {
-      /* Was a click without drag — toggle task */
-      app->notes->current_id = app->notes->drag_note_id;
-      ToggleTask(app->notes);
-    }
-    app->notes->drag_note_id = -1;
-    app->notes->drag_moved = false;
-    return;
   }
 }
+
+/**
+ * ---------------------------------------------------------------------------
+ * Keyboard Handlers
+ * ---------------------------------------------------------------------------
+ */
 
 /**
  * Handle input in DEFAULT mode (menu navigation, pomodoro control).
