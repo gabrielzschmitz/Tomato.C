@@ -206,6 +206,9 @@ static void handleMouseCancelEdit(AppData* app, MEVENT* event) {
 }
 
 static void handleMousePopup(AppData* app, MEVENT* event) {
+  bool is_click = (event->bstate == BUTTON1_PRESSED ||
+                   event->bstate == BUTTON1_RELEASED);
+
   bool inside_popup = false;
   {
     Vector2D pos = app->popup_dialog->position;
@@ -213,7 +216,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
                     event->y >= pos.y && event->y < pos.y + size.height);
   }
-  if ((event->bstate & BUTTON1_PRESSED) && !inside_popup) {
+  if (is_click && !inside_popup) {
     ClosePopup(app);
     return;
   }
@@ -227,7 +230,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           r->item_index < app->popup_dialog->menu.item_count) {
         if (event->bstate & REPORT_MOUSE_POSITION)
           app->popup_dialog->menu.selected_item = r->item_index;
-        else if (event->bstate & BUTTON1_PRESSED) {
+        else if (is_click) {
           app->popup_dialog->menu.selected_item = r->item_index;
           ExecuteMenuAction(app);
         }
@@ -1146,6 +1149,35 @@ void ChangeSelectedItemRight(AppData* app) {
     flushinp();
   } else
     SelectNextItem(app);
+}
+
+/**
+ * Continue a previous unfinished pomodoro session.
+ * Resumes the saved scene and hides the menu.
+ * @param app Pointer to the application data
+ */
+void ContinuePreviousSession(AppData* app) {
+  ExecuteHistory(app->screen->panels[0].scene_history,
+                 app->pomodoro_data.current_step);
+  app->screen->panels[0].menu_index = -1;
+}
+
+/**
+ * Abandon a previous unfinished pomodoro session.
+ * Resets pomodoro data to defaults and removes the
+ * uncompleted log entry so the popup won't reappear.
+ * @param app Pointer to the application data
+ */
+void AbandonPreviousSession(AppData* app) {
+  app->pomodoro_data.current_step = MAIN_MENU;
+  app->pomodoro_data.current_cycle = 0;
+  app->pomodoro_data.current_step_time = 0;
+  app->pomodoro_data.total_elapsed = 0;
+  app->pomodoro_data.last_step_time = -1;
+  app->pomodoro_data.status = 0;
+  if (app->pomodoro_data.session_index > 0)
+    RemoveUncompletedEntries(POMODORO_LOG, app->pomodoro_data.session_index);
+  app->pomodoro_data.session_index = 0;
 }
 
 /**

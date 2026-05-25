@@ -672,17 +672,28 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
 FloatingDialog* CreateCenterFloatingDialog(Screen* screen, Menu menu,
                                            const char* message, Border border) {
   const int padding = 4;
-  const int msg_len = strlen(message);
-  int menu_width = 0;
+  int msg_lines = 1, longest_line = 0, current_line_len = 0;
 
+  for (const char* p = message; *p; p++) {
+    if (*p == '\n') {
+      msg_lines++;
+      longest_line = Max(longest_line, current_line_len);
+      current_line_len = 0;
+    } else {
+      current_line_len++;
+    }
+  }
+  longest_line = Max(longest_line, current_line_len);
+
+  int menu_width = 0;
   for (int i = 0; i < menu.item_count; i++) {
     int label_len = strlen(menu.items[i].label);
     menu_width = Max(menu_width, label_len);
     menu_width += padding;
   }
 
-  int width = Max(msg_len, menu_width) + padding;
-  int height = menu.item_count + padding;
+  int width = Max(longest_line, menu_width) + padding;
+  int height = menu.item_count + padding + (msg_lines - 1);
 
   Vector2D position = {.x = (screen->size.width - width) / 2,
                        .y = (screen->size.height - height) / 2};
@@ -753,13 +764,21 @@ void RenderFloatingDialog(AppData* app, FloatingDialog* dialog) {
   for (int i = 1; i < height - 1; i++)
     for (int j = 1; j < width - 1; j++) mvprintw(y + i, x + j, " ");
 
-  /* Print message */
+  /* Print message (supports multi-line with \n) */
   int msg_x = x + 2;
   int msg_y = y + 1;
-  mvprintw(msg_y, msg_x, "%s", dialog->message);
+  int msg_lines = 0;
+  const char* msg = dialog->message;
+  while (*msg) {
+    const char* nl = strchr(msg, '\n');
+    int len = nl ? (int)(nl - msg) : (int)strlen(msg);
+    mvprintw(msg_y + msg_lines, msg_x, "%.*s", len, msg);
+    msg_lines++;
+    msg = nl ? nl + 1 : msg + len;
+  }
 
   /* Render menu */
-  Vector2D menu_offset = {x, y + 3};
+  Vector2D menu_offset = {x, y + msg_lines + 2};
   int menu_spacing = 4;
   printMenuSideBySide(app, &dialog->menu, menu_offset, menu_spacing, width);
 }
@@ -907,6 +926,48 @@ void RenderSkipConfirmation(AppData* app) {
 
   UpdateFloatingDialog(app->popup_dialog, app->screen);
   RenderFloatingDialog(app, app->popup_dialog);
+}
+
+/**
+ * Create a welcome popup dialog for first-time users.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateWelcomeDialog(AppData* app) {
+  const char* message =
+    "Welcome to Tomato.C!\n"
+    "A terminal pomodoro timer.\n"
+    "Press Enter to begin.";
+  MenuItem items[] = {{"Get Started", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "[",
+               .select_style_right = "]",
+               .item_count = 1};
+  return CreateCenterFloatingDialog(app->screen, menu, message, InitBorder());
+}
+
+/**
+ * Create a continue/cancel popup dialog for unfinished sessions.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateContinueDialog(AppData* app) {
+  const char* message =
+    "Unfinished session detected.\n"
+    "Continue where you left off?";
+  MenuItem items[] = {{"Continue", ContinuePreviousSession},
+                      {"Cancel", AbandonPreviousSession}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "[",
+               .select_style_right = "]",
+               .item_count = 2};
+  return CreateCenterFloatingDialog(app->screen, menu, message, InitBorder());
 }
 
 /* ---------------------------------------------------------------------------

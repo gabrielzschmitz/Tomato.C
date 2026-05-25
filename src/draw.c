@@ -305,6 +305,10 @@ static void renderDialogPopups(AppData* app) {
             app->popup_dialog->menu.items[0].action == ResetPomodoroCycle) &&
            (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
+  else {
+    UpdateFloatingDialog(app->popup_dialog, app->screen);
+    RenderFloatingDialog(app, app->popup_dialog);
+  }
 }
 
 /**

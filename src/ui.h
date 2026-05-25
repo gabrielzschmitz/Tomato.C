@@ -364,6 +364,20 @@ void RenderResetMenu(AppData* app);
  */
 void RenderSkipConfirmation(AppData* app);
 
+/**
+ * Create a welcome popup dialog for first-time users.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateWelcomeDialog(AppData* app);
+
+/**
+ * Create a continue/cancel popup dialog for unfinished sessions.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateContinueDialog(AppData* app);
+
 /* ---------------------------------------------------------------------------
  * Pomodoro
  * --------------------------------------------------------------------------- */

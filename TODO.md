@@ -57,6 +57,11 @@ extensible, terminal-based Pomodoro timer written in C.
 ---
 
 ## 🚧 In Progress
+### 👋 User Interface
+- [X] Mouse interaction
+- [ ] Welcome screen
+- [ ] Continue screen
+
 ### 🧩 Extra Features
 - [ ] White noise playback for focus sessions
 - [ ] Work history log (git-style commits)
@@ -64,10 +69,6 @@ extensible, terminal-based Pomodoro timer written in C.
 ---
 
 ## 🗓️ Planned
-
-### 👋 User Interface
-- [ ] Welcome screen
-- [ ] Mouse interaction
 
 ### ⚙️ Configuration
 - [ ] Move configuration from compiled to runtime paradigma

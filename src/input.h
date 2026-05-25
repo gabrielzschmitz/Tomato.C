@@ -408,6 +408,21 @@ void ExecuteMenuAction(AppData* app);
 void ClosePopup(AppData* app);
 
 /**
+ * Continue a previous unfinished pomodoro session.
+ * Resumes the saved scene and hides the menu.
+ * @param app Pointer to the application data
+ */
+void ContinuePreviousSession(AppData* app);
+
+/**
+ * Abandon a previous unfinished pomodoro session.
+ * Resets pomodoro data to defaults and removes the
+ * uncompleted log entry so the popup won't reappear.
+ * @param app Pointer to the application data
+ */
+void AbandonPreviousSession(AppData* app);
+
+/**
  * Navigate popup left/up (previous item).
  * @param app Pointer to the application data
  */

@@ -159,6 +159,8 @@ ErrorType InitScreen(void) {
   nodelay(stdscr, TRUE);
   /* Enable keypad mode for extended keyboard input */
   keypad(stdscr, TRUE);
+  /* Discard any stale terminal events from before ncurses init */
+  flushinp();
   return NO_ERROR;
 }
 
@@ -289,8 +291,8 @@ static ErrorType initAnimations(AppData* app) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 static ErrorType initPomodoroData(AppData* app) {
-  bool pomodoro_loaded = false;
-  int loaded_status = -1;
+  bool session_loaded = false;
+  bool log_had_data = false;
 
   if (WORK_LOG) {
     FILE* file = fopen(POMODORO_LOG, "rb");
@@ -299,29 +301,24 @@ static ErrorType initPomodoroData(AppData* app) {
       long size = ftell(file);
       fclose(file);
       if (size > 0) {
+        log_had_data = true;
         if (LoadPomodoro(POMODORO_LOG, &app->pomodoro_data) == NO_ERROR) {
-          loaded_status = app->pomodoro_data.status;
-          if (loaded_status == 0) {
+          if (app->pomodoro_data.status == 0) {
             app->pomodoro_data.current_step = MAIN_MENU;
             app->pomodoro_data.current_cycle = 0;
             app->pomodoro_data.current_step_time = 0;
             app->pomodoro_data.total_elapsed = 0;
             app->pomodoro_data.session_index = 0;
-          } else if (loaded_status == 1) {
+          } else if (app->pomodoro_data.status == 1) {
             if (app->pomodoro_data.current_step == WORK_TIME ||
                 app->pomodoro_data.current_step == SHORT_PAUSE ||
                 app->pomodoro_data.current_step == LONG_PAUSE) {
               app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-              pomodoro_loaded = true;
+              session_loaded = true;
               app->pomodoro_data.last_step_time = -1;
-              app->pomodoro_data.session_index =
-                app->pomodoro_data.session_index > 0
-                  ? app->pomodoro_data.session_index
-                  : 1;
-              ExecuteHistory(app->screen->panels[0].scene_history,
-                             app->pomodoro_data.current_step);
-              app->screen->panels[0].menu_index = -1;
-              return NO_ERROR;
+              if (app->pomodoro_data.session_index == 0)
+                app->pomodoro_data.session_index = 1;
+              app->popup_dialog = CreateContinueDialog(app);
             }
           }
         }
@@ -329,7 +326,10 @@ static ErrorType initPomodoroData(AppData* app) {
     }
   }
 
-  if (!pomodoro_loaded) {
+  /* Discard any stale input before showing popups */
+  flushinp();
+
+  if (!session_loaded) {
     if (DEBUG)
       app->pomodoro_data.total_cycles = 2;
     else
@@ -344,6 +344,9 @@ static ErrorType initPomodoroData(AppData* app) {
     app->pomodoro_data.total_elapsed = 0;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     app->pomodoro_data.session_index = 0;
+
+    if (!log_had_data)
+      app->popup_dialog = CreateWelcomeDialog(app);
   }
 
   return NO_ERROR;
