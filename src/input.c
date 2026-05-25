@@ -206,8 +206,7 @@ static void handleMouseCancelEdit(AppData* app, MEVENT* event) {
 }
 
 static void handleMousePopup(AppData* app, MEVENT* event) {
-  bool is_click = (event->bstate == BUTTON1_PRESSED ||
-                   event->bstate == BUTTON1_RELEASED);
+  bool is_click = (event->bstate == BUTTON1_PRESSED);
 
   bool inside_popup = false;
   {
@@ -229,21 +228,28 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
         def->update(app, def);
       }
       if (is_click) {
+        def->hovered = -1;
         for (int i = 0; i < app->click_region_count; i++) {
           ClickRegion* r = &app->click_regions[i];
           if (r->type != REGION_WELCOME_NAV) continue;
           if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
               event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
-            if (r->item_index == 0 && d->currentSlide > 0)
+            if (r->item_index == 0 && d->currentSlide > 0) {
               d->currentSlide--;
-            else if (r->item_index == 1 &&
-                     d->currentSlide < WELCOME_SLIDE_COUNT - 1)
+            } else if (r->item_index == 1 &&
+                     d->currentSlide < WELCOME_SLIDE_COUNT - 1) {
               d->currentSlide++;
-            else if (r->item_index == 2 || r->item_index == 3)
+            } else if (r->item_index == 2 || r->item_index == 3) {
               ClosePopup(app);
+            }
             break;
           }
         }
+      }
+      if (app->popup_dialog && app->popup_dialog->is_welcome &&
+          (is_click || event->bstate == BUTTON1_RELEASED)) {
+        def = d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
+        def->hovered = -1;
       }
       return;
     }
