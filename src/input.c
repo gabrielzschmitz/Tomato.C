@@ -198,6 +198,41 @@ void HandleMouseEvent(AppData* app, MEVENT* event) {
 
   /* --- DEFAULT mode below --- */
 
+  /* Popup active: filter mouse to popup only */
+  if (app->popup_dialog) {
+    bool inside_popup = false;
+    { /* scope for pos/size */
+      Vector2D pos = app->popup_dialog->position;
+      Dimensions size = app->popup_dialog->size;
+      inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
+                      event->y >= pos.y && event->y < pos.y + size.height);
+    }
+    /* Click outside popup closes it */
+    if ((event->bstate & BUTTON1_PRESSED) && !inside_popup) {
+      ClosePopup(app);
+      return;
+    }
+    /* Inside popup: hover updates selection, click executes action */
+    if (inside_popup) {
+      for (int i = 0; i < app->click_region_count; i++) {
+        ClickRegion* r = &app->click_regions[i];
+        if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
+        if (event->y < r->pos.y || event->y >= r->pos.y + r->size.height) continue;
+        if (r->type == REGION_POPUP_ITEM && app->popup_dialog &&
+            r->item_index < app->popup_dialog->menu.item_count) {
+          if (event->bstate & REPORT_MOUSE_POSITION) {
+            app->popup_dialog->menu.selected_item = r->item_index;
+          } else if (event->bstate & BUTTON1_PRESSED) {
+            app->popup_dialog->menu.selected_item = r->item_index;
+            ExecuteMenuAction(app);
+          }
+        }
+        break;
+      }
+    }
+    return;
+  }
+
   /* Switch panel on any mouse event (move or click) */
   for (int i = 0; i < MAX_PANELS; i++) {
     Panel* p = &app->screen->panels[i];
