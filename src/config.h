@@ -232,6 +232,17 @@ static const KeyFunction keys[] = {
   {CTRLR, OpenResetMenu, DEFAULT, POMODORO_SCENES},
   {'q', QuitApp, DEFAULT, ALL_SCENES},
   {ESC, QuitApp, DEFAULT, ALL_SCENES},
+
+  /* Slide Navigation */
+  {KEY_LEFT, GoPrevSlide, DEFAULT, ALL_SCENES},
+  {'h', GoPrevSlide, DEFAULT, ALL_SCENES},
+  {KEY_RIGHT, GoNextSlide, DEFAULT, ALL_SCENES},
+  {'l', GoNextSlide, DEFAULT, ALL_SCENES},
+  {ENTER, ClosePopup, DEFAULT, ALL_SCENES},
+  {'\r', ClosePopup, DEFAULT, ALL_SCENES},
+  {KEY_ENTER, ClosePopup, DEFAULT, ALL_SCENES},
+  {'q', ClosePopup, DEFAULT, ALL_SCENES},
+  {ESC, ClosePopup, DEFAULT, ALL_SCENES},
 };
 
 #endif /* CONFIG_H_ */

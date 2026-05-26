@@ -223,7 +223,8 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     if (app->popup_dialog->is_welcome) {
       FloatingDialog* d = app->popup_dialog;
       int icon_type = GetConfigIconType();
-      SlideDef* def = d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
+      SlideDef* def =
+        d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
       if (event->bstate & REPORT_MOUSE_POSITION) {
         def->update(app, def);
       }
@@ -234,14 +235,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           if (r->type != REGION_WELCOME_NAV) continue;
           if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
               event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
-            if (r->item_index == 0 && d->currentSlide > 0) {
-              d->currentSlide--;
-            } else if (r->item_index == 1 &&
-                     d->currentSlide < WELCOME_SLIDE_COUNT - 1) {
-              d->currentSlide++;
-            } else if (r->item_index == 2 || r->item_index == 3) {
-              ClosePopup(app);
-            }
+            if (r->action) r->action(app);
             break;
           }
         }
@@ -496,20 +490,17 @@ ErrorType HandleVisualMode(AppData* app, int key) {
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
 
-  /* Welcome screen navigation */
+  /* Welcome screen navigation — dispatch via keybinding config */
   if (app->popup_dialog->is_welcome) {
-    FloatingDialog* d = app->popup_dialog;
-    if (key == KEY_LEFT || key == 'h') {
-      if (d->currentSlide > 0) d->currentSlide--;
+    if (IsKeyAssignedToAction(key, GoPrevSlide)) {
+      GoPrevSlide(app);
       return true;
     }
-    if (key == KEY_RIGHT || key == 'l' || key == ' ') {
-      if (d->currentSlide < WELCOME_SLIDE_COUNT - 1)
-        d->currentSlide++;
+    if (IsKeyAssignedToAction(key, GoNextSlide)) {
+      GoNextSlide(app);
       return true;
     }
-    if (key == ENTER || key == '\r' || key == KEY_ENTER ||
-        key == 'q' || key == 27) {
+    if (IsKeyAssignedToAction(key, ClosePopup)) {
       ClosePopup(app);
       return true;
     }
@@ -1177,6 +1168,24 @@ void ClosePopup(AppData* app) {
   if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
 
   app->popup_dialog = NULL;
+}
+
+/**
+ * Navigate to the previous slide in a welcome dialog.
+ * @param app Pointer to the application data
+ */
+void GoPrevSlide(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (d && d->currentSlide > 0) d->currentSlide--;
+}
+
+/**
+ * Navigate to the next slide in a welcome dialog.
+ * @param app Pointer to the application data
+ */
+void GoNextSlide(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (d && d->currentSlide < WELCOME_SLIDE_COUNT - 1) d->currentSlide++;
 }
 
 /**

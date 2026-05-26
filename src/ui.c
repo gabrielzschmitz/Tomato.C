@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Suppress -Wmissing-field-initializers for lineProto arrays where
+   trailing x field defaults to 0 (valid per C99 zero-initialization). */
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 #include "config.h"
 #include "error.h"
 #include "init.h"
@@ -52,11 +56,9 @@ static SlideDef* buildSlide(const lineProto* protos, int w, int h,
 static void welcomeRender(AppData* app, SlideDef* def);
 static void welcomeUpdate(AppData* app, SlideDef* def);
 static void renderSlideBox(int x, int y, int w, int h);
-static void renderSlideProgress(int x, int y, int w, int slide_idx,
-                                int icon_type);
 static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines);
-static void renderSlideControls(AppData* app, int x, int y, int h,
-                                int slide_idx, SlideDef* def);
+static SlideProgress* slideProgressDup(const SlideProgress* p);
+static SlideControls* slideControlsDup(const ControlButton* btns, int count);
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
 static void freePanel(Panel* panel);
@@ -1239,8 +1241,24 @@ SlideDef** BuildWelcomeSlides(void) {
   static const struct {
     const lineProto* protos;
     int h;
+    int ctrl_set; /* 0=first, 1=middle, 2=last */
   } slideData[WELCOME_SLIDE_COUNT] = {
-    {s0, 14}, {s1, 19}, {s2, 18}, {s3, 24}, {s4, 12},
+    {s0, 14, 0}, {s1, 19, 1}, {s2, 18, 1}, {s3, 24, 1}, {s4, 12, 2},
+  };
+
+  const SlideProgress prog = {"Welcome", "●", "○", WELCOME_SLIDE_COUNT, 0};
+
+  const ControlButton first_btns[] = {
+    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
+    {"[Close]", ALIGN_SLIDE_CENTER, ClosePopup},
+  };
+  const ControlButton mid_btns[] = {
+    {"<  Prev", ALIGN_SLIDE_LEFT, GoPrevSlide},
+    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
+    {"[Close]", ALIGN_SLIDE_CENTER, ClosePopup},
+  };
+  const ControlButton last_btns[] = {
+    {"[ Get Started ]", ALIGN_SLIDE_CENTER, ClosePopup},
   };
 
   int total = 3 * WELCOME_SLIDE_COUNT;
@@ -1255,6 +1273,20 @@ SlideDef** BuildWelcomeSlides(void) {
       if (!slides[idx]) {
         FreeWelcomeSlides(slides, total);
         return NULL;
+      }
+      slides[idx]->render_progress = SlideProgressRender;
+      slides[idx]->progress = slideProgressDup(&prog);
+      slides[idx]->render_controls = SlideControlsRender;
+      switch (slideData[si].ctrl_set) {
+        case 0:
+          slides[idx]->controls = slideControlsDup(first_btns, 2);
+          break;
+        case 1:
+          slides[idx]->controls = slideControlsDup(mid_btns, 3);
+          break;
+        case 2:
+          slides[idx]->controls = slideControlsDup(last_btns, 1);
+          break;
       }
     }
   }
@@ -1274,6 +1306,11 @@ void FreeWelcomeSlides(SlideDef** slides, int count) {
       if (slides[i]->lines) {
         for (SlideLine* l = slides[i]->lines; l->text; l++) free(l->text);
         free(slides[i]->lines);
+      }
+      free(slides[i]->progress);
+      if (slides[i]->controls) {
+        free(slides[i]->controls->buttons);
+        free(slides[i]->controls);
       }
       free(slides[i]);
     }
@@ -1508,8 +1545,6 @@ static SlideDef* buildSlide(const lineProto* protos, int w, int h,
  */
 static void welcomeRender(AppData* app, SlideDef* def) {
   FloatingDialog* d = app->popup_dialog;
-  int slide_idx = d->currentSlide;
-  int icon_type = GetConfigIconType();
   int w = def->size.width;
   int h = def->size.height;
 
@@ -1526,9 +1561,11 @@ static void welcomeRender(AppData* app, SlideDef* def) {
 
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   renderSlideBox(x, y, w, h);
-  renderSlideProgress(x, y, w, slide_idx, icon_type);
+  if (def->render_progress && def->progress)
+    def->render_progress(app, x, y + 1, w, def, def->progress);
   renderSlideContent(x, y, w, h, def->lines);
-  renderSlideControls(app, x, y, h, slide_idx, def);
+  if (def->render_controls && def->controls)
+    def->render_controls(app, x, y + h - 2, w, def, def->controls);
 }
 
 /**
@@ -1585,30 +1622,100 @@ static void renderSlideBox(int x, int y, int w, int h) {
 }
 
 /**
- * Draw the progress indicator at the top of the dialog.
- * Shows "Welcome 1/5" in ASCII mode, or filled/empty dots in UTF-8 mode.
- * @param x         X position of the dialog
- * @param y         Y position of the dialog
- * @param w         Width of the dialog (unused, derived from SLIDE_W)
- * @param slide_idx Zero-based index of the current slide
- * @param icon_type Icon-type (ASCII shows numeric, otherwise dots)
+ * Duplicate a SlideProgress struct onto the heap.
+ * @param p Source progress parameters
+ * @return Heap-allocated copy, or NULL on failure
  */
-static void renderSlideProgress(int x, int y, int w, int slide_idx,
-                                int icon_type) {
+static SlideProgress* slideProgressDup(const SlideProgress* p) {
+  SlideProgress* d = (SlideProgress*)malloc(sizeof(SlideProgress));
+  if (d) *d = *p;
+  return d;
+}
+
+/**
+ * Duplicate a SlideControls struct (including buttons array) onto the heap.
+ * @param btns Source buttons array
+ * @param count Number of buttons
+ * @return Heap-allocated SlideControls with copied buttons, or NULL on failure
+ */
+static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
+  SlideControls* c = (SlideControls*)malloc(sizeof(SlideControls));
+  if (!c) return NULL;
+  c->buttons = (ControlButton*)malloc(count * sizeof(ControlButton));
+  if (!c->buttons) {
+    free(c);
+    return NULL;
+  }
+  memcpy(c->buttons, btns, count * sizeof(ControlButton));
+  c->count = count;
+  return c;
+}
+
+/**
+ * Default progress renderer for slides.
+ * Draws the title with filled/empty dots ("Welcome ●●○○○") in
+ * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
+ * Current slide index is obtained from app->popup_dialog->currentSlide.
+ */
+void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideProgress* params) {
+  (void)def;
   (void)w;
+  int slide_idx = app->popup_dialog->currentSlide;
+  int icon_type = GetConfigIconType();
   char buf[64];
-  if (icon_type == ASCII)
-    snprintf(buf, sizeof(buf), "Welcome %d/%d", slide_idx + 1,
-             WELCOME_SLIDE_COUNT);
+
+  if (icon_type == ASCII || !params->icon_on[0] || !params->icon_off[0])
+    snprintf(buf, sizeof(buf), "%s %d/%d", params->title, slide_idx + 1,
+             params->total);
   else {
     char* p = buf;
-    p += sprintf(p, "Welcome ");
-    for (int i = 0; i < WELCOME_SLIDE_COUNT; i++)
-      p += sprintf(p, "%s", i <= slide_idx ? "●" : "○");
+    p += sprintf(p, "%s ", params->title);
+    for (int i = 0; i < params->total; i++)
+      p +=
+        sprintf(p, "%s", i <= slide_idx ? params->icon_on : params->icon_off);
     *p = '\0';
   }
   int dot_w = utf8DisplayWidth(buf);
-  mvprintw(y + 1, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
+  mvprintw(y, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
+}
+
+/**
+ * Default controls renderer for slides.
+ * Positions each button by its align field:
+ *   LEFT   → x + 2
+ *   CENTER → centered within SLIDE_INNER_W
+ *   RIGHT  → x + SLIDE_W - 2 - text_width
+ * Draws with A_REVERSE when def->hovered matches the button index,
+ * and registers a REGION_WELCOME_NAV click region with the action.
+ */
+void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideControls* params) {
+  (void)w;
+  for (int i = 0; i < params->count; i++) {
+    const ControlButton* btn = &params->buttons[i];
+    int tw = utf8DisplayWidth(btn->text);
+    int bx;
+    switch (btn->align) {
+      case ALIGN_SLIDE_LEFT:
+        bx = x + 2;
+        break;
+      case ALIGN_SLIDE_CENTER:
+        bx = x + 1 + (SLIDE_INNER_W - tw) / 2;
+        break;
+      case ALIGN_SLIDE_RIGHT:
+        bx = x + SLIDE_W - 2 - tw;
+        break;
+      default:
+        bx = x + 2;
+        break;
+    }
+    if (def->hovered == i) attron(A_REVERSE);
+    mvprintw(y, bx, "%s", btn->text);
+    if (def->hovered == i) attroff(A_REVERSE);
+    RegisterClickRegion(app, bx, y, tw, 1, REGION_WELCOME_NAV,
+                        (MenuAction)btn->action, -1, i, 0);
+  }
 }
 
 /**
@@ -1647,79 +1754,5 @@ static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines) {
 
     mvprintw(y + l->y, line_x, "%s", l->text);
     SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  }
-}
-
-/**
- * Draw navigation controls (prev/next/close/get-started) at the bottom of the
- * dialog and register click regions for mouse interaction.
- *
- * For non-last slides: [Close] centered, or [< Prev] / [Next >] on the sides.
- * For the last slide:  [ Get Started ] centered.
- *
- * @param app       Application state (for RegisterClickRegion)
- * @param x         X position of the dialog
- * @param y         Y position of the dialog
- * @param h         Height of the dialog
- * @param slide_idx Zero-based index of the current slide
- * @param def       Slide definition (hovered field controls A_REVERSE highlight)
- */
-static void renderSlideControls(AppData* app, int x, int y, int h,
-                                int slide_idx, SlideDef* def) {
-  int nav_y = y + h - 2;
-  bool is_last = (slide_idx == WELCOME_SLIDE_COUNT - 1);
-  bool is_first = (slide_idx == 0);
-
-  if (is_last) {
-    const char* gs = "[ Get Started ]";
-    int gs_w = utf8DisplayWidth(gs);
-    int gx = x + 1 + (SLIDE_INNER_W - gs_w) / 2;
-    if (def->hovered == 2) attron(A_REVERSE);
-    mvprintw(nav_y, gx, "%s", gs);
-    if (def->hovered == 2) attroff(A_REVERSE);
-    RegisterClickRegion(app, gx, nav_y, gs_w, 1, REGION_WELCOME_NAV, NULL, -1,
-                        2, 0);
-  } else if (is_first) {
-    const char* close = "[Close]";
-    const char* next = "Next  >";
-    int close_w = utf8DisplayWidth(close);
-    int nw = utf8DisplayWidth(next);
-    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
-    int nx = x + SLIDE_W - 2 - nw;
-    if (def->hovered == 3) attron(A_REVERSE);
-    mvprintw(nav_y, cx, "%s", close);
-    if (def->hovered == 3) attroff(A_REVERSE);
-    if (def->hovered == 1) attron(A_REVERSE);
-    mvprintw(nav_y, nx, "%s", next);
-    if (def->hovered == 1) attroff(A_REVERSE);
-    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
-                        -1, 3, 0);
-    RegisterClickRegion(app, nx, nav_y, nw, 1, REGION_WELCOME_NAV, NULL, -1, 1,
-                        0);
-  } else {
-    const char* close = "[Close]";
-    const char* prev = "<  Prev";
-    const char* next = "Next  >";
-    int close_w = utf8DisplayWidth(close);
-    int pw = utf8DisplayWidth(prev);
-    int nw = utf8DisplayWidth(next);
-    int cx = x + 1 + (SLIDE_INNER_W - close_w) / 2;
-    int px = x + 2;
-    int nx = x + SLIDE_W - 2 - nw;
-    if (def->hovered == 3) attron(A_REVERSE);
-    mvprintw(nav_y, cx, "%s", close);
-    if (def->hovered == 3) attroff(A_REVERSE);
-    RegisterClickRegion(app, cx, nav_y, close_w, 1, REGION_WELCOME_NAV, NULL,
-                        -1, 3, 0);
-    if (def->hovered == 0) attron(A_REVERSE);
-    mvprintw(nav_y, px, "%s", prev);
-    if (def->hovered == 0) attroff(A_REVERSE);
-    if (def->hovered == 1) attron(A_REVERSE);
-    mvprintw(nav_y, nx, "%s", next);
-    if (def->hovered == 1) attroff(A_REVERSE);
-    RegisterClickRegion(app, px, nav_y, pw, 1, REGION_WELCOME_NAV, NULL, -1, 0,
-                        0);
-    RegisterClickRegion(app, nx, nav_y, nw, 1, REGION_WELCOME_NAV, NULL, -1, 1,
-                        0);
   }
 }

@@ -31,6 +31,42 @@ typedef enum {
   ALIGN_SLIDE_RIGHT   /**< Right-aligned */
 } SlideAlign;
 
+/** Action function for slide nav controls (prev/next/close). */
+typedef void (*SlideNavAction)(AppData* app);
+
+/**
+ * A single control button in a slide's navigation bar.
+ * Rendered at the position determined by its alignment, executing
+ * action on click.
+ */
+typedef struct {
+  const char* text;       /**< Display text (e.g. "[Close]", "Next  >") */
+  SlideAlign align;       /**< LEFT, CENTER, or RIGHT positioning */
+  SlideNavAction action;  /**< Function to call on click */
+} ControlButton;
+
+/**
+ * Definition of navigation controls for a slide.
+ * Contains an array of at most 3 buttons arranged by alignment.
+ */
+typedef struct {
+  ControlButton* buttons; /**< Array of control buttons */
+  int count;              /**< Number of buttons (0-3) */
+} SlideControls;
+
+/**
+ * Definition of a progress indicator for slides.
+ * Renders a title with either dots ("Welcome ●●○○○") or
+ * counter format ("Welcome 2/5" in ASCII mode).
+ */
+typedef struct {
+  const char* title;   /**< Title prefix (e.g. "Welcome") */
+  const char* icon_on; /**< Filled dot character ("●"); "" for N/M mode */
+  const char* icon_off; /**< Empty dot character ("○"); "" for N/M mode */
+  int total;           /**< Total number of slides */
+  int current;         /**< Metadata only; render reads from dialog at runtime */
+} SlideProgress;
+
 /**
  * A single pre-formatted line in a welcome slide.
  */
@@ -43,9 +79,9 @@ typedef struct {
 } SlideLine;
 
 /**
- * Definition of a single welcome slide.
+ * Definition of a single slide.
  * Contains pre-built lines for one icon type, render/update callbacks,
- * and per-frame hover state.
+ * per-frame hover state, and optional generic progress/controls renderers.
  */
 struct SlideDef {
   SlideLine* lines; /**< NULL-terminated array of pre-formatted lines */
@@ -53,6 +89,12 @@ struct SlideDef {
   void (*render)(AppData* app, SlideDef* def); /**< Render this slide */
   void (*update)(AppData* app, SlideDef* def); /**< Update hover state */
   int hovered; /**< Currently hovered nav control (-1 = none) */
+  void (*render_progress)(AppData* app, int x, int y, int w, SlideDef* def,
+                          SlideProgress* params); /**< Progress renderer */
+  void (*render_controls)(AppData* app, int x, int y, int w, SlideDef* def,
+                          SlideControls* params); /**< Controls renderer */
+  SlideProgress* progress; /**< Progress params (heap-allocated, owned) */
+  SlideControls* controls; /**< Controls params (heap-allocated, owned) */
 };
 
 /**
@@ -460,5 +502,34 @@ SlideDef** BuildWelcomeSlides(void);
  * @param count Number of elements in the array
  */
 void FreeWelcomeSlides(SlideDef** slides, int count);
+
+/**
+ * Default progress renderer for slides.
+ * Draws "title ●●○○○" or "title N/M" (ASCII mode) at (x, y) centered.
+ * Gets current index from app->popup_dialog->currentSlide.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width
+ * @param def    Slide definition (unused)
+ * @param params Progress parameters (title, icons, total)
+ */
+void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideProgress* params);
+
+/**
+ * Default controls renderer for slides.
+ * Positions each button by its align field (LEFT=x+2, CENTER=centered,
+ * RIGHT=x+SLIDE_W-2-text_width), draws with A_REVERSE on hover,
+ * and registers REGION_WELCOME_NAV click regions.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (controls line)
+ * @param w      Slide width
+ * @param def    Slide definition (provides hovered index)
+ * @param params Controls parameters (button array + count)
+ */
+void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideControls* params);
 
 #endif /* UI_H_ */

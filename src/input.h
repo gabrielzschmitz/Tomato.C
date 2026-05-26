@@ -408,6 +408,18 @@ void ExecuteMenuAction(AppData* app);
 void ClosePopup(AppData* app);
 
 /**
+ * Navigate to the previous slide in a welcome dialog.
+ * @param app Pointer to the application data
+ */
+void GoPrevSlide(AppData* app);
+
+/**
+ * Navigate to the next slide in a welcome dialog.
+ * @param app Pointer to the application data
+ */
+void GoNextSlide(AppData* app);
+
+/**
  * Continue a previous unfinished pomodoro session.
  * Resumes the saved scene and hides the menu.
  * @param app Pointer to the application data
