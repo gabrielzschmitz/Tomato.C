@@ -25,6 +25,7 @@ typedef struct {
   int color;        /**< Text color (NO_COLOR for default) */
   SlideAlign align; /**< Alignment: LEFT, CENTER, or RIGHT */
   void (*builder)(char* buf, size_t size, int icon_type, const char* text);
+  int x; /**< Column offset from slide left edge, 0 to use align */
 } lineProto;
 
 /** Sentinel terminator for lineProto arrays. */
@@ -1170,8 +1171,8 @@ SlideDef** BuildWelcomeSlides(void) {
     PROTO_END};
 
   static const lineProto s1[] = {
-    {4, "   ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓  ", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
+    {4, "   ┏━━━━━━━━━━━━━┳", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain},
+    {4, "━━━━━━━━━━━━━━━━━┓  ", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain, 18},
     {5, "   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
      buildPlain},
     {6, "   ┃             ┃                 ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
@@ -1180,8 +1181,19 @@ SlideDef** BuildWelcomeSlides(void) {
     {8, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, buildS1IconTask},
     {9, "   ┃    24:59    ┃ ─ Note          ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
      buildPlain},
-    {10, "   ┗━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━┛  ", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
+    {10, "   ┗━━━━━━━━━━━━━┻", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain},
+    {10, "━━━━━━━━━━━━━━━━━┛  ", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain, 18},
+    /* Red vertical separators for timer panel (overwrite white ┃) */
+    {5, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
+    {5, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
+    {6, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
+    {6, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
+    {7, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
+    {7, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
+    {8, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
+    {8, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
+    {9, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
+    {9, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
     {12, "   • SPACE → switch focus", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
     {13, "   • Responsive terminal layout", NO_COLOR, ALIGN_SLIDE_LEFT,
      buildPlain},
@@ -1482,6 +1494,7 @@ static SlideDef* buildSlide(const lineProto* protos, int w, int h,
     def->lines[idx].text = strdup(buf);
     def->lines[idx].color = p->color;
     def->lines[idx].align = p->align;
+    def->lines[idx].x = p->x;
   }
 
   return def;
@@ -1618,15 +1631,21 @@ static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines) {
 
   for (SlideLine* l = lines; l->text; l++) {
     int display_w = strDisplayWidth(l->text);
-    int pad =
-      (l->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2 : 0;
+    int line_x;
+    if (l->x > 0)
+      line_x = x + 1 + l->x;
+    else
+      line_x =
+        x + 1 +
+        ((l->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2
+                                          : 0);
 
     if (l->color != NO_COLOR)
       SetColor(l->color, NO_COLOR, A_BOLD);
     else
       SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
 
-    mvprintw(y + l->y, x + 1 + pad, "%s", l->text);
+    mvprintw(y + l->y, line_x, "%s", l->text);
     SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   }
 }

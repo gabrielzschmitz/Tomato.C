@@ -39,6 +39,7 @@ typedef struct {
   char* text;       /**< Pre-formatted display text (allocated) */
   int color;        /**< Ncurses color pair, NO_COLOR for default */
   SlideAlign align; /**< Horizontal alignment */
+  int x;            /**< Column offset from slide left edge, 0 to use align */
 } SlideLine;
 
 /**
