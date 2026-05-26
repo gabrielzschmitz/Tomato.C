@@ -40,9 +40,9 @@ typedef void (*SlideNavAction)(AppData* app);
  * action on click.
  */
 typedef struct {
-  const char* text;       /**< Display text (e.g. "[Close]", "Next  >") */
-  SlideAlign align;       /**< LEFT, CENTER, or RIGHT positioning */
-  SlideNavAction action;  /**< Function to call on click */
+  const char* text;      /**< Display text (e.g. "[Close]", "Next  >") */
+  SlideAlign align;      /**< LEFT, CENTER, or RIGHT positioning */
+  SlideNavAction action; /**< Function to call on click */
 } ControlButton;
 
 /**
@@ -60,32 +60,35 @@ typedef struct {
  * counter format ("Welcome 2/5" in ASCII mode).
  */
 typedef struct {
-  const char* title;   /**< Title prefix (e.g. "Welcome") */
-  const char* icon_on; /**< Filled dot character ("●"); "" for N/M mode */
+  const char* title;    /**< Title prefix (e.g. "Welcome") */
+  const char* icon_on;  /**< Filled dot character ("●"); "" for N/M mode */
   const char* icon_off; /**< Empty dot character ("○"); "" for N/M mode */
-  int total;           /**< Total number of slides */
-  int current;         /**< Metadata only; render reads from dialog at runtime */
+  int total;            /**< Total number of slides */
+  int current; /**< Metadata only; render reads from dialog at runtime */
 } SlideProgress;
 
 /**
- * A single pre-formatted line in a welcome slide.
+ * A single formatted text segment in a slide's token stream.
+ * Each token carries its own color, alignment, and optional x-override.
+ * Tokens are linked into a singly-linked list owned by SlideDef.
  */
-typedef struct {
-  int y;            /**< Row offset from slide top (0 = border row) */
-  char* text;       /**< Pre-formatted display text (allocated) */
-  int color;        /**< Ncurses color pair, NO_COLOR for default */
-  SlideAlign align; /**< Horizontal alignment */
-  int x;            /**< Column offset from slide left edge, 0 to use align */
-} SlideLine;
+typedef struct SlideToken {
+  int y;                   /**< Row offset (0 = row 3 in dialog) */
+  char* text;              /**< Allocated text for this segment */
+  int color;               /**< Color 0-15 (<0 = NO_COLOR → white+bold) */
+  SlideAlign align;        /**< Alignment (from \a, persists across \c) */
+  int x;                   /**< Absolute column override (0 = use align) */
+  struct SlideToken* next; /**< Next token (NULL = end) */
+} SlideToken;
 
 /**
  * Definition of a single slide.
- * Contains pre-built lines for one icon type, render/update callbacks,
+ * Contains token stream for one icon type, render/update callbacks,
  * per-frame hover state, and optional generic progress/controls renderers.
  */
 struct SlideDef {
-  SlideLine* lines; /**< NULL-terminated array of pre-formatted lines */
-  Dimensions size;  /**< Slide width and height in columns/rows */
+  SlideToken* tokens; /**< Linked-list head of formatted tokens */
+  Dimensions size;    /**< Slide width and height in columns/rows */
   void (*render)(AppData* app, SlideDef* def); /**< Render this slide */
   void (*update)(AppData* app, SlideDef* def); /**< Update hover state */
   int hovered; /**< Currently hovered nav control (-1 = none) */
@@ -484,7 +487,7 @@ void RenderPomodoroControls(AppData* app, Vector2D pos);
 
 /**
  * ---------------------------------------------------------------------------
- * Welcome Slides
+ * Slides
  * ---------------------------------------------------------------------------
  */
 
@@ -498,6 +501,7 @@ SlideDef** BuildWelcomeSlides(void);
 
 /**
  * Free all memory associated with a welcome slides array.
+ * Walks and frees each slide's token linked list, then the slide array.
  * @param slides Array of SlideDef pointers to free
  * @param count Number of elements in the array
  */
@@ -505,8 +509,9 @@ void FreeWelcomeSlides(SlideDef** slides, int count);
 
 /**
  * Default progress renderer for slides.
- * Draws "title ●●○○○" or "title N/M" (ASCII mode) at (x, y) centered.
- * Gets current index from app->popup_dialog->currentSlide.
+ * Draws the title with filled/empty dots ("Welcome ●●○○○") in
+ * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
+ * Current slide index is obtained from app->popup_dialog->currentSlide.
  * @param app    Application state
  * @param x      Absolute column position (slide left edge)
  * @param y      Absolute row position (progress line)
@@ -519,9 +524,12 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
 
 /**
  * Default controls renderer for slides.
- * Positions each button by its align field (LEFT=x+2, CENTER=centered,
- * RIGHT=x+SLIDE_W-2-text_width), draws with A_REVERSE on hover,
- * and registers REGION_WELCOME_NAV click regions.
+ * Positions each button by its align field:
+ *   LEFT   → x + 2
+ *   CENTER → centered within SLIDE_INNER_W
+ *   RIGHT  → x + SLIDE_W - 2 - text_width
+ * Draws with A_REVERSE when def->hovered matches the button index,
+ * and registers a REGION_WELCOME_NAV click region with the action.
  * @param app    Application state
  * @param x      Absolute column position (slide left edge)
  * @param y      Absolute row position (controls line)

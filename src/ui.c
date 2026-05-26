@@ -5,10 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Suppress -Wmissing-field-initializers for lineProto arrays where
-   trailing x field defaults to 0 (valid per C99 zero-initialization). */
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
 #include "config.h"
 #include "error.h"
 #include "init.h"
@@ -17,46 +13,16 @@
 #include "util.h"
 
 /* PRIVATE UI FUNCTIONS */
-/* Welcome Slides */
-/**
- * Line prototype for building a single slide row.
- * Each entry specifies the row offset, optional static text, color, alignment,
- * and an optional builder callback that produces the final text per icon type.
- */
-typedef struct {
-  int y;            /**< Row offset relative to slide top */
-  const char* text; /**< Static text (passed to builder if non-NULL) */
-  int color;        /**< Text color (NO_COLOR for default) */
-  SlideAlign align; /**< Alignment: LEFT, CENTER, or RIGHT */
-  void (*builder)(char* buf, size_t size, int icon_type, const char* text);
-  int x; /**< Column offset from slide left edge, 0 to use align */
-} lineProto;
-
-/** Sentinel terminator for lineProto arrays. */
-#define PROTO_END {0, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, NULL}
-#define SLIDE_W 41
-#define SLIDE_INNER_W (SLIDE_W - 2)
-static int iconWidth(const char* s);
+/* Slides */
 static int strDisplayWidth(const char* s);
 static int utf8DisplayWidth(const char* s);
-static void padIcon(char* dst, size_t size, const char* icon);
-static void buildPlain(char* buf, size_t size, int icon_type, const char* text);
-static void buildIconWork(char* buf, size_t size, int icon_type,
-                          const char* text);
-static void buildIconNotes(char* buf, size_t size, int icon_type,
-                           const char* text);
-static void buildIconMode(char* buf, size_t size, int icon_type,
-                          const char* text);
-static void buildS1IconTask(char* buf, size_t size, int icon_type,
-                            const char* text);
-static void buildS1IconsControls(char* buf, size_t size, int icon_type,
-                                 const char* text);
-static SlideDef* buildSlide(const lineProto* protos, int w, int h,
-                            int icon_type);
+static SlideToken* parseSlideText(const char* text, int icon_type);
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type);
 static void welcomeRender(AppData* app, SlideDef* def);
 static void welcomeUpdate(AppData* app, SlideDef* def);
 static void renderSlideBox(int x, int y, int w, int h);
-static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines);
+static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
 static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
 /* Screen / Panel */
@@ -1153,9 +1119,12 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
 
 /**
  * ---------------------------------------------------------------------------
- * Welcome Slides
+ * Slides
  * ---------------------------------------------------------------------------
  */
+
+#define SLIDE_W 41
+#define SLIDE_INNER_W (SLIDE_W - 2)
 
 /**
  * Build all welcome slide definitions for all icon types.
@@ -1164,86 +1133,148 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
  * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
  */
 SlideDef** BuildWelcomeSlides(void) {
-  static const lineProto s0[] = {
-    {4, "  Tomato.C", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildIconWork},
-    {6, "Pomodoro + notes in", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
-    {7, "your terminal", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
-    {9, "Stay focused. Stay fast", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
-     buildPlain},
-    PROTO_END};
+  /**
+   * Slide text definitions in token-format with escape sequences.
+   * Three entries per slide: [0]=nerd-icons, [1]=emoji, [2]=ascii.
+   */
 
-  static const lineProto s1[] = {
-    {4, "   ┏━━━━━━━━━━━━━┳", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain},
-    {4, "━━━━━━━━━━━━━━━━━┓  ", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain, 18},
-    {5, "   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {6, "   ┃             ┃                 ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {7, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, buildS1IconsControls},
-    {8, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, buildS1IconTask},
-    {9, "   ┃    24:59    ┃ ─ Note          ┃   ", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {10, "   ┗━━━━━━━━━━━━━┻", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain},
-    {10, "━━━━━━━━━━━━━━━━━┛  ", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain, 18},
-    /* Red vertical separators for timer panel (overwrite white ┃) */
-    {5, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
-    {5, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
-    {6, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
-    {6, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
-    {7, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
-    {7, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
-    {8, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
-    {8, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
-    {9, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 3},
-    {9, "┃", COLOR_RED, ALIGN_SLIDE_LEFT, buildPlain, 17},
-    {12, "   • SPACE → switch focus", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {13, "   • Responsive terminal layout", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {14, "   • Mouse support available", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    PROTO_END};
-  static const lineProto s2[] = {
-    {4, " POMODORO WORKFLOW", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildIconWork},
-    {6, "Work → Break → Work → Long Break", NO_COLOR, ALIGN_SLIDE_CENTER,
-     buildPlain},
-    {8, "   • Pause / resume", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {9, "   • Auto-save sessions", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {10, "   • Notifications + sound", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {11, "   • Continue unfinished timers", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {13, "[p] pause   [s] skip   [Ctrl+r] reset", NO_COLOR, ALIGN_SLIDE_CENTER,
-     buildPlain},
-    PROTO_END};
-  static const lineProto s3[] = {
-    {4, " HIERARCHICAL NOTES", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
-     buildIconNotes},
-    {6, "       • - Plain notes", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {7, "       • [ ] Tasks", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {8, "       • [X] Completed tasks", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {10, "  ──────────────────────", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
-    {11, "  VIM-LIKE EDITING", COLOR_MAGENTA, ALIGN_SLIDE_CENTER,
-     buildIconMode},
-    {13, "       • DEFAULT → manage", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {14, "       • NORMAL  → navigate", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {15, "       • INSERT  → type", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {16, "       • VISUAL  → select", NO_COLOR, ALIGN_SLIDE_LEFT, buildPlain},
-    {18, "   [n/t] add    [u/Ctrl+r] undo/redo", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    {19, "   [e]   edit   [V]        move", NO_COLOR, ALIGN_SLIDE_LEFT,
-     buildPlain},
-    PROTO_END};
-  static const lineProto s4[] = {
-    {4, "Ready to focus?", COLOR_MAGENTA, ALIGN_SLIDE_CENTER, buildPlain},
-    {6, "Start your first cycle", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
-    {7, "and organize your work", NO_COLOR, ALIGN_SLIDE_CENTER, buildPlain},
-    PROTO_END};
+  /* s0 – Title slide */
+  static const char* s0_texts[3] = {
+    /* nerd & emoji: icon placeholder + text */
+    "\\n\\n\\n\\n\\c13\\aC{W}  Tomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
+    "your terminal\\n\\n\\c13\\aCStay focused. Stay fast",
+    "\\n\\n\\n\\n\\c13\\aC{W}  Tomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
+    "your terminal\\n\\n\\c13\\aCStay focused. Stay fast",
+    /* ascii: icon is empty → just extra space */
+    "\\n\\n\\n\\n\\c13\\aC   Tomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
+    "your terminal\\n\\n\\c13\\aCStay focused. Stay fast",
+  };
+
+  /* s1 – Split-panel layout */
+  static const char* s1_texts[3] = {
+    /* nerd (1-col icons: left_pad=5) */
+    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
+    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃      {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n"
+    "\\c16   • SPACE → switch focus\\n"
+    "   • Responsive terminal layout\\n"
+    "   • Mouse support available",
+    /* emoji (2-col icons: left_pad=4) */
+    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
+    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃     {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n"
+    "\\c16   • SPACE → switch focus\\n"
+    "   • Responsive terminal layout\\n"
+    "   • Mouse support available",
+    /* ascii (1-col icons: same padding as nerd) */
+    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
+    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃      {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
+    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n"
+    "\\c16   • SPACE → switch focus\\n"
+    "   • Responsive terminal layout\\n"
+    "   • Mouse support available",
+  };
+
+  /* s2 – Pomodoro workflow */
+  static const char* s2_texts[3] = {
+    "\\n\\n\\n\\n\\c13\\aC{W} POMODORO WORKFLOW\\n\\n\\aC"
+    "Work → Break → Work → Long Break\\n\\n"
+    "\\c16   • Pause / resume\\n"
+    "   • Auto-save sessions\\n"
+    "   • Notifications + sound\\n"
+    "   • Continue unfinished timers\\n\\n\\aC"
+    "[p] pause   [s] skip   [Ctrl+r] reset",
+    "\\n\\n\\n\\n\\c13\\aC{W} POMODORO WORKFLOW\\n\\n\\aC"
+    "Work → Break → Work → Long Break\\n\\n"
+    "\\c16   • Pause / resume\\n"
+    "   • Auto-save sessions\\n"
+    "   • Notifications + sound\\n"
+    "   • Continue unfinished timers\\n\\n\\aC"
+    "[p] pause   [s] skip   [Ctrl+r] reset",
+    "\\n\\n\\n\\n\\c13\\aC  POMODORO WORKFLOW\\n\\n\\aC"
+    "Work → Break → Work → Long Break\\n\\n"
+    "\\c16   • Pause / resume\\n"
+    "   • Auto-save sessions\\n"
+    "   • Notifications + sound\\n"
+    "   • Continue unfinished timers\\n\\n\\aC"
+    "[p] pause   [s] skip   [Ctrl+r] reset",
+  };
+
+  /* s3 – Hierarchical notes / Vim editing */
+  static const char* s3_texts[3] = {
+    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
+    "       • - Plain notes\\n"
+    "       • [ ] Tasks\\n"
+    "       • [X] Completed tasks\\n\\n\\c16"
+    "  ──────────────────────\\n"
+    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
+    "       • DEFAULT → manage\\n"
+    "       • NORMAL  → navigate\\n"
+    "       • INSERT  → type\\n"
+    "       • VISUAL  → select\\n\\n"
+    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
+    "   [e]   edit   [V]        move",
+    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
+    "       • - Plain notes\\n"
+    "       • [ ] Tasks\\n"
+    "       • [X] Completed tasks\\n\\n\\c16"
+    "  ──────────────────────\\n"
+    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
+    "       • DEFAULT → manage\\n"
+    "       • NORMAL  → navigate\\n"
+    "       • INSERT  → type\\n"
+    "       • VISUAL  → select\\n\\n"
+    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
+    "   [e]   edit   [V]        move",
+    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
+    "       • - Plain notes\\n"
+    "       • [ ] Tasks\\n"
+    "       • [X] Completed tasks\\n\\n\\c16"
+    "  ──────────────────────\\n"
+    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
+    "       • DEFAULT → manage\\n"
+    "       • NORMAL  → navigate\\n"
+    "       • INSERT  → type\\n"
+    "       • VISUAL  → select\\n\\n"
+    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
+    "   [e]   edit   [V]        move",
+  };
+
+  /* s4 – Finish */
+  static const char* s4_texts[3] = {
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
+    "Start your first cycle\\n\\aC"
+    "and organize your work",
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
+    "Start your first cycle\\n\\aC"
+    "and organize your work",
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
+    "Start your first cycle\\n\\aC"
+    "and organize your work",
+  };
 
   static const struct {
-    const lineProto* protos;
+    const char* (*texts)[3];
     int h;
-    int ctrl_set; /* 0=first, 1=middle, 2=last */
+    int ctrl_set;
   } slideData[WELCOME_SLIDE_COUNT] = {
-    {s0, 14, 0}, {s1, 19, 1}, {s2, 18, 1}, {s3, 24, 1}, {s4, 12, 2},
+    {&s0_texts, 14, 0}, {&s1_texts, 19, 1}, {&s2_texts, 18, 1},
+    {&s3_texts, 24, 1}, {&s4_texts, 12, 2},
   };
 
   const SlideProgress prog = {"Welcome", "●", "○", WELCOME_SLIDE_COUNT, 0};
@@ -1268,8 +1299,8 @@ SlideDef** BuildWelcomeSlides(void) {
   for (int ic = 0; ic < 3; ic++) {
     for (int si = 0; si < WELCOME_SLIDE_COUNT; si++) {
       int idx = ic * WELCOME_SLIDE_COUNT + si;
-      slides[idx] =
-        buildSlide(slideData[si].protos, SLIDE_W, slideData[si].h, ic);
+      const char* text = (*slideData[si].texts)[ic];
+      slides[idx] = buildSlideFromText(text, SLIDE_W, slideData[si].h, ic);
       if (!slides[idx]) {
         FreeWelcomeSlides(slides, total);
         return NULL;
@@ -1295,17 +1326,21 @@ SlideDef** BuildWelcomeSlides(void) {
 }
 
 /**
- * Free all memory associated with a welcome slide array.
- * @param slides Pointer to the slide array
- * @param count Number of SlideDef pointers in the array
+ * Free all memory associated with a welcome slides array.
+ * Walks and frees each slide's token linked list, then the slide array.
+ * @param slides Array of SlideDef pointers to free
+ * @param count Number of elements in the array
  */
 void FreeWelcomeSlides(SlideDef** slides, int count) {
   if (!slides) return;
   for (int i = 0; i < count; i++) {
     if (slides[i]) {
-      if (slides[i]->lines) {
-        for (SlideLine* l = slides[i]->lines; l->text; l++) free(l->text);
-        free(slides[i]->lines);
+      SlideToken* t = slides[i]->tokens;
+      while (t) {
+        SlideToken* next = t->next;
+        free(t->text);
+        free(t);
+        t = next;
       }
       free(slides[i]->progress);
       if (slides[i]->controls) {
@@ -1319,14 +1354,82 @@ void FreeWelcomeSlides(SlideDef** slides, int count) {
 }
 
 /**
- * Measure the display width of a single icon character.
- * @param s The icon string (first byte examined)
- * @return 2 for 4-byte UTF-8 (e.g. emoji), 1 for smaller encodings, 0 if NULL or empty
+ * Default progress renderer for slides.
+ * Draws the title with filled/empty dots ("Welcome ●●○○○") in
+ * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
+ * Current slide index is obtained from app->popup_dialog->currentSlide.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width
+ * @param def    Slide definition (unused)
+ * @param params Progress parameters (title, icons, total)
  */
-static int iconWidth(const char* s) {
-  if (!s || !*s) return 0;
-  unsigned char c = (unsigned char)*s;
-  return (c >= 0xF0) ? 2 : 1;
+void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideProgress* params) {
+  (void)def;
+  (void)w;
+  int slide_idx = app->popup_dialog->currentSlide;
+  int icon_type = GetConfigIconType();
+  char buf[64];
+
+  if (icon_type == ASCII || !params->icon_on[0] || !params->icon_off[0])
+    snprintf(buf, sizeof(buf), "%s %d/%d", params->title, slide_idx + 1,
+             params->total);
+  else {
+    char* p = buf;
+    p += sprintf(p, "%s ", params->title);
+    for (int i = 0; i < params->total; i++)
+      p +=
+        sprintf(p, "%s", i <= slide_idx ? params->icon_on : params->icon_off);
+    *p = '\0';
+  }
+  int dot_w = utf8DisplayWidth(buf);
+  mvprintw(y, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
+}
+
+/**
+ * Default controls renderer for slides.
+ * Positions each button by its align field:
+ *   LEFT   → x + 2
+ *   CENTER → centered within SLIDE_INNER_W
+ *   RIGHT  → x + SLIDE_W - 2 - text_width
+ * Draws with A_REVERSE when def->hovered matches the button index,
+ * and registers a REGION_WELCOME_NAV click region with the action.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (controls line)
+ * @param w      Slide width
+ * @param def    Slide definition (provides hovered index)
+ * @param params Controls parameters (button array + count)
+ */
+void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideControls* params) {
+  (void)w;
+  for (int i = 0; i < params->count; i++) {
+    const ControlButton* btn = &params->buttons[i];
+    int tw = utf8DisplayWidth(btn->text);
+    int bx;
+    switch (btn->align) {
+      case ALIGN_SLIDE_LEFT:
+        bx = x + 2;
+        break;
+      case ALIGN_SLIDE_CENTER:
+        bx = x + 1 + (SLIDE_INNER_W - tw) / 2;
+        break;
+      case ALIGN_SLIDE_RIGHT:
+        bx = x + SLIDE_W - 2 - tw;
+        break;
+      default:
+        bx = x + 2;
+        break;
+    }
+    if (def->hovered == i) attron(A_REVERSE);
+    mvprintw(y, bx, "%s", btn->text);
+    if (def->hovered == i) attroff(A_REVERSE);
+    RegisterClickRegion(app, bx, y, tw, 1, REGION_WELCOME_NAV,
+                        (MenuAction)btn->action, -1, i, 0);
+  }
 }
 
 /**
@@ -1378,137 +1481,217 @@ static int utf8DisplayWidth(const char* s) {
 }
 
 /**
- * Pad an icon with trailing spaces so it occupies exactly iconWidth columns.
- * @param dst  Output buffer
- * @param size Buffer size
- * @param icon Icon string to pad
+ * Parse a slide text string with escape sequences into a linked list of
+ * SlideToken structs.
+ *
+ * Supported sequences:
+ *   \\cN    – Set color (0-15; 0-7 no bold, 8-15 bold, ≥16 = NO_COLOR)
+ *   \\aL/C/R – Set alignment (LEFT, CENTER, RIGHT)
+ *   \\xNN   – Set absolute column offset (decimal digits)
+ *   \\n     – Newline (emit buffer, y++, reset color/align/x)
+ *   {W}{S}{P}{N}{M} – Expand icon placeholder for current icon_type
+ *   \\\\    – Literal backslash
+ *
+ * Returns the head of the allocated linked list, or NULL on allocation failure.
+ * The caller (buildSlideFromText) owns the list.
+ *
+ * @param text      Raw slide text with escape sequences
+ * @param icon_type Icon type index (0=nerd, 1=emoji, 2=ascii)
+ * @return Head of SlideToken linked list, or NULL on failure
  */
-static void padIcon(char* dst, size_t size, const char* icon) {
-  int w = iconWidth(icon);
-  if (w < 1)
-    snprintf(dst, size, "%s%*s", icon, 1 - w, "");
-  else
-    snprintf(dst, size, "%s", icon);
-}
+static SlideToken* parseSlideText(const char* text, int icon_type) {
+  if (!text || !*text) return NULL;
 
-/**
- * Copy text verbatim into the output buffer (icon_type is ignored).
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon type (unused)
- * @param text      Static text to copy
- */
-static void buildPlain(char* buf, size_t size, int icon_type,
-                       const char* text) {
-  (void)icon_type;
-  snprintf(buf, size, "%s", text);
-}
+  SlideToken head = {0, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, 0, NULL};
+  SlideToken* tail = &head;
+  int y = 0;
+  int color = NO_COLOR;
+  SlideAlign align = ALIGN_SLIDE_LEFT;
+  int x = 0;
+  char buf[1024];
+  int bufpos = 0;
+  buf[0] = '\0';
 
-/**
- * Prepend a work-mode icon to the provided text.
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon-type index for WORK_ICONS lookup
- * @param text      Text to append after the icon
- */
-static void buildIconWork(char* buf, size_t size, int icon_type,
-                          const char* text) {
-  char ic[16];
-  padIcon(ic, sizeof(ic), WORK_ICONS[icon_type]);
-  snprintf(buf, size, "%s%s", ic, text);
-}
+  while (*text) {
+    if (*text == '\\') {
+      text++;
+      if (!*text) break;
 
-/**
- * Prepend a notes icon to the provided text.
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon-type index for NOTES_ICONS lookup
- * @param text      Text to append after the icon
- */
-static void buildIconNotes(char* buf, size_t size, int icon_type,
-                           const char* text) {
-  char ic[16];
-  padIcon(ic, sizeof(ic), NOTES_ICONS[icon_type]);
-  snprintf(buf, size, "%s%s", ic, text);
-}
+      switch (*text) {
+        case 'n': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          y++;
+          color = NO_COLOR;
+          align = ALIGN_SLIDE_LEFT;
+          x = 0;
+          text++;
+          break;
+        }
+        case 'c': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          int val = 0;
+          while (*text >= '0' && *text <= '9') {
+            val = val * 10 + (*text - '0');
+            text++;
+          }
+          color = (val >= 16) ? NO_COLOR : val;
+          break;
+        }
+        case 'a': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          if (*text == 'L')
+            align = ALIGN_SLIDE_LEFT;
+          else if (*text == 'C')
+            align = ALIGN_SLIDE_CENTER;
+          else if (*text == 'R')
+            align = ALIGN_SLIDE_RIGHT;
+          if (*text) text++;
+          break;
+        }
+        case 'x': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          int val = 0;
+          while (*text >= '0' && *text <= '9') {
+            val = val * 10 + (*text - '0');
+            text++;
+          }
+          x = val;
+          break;
+        }
+        case '\\': {
+          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = '\\';
+          text++;
+          break;
+        }
+        default: {
+          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
+          text++;
+          break;
+        }
+      }
+    } else if (*text == '{') {
+      text++;
+      if (!*text) break;
 
-/**
- * Prepend a mode icon to the provided text.
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon-type index for DEFAULT_MODE_ICONS lookup
- * @param text      Text to append after the icon
- */
-static void buildIconMode(char* buf, size_t size, int icon_type,
-                          const char* text) {
-  char ic[16];
-  padIcon(ic, sizeof(ic), DEFAULT_MODE_ICONS[icon_type]);
-  snprintf(buf, size, "%s%s", ic, text);
-}
+      const char* icon = NULL;
+      if (*text == 'W')
+        icon = WORK_ICONS[icon_type];
+      else if (*text == 'S')
+        icon = SKIP_ICONS[icon_type];
+      else if (*text == 'P')
+        icon = PAUSE_ICONS[icon_type];
+      else if (*text == 'N')
+        icon = NOTES_ICONS[icon_type];
+      else if (*text == 'M')
+        icon = DEFAULT_MODE_ICONS[icon_type];
 
-/**
- * Build the slide-1 task row showing a completed-task indicator inside the
- * split-panel ASCII frame.
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon-type index for WORK_ICONS lookup
- * @param text      Unused (the row layout is hardcoded)
- */
-static void buildS1IconTask(char* buf, size_t size, int icon_type,
-                            const char* text) {
-  (void)text;
-  char ic[16];
-  padIcon(ic, sizeof(ic), WORK_ICONS[icon_type]);
-  int iw = iconWidth(ic);
-  int left_pad = (iw >= 2) ? 4 : 5;
-  snprintf(buf, size, "   ┃ %*s%s      ┃ [X] Done task   ┃   ", left_pad, "",
-           ic);
-}
+      text++;
+      if (*text == '}') text++;
 
-/**
- * Build the slide-1 control row showing skip/pause icons inside the
- * split-panel ASCII frame.
- * @param buf       Output buffer
- * @param size      Buffer size
- * @param icon_type Icon-type index for SKIP_ICONS / PAUSE_ICONS lookup
- * @param text      Unused (the row layout is hardcoded)
- */
-static void buildS1IconsControls(char* buf, size_t size, int icon_type,
-                                 const char* text) {
-  (void)text;
-  char ic1[16], ic2[16];
-  padIcon(ic1, sizeof(ic1), SKIP_ICONS[icon_type]);
-  padIcon(ic2, sizeof(ic2), PAUSE_ICONS[icon_type]);
-  snprintf(buf, size, "   ┃ %s %s   01/04 ┃ [ ] Undone task ┃   ", ic1, ic2);
-  int dw = strDisplayWidth(buf);
-  while (dw > SLIDE_INNER_W) {
-    int blen = strlen(buf);
-    if (blen > 0 && buf[blen - 1] == ' ')
-      buf[--blen] = '\0';
-    else
-      break;
-    dw = strDisplayWidth(buf);
+      if (icon) {
+        if (!*icon) {
+          if (bufpos < (int)sizeof(buf) - 2) buf[bufpos++] = ' ';
+        } else {
+          int slen = (int)strlen(icon);
+          if (bufpos + slen < (int)sizeof(buf) - 1) {
+            memcpy(buf + bufpos, icon, slen);
+            bufpos += slen;
+          }
+        }
+      }
+    } else {
+      if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
+      text++;
+    }
   }
+
+  if (bufpos > 0) {
+    buf[bufpos] = '\0';
+    SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+    if (!t) return NULL;
+    t->y = y;
+    t->text = strdup(buf);
+    t->color = color;
+    t->align = align;
+    t->x = x;
+    t->next = NULL;
+    tail->next = t;
+  }
+
+  return head.next;
 }
 
 /**
- * Allocate and populate a SlideDef from a lineProto array for a given icon type.
- * @param protos   Null-terminated array of lineProto entries
- * @param w        Slide width in columns
- * @param h        Slide height in rows
- * @param icon_type Icon-type index (0=ASCII, 1=UTF-8, 2=color)
- * @return Pointer to the allocated SlideDef, or NULL on allocation failure
+ * Build a SlideDef from a single pre-selected text string for a given
+ * icon type. Parses escape sequences via parseSlideText.
+ * @param text      Slide text with escape sequences (already resolved for icon_type)
+ * @param w         Slide width in columns
+ * @param h         Slide height in rows
+ * @param icon_type Icon type index for placeholder expansion
+ * @return Pointer to allocated SlideDef, or NULL on failure
  */
-static SlideDef* buildSlide(const lineProto* protos, int w, int h,
-                            int icon_type) {
-  int count = 0;
-  for (const lineProto* p = protos; p->builder || p->text; p++) count++;
-
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type) {
   SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
   if (!def) return NULL;
 
-  def->lines = (SlideLine*)calloc(count + 1, sizeof(SlideLine));
-  if (!def->lines) {
+  def->tokens = parseSlideText(text, icon_type);
+  if (!def->tokens) {
     free(def);
     return NULL;
   }
@@ -1519,27 +1702,54 @@ static SlideDef* buildSlide(const lineProto* protos, int w, int h,
   def->update = welcomeUpdate;
   def->hovered = -1;
 
-  int idx = 0;
-  for (const lineProto* p = protos; p->builder || p->text; p++, idx++) {
-    char buf[256];
-    if (p->builder)
-      p->builder(buf, sizeof(buf), icon_type, p->text);
-    else
-      snprintf(buf, sizeof(buf), "%s", p->text);
-
-    def->lines[idx].y = p->y;
-    def->lines[idx].text = strdup(buf);
-    def->lines[idx].color = p->color;
-    def->lines[idx].align = p->align;
-    def->lines[idx].x = p->x;
-  }
-
   return def;
 }
 
 /**
+ * Render the content-area tokens between the horizontal rules of the dialog.
+ * Fills each row with spaces and vertical-side characters, then draws each
+ * token from the linked list at its computed position.
+ * @param x      X position of the dialog
+ * @param y      Y position of the dialog
+ * @param w      Width of the dialog
+ * @param h      Height of the dialog
+ * @param tokens Head of SlideToken linked list
+ */
+static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
+  (void)w;
+  for (int row = y + 3; row <= y + h - 4; row++) {
+    mvaddch(row, x, ACS_VLINE);
+    for (int ci = 1; ci < SLIDE_W - 1; ci++) mvaddch(row, x + ci, ' ');
+    mvaddch(row, x + SLIDE_W - 1, ACS_VLINE);
+  }
+
+  for (SlideToken* t = tokens; t; t = t->next) {
+    if (!t->text || !*(t->text)) continue;
+    int display_w = strDisplayWidth(t->text);
+    int line_x;
+    if (t->x > 0)
+      line_x = x + 1 + t->x;
+    else
+      line_x =
+        x + 1 +
+        ((t->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2
+                                          : 0);
+
+    if (t->color < 0 || t->color >= 16)
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    else if (t->color >= 8)
+      SetColor(t->color - 8, NO_COLOR, A_BOLD);
+    else
+      SetColor(t->color, NO_COLOR, A_NORMAL);
+
+    mvprintw(y + t->y, line_x, "%s", t->text);
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  }
+}
+
+/**
  * Render the current welcome slide into the popup dialog.
- * Draws the box frame, progress indicator, content lines, and nav controls.
+ * Draws the box frame, progress indicator, content tokens, and nav controls.
  * @param app Application state (provides popup_dialog, screen)
  * @param def Slide definition to render
  */
@@ -1563,7 +1773,7 @@ static void welcomeRender(AppData* app, SlideDef* def) {
   renderSlideBox(x, y, w, h);
   if (def->render_progress && def->progress)
     def->render_progress(app, x, y + 1, w, def, def->progress);
-  renderSlideContent(x, y, w, h, def->lines);
+  renderSlideTokens(x, y, w, h, def->tokens);
   if (def->render_controls && def->controls)
     def->render_controls(app, x, y + h - 2, w, def, def->controls);
 }
@@ -1649,110 +1859,4 @@ static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
   memcpy(c->buttons, btns, count * sizeof(ControlButton));
   c->count = count;
   return c;
-}
-
-/**
- * Default progress renderer for slides.
- * Draws the title with filled/empty dots ("Welcome ●●○○○") in
- * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
- * Current slide index is obtained from app->popup_dialog->currentSlide.
- */
-void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
-                         SlideProgress* params) {
-  (void)def;
-  (void)w;
-  int slide_idx = app->popup_dialog->currentSlide;
-  int icon_type = GetConfigIconType();
-  char buf[64];
-
-  if (icon_type == ASCII || !params->icon_on[0] || !params->icon_off[0])
-    snprintf(buf, sizeof(buf), "%s %d/%d", params->title, slide_idx + 1,
-             params->total);
-  else {
-    char* p = buf;
-    p += sprintf(p, "%s ", params->title);
-    for (int i = 0; i < params->total; i++)
-      p +=
-        sprintf(p, "%s", i <= slide_idx ? params->icon_on : params->icon_off);
-    *p = '\0';
-  }
-  int dot_w = utf8DisplayWidth(buf);
-  mvprintw(y, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
-}
-
-/**
- * Default controls renderer for slides.
- * Positions each button by its align field:
- *   LEFT   → x + 2
- *   CENTER → centered within SLIDE_INNER_W
- *   RIGHT  → x + SLIDE_W - 2 - text_width
- * Draws with A_REVERSE when def->hovered matches the button index,
- * and registers a REGION_WELCOME_NAV click region with the action.
- */
-void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
-                         SlideControls* params) {
-  (void)w;
-  for (int i = 0; i < params->count; i++) {
-    const ControlButton* btn = &params->buttons[i];
-    int tw = utf8DisplayWidth(btn->text);
-    int bx;
-    switch (btn->align) {
-      case ALIGN_SLIDE_LEFT:
-        bx = x + 2;
-        break;
-      case ALIGN_SLIDE_CENTER:
-        bx = x + 1 + (SLIDE_INNER_W - tw) / 2;
-        break;
-      case ALIGN_SLIDE_RIGHT:
-        bx = x + SLIDE_W - 2 - tw;
-        break;
-      default:
-        bx = x + 2;
-        break;
-    }
-    if (def->hovered == i) attron(A_REVERSE);
-    mvprintw(y, bx, "%s", btn->text);
-    if (def->hovered == i) attroff(A_REVERSE);
-    RegisterClickRegion(app, bx, y, tw, 1, REGION_WELCOME_NAV,
-                        (MenuAction)btn->action, -1, i, 0);
-  }
-}
-
-/**
- * Draw the content-area lines between the two horizontal rules of the dialog.
- * Fills each row with spaces and vertical-side characters, then draws each
- * line from the SlideLine array with appropriate alignment and colour.
- * @param x     X position of the dialog
- * @param y     Y position of the dialog
- * @param w     Width of the dialog (unused, derived from SLIDE_W)
- * @param h     Height of the dialog
- * @param lines Null-terminated array of SlideLine entries to render
- */
-static void renderSlideContent(int x, int y, int w, int h, SlideLine* lines) {
-  (void)w;
-  for (int row = y + 3; row <= y + h - 4; row++) {
-    mvaddch(row, x, ACS_VLINE);
-    for (int ci = 1; ci < SLIDE_W - 1; ci++) mvaddch(row, x + ci, ' ');
-    mvaddch(row, x + SLIDE_W - 1, ACS_VLINE);
-  }
-
-  for (SlideLine* l = lines; l->text; l++) {
-    int display_w = strDisplayWidth(l->text);
-    int line_x;
-    if (l->x > 0)
-      line_x = x + 1 + l->x;
-    else
-      line_x =
-        x + 1 +
-        ((l->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2
-                                          : 0);
-
-    if (l->color != NO_COLOR)
-      SetColor(l->color, NO_COLOR, A_BOLD);
-    else
-      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-
-    mvprintw(y + l->y, line_x, "%s", l->text);
-    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  }
 }
