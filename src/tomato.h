@@ -73,10 +73,9 @@ struct AppData {
   int click_region_count; /**< Number of registered click regions */
 
 
-  int debug_last_key;     /**< Last raw key from getch() (for debug display) */
-  int debug_mouse_x;      /**< Last mouse x coordinate */
-  int debug_mouse_y;      /**< Last mouse y coordinate */
-  int debug_mouse_bstate; /**< Last mouse button state */
+  int mouse_x;            /**< Last mouse x coordinate */
+  int mouse_y;            /**< Last mouse y coordinate */
+  int mouse_bstate;       /**< Last mouse button state */
 };
 
 #endif /* TOMATO_H_ */

@@ -76,10 +76,9 @@ ErrorType InitApp(AppData* app) {
   app->last_input = -1;
   app->block_input = false;
   app->frozen = false;
-  app->debug_last_key = -1;
-  app->debug_mouse_x = -1;
-  app->debug_mouse_y = -1;
-  app->debug_mouse_bstate = 0;
+  app->mouse_x = -1;
+  app->mouse_y = -1;
+  app->mouse_bstate = 0;
 
   status = initPomodoroData(app);
   if (status != NO_ERROR) return status;

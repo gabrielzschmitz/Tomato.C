@@ -98,8 +98,6 @@ ErrorType HandleInputs(AppData* app) {
   }
 
   int key = app->user_input;
-  app->debug_last_key = key;
-
   /* Handle mouse events — drain queue, keep only last position */
   if (key == KEY_MOUSE) {
     MEVENT event, last_event;
@@ -115,9 +113,9 @@ ErrorType HandleInputs(AppData* app) {
       }
     }
     if (valid) {
-      app->debug_mouse_x = last_event.x;
-      app->debug_mouse_y = last_event.y;
-      app->debug_mouse_bstate = last_event.bstate;
+      app->mouse_x = last_event.x;
+      app->mouse_y = last_event.y;
+      app->mouse_bstate = last_event.bstate;
       ErrorType merr = HandleMouseEvent(app, &last_event);
       if (merr != NO_ERROR) status = merr;
     }
@@ -125,10 +123,6 @@ ErrorType HandleInputs(AppData* app) {
     app->user_input = -1;
     return status;
   }
-
-  app->debug_mouse_x = -1;
-  app->debug_mouse_y = -1;
-  app->debug_mouse_bstate = 0;
 
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
 

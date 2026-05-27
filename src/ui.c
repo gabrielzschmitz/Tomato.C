@@ -1964,7 +1964,7 @@ static void welcomeRender(AppData* app, SlideDef* def) {
 /**
  * Track mouse hover over the nav controls (prev/next/close/start) on the
  * current slide and update def->hovered accordingly.
- * @param app Application state (provides click_regions, debug_mouse coordinates)
+ * @param app Application state (provides click_regions, mouse coordinates)
  * @param def Slide definition whose hovered field to update
  */
 static void welcomeUpdate(AppData* app, SlideDef* def) {
@@ -1993,17 +1993,15 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
           bx = x + 2;
           break;
       }
-      if (app->debug_mouse_x >= bx && app->debug_mouse_x < bx + tw &&
-          app->debug_mouse_y == y) {
+      if (app->mouse_x >= bx && app->mouse_x < bx + tw &&
+          app->mouse_y == y) {
         hover_idx = i;
         break;
       }
     }
   }
-  /* Only update hovered when a fresh mouse position is available.
-   * debug_mouse_x/y are reset to -1 on non-mouse input cycles, so
-   * skipping the update when they are stale preserves the highlight */
-  if (app->debug_mouse_x >= 0) {
+  /* Update hovered_button when mouse is over a button */
+  if (hover_idx >= 0) {
     def->hovered = hover_idx;
     if (d->slide_type == SLIDE_TYPE_CONTINUE ||
         d->slide_type == SLIDE_TYPE_WELCOME)

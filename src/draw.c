@@ -136,16 +136,11 @@ static void renderPanel(AppData* app, Border border) {
     renderPanelScene(app, current_panel, animation, size, position);
 
     if (DEBUG && current_panel->visible) {
-      if (app->debug_mouse_x >= 0)
-        mvprintw(1, 2, "M:%d,%d[%d] CS:%d K:%d L:%c CM:%d RG:%d",
-                 app->debug_mouse_x, app->debug_mouse_y,
-                 app->debug_mouse_bstate, app->pomodoro_data.current_step,
-                 app->debug_last_key, app->last_input, app->current_menu,
-                 app->click_region_count);
-      else
-        mvprintw(1, 2, "M:-- CS:%d K:%d L:%d CM:%d RG:%d",
-                 app->pomodoro_data.current_step, app->debug_last_key,
-                 app->last_input, app->current_menu, app->click_region_count);
+      mvprintw(1, 2, "M:%d,%d[%#x] CS:%d L:%d CM:%d RG:%d",
+               app->mouse_x, app->mouse_y,
+               app->mouse_bstate, app->pomodoro_data.current_step,
+               app->last_input, app->current_menu,
+               app->click_region_count);
     }
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
