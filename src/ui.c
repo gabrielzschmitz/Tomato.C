@@ -976,10 +976,11 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
     CreateFloatingDialog(pos, size, InitBorder(), menu, "");
   if (dialog != NULL) {
     dialog->slide_type = SLIDE_TYPE_WELCOME;
-    dialog->hovered_button = -1;
     dialog->slides = BuildWelcomeSlides();
     dialog->slideCount = 3 * WELCOME_SLIDE_COUNT;
     dialog->currentSlide = 0;
+    /* "Next  >" is always at index 1 on the first slide */
+    dialog->hovered_button = 1;
   }
   return dialog;
 }
@@ -1005,7 +1006,7 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
     CreateFloatingDialog(pos, size, InitBorder(), menu, "");
   if (dialog != NULL) {
     dialog->slide_type = SLIDE_TYPE_CONTINUE;
-    dialog->hovered_button = -1;
+    dialog->hovered_button = 0;
     dialog->slides = BuildContinueSlides(app);
     if (!dialog->slides) {
       FreeFloatingDialog(dialog);
@@ -1301,13 +1302,13 @@ SlideDef** BuildWelcomeSlides(void) {
   const SlideProgress prog = {"Welcome", "●", "○", WELCOME_SLIDE_COUNT, 0};
 
   const ControlButton first_btns[] = {
-    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
     {"[Close]", ALIGN_SLIDE_CENTER, ClosePopup},
+    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
   };
   const ControlButton mid_btns[] = {
     {"<  Prev", ALIGN_SLIDE_LEFT, GoPrevSlide},
-    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
     {"[Close]", ALIGN_SLIDE_CENTER, ClosePopup},
+    {"Next  >", ALIGN_SLIDE_RIGHT, GoNextSlide},
   };
   const ControlButton last_btns[] = {
     {"[ Get Started ]", ALIGN_SLIDE_CENTER, ClosePopup},
@@ -2002,9 +2003,12 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
   /* Only update hovered when a fresh mouse position is available.
    * debug_mouse_x/y are reset to -1 on non-mouse input cycles, so
    * skipping the update when they are stale preserves the highlight */
-  if (app->debug_mouse_x >= 0) def->hovered = hover_idx;
-  if (d->slide_type == SLIDE_TYPE_CONTINUE && app->debug_mouse_x >= 0)
-    d->hovered_button = hover_idx;
+  if (app->debug_mouse_x >= 0) {
+    def->hovered = hover_idx;
+    if (d->slide_type == SLIDE_TYPE_CONTINUE ||
+        d->slide_type == SLIDE_TYPE_WELCOME)
+      d->hovered_button = hover_idx;
+  }
 }
 
 /**

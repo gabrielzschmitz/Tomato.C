@@ -496,23 +496,9 @@ ErrorType HandleVisualMode(AppData* app, int key) {
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
 
-  /* Slide-based dialogs — dispatch via keybinding config */
-  if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME) {
-    if (IsKeyAssignedToAction(key, GoPrevSlide)) {
-      GoPrevSlide(app);
-      return true;
-    }
-    if (IsKeyAssignedToAction(key, GoNextSlide)) {
-      GoNextSlide(app);
-      return true;
-    }
-    if (IsKeyAssignedToAction(key, ClosePopup)) {
-      ClosePopup(app);
-      return true;
-    }
-    return true; /* consume all keys while welcome is active */
-  }
-  if (app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+  /* Slide-based dialogs — LEFT/RIGHT selects options, ENTER executes */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
+      app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
     if (IsKeyAssignedToAction(key, SelectPrevButton)) {
       SelectPrevButton(app);
       return true;
@@ -529,7 +515,7 @@ bool HandlePopupInput(AppData* app, int key) {
       ClosePopup(app);
       return true;
     }
-    return true; /* consume all keys while continue dialog is active */
+    return true; /* consume all keys while a slide dialog is active */
   }
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
@@ -1197,12 +1183,33 @@ void ClosePopup(AppData* app) {
 }
 
 /**
- * Navigate to the previous slide in a welcome dialog.
+ * Navigate popup left/up (previous item).
  * @param app Pointer to the application data
  */
 void GoPrevSlide(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
-  if (d && d->currentSlide > 0) d->currentSlide--;
+  if (d && d->currentSlide > 0) {
+    int stride = d->slideCount / 3;
+    int icon_type = GetConfigIconType();
+    SlideDef* cur = d->slides[icon_type * stride + d->currentSlide];
+    const char* btn_text = NULL;
+    if (cur && cur->controls && d->hovered_button >= 0 &&
+        d->hovered_button < cur->controls->count)
+      btn_text = cur->controls->buttons[d->hovered_button].text;
+    d->currentSlide--;
+    d->hovered_button = 0;
+    if (btn_text) {
+      SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+      if (def && def->controls) {
+        for (int i = 0; i < def->controls->count; i++) {
+          if (strcmp(def->controls->buttons[i].text, btn_text) == 0) {
+            d->hovered_button = i;
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -1213,7 +1220,27 @@ void GoNextSlide(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
   if (d) {
     int stride = d->slideCount / 3;
-    if (d->currentSlide < stride - 1) d->currentSlide++;
+    if (d->currentSlide < stride - 1) {
+      int icon_type = GetConfigIconType();
+      SlideDef* cur = d->slides[icon_type * stride + d->currentSlide];
+      const char* btn_text = NULL;
+      if (cur && cur->controls && d->hovered_button >= 0 &&
+          d->hovered_button < cur->controls->count)
+        btn_text = cur->controls->buttons[d->hovered_button].text;
+      d->currentSlide++;
+      d->hovered_button = 0;
+      if (btn_text) {
+        SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+        if (def && def->controls) {
+          for (int i = 0; i < def->controls->count; i++) {
+            if (strcmp(def->controls->buttons[i].text, btn_text) == 0) {
+              d->hovered_button = i;
+              break;
+            }
+          }
+        }
+      }
+    }
   }
 }
 
