@@ -506,11 +506,12 @@ void RenderPomodoroControls(AppData* app, Vector2D pos);
 
 /**
  * Build all welcome slide definitions for all icon types.
- * Allocates 3 * WELCOME_SLIDE_COUNT SlideDef instances, one per icon
+ * Allocates 3 * stride SlideDef instances, one per icon
  * type per slide. Index with [iconType * WELCOME_SLIDE_COUNT + slideIdx].
+ * @param size Slide dimensions: width=41, height=-1 to use per-slide height
  * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
  */
-SlideDef** BuildWelcomeSlides(void);
+SlideDef** BuildWelcomeSlides(Dimensions size);
 
 /**
  * Free all memory associated with a welcome slides array.
@@ -525,9 +526,10 @@ void FreeWelcomeSlides(SlideDef** slides, int count);
  * Reads current session data from app->pomodoro_data and
  * formats it into token-format text with escape sequences.
  * @param app Application state with loaded pomodoro session data
+ * @param size Slide dimensions (width=39, height=19)
  * @return Array of 3 SlideDef pointers (one per icon type), or NULL on failure
  */
-SlideDef** BuildContinueSlides(AppData* app);
+SlideDef** BuildContinueSlides(AppData* app, Dimensions size);
 
 /**
  * Default progress renderer for slides.
@@ -548,8 +550,8 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
  * Default controls renderer for slides.
  * Positions each button by its align field:
  *   LEFT   → x + 2
- *   CENTER → centered within SLIDE_INNER_W
- *   RIGHT  → x + SLIDE_W - 2 - text_width
+ *   CENTER → centered within (w - 2)
+ *   RIGHT  → x + w - 2 - text_width
  * Draws with A_REVERSE when def->hovered matches the button index,
  * and registers a REGION_WELCOME_NAV click region with the action.
  * @param app    Application state

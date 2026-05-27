@@ -962,7 +962,7 @@ void RenderSkipConfirmation(AppData* app) {
  */
 FloatingDialog* CreateWelcomeDialog(AppData* app) {
   (void)app;
-  Dimensions size = {.width = 38, .height = 26};
+  Dimensions size = {.width = 41, .height = -1};
   Vector2D pos = {.x = 0, .y = 0};
   MenuItem items[] = {{"Get Started", ClosePopup}};
   Menu menu = {.items = items,
@@ -976,7 +976,7 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
     CreateFloatingDialog(pos, size, InitBorder(), menu, "");
   if (dialog != NULL) {
     dialog->slide_type = SLIDE_TYPE_WELCOME;
-    dialog->slides = BuildWelcomeSlides();
+    dialog->slides = BuildWelcomeSlides(size);
     dialog->slideCount = 3 * WELCOME_SLIDE_COUNT;
     dialog->currentSlide = 0;
     /* "Next  >" is always at index 1 on the first slide */
@@ -1007,7 +1007,7 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
   if (dialog != NULL) {
     dialog->slide_type = SLIDE_TYPE_CONTINUE;
     dialog->hovered_button = 0;
-    dialog->slides = BuildContinueSlides(app);
+    dialog->slides = BuildContinueSlides(app, size);
     if (!dialog->slides) {
       FreeFloatingDialog(dialog);
       return NULL;
@@ -1142,16 +1142,14 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
  * ---------------------------------------------------------------------------
  */
 
-#define SLIDE_W 41
-#define SLIDE_INNER_W (SLIDE_W - 2)
-
 /**
  * Build all welcome slide definitions for all icon types.
  * Allocates 3 * stride SlideDef instances, one per icon
  * type per slide. Index with [iconType * stride + slideIdx].
+ * @param size Slide dimensions: width=41, height=-1 to use per-slide height
  * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
  */
-SlideDef** BuildWelcomeSlides(void) {
+SlideDef** BuildWelcomeSlides(Dimensions size) {
   /**
    * Slide text definitions in token-format with escape sequences.
    * Three entries per slide: [0]=nerd-icons, [1]=emoji, [2]=ascii.
@@ -1322,7 +1320,8 @@ SlideDef** BuildWelcomeSlides(void) {
     for (int si = 0; si < WELCOME_SLIDE_COUNT; si++) {
       int idx = ic * WELCOME_SLIDE_COUNT + si;
       const char* text = (*slideData[si].texts)[ic];
-      slides[idx] = buildSlideFromText(text, SLIDE_W, slideData[si].h, ic);
+      int h = size.height >= 0 ? size.height : slideData[si].h;
+      slides[idx] = buildSlideFromText(text, size.width, h, ic);
       if (!slides[idx]) {
         FreeWelcomeSlides(slides, total);
         return NULL;
@@ -1424,9 +1423,10 @@ static void continueProgressRender(AppData* app, int x, int y, int w,
  * Reads current session data from app->pomodoro_data and
  * formats it into token-format text with escape sequences.
  * @param app Application state with loaded pomodoro session data
+ * @param size Slide dimensions (width=39, height=19)
  * @return Array of 3 SlideDef pointers (one per icon type), or NULL on failure
  */
-SlideDef** BuildContinueSlides(AppData* app) {
+SlideDef** BuildContinueSlides(AppData* app, Dimensions size) {
   PomodoroData* pd = &app->pomodoro_data;
 
   const char* step_name;
@@ -1503,7 +1503,7 @@ SlideDef** BuildContinueSlides(AppData* app) {
   if (!slides) return NULL;
 
   for (int ic = 0; ic < 3; ic++) {
-    slides[ic] = buildSlideFromText(text, 39, 19, ic);
+    slides[ic] = buildSlideFromText(text, size.width, size.height, ic);
     if (!slides[ic]) {
       FreeWelcomeSlides(slides, total);
       return NULL;
@@ -1557,15 +1557,15 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
     *p = '\0';
   }
   int dot_w = utf8DisplayWidth(buf);
-  mvprintw(y, x + 1 + (SLIDE_INNER_W - dot_w) / 2, "%s", buf);
+  mvprintw(y, x + 1 + (39 - dot_w) / 2, "%s", buf);
 }
 
 /**
  * Default controls renderer for slides.
  * Positions each button by its align field:
  *   LEFT   → x + 2
- *   CENTER → centered within SLIDE_INNER_W
- *   RIGHT  → x + SLIDE_W - 2 - text_width
+ *   CENTER → centered within (w - 2)
+ *   RIGHT  → x + w - 2 - text_width
  * Draws with A_REVERSE when def->hovered matches the button index,
  * and registers a REGION_WELCOME_NAV click region with the action.
  * @param app    Application state
@@ -1993,8 +1993,7 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
           bx = x + 2;
           break;
       }
-      if (app->mouse_x >= bx && app->mouse_x < bx + tw &&
-          app->mouse_y == y) {
+      if (app->mouse_x >= bx && app->mouse_x < bx + tw && app->mouse_y == y) {
         hover_idx = i;
         break;
       }
