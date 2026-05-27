@@ -111,6 +111,27 @@ void ProcessKeyInput(AppData* app, int key);
 int IsKeyAssignedToAction(int key, void (*action)(AppData*));
 
 /**
+ * Select the previous/left button in a slide dialog's control bar.
+ * For SLIDE_TYPE_CONTINUE: cycles hovered index toward 0.
+ * @param app Application state
+ */
+void SelectPrevButton(AppData* app);
+
+/**
+ * Select the next/right button in a slide dialog's control bar.
+ * For SLIDE_TYPE_CONTINUE: cycles hovered index toward end.
+ * @param app Application state
+ */
+void SelectNextButton(AppData* app);
+
+/**
+ * Execute the currently hovered button's action in a slide dialog.
+ * For SLIDE_TYPE_CONTINUE: invokes def->controls->buttons[hovered].action.
+ * @param app Application state
+ */
+void ExecuteButtonAction(AppData* app);
+
+/**
  * Handle all user input based on current app state.
  * Reads input from terminal and routes to appropriate handler.
  * @param app Pointer to the application data

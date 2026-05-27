@@ -34,6 +34,8 @@ static const char* PLUS_VOLUME_ICONS[3] = {"", "➕", "+"};
 static const char* MINUS_VOLUME_ICONS[3] = {"", "➖", "-"};
 static const char* ACTIVE_VOLUME_BAR_ICONS[3] = {"█", "█", "█"};
 static const char* INACTIVE_VOLUME_BAR_ICONS[3] = {"▒", "▒", "▒"};
+static const char* ACTIVE_PROGRESS_BAR_ICONS[3] = {"█", "█", "█"};
+static const char* INACTIVE_PROGRESS_BAR_ICONS[3] = {"▒", "▒", "▒"};
 /* Pomodoro Icons */
 static const char* MAIN_MENU_ICONS[3] = {"󰍜", "🧾", ""};
 static const char* WORK_ICONS[3] = {"", "🍅", ""};
@@ -243,6 +245,15 @@ static const KeyFunction keys[] = {
   {KEY_ENTER, ClosePopup, DEFAULT, ALL_SCENES},
   {'q', ClosePopup, DEFAULT, ALL_SCENES},
   {ESC, ClosePopup, DEFAULT, ALL_SCENES},
+
+  /* Continue dialog — button navigation */
+  {KEY_LEFT, SelectPrevButton, DEFAULT, ALL_SCENES},
+  {'h', SelectPrevButton, DEFAULT, ALL_SCENES},
+  {KEY_RIGHT, SelectNextButton, DEFAULT, ALL_SCENES},
+  {'l', SelectNextButton, DEFAULT, ALL_SCENES},
+  {ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
+  {'\r', ExecuteButtonAction, DEFAULT, ALL_SCENES},
+  {KEY_ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
 };
 
 #endif /* CONFIG_H_ */

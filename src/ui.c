@@ -23,6 +23,10 @@ static void welcomeRender(AppData* app, SlideDef* def);
 static void welcomeUpdate(AppData* app, SlideDef* def);
 static void renderSlideBox(int x, int y, int w, int h);
 static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
+static void continueAndClose(AppData* app);
+static void abandonAndClose(AppData* app);
+static void continueProgressRender(AppData* app, int x, int y, int w,
+                                   SlideDef* def, SlideProgress* params);
 static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
 /* Screen / Panel */
@@ -669,10 +673,11 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
     return NULL;
   }
   dialog->visible = true;
-  dialog->is_welcome = false;
   dialog->slides = NULL;
   dialog->slideCount = 0;
   dialog->currentSlide = 0;
+  dialog->slide_type = SLIDE_TYPE_NONE;
+  dialog->hovered_button = -1;
 
   return dialog;
 }
@@ -970,7 +975,8 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
   FloatingDialog* dialog =
     CreateFloatingDialog(pos, size, InitBorder(), menu, "");
   if (dialog != NULL) {
-    dialog->is_welcome = true;
+    dialog->slide_type = SLIDE_TYPE_WELCOME;
+    dialog->hovered_button = -1;
     dialog->slides = BuildWelcomeSlides();
     dialog->slideCount = 3 * WELCOME_SLIDE_COUNT;
     dialog->currentSlide = 0;
@@ -984,11 +990,10 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
  * @return Pointer to the created dialog, or NULL on failure
  */
 FloatingDialog* CreateContinueDialog(AppData* app) {
-  const char* message =
-    "Unfinished session detected.\n"
-    "Continue where you left off?";
-  MenuItem items[] = {{"Continue", ContinuePreviousSession},
-                      {"Cancel", AbandonPreviousSession}};
+  Dimensions size = {.width = 39, .height = 19};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Continue", continueAndClose},
+                      {"Discard", abandonAndClose}};
   Menu menu = {.items = items,
                .selected_item = 0,
                .focused_color = COLOR_WHITE,
@@ -996,7 +1001,20 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
                .select_style_left = "[",
                .select_style_right = "]",
                .item_count = 2};
-  return CreateCenterFloatingDialog(app->screen, menu, message, InitBorder());
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (dialog != NULL) {
+    dialog->slide_type = SLIDE_TYPE_CONTINUE;
+    dialog->hovered_button = -1;
+    dialog->slides = BuildContinueSlides(app);
+    if (!dialog->slides) {
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    dialog->slideCount = 3;
+    dialog->currentSlide = 0;
+  }
+  return dialog;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1128,8 +1146,8 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
 
 /**
  * Build all welcome slide definitions for all icon types.
- * Allocates 3 * WELCOME_SLIDE_COUNT SlideDef instances, one per icon
- * type per slide. Index with [iconType * WELCOME_SLIDE_COUNT + slideIdx].
+ * Allocates 3 * stride SlideDef instances, one per icon
+ * type per slide. Index with [iconType * stride + slideIdx].
  * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
  */
 SlideDef** BuildWelcomeSlides(void) {
@@ -1221,7 +1239,7 @@ SlideDef** BuildWelcomeSlides(void) {
     "       • - Plain notes\\n"
     "       • [ ] Tasks\\n"
     "       • [X] Completed tasks\\n\\n\\c16"
-    "  ──────────────────────\\n"
+    "\\aC──────────────────────\\n"
     "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
     "       • DEFAULT → manage\\n"
     "       • NORMAL  → navigate\\n"
@@ -1319,6 +1337,7 @@ SlideDef** BuildWelcomeSlides(void) {
           slides[idx]->controls = slideControlsDup(last_btns, 1);
           break;
       }
+      slides[idx]->slide_type = SLIDE_TYPE_WELCOME;
     }
   }
 
@@ -1351,6 +1370,159 @@ void FreeWelcomeSlides(SlideDef** slides, int count) {
     }
   }
   free(slides);
+}
+
+/**
+ * Continue the session then close the dialog.
+ * @param app Application state
+ */
+static void continueAndClose(AppData* app) {
+  ContinuePreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
+ * Abandon the session then close the dialog.
+ * @param app Application state
+ */
+static void abandonAndClose(AppData* app) {
+  AbandonPreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
+ * Continue-dialog progress renderer: shows "{W} Resume Pomodoro Session"
+ * centred in the title bar, with the icon expanded per icon type.
+ * @param app    Application state (for icon type)
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width (unused)
+ * @param def    Slide definition (unused)
+ * @param params Unused (no dots needed)
+ */
+static void continueProgressRender(AppData* app, int x, int y, int w,
+                                   SlideDef* def, SlideProgress* params) {
+  (void)app;
+  (void)def;
+  (void)params;
+  int icon_type = GetConfigIconType();
+  const char* icon = WORK_ICONS[icon_type];
+  char title[64];
+  snprintf(title, sizeof(title), "%s Resume Pomodoro Session",
+           (icon && icon[0]) ? icon : "");
+  int tw = utf8DisplayWidth(title);
+  SetColor(COLOR_MAGENTA, NO_COLOR, A_BOLD);
+  mvprintw(y, x + 1 + ((w - 2) - tw) / 2, "%s", title);
+}
+
+/**
+ * Build a set of continue session slides (one per icon type).
+ * Reads current session data from app->pomodoro_data and
+ * formats it into token-format text with escape sequences.
+ * @param app Application state with loaded pomodoro session data
+ * @return Array of 3 SlideDef pointers (one per icon type), or NULL on failure
+ */
+SlideDef** BuildContinueSlides(AppData* app) {
+  PomodoroData* pd = &app->pomodoro_data;
+
+  const char* step_name;
+  switch (pd->current_step) {
+    case WORK_TIME:
+      step_name = "Work";
+      break;
+    case SHORT_PAUSE:
+      step_name = "Short Break";
+      break;
+    case LONG_PAUSE:
+      step_name = "Long Pause";
+      break;
+    default:
+      step_name = "Unknown";
+      break;
+  }
+
+  int icon_type = GetConfigIconType();
+  const char* filled = ACTIVE_PROGRESS_BAR_ICONS[icon_type];
+  const char* empty_ch = INACTIVE_PROGRESS_BAR_ICONS[icon_type];
+
+  /* Total session remaining + progress across all cycles */
+  int w = pd->work_time, s = pd->short_pause_time, l = pd->long_pause_time;
+  int total_session_sec = ((pd->total_cycles - 1) * (w + s) + w + l) * 60;
+  int completed_sec = 0;
+  for (int c = 0; c < pd->current_cycle; c++)
+    completed_sec += (w + s) * 60;
+  if (pd->current_step == SHORT_PAUSE)
+    completed_sec += w * 60;
+  else if (pd->current_step == LONG_PAUSE)
+    completed_sec += (w + s) * 60;
+  completed_sec += pd->current_step_time;
+
+  int total_remaining = total_session_sec - completed_sec;
+  if (total_remaining < 0) total_remaining = 0;
+  int tr_m = total_remaining / 60;
+  int tr_s = total_remaining % 60;
+  int total_pct = (total_session_sec > 0)
+                   ? (completed_sec * 100) / total_session_sec : 0;
+  int total_bar_filled = (total_session_sec > 0)
+                          ? (completed_sec * 10) / total_session_sec : 0;
+
+  char total_bar[64];
+  char* bp = total_bar;
+  for (int i = 0; i < 10; i++)
+    bp += sprintf(bp, "%s", i < total_bar_filled ? filled : empty_ch);
+  *bp = '\0';
+
+  char started_str[64] = "--";
+  if (pd->step_start_time > 0) {
+    time_t session_start = pd->step_start_time - completed_sec;
+    struct tm* tm_info = localtime(&session_start);
+    strftime(started_str, sizeof(started_str), "%d/%m/%y %H:%M", tm_info);
+  }
+
+  char text[512];
+  snprintf(text, sizeof(text),
+           "\\n\\n\\n\\n"
+           "\\aCAn unfinished focus session was\\n"
+           "\\aCdetected from your previous run\\n"
+           "\\aC\\n"
+           "\\aL\\x03─ Session Details ─\\n"
+           "\\aC\\n"
+           "\\aL\\x03Phase\\x14  %s %02d/%02d\\n"
+           "\\x03Remaining\\x14  %d:%02d\\n"
+           "\\x03Progress\\x14  %s %d%%\\n"
+           "\\x03Started\\x14  %s\\n"
+           "\\aC\\n"
+           "\\aL\\x03Continue where you left off?\\n",
+           step_name, pd->current_cycle + 1, pd->total_cycles,
+           tr_m, tr_s,
+           total_bar, total_pct,
+           started_str);
+
+  int total = 3;
+  SlideDef** slides = (SlideDef**)calloc(total, sizeof(SlideDef*));
+  if (!slides) return NULL;
+
+  for (int ic = 0; ic < 3; ic++) {
+    slides[ic] = buildSlideFromText(text, 39, 19, ic);
+    if (!slides[ic]) {
+      FreeWelcomeSlides(slides, total);
+      return NULL;
+    }
+    slides[ic]->slide_type = SLIDE_TYPE_CONTINUE;
+    slides[ic]->render_controls = SlideControlsRender;
+    slides[ic]->render_progress = continueProgressRender;
+    {
+      const SlideProgress dummy = {"", "", "", 1, 0};
+      slides[ic]->progress = slideProgressDup(&dummy);
+    }
+    const ControlButton btns[] = {
+      {"[ Continue ]", ALIGN_SLIDE_LEFT, continueAndClose},
+      {"[ Discard ]", ALIGN_SLIDE_RIGHT, abandonAndClose},
+    };
+    slides[ic]->controls = slideControlsDup(btns, 2);
+  }
+
+  return slides;
 }
 
 /**
@@ -1405,7 +1577,6 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
  */
 void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
                          SlideControls* params) {
-  (void)w;
   for (int i = 0; i < params->count; i++) {
     const ControlButton* btn = &params->buttons[i];
     int tw = utf8DisplayWidth(btn->text);
@@ -1415,10 +1586,10 @@ void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
         bx = x + 2;
         break;
       case ALIGN_SLIDE_CENTER:
-        bx = x + 1 + (SLIDE_INNER_W - tw) / 2;
+        bx = x + 1 + ((w - 2) - tw) / 2;
         break;
       case ALIGN_SLIDE_RIGHT:
-        bx = x + SLIDE_W - 2 - tw;
+        bx = x + w - 2 - tw;
         break;
       default:
         bx = x + 2;
@@ -1716,11 +1887,10 @@ static SlideDef* buildSlideFromText(const char* text, int w, int h,
  * @param tokens Head of SlideToken linked list
  */
 static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
-  (void)w;
   for (int row = y + 3; row <= y + h - 4; row++) {
     mvaddch(row, x, ACS_VLINE);
-    for (int ci = 1; ci < SLIDE_W - 1; ci++) mvaddch(row, x + ci, ' ');
-    mvaddch(row, x + SLIDE_W - 1, ACS_VLINE);
+    for (int ci = 1; ci < w - 1; ci++) mvaddch(row, x + ci, ' ');
+    mvaddch(row, x + w - 1, ACS_VLINE);
   }
 
   for (SlideToken* t = tokens; t; t = t->next) {
@@ -1732,7 +1902,7 @@ static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
     else
       line_x =
         x + 1 +
-        ((t->align == ALIGN_SLIDE_CENTER) ? (SLIDE_INNER_W - display_w) / 2
+        ((t->align == ALIGN_SLIDE_CENTER) ? ((w - 2) - display_w) / 2
                                           : 0);
 
     if (t->color < 0 || t->color >= 16)
@@ -1769,10 +1939,17 @@ static void welcomeRender(AppData* app, SlideDef* def) {
   for (int r = 0; r < h; r++)
     for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
 
+  /* Sync keyboard-hovered button index into the slide def so
+   * SlideControlsRender highlights the right button.
+   * Only override when keyboard has made a selection (>=0)
+   * so mouse hover set by welcomeUpdate is not cleared for WELCOME slides. */
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   renderSlideBox(x, y, w, h);
   if (def->render_progress && def->progress)
     def->render_progress(app, x, y + 1, w, def, def->progress);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   renderSlideTokens(x, y, w, h, def->tokens);
   if (def->render_controls && def->controls)
     def->render_controls(app, x, y + h - 2, w, def, def->controls);
@@ -1785,18 +1962,37 @@ static void welcomeRender(AppData* app, SlideDef* def) {
  * @param def Slide definition whose hovered field to update
  */
 static void welcomeUpdate(AppData* app, SlideDef* def) {
-  def->hovered = -1;
-  for (int i = 0; i < app->click_region_count; i++) {
-    ClickRegion* r = &app->click_regions[i];
-    if (r->type != REGION_WELCOME_NAV) continue;
-    if (app->debug_mouse_x >= r->pos.x &&
-        app->debug_mouse_x < r->pos.x + r->size.width &&
-        app->debug_mouse_y >= r->pos.y &&
-        app->debug_mouse_y < r->pos.y + r->size.height) {
-      def->hovered = r->item_index;
-      break;
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y + d->size.height - 2;
+  int w = def->size.width;
+  int hover_idx = -1;
+  if (def->controls) {
+    for (int i = 0; i < def->controls->count; i++) {
+      const ControlButton* btn = &def->controls->buttons[i];
+      int tw = utf8DisplayWidth(btn->text);
+      int bx;
+      switch (btn->align) {
+        case ALIGN_SLIDE_LEFT:   bx = x + 2; break;
+        case ALIGN_SLIDE_CENTER: bx = x + 1 + ((w - 2) - tw) / 2; break;
+        case ALIGN_SLIDE_RIGHT:  bx = x + w - 2 - tw; break;
+        default:                 bx = x + 2; break;
+      }
+      if (app->debug_mouse_x >= bx && app->debug_mouse_x < bx + tw &&
+          app->debug_mouse_y == y) {
+        hover_idx = i;
+        break;
+      }
     }
   }
+  /* Only update hovered when a fresh mouse position is available.
+   * debug_mouse_x/y are reset to -1 on non-mouse input cycles, so
+   * skipping the update when they are stale preserves the highlight */
+  if (app->debug_mouse_x >= 0)
+    def->hovered = hover_idx;
+  if (d->slide_type == SLIDE_TYPE_CONTINUE && app->debug_mouse_x >= 0)
+    d->hovered_button = hover_idx;
 }
 
 /**

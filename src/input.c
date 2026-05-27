@@ -215,16 +215,20 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
                     event->y >= pos.y && event->y < pos.y + size.height);
   }
-  if (is_click && !inside_popup && !app->popup_dialog->is_welcome) {
+  if (is_click && !inside_popup && app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
+      app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE) {
     ClosePopup(app);
     return;
   }
   if (inside_popup) {
-    if (app->popup_dialog->is_welcome) {
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
+        app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
       FloatingDialog* d = app->popup_dialog;
+      int stride = d->slideCount / 3;
       int icon_type = GetConfigIconType();
-      SlideDef* def =
-        d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
+      if (!d->slides) return;
+      SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+      if (!def) return;
       if (event->bstate & REPORT_MOUSE_POSITION) {
         def->update(app, def);
       }
@@ -240,9 +244,11 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           }
         }
       }
-      if (app->popup_dialog && app->popup_dialog->is_welcome &&
+      if (app->popup_dialog &&
+          (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) &&
           (is_click || event->bstate == BUTTON1_RELEASED)) {
-        def = d->slides[icon_type * WELCOME_SLIDE_COUNT + d->currentSlide];
+        def = d->slides[icon_type * stride + d->currentSlide];
         def->hovered = -1;
       }
       return;
@@ -490,8 +496,8 @@ ErrorType HandleVisualMode(AppData* app, int key) {
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
 
-  /* Welcome screen navigation — dispatch via keybinding config */
-  if (app->popup_dialog->is_welcome) {
+  /* Slide-based dialogs — dispatch via keybinding config */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME) {
     if (IsKeyAssignedToAction(key, GoPrevSlide)) {
       GoPrevSlide(app);
       return true;
@@ -505,6 +511,25 @@ bool HandlePopupInput(AppData* app, int key) {
       return true;
     }
     return true; /* consume all keys while welcome is active */
+  }
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+    if (IsKeyAssignedToAction(key, SelectPrevButton)) {
+      SelectPrevButton(app);
+      return true;
+    }
+    if (IsKeyAssignedToAction(key, SelectNextButton)) {
+      SelectNextButton(app);
+      return true;
+    }
+    if (IsKeyAssignedToAction(key, ExecuteButtonAction)) {
+      ExecuteButtonAction(app);
+      return true;
+    }
+    if (IsKeyAssignedToAction(key, ClosePopup)) {
+      ClosePopup(app);
+      return true;
+    }
+    return true; /* consume all keys while continue dialog is active */
   }
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
@@ -1185,7 +1210,65 @@ void GoPrevSlide(AppData* app) {
  */
 void GoNextSlide(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
-  if (d && d->currentSlide < WELCOME_SLIDE_COUNT - 1) d->currentSlide++;
+  if (d) {
+    int stride = d->slideCount / 3;
+    if (d->currentSlide < stride - 1) d->currentSlide++;
+  }
+}
+
+/**
+ * Select the previous button in a slide-dialog control bar.
+ * Cycles the hovered index toward 0 (most commonly used for
+ * SLIDE_TYPE_CONTINUE two-button layouts).
+ * @param app Application state
+ */
+void SelectPrevButton(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int stride = d->slideCount / 3;
+  int icon_type = GetConfigIconType();
+  if (!d->slides) return;
+  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  if (!def) return;
+  if (def->controls && d->hovered_button > 0)
+    d->hovered_button--;
+}
+
+/**
+ * Select the next button in a slide-dialog control bar.
+ * Cycles the hovered index toward the last button.
+ * @param app Application state
+ */
+void SelectNextButton(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int stride = d->slideCount / 3;
+  int icon_type = GetConfigIconType();
+  if (!d->slides) return;
+  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  if (!def) return;
+  if (def->controls && d->hovered_button < def->controls->count - 1)
+    d->hovered_button++;
+}
+
+/**
+ * Execute the action bound to the currently hovered button.
+ * For SLIDE_TYPE_CONTINUE: calls the button's action function
+ * which typically continues or abandons the session then closes.
+ * @param app Application state
+ */
+void ExecuteButtonAction(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int stride = d->slideCount / 3;
+  int icon_type = GetConfigIconType();
+  if (!d->slides) return;
+  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  if (!def || !def->controls) return;
+  if (d->hovered_button >= 0 &&
+      d->hovered_button < def->controls->count &&
+      def->controls->buttons[d->hovered_button].action)
+    def->controls->buttons[d->hovered_button].action(app);
 }
 
 /**

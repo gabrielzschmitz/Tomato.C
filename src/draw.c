@@ -305,10 +305,15 @@ static void renderDialogPopups(AppData* app) {
             app->popup_dialog->menu.items[0].action == ResetPomodoroCycle) &&
            (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
-  else if (app->popup_dialog->is_welcome) {
+  else if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+    int stride = app->popup_dialog->slideCount / 3;
     int icon_type = GetConfigIconType();
-    int idx = icon_type * WELCOME_SLIDE_COUNT + app->popup_dialog->currentSlide;
+    int idx = icon_type * stride + app->popup_dialog->currentSlide;
+    if (!app->popup_dialog->slides) return;
     SlideDef* def = app->popup_dialog->slides[idx];
+    if (!def) return;
+    if (def->update) def->update(app, def);
     def->render(app, def);
   } else {
     UpdateFloatingDialog(app->popup_dialog, app->screen);

@@ -82,16 +82,29 @@ typedef struct SlideToken {
 } SlideToken;
 
 /**
+ * Slide type identifier that determines input handling behaviour.
+ * Each slide-based dialog sets this to route keyboard/mouse
+ * dispatch to the appropriate action set.
+ */
+typedef enum {
+  SLIDE_TYPE_NONE,     /**< Not a slide-based dialog (regular menu popup) */
+  SLIDE_TYPE_WELCOME,  /**< Multi-slide carousel with prev/next navigation */
+  SLIDE_TYPE_CONTINUE, /**< Single-slide session dialog with action buttons */
+} SlideType;
+
+/**
  * Definition of a single slide.
  * Contains token stream for one icon type, render/update callbacks,
- * per-frame hover state, and optional generic progress/controls renderers.
+ * per-frame hover state, slide type for input dispatch, and optional
+ * generic progress/controls renderers.
  */
 struct SlideDef {
   SlideToken* tokens; /**< Linked-list head of formatted tokens */
   Dimensions size;    /**< Slide width and height in columns/rows */
   void (*render)(AppData* app, SlideDef* def); /**< Render this slide */
   void (*update)(AppData* app, SlideDef* def); /**< Update hover state */
-  int hovered; /**< Currently hovered nav control (-1 = none) */
+  int hovered;        /**< Currently hovered nav control (-1 = none) */
+  SlideType slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
   void (*render_progress)(AppData* app, int x, int y, int w, SlideDef* def,
                           SlideProgress* params); /**< Progress renderer */
   void (*render_controls)(AppData* app, int x, int y, int w, SlideDef* def,
@@ -194,12 +207,12 @@ struct FloatingDialog {
   Menu menu;         /**< Menu displayed inside the dialog */
   char* message;     /**< Message text displayed in the dialog */
   bool visible;      /**< Whether the dialog is currently shown */
-  bool is_welcome;   /**< True if this is the welcome dialog */
   SlideDef**
-    slides; /**< Pre-built slides [iconType * WELCOME_SLIDE_COUNT + slideIdx] */
-  int slideCount; /**< Total slides in array (3 * WELCOME_SLIDE_COUNT) */
-  int
-    currentSlide; /**< Currently displayed slide index (0 to WELCOME_SLIDE_COUNT-1) */
+    slides; /**< Pre-built slides [iconType * stride + slideIdx] */
+  int slideCount; /**< Total slides in array (3 * stride) */
+  int currentSlide; /**< Currently displayed slide index (0 to stride-1) */
+  SlideType slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
+  int hovered_button; /**< Currently hovered control button index (-1 = none) */
 };
 
 /**
@@ -506,6 +519,15 @@ SlideDef** BuildWelcomeSlides(void);
  * @param count Number of elements in the array
  */
 void FreeWelcomeSlides(SlideDef** slides, int count);
+
+/**
+ * Build a set of continue session slides (one per icon type).
+ * Reads current session data from app->pomodoro_data and
+ * formats it into token-format text with escape sequences.
+ * @param app Application state with loaded pomodoro session data
+ * @return Array of 3 SlideDef pointers (one per icon type), or NULL on failure
+ */
+SlideDef** BuildContinueSlides(AppData* app);
 
 /**
  * Default progress renderer for slides.

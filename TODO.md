@@ -54,14 +54,14 @@ extensible, terminal-based Pomodoro timer written in C.
     - [X] Add more interesting data about sessions to GetPomodoroLog
 - [X] Add error stack and UI error line
 
+### 👋 User Interface
+- [X] Mouse interaction
+- [X] Welcome screen
+- [X] Continue screen
+
 ---
 
 ## 🚧 In Progress
-### 👋 User Interface
-- [X] Mouse interaction
-- [ ] Welcome screen
-- [ ] Continue screen
-
 ### 🧩 Extra Features
 - [ ] White noise playback for focus sessions
 - [ ] Work history log (git-style commits)
