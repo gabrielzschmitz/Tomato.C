@@ -1019,6 +1019,7 @@ void StartPomodoro(AppData* app) {
   if (app->pomodoro_data.current_step_time == 0) {
     app->pomodoro_data.current_cycle = 0;
     app->pomodoro_data.step_start_time = time(NULL);
+    app->pomodoro_data.session_start_time = time(NULL);
   }
   app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
   if (app->pomodoro_data.session_index == 0)

@@ -39,8 +39,9 @@ typedef struct {
   int total_elapsed;      /**< Total elapsed time across all steps (seconds) */
   double delta_time_ms;   /**< Elapsed ms since last frame update */
   int session_index;      /**< Current session index for log entries */
-  time_t step_start_time; /**< Timestamp when current step started */
-  int status;             /**< 0 = completed, 1 = uncompleted */
+  time_t step_start_time;     /**< Timestamp when current step started */
+  time_t session_start_time;  /**< Timestamp when the session was started */
+  int status;                 /**< 0 = completed, 1 = uncompleted */
 } PomodoroData;
 
 /**

@@ -36,7 +36,7 @@ typedef struct __attribute__((packed)) {
   uint32_t total_elapsed;
   uint32_t current_step_time;
   uint8_t status;
-  uint8_t padding[3];
+  uint32_t session_start_time;
 } pomodoroLogRecord;
 
 typedef struct {
@@ -627,7 +627,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
     .total_elapsed = (uint32_t)data->total_elapsed,
     .current_step_time = (uint32_t)data->current_step_time,
     .status = (uint8_t)data->status,
-    .padding = {0, 0, 0}};
+    .session_start_time = (uint32_t)data->session_start_time};
 
   FILE* file = fopen(path, append ? "ab" : "wb");
   if (!file) return TIMER_LOG_ERROR;
@@ -663,6 +663,7 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   if (last_record.session_index == 0) return NO_ERROR;
 
   data->session_index = last_record.session_index;
+  data->session_start_time = last_record.session_start_time;
   data->step_start_time = time(NULL);
   data->current_step = last_record.current_step;
   data->current_cycle = last_record.current_cycle - 1;

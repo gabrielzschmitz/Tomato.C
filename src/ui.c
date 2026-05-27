@@ -1164,126 +1164,129 @@ SlideDef** BuildWelcomeSlides(void) {
     "\\n\\n\\n\\n\\c13\\aC{W}  Tomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
     "your terminal\\n\\n\\c13\\aCStay focused. Stay fast",
     /* ascii: icon is empty → just extra space */
-    "\\n\\n\\n\\n\\c13\\aC   Tomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
+    "\\n\\n\\n\\n\\c13\\aCTomato.C\\n\\n\\aCPomodoro + notes in\\n\\aC"
     "your terminal\\n\\n\\c13\\aCStay focused. Stay fast",
   };
 
   /* s1 – Split-panel layout */
   static const char* s1_texts[3] = {
     /* nerd (1-col icons: left_pad=5) */
-    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
-    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃      {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n\\n\\n\\n\\c09   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
+    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃             ┃                 ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃      {W}      ┃ [X] Done task   ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c09   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
     "\\n"
     "\\c16   • SPACE → switch focus\\n"
     "   • Responsive terminal layout\\n"
     "   • Mouse support available",
     /* emoji (2-col icons: left_pad=4) */
-    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
-    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃     {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n\\n\\n\\n\\c09   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
+    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃             ┃                 ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃     {W}      ┃ [X] Done task   ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x03\\c09┃\\x17\\c09┃\\n"
+    "\\c09   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
     "\\n"
     "\\c16   • SPACE → switch focus\\n"
     "   • Responsive terminal layout\\n"
     "   • Mouse support available",
     /* ascii (1-col icons: same padding as nerd) */
-    "\\n\\n\\n\\n\\c9   ┏━━━━━━━━━━━━━┳\\x18\\c16━━━━━━━━━━━━━━━━━┓  \\n"
-    "\\c16   ┃ TIMER PANEL ┃ NOTES PANEL     ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃             ┃                 ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃ {S} {P}   01/04 ┃ [ ] Undone task ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃      {W}      ┃ [X] Done task   ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c16   ┃    24:59    ┃ ─ Note          ┃   \\x3\\c9┃\\x17\\c9┃\\n"
-    "\\c9   ┗━━━━━━━━━━━━━┻\\x18\\c16━━━━━━━━━━━━━━━━━┛  \\n"
+    "\\n\\n\\n\\n\\c09   +-------------+\\x18\\c16-----------------+  \\n"
+    "\\c16   | TIMER PANEL | NOTES PANEL     |   \\x03\\c09|\\x17\\c09|\\n"
+    "\\c16   |             |                 |   \\x03\\c09|\\x17\\c09|\\n"
+    "\\c16   | {S} {P}   01/04 | [ ] Undone task |   \\x03\\c09|\\x17\\c09|\\n"
+    "\\c16   |      {W}      | [X] Done task   |   \\x03\\c09|\\x17\\c09|\\n"
+    "\\c16   |    24:59    | ─ Note          |   \\x03\\c09|\\x17\\c09|\\n"
+    "\\c09   +-------------+\\x18\\c16-----------------+  \\n"
     "\\n"
-    "\\c16   • SPACE → switch focus\\n"
-    "   • Responsive terminal layout\\n"
-    "   • Mouse support available",
+    "\\c16   * SPACE -> switch focus\\n"
+    "   * Responsive terminal layout\\n"
+    "   * Mouse support available",
   };
 
   /* s2 – Pomodoro workflow */
   static const char* s2_texts[3] = {
     "\\n\\n\\n\\n\\c13\\aC{W} POMODORO WORKFLOW\\n\\n\\aC"
-    "Work → Break → Work → Long Break\\n\\n"
-    "\\c16   • Pause / resume\\n"
-    "   • Auto-save sessions\\n"
-    "   • Notifications + sound\\n"
-    "   • Continue unfinished timers\\n\\n\\aC"
-    "[p] pause   [s] skip   [Ctrl+r] reset",
+    "Work → Break → Work → Long Break\\n\\n\\c16"
+    "\\x03\\c15•\\x05\\c07Pause / resume\\n"
+    "\\x03\\c15•\\x05\\c07Auto-save sessions\\n"
+    "\\x03\\c15•\\x05\\c07Notifications + sound\\n"
+    "\\x03\\c15•\\x05\\c07Continue unfinished timers\\n\\n"
+    "\\x01\\c15[p]\\x05\\c07pause\\x13\\c15[s]\\x17\\c07skip\\x24\\c15[Ctrl+r]"
+    "\\x33\\c07reset",
     "\\n\\n\\n\\n\\c13\\aC{W} POMODORO WORKFLOW\\n\\n\\aC"
-    "Work → Break → Work → Long Break\\n\\n"
-    "\\c16   • Pause / resume\\n"
-    "   • Auto-save sessions\\n"
-    "   • Notifications + sound\\n"
-    "   • Continue unfinished timers\\n\\n\\aC"
-    "[p] pause   [s] skip   [Ctrl+r] reset",
-    "\\n\\n\\n\\n\\c13\\aC  POMODORO WORKFLOW\\n\\n\\aC"
-    "Work → Break → Work → Long Break\\n\\n"
-    "\\c16   • Pause / resume\\n"
-    "   • Auto-save sessions\\n"
-    "   • Notifications + sound\\n"
-    "   • Continue unfinished timers\\n\\n\\aC"
-    "[p] pause   [s] skip   [Ctrl+r] reset",
+    "Work → Break → Work → Long Break\\n\\n\\c16"
+    "\\x03\\c15•\\x05\\c07Pause / resume\\n"
+    "\\x03\\c15•\\x05\\c07Auto-save sessions\\n"
+    "\\x03\\c15•\\x05\\c07Notifications + sound\\n"
+    "\\x03\\c15•\\x05\\c07Continue unfinished timers\\n\\n"
+    "\\x01\\c15[p]\\x05\\c07pause\\x13\\c15[s]\\x17\\c07skip\\x24\\c15[Ctrl+r]"
+    "\\x33\\c07reset",
+    "\\n\\n\\n\\n\\c13\\aCPOMODORO WORKFLOW\\n\\n\\aC"
+    "Work -> Break -> Work -> Long Break\\n\\n\\c16"
+    "\\x03\\c15*\\x05\\c07Pause / resume\\n"
+    "\\x03\\c15*\\x05\\c07Auto-save sessions\\n"
+    "\\x03\\c15*\\x05\\c07Notifications + sound\\n"
+    "\\x03\\c15*\\x05\\c07Continue unfinished timers\\n\\n"
+    "\\x01\\c15[p]\\x05\\c07pause\\x13\\c15[s]\\x17\\c07skip\\x24\\c15[Ctrl+r]"
+    "\\x33\\c07reset",
   };
 
   /* s3 – Hierarchical notes / Vim editing */
   static const char* s3_texts[3] = {
-    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
-    "       • - Plain notes\\n"
-    "       • [ ] Tasks\\n"
-    "       • [X] Completed tasks\\n\\n\\c16"
+    "\\n\\n\\n\\n\\c11\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
+    "\\x07\\c16• -\\x12\\c07Plain notes\\n"
+    "\\x07\\c16• [ ]\\x14\\c07Undone tasks\\n"
+    "\\x07\\c16• [X]\\x14\\c07Done tasks\\n\\n\\c16"
     "\\aC──────────────────────\\n"
-    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
-    "       • DEFAULT → manage\\n"
-    "       • NORMAL  → navigate\\n"
-    "       • INSERT  → type\\n"
-    "       • VISUAL  → select\\n\\n"
-    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
-    "   [e]   edit   [V]        move",
-    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
-    "       • - Plain notes\\n"
-    "       • [ ] Tasks\\n"
-    "       • [X] Completed tasks\\n\\n\\c16"
-    "  ──────────────────────\\n"
-    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
-    "       • DEFAULT → manage\\n"
-    "       • NORMAL  → navigate\\n"
-    "       • INSERT  → type\\n"
-    "       • VISUAL  → select\\n\\n"
-    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
-    "   [e]   edit   [V]        move",
-    "\\n\\n\\n\\n\\c13\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
-    "       • - Plain notes\\n"
-    "       • [ ] Tasks\\n"
-    "       • [X] Completed tasks\\n\\n\\c16"
-    "  ──────────────────────\\n"
-    "\\c13\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
-    "       • DEFAULT → manage\\n"
-    "       • NORMAL  → navigate\\n"
-    "       • INSERT  → type\\n"
-    "       • VISUAL  → select\\n\\n"
-    "   [n/t] add    [u/Ctrl+r] undo/redo\\n"
-    "   [e]   edit   [V]        move",
+    "\\c14\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
+    "\\x07\\c16• DEFAULT →\\x20\\c07manage\\n"
+    "\\x07\\c16• NORMAL  →\\x20\\c07navigate\\n"
+    "\\x07\\c16• INSERT  →\\x20\\c07type\\n"
+    "\\x07\\c16• VISUAL  →\\x20\\c07select\\n\\n"
+    "\\x03\\c15[n/t]\\x09\\c07add\\x16\\c15[u/Ctrl+r]\\x27\\c07undo/redo\\n"
+    "\\x03\\c15[e]\\x09\\c07edit\\x16\\c15[V]\\x27\\c07move",
+    "\\n\\n\\n\\n\\c11\\aC{N} HIERARCHICAL NOTES\\n\\n\\c16"
+    "\\x07\\c16• -\\x12\\c07Plain notes\\n"
+    "\\x07\\c16• [ ]\\x14\\c07Undone tasks\\n"
+    "\\x07\\c16• [X]\\x14\\c07Done tasks\\n\\n\\c16"
+    "\\aC──────────────────────\\n"
+    "\\c14\\aC{M}  VIM-LIKE EDITING\\n\\n\\c16"
+    "\\x07\\c16• DEFAULT →\\x20\\c07manage\\n"
+    "\\x07\\c16• NORMAL  →\\x20\\c07navigate\\n"
+    "\\x07\\c16• INSERT  →\\x20\\c07type\\n"
+    "\\x07\\c16• VISUAL  →\\x20\\c07select\\n\\n"
+    "\\x03\\c15[n/t]\\x09\\c07add\\x16\\c15[u/Ctrl+r]\\x27\\c07undo/redo\\n"
+    "\\x03\\c15[e]\\x09\\c07edit\\x16\\c15[V]\\x27\\c07move",
+    "\\n\\n\\n\\n\\c11\\aCHIERARCHICAL NOTES\\n\\n\\c16"
+    "\\x07\\c16* -\\x12\\c07Plain notes\\n"
+    "\\x07\\c16* [ ]\\x14\\c07Undone tasks\\n"
+    "\\x07\\c16* [X]\\x14\\c07Done tasks\\n\\n\\c16"
+    "\\aC----------------------\\n"
+    "\\c14\\aCVIM-LIKE EDITING\\n\\n\\c16"
+    "\\x07\\c16* DEFAULT ->\\x21\\c07manage\\n"
+    "\\x07\\c16* NORMAL  ->\\x21\\c07navigate\\n"
+    "\\x07\\c16* INSERT  ->\\x21\\c07type\\n"
+    "\\x07\\c16* VISUAL  ->\\x21\\c07select\\n\\n"
+    "\\x03\\c15[n/t]\\x09\\c07add\\x16\\c15[u/Ctrl+r]\\x27\\c07undo/redo\\n"
+    "\\x03\\c15[e]\\x09\\c07edit\\x16\\c15[V]\\x27\\c07move",
   };
 
   /* s4 – Finish */
   static const char* s4_texts[3] = {
-    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
-    "Start your first cycle\\n\\aC"
-    "and organize your work",
-    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
-    "Start your first cycle\\n\\aC"
-    "and organize your work",
-    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n\\aC"
-    "Start your first cycle\\n\\aC"
-    "and organize your work",
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n"
+    "\\aCStart your first cycle\\n"
+    "\\aCand organize your work",
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n"
+    "\\aCStart your first cycle\\n"
+    "\\aCand organize your work",
+    "\\n\\n\\n\\n\\c13\\aCReady to focus?\\n\\n"
+    "\\aCStart your first cycle\\n"
+    "\\aCand organize your work",
   };
 
   static const struct {
@@ -1449,8 +1452,7 @@ SlideDef** BuildContinueSlides(AppData* app) {
   int w = pd->work_time, s = pd->short_pause_time, l = pd->long_pause_time;
   int total_session_sec = ((pd->total_cycles - 1) * (w + s) + w + l) * 60;
   int completed_sec = 0;
-  for (int c = 0; c < pd->current_cycle; c++)
-    completed_sec += (w + s) * 60;
+  for (int c = 0; c < pd->current_cycle; c++) completed_sec += (w + s) * 60;
   if (pd->current_step == SHORT_PAUSE)
     completed_sec += w * 60;
   else if (pd->current_step == LONG_PAUSE)
@@ -1461,10 +1463,10 @@ SlideDef** BuildContinueSlides(AppData* app) {
   if (total_remaining < 0) total_remaining = 0;
   int tr_m = total_remaining / 60;
   int tr_s = total_remaining % 60;
-  int total_pct = (total_session_sec > 0)
-                   ? (completed_sec * 100) / total_session_sec : 0;
-  int total_bar_filled = (total_session_sec > 0)
-                          ? (completed_sec * 10) / total_session_sec : 0;
+  int total_pct =
+    (total_session_sec > 0) ? (completed_sec * 100) / total_session_sec : 0;
+  int total_bar_filled =
+    (total_session_sec > 0) ? (completed_sec * 10) / total_session_sec : 0;
 
   char total_bar[64];
   char* bp = total_bar;
@@ -1473,9 +1475,8 @@ SlideDef** BuildContinueSlides(AppData* app) {
   *bp = '\0';
 
   char started_str[64] = "--";
-  if (pd->step_start_time > 0) {
-    time_t session_start = pd->step_start_time - completed_sec;
-    struct tm* tm_info = localtime(&session_start);
+  if (pd->session_start_time > 0) {
+    struct tm* tm_info = localtime(&pd->session_start_time);
     strftime(started_str, sizeof(started_str), "%d/%m/%y %H:%M", tm_info);
   }
 
@@ -1487,16 +1488,14 @@ SlideDef** BuildContinueSlides(AppData* app) {
            "\\aC\\n"
            "\\aL\\x03─ Session Details ─\\n"
            "\\aC\\n"
-           "\\aL\\x03Phase\\x14  %s %02d/%02d\\n"
-           "\\x03Remaining\\x14  %d:%02d\\n"
-           "\\x03Progress\\x14  %s %d%%\\n"
-           "\\x03Started\\x14  %s\\n"
+           "\\aL\\x03Phase\\x16\\c07%s %02d/%02d\\n"
+           "\\x03Remaining\\x16\\c07%02d:%02d\\n"
+           "\\x03Progress\\x16\\c07%s %d%%\\n"
+           "\\x03Started\\x16\\c07%s\\n"
            "\\aC\\n"
            "\\aL\\x03Continue where you left off?\\n",
-           step_name, pd->current_cycle + 1, pd->total_cycles,
-           tr_m, tr_s,
-           total_bar, total_pct,
-           started_str);
+           step_name, pd->current_cycle + 1, pd->total_cycles, tr_m, tr_s,
+           total_bar, total_pct, started_str);
 
   int total = 3;
   SlideDef** slides = (SlideDef**)calloc(total, sizeof(SlideDef*));
@@ -1727,12 +1726,17 @@ static SlideToken* parseSlideText(const char* text, int icon_type) {
             buf[0] = '\0';
           }
           text++;
-          int val = 0;
-          while (*text >= '0' && *text <= '9') {
-            val = val * 10 + (*text - '0');
+          if (*text >= '0' && *text <= '9') {
+            color = (*text - '0') * 10;
             text++;
+            if (*text >= '0' && *text <= '9') {
+              color += (*text - '0');
+              text++;
+            }
+            if (color >= 16) color = NO_COLOR;
+          } else {
+            color = NO_COLOR;
           }
-          color = (val >= 16) ? NO_COLOR : val;
           break;
         }
         case 'a': {
@@ -1776,12 +1780,14 @@ static SlideToken* parseSlideText(const char* text, int icon_type) {
             buf[0] = '\0';
           }
           text++;
-          int val = 0;
-          while (*text >= '0' && *text <= '9') {
-            val = val * 10 + (*text - '0');
+          if (*text >= '0' && *text <= '9') {
+            x = (*text - '0') * 10;
             text++;
+            if (*text >= '0' && *text <= '9') {
+              x += (*text - '0');
+              text++;
+            }
           }
-          x = val;
           break;
         }
         case '\\': {
@@ -1902,8 +1908,7 @@ static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
     else
       line_x =
         x + 1 +
-        ((t->align == ALIGN_SLIDE_CENTER) ? ((w - 2) - display_w) / 2
-                                          : 0);
+        ((t->align == ALIGN_SLIDE_CENTER) ? ((w - 2) - display_w) / 2 : 0);
 
     if (t->color < 0 || t->color >= 16)
       SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
@@ -1974,10 +1979,18 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
       int tw = utf8DisplayWidth(btn->text);
       int bx;
       switch (btn->align) {
-        case ALIGN_SLIDE_LEFT:   bx = x + 2; break;
-        case ALIGN_SLIDE_CENTER: bx = x + 1 + ((w - 2) - tw) / 2; break;
-        case ALIGN_SLIDE_RIGHT:  bx = x + w - 2 - tw; break;
-        default:                 bx = x + 2; break;
+        case ALIGN_SLIDE_LEFT:
+          bx = x + 2;
+          break;
+        case ALIGN_SLIDE_CENTER:
+          bx = x + 1 + ((w - 2) - tw) / 2;
+          break;
+        case ALIGN_SLIDE_RIGHT:
+          bx = x + w - 2 - tw;
+          break;
+        default:
+          bx = x + 2;
+          break;
       }
       if (app->debug_mouse_x >= bx && app->debug_mouse_x < bx + tw &&
           app->debug_mouse_y == y) {
@@ -1989,8 +2002,7 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
   /* Only update hovered when a fresh mouse position is available.
    * debug_mouse_x/y are reset to -1 on non-mouse input cycles, so
    * skipping the update when they are stale preserves the highlight */
-  if (app->debug_mouse_x >= 0)
-    def->hovered = hover_idx;
+  if (app->debug_mouse_x >= 0) def->hovered = hover_idx;
   if (d->slide_type == SLIDE_TYPE_CONTINUE && app->debug_mouse_x >= 0)
     d->hovered_button = hover_idx;
 }
