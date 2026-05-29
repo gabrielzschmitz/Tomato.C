@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <time.h>
 
+#include "audio.h"
 #include "bar.h"
 #include "notes.h"
 #include "ui.h"
@@ -23,6 +24,10 @@
 #define DEBUG 0
 #endif
 
+static const char* NOISE_SOUND_PATHS[NOISE_TRACK_COUNT] = {
+  "./sounds/ambience-rain.mp3", "./sounds/ambience-fire.mp3",
+  "./sounds/ambience-wind.mp3", "./sounds/ambience-thunder.mp3"};
+
 /**
  * Pomodoro timer data structure.
  * Tracks the current state of the pomodoro cycle.
@@ -39,9 +44,9 @@ typedef struct {
   int total_elapsed;      /**< Total elapsed time across all steps (seconds) */
   double delta_time_ms;   /**< Elapsed ms since last frame update */
   int session_index;      /**< Current session index for log entries */
-  time_t step_start_time;     /**< Timestamp when current step started */
-  time_t session_start_time;  /**< Timestamp when the session was started */
-  int status;                 /**< 0 = completed, 1 = uncompleted */
+  time_t step_start_time; /**< Timestamp when current step started */
+  time_t session_start_time; /**< Timestamp when the session was started */
+  int status;                /**< 0 = completed, 1 = uncompleted */
 } PomodoroData;
 
 /**
@@ -67,15 +72,15 @@ struct AppData {
   bool running; /**< Whether the app is running (false = exit) */
 
   PomodoroData pomodoro_data; /**< Pomodoro timer state */
+  WhiteNoiseData noise_data;  /**< White noise playback state */
   NotesData* notes;           /**< Notes/text editor data */
 
   ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
   int click_region_count; /**< Number of registered click regions */
 
-
-  int mouse_x;            /**< Last mouse x coordinate */
-  int mouse_y;            /**< Last mouse y coordinate */
-  int mouse_bstate;       /**< Last mouse button state */
+  int mouse_x;      /**< Last mouse x coordinate */
+  int mouse_y;      /**< Last mouse y coordinate */
+  int mouse_bstate; /**< Last mouse button state */
 };
 
 #endif /* TOMATO_H_ */

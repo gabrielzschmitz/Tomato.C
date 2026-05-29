@@ -136,11 +136,9 @@ static void renderPanel(AppData* app, Border border) {
     renderPanelScene(app, current_panel, animation, size, position);
 
     if (DEBUG && current_panel->visible) {
-      mvprintw(1, 2, "M:%d,%d[%#x] CS:%d L:%d CM:%d RG:%d",
-               app->mouse_x, app->mouse_y,
-               app->mouse_bstate, app->pomodoro_data.current_step,
-               app->last_input, app->current_menu,
-               app->click_region_count);
+      mvprintw(1, 2, "M:%d,%d[%#x] CS:%d L:%d CM:%d RG:%d", app->mouse_x,
+               app->mouse_y, app->mouse_bstate, app->pomodoro_data.current_step,
+               app->last_input, app->current_menu, app->click_region_count);
     }
 
     SetColor((app->screen->current_panel == i) ? FOCUSED_PANEL_COLOR
@@ -270,7 +268,8 @@ static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation) {
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   InputState* input = panel->input;
 
-  RenderNotes(app, app->notes, start_x, start_y, end_x, end_y, input, current_mode);
+  RenderNotes(app, app->notes, start_x, start_y, end_x, end_y, input,
+              current_mode);
 
   if (DEBUG)
     RenderNotesHistoryDebug(app->notes, panel->position.x + panel->size.width,
@@ -301,7 +300,8 @@ static void renderDialogPopups(AppData* app) {
            (POMODORO_SCENES & (1 << current_scene)))
     RenderResetMenu(app);
   else if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
-           app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+           app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
     int stride = app->popup_dialog->slideCount / 3;
     int icon_type = GetConfigIconType();
     int idx = icon_type * stride + app->popup_dialog->currentSlide;

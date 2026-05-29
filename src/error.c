@@ -347,6 +347,16 @@ static const char* getErrorMessage(ErrorType error) {
     case AUDIO_PLAYBACK_ERROR:
       return "Failed to play audio";
 
+      /* Noise / persistent audio errors */
+    case AUDIO_ENGINE_INIT_ERROR:
+      return "Failed to initialize audio engine";
+    case AUDIO_INIT_ERROR:
+      return "Failed to init sound from file";
+    case AUDIO_START_ERROR:
+      return "Failed to start sound playback";
+    case INVALID_TRACK_INDEX:
+      return "Track index out of range";
+
     case TEST_ERROR:
       return "Test error";
 
@@ -384,6 +394,9 @@ static ErrorLevel getErrorLevel(ErrorType error) {
     case SOCKET_BIND_ERROR:
     case SOCKET_LISTEN_ERROR:
     case AUDIO_PLAYBACK_ERROR:
+    case AUDIO_ENGINE_INIT_ERROR:
+    case AUDIO_INIT_ERROR:
+    case AUDIO_START_ERROR:
       return ERROR_LEVEL_ERROR;
 
     case INVALID_INPUT:
@@ -393,6 +406,7 @@ static ErrorLevel getErrorLevel(ErrorType error) {
     case SOCKET_ACCEPT_ERROR:
     case SOCKET_READ_ERROR:
     case SOCKET_WRITE_ERROR:
+    case INVALID_TRACK_INDEX:
       return ERROR_LEVEL_WARNING;
 
     case TOO_SMALL_SCREEN:

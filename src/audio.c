@@ -6,12 +6,21 @@
 
 #include "config.h"
 #include "error.h"
+#include "tomato.h"
 
 #ifdef __APPLE__
 #define MA_NO_RUNTIME_LINKING
 #endif
 #define MINIAUDIO_IMPLEMENTATION
 #include "external/miniaudio.h"
+
+/* PRIVATE AUDIO FUNCTIONS */
+/* Audio Playback */
+static void* playbackThread(void* arg);
+
+static ma_engine noise_engine;
+static ma_sound noise_sounds[NOISE_TRACK_COUNT];
+static bool noise_engine_initialized = false;
 
 /**
  * Structure to pass data to the playback thread.
@@ -22,6 +31,52 @@ static struct playbackData {
   float volume;         /**< Volume level for playback (0.0 to 1.0) */
   bool loop;            /**< true to loop playback, false to play once */
 } playbackData;
+
+/**
+ * ---------------------------------------------------------------------------
+ * Audio Plyback
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Play audio from path using miniaudio.
+ * Spawns a detached thread to handle playback asynchronously.
+ * Sound is disabled on WSL and when NOTIFICATIONS_SOUND is 0.
+ * @param audio_path Path to the audio file to play
+ * @param volume Volume level for playback (0.0 to 1.0)
+ * @param loop true to loop playback, false to play once
+ * @return NO_ERROR on success, error code on failure
+ */
+ErrorType PlayAudio(const char* audio_path, const float volume,
+                    const bool loop) {
+  if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
+  if (audio_path == NULL) return NULL_POINTER_ERROR;
+
+  /* Prepare playback data */
+  struct playbackData* data =
+    (struct playbackData*)malloc(sizeof(struct playbackData));
+  if (data == NULL) return MALLOC_ERROR;
+
+  strncpy(data->audio_path, audio_path, sizeof(data->audio_path) - 1);
+  data->audio_path[sizeof(data->audio_path) - 1] = '\0';
+  data->volume = volume;
+  data->loop = loop;
+
+  /* Create playback thread */
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, playbackThread, data) != 0) {
+    free(data);
+    return PTHREAD_CREATION_ERROR;
+  }
+
+  /* Detach the thread to allow self-cleanup */
+  if (pthread_detach(thread) != 0) {
+    pthread_join(thread, NULL);
+    return PTHREAD_DETACH_ERROR;
+  }
+
+  return NO_ERROR;
+}
 
 /**
  * Playback thread function.
@@ -80,41 +135,115 @@ static void* playbackThread(void* arg) {
 }
 
 /**
- * Play audio from path using miniaudio.
- * Spawns a detached thread to handle playback asynchronously.
- * Sound is disabled on WSL and when NOTIFICATIONS_SOUND is 0.
- * @param audio_path Path to the audio file to play
- * @param volume Volume level for playback (0.0 to 1.0)
- * @param loop true to loop playback, false to play once
- * @return NO_ERROR on success, error code on failure
+ * ---------------------------------------------------------------------------
+ * Noise Audio
+ * ---------------------------------------------------------------------------
  */
-ErrorType PlayAudio(const char* audio_path, const float volume,
-                    const bool loop) {
-  if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
-  if (audio_path == NULL) return NULL_POINTER_ERROR;
 
-  /* Prepare playback data */
-  struct playbackData* data =
-    (struct playbackData*)malloc(sizeof(struct playbackData));
-  if (data == NULL) return MALLOC_ERROR;
+/**
+ * Initialize the persistent noise audio engine.
+ * Starts the miniaudio engine for white noise playback.
+ * Safe to call multiple times (idempotent).
+ * @return NO_ERROR on success, AUDIO_ENGINE_INIT_ERROR on failure
+ */
+ErrorType InitNoiseAudio(void) {
+  if (noise_engine_initialized) return NO_ERROR;
 
-  strncpy(data->audio_path, audio_path, sizeof(data->audio_path) - 1);
-  data->audio_path[sizeof(data->audio_path) - 1] = '\0';
-  data->volume = volume;
-  data->loop = loop;
+  ma_result result = ma_engine_init(NULL, &noise_engine);
+  if (result != MA_SUCCESS) return AUDIO_ENGINE_INIT_ERROR;
 
-  /* Create playback thread */
-  pthread_t thread;
-  if (pthread_create(&thread, NULL, playbackThread, data) != 0) {
-    free(data);
-    return PTHREAD_CREATION_ERROR;
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++)
+    memset(&noise_sounds[i], 0, sizeof(ma_sound));
+
+  noise_engine_initialized = true;
+  return NO_ERROR;
+}
+
+/**
+ * Shut down the noise audio engine.
+ * Stops all active sounds and uninitializes the engine.
+ * Safe to call multiple times (idempotent).
+ */
+void ShutdownNoiseAudio(void) {
+  if (!noise_engine_initialized) return;
+
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+    if (ma_sound_is_playing(&noise_sounds[i])) ma_sound_stop(&noise_sounds[i]);
+    ma_sound_uninit(&noise_sounds[i]);
   }
 
-  /* Detach the thread to allow self-cleanup */
-  if (pthread_detach(thread) != 0) {
-    pthread_join(thread, NULL);
-    return PTHREAD_DETACH_ERROR;
+  ma_engine_uninit(&noise_engine);
+  noise_engine_initialized = false;
+}
+
+/**
+ * Start playing a noise track on loop.
+ * Loads the ambient sound file from NOISE_SOUND_PATHS and begins
+ * playback.  If the track is already active it is stopped first.
+ * @param track_index Index of the track (0 .. NOISE_TRACK_COUNT-1)
+ * @param volume      Volume level (0.0 .. 1.0, includes master scaling)
+ * @return NO_ERROR on success, or an error code on failure
+ */
+ErrorType NoiseStartTrack(int track_index, float volume) {
+  if (track_index < 0 || track_index >= NOISE_TRACK_COUNT)
+    return INVALID_TRACK_INDEX;
+
+  if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
+
+  if (!noise_engine_initialized) {
+    ErrorType err = InitNoiseAudio();
+    if (err != NO_ERROR) return err;
+  }
+
+  if (ma_sound_is_playing(&noise_sounds[track_index])) {
+    ma_sound_stop(&noise_sounds[track_index]);
+    ma_sound_uninit(&noise_sounds[track_index]);
+  }
+
+  ma_result result =
+    ma_sound_init_from_file(&noise_engine, NOISE_SOUND_PATHS[track_index], 0,
+                            NULL, NULL, &noise_sounds[track_index]);
+  if (result != MA_SUCCESS) return AUDIO_INIT_ERROR;
+
+  ma_sound_set_looping(&noise_sounds[track_index], true);
+  ma_sound_set_volume(&noise_sounds[track_index], volume);
+
+  result = ma_sound_start(&noise_sounds[track_index]);
+  if (result != MA_SUCCESS) {
+    ma_sound_uninit(&noise_sounds[track_index]);
+    return AUDIO_START_ERROR;
   }
 
   return NO_ERROR;
+}
+
+/**
+ * Stop playing a noise track.
+ * Unloads the sound resource and silences the track.
+ * Safe to call on non-playing tracks.
+ * @param track_index Index of the track (0 .. NOISE_TRACK_COUNT-1)
+ */
+void NoiseStopTrack(int track_index) {
+  if (!noise_engine_initialized) return;
+  if (track_index < 0 || track_index >= NOISE_TRACK_COUNT) return;
+
+  if (ma_sound_is_playing(&noise_sounds[track_index])) {
+    ma_sound_stop(&noise_sounds[track_index]);
+    ma_sound_uninit(&noise_sounds[track_index]);
+    memset(&noise_sounds[track_index], 0, sizeof(ma_sound));
+  }
+}
+
+/**
+ * Set the volume of an actively playing noise track.
+ * Only affects tracks that are currently playing.
+ * @param track_index Index of the track (0 .. NOISE_TRACK_COUNT-1)
+ * @param volume      Volume level (0.0 .. 1.0, includes master scaling)
+ */
+void NoiseSetVolume(int track_index, float volume) {
+  if (!noise_engine_initialized) return;
+  if (track_index < 0 || track_index >= NOISE_TRACK_COUNT) return;
+
+  if (ma_sound_is_playing(&noise_sounds[track_index]))
+    ma_sound_set_volume(&noise_sounds[track_index], volume);
 }

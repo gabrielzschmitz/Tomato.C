@@ -1,6 +1,7 @@
 #ifndef INIT_H_
 #define INIT_H_
 
+#include "audio.h"
 #include "error.h"
 #include "ui.h"
 
@@ -51,5 +52,18 @@ ErrorType EndScreen(void);
  * @return Border struct with default border characters
  */
 Border InitBorder(void);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Noise Audio
+ * ---------------------------------------------------------------------------
+ */
+/**
+ * Initialise a WhiteNoiseData struct with default values.
+ * Sets volumes from the user's config.h defaults and marks
+ * all tracks as stopped, with the first track selected.
+ * @param data Pointer to the WhiteNoiseData struct to initialise
+ */
+void InitWhiteNoiseData(WhiteNoiseData* data);
 
 #endif /* INIT_H_ */

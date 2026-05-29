@@ -92,6 +92,12 @@ typedef enum {
   NOTIFICATION_SEND_ERROR = 32, /**< Error: Failed to send notification */
   AUDIO_PLAYBACK_ERROR = 33,    /**< Error: Failed to play audio */
 
+  /* Noise / persistent audio errors */
+  AUDIO_ENGINE_INIT_ERROR = 34, /**< Error: Failed to initialize audio engine */
+  AUDIO_INIT_ERROR = 35,        /**< Error: Failed to init sound from file */
+  AUDIO_START_ERROR = 36,       /**< Error: Failed to start sound playback */
+  INVALID_TRACK_INDEX = 37,     /**< Warning: Track index out of range */
+
   /* Test errors */
   TEST_ERROR /**< Error: Test error for testing purposes */
 } ErrorType;

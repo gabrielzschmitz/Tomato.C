@@ -80,6 +80,8 @@ ErrorType InitApp(AppData* app) {
   app->mouse_y = -1;
   app->mouse_bstate = 0;
 
+  InitWhiteNoiseData(&app->noise_data);
+
   status = initPomodoroData(app);
   if (status != NO_ERROR) return status;
   app->running = true;
@@ -100,6 +102,7 @@ ErrorType EndApp(AppData* app) {
     FreeMenu(app->menus[i]);
     app->menus[i] = NULL;
   }
+  ShutdownNoiseAudio();
   FreeFloatingDialog(app->popup_dialog);
   FreeStatusBar(app->status_bar);
   if (NOTEPAD_LOG)
@@ -344,9 +347,32 @@ static ErrorType initPomodoroData(AppData* app) {
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     app->pomodoro_data.session_index = 0;
 
-    if (!log_had_data)
-      app->popup_dialog = CreateWelcomeDialog(app);
+    if (!log_had_data) app->popup_dialog = CreateWelcomeDialog(app);
   }
 
   return NO_ERROR;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Noise Audio
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialise a WhiteNoiseData struct with default values.
+ * Loads per-track volumes from the user's config.h settings
+ * (RAIN_VOLUME, FIRE_VOLUME, WIND_VOLUME, THUNDER_VOLUME,
+ * NOISE_MASTER_VOLUME).  All tracks start stopped, first
+ * track selected.
+ * @param data Pointer to the WhiteNoiseData struct to initialise
+ */
+void InitWhiteNoiseData(WhiteNoiseData* data) {
+  data->volume[0] = RAIN_VOLUME;
+  data->volume[1] = FIRE_VOLUME;
+  data->volume[2] = WIND_VOLUME;
+  data->volume[3] = THUNDER_VOLUME;
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) data->playing[i] = false;
+  data->master_volume = NOISE_MASTER_VOLUME;
+  data->selected = 0;
 }

@@ -30,6 +30,7 @@ static const char* RAIN_ICONS[3] = {"󰖖", "☔", "R"};
 static const char* FIRE_ICONS[3] = {"󰈸", "🔥", "F"};
 static const char* WIND_ICONS[3] = {"󰖝", "🍃", "W"};
 static const char* THUNDER_ICONS[3] = {"󱐋", "⚡", "T"};
+static const char* PLAYING_ICONS[3] = {"", "▶", "P"};
 static const char* PLUS_VOLUME_ICONS[3] = {"", "➕", "+"};
 static const char* MINUS_VOLUME_ICONS[3] = {"", "➖", "-"};
 static const char* ACTIVE_VOLUME_BAR_ICONS[3] = {"█", "█", "█"};
@@ -83,13 +84,14 @@ static const float NOTIFICATIONS_SOUND_VOLUME = 0.5;
 /* Noise Settings ----------------------------------------------------------- */
 /* 1 means noises on, 0 off (default: 1)
  * Note: you'll need mpv */
-static const int NOISE = 1;
+static const int NOISE_ENABLED = 1;
 /* noises volume level stage from 10 to 100 (default: 50)
  * Note: you'll need mpv (increment it by 10 by 10)*/
 static const int RAIN_VOLUME = 50;
 static const int FIRE_VOLUME = 50;
 static const int WIND_VOLUME = 50;
 static const int THUNDER_VOLUME = 50;
+static const int NOISE_MASTER_VOLUME = 50;
 
 /* Logging Settings --------------------------------------------------------- */
 /* the file path for the pomodoro log (default: /tmp/tomato_pomodoro.bin) */
@@ -254,6 +256,26 @@ static const KeyFunction keys[] = {
   {ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
   {'\r', ExecuteButtonAction, DEFAULT, ALL_SCENES},
   {KEY_ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
+
+  /* White noise dialog controls */
+  {'w', OpenNoiseMenu, DEFAULT, ALL_SCENES},
+  {'q', NoiseClose, DEFAULT, SCENE_NOISE},
+  {ESC, NoiseClose, DEFAULT, SCENE_NOISE},
+  {'k', NoiseSelectPrev, DEFAULT, SCENE_NOISE},
+  {KEY_UP, NoiseSelectPrev, DEFAULT, SCENE_NOISE},
+  {'j', NoiseSelectNext, DEFAULT, SCENE_NOISE},
+  {KEY_DOWN, NoiseSelectNext, DEFAULT, SCENE_NOISE},
+  {' ', NoiseTogglePlay, DEFAULT, SCENE_NOISE},
+  {'l', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
+  {KEY_RIGHT, NoiseVolumeUp, DEFAULT, SCENE_NOISE},
+  {'+', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
+  {'=', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
+  {'h', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
+  {KEY_LEFT, NoiseVolumeDown, DEFAULT, SCENE_NOISE},
+  {'-', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
+  {'_', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
+  {'r', NoiseResetAll, DEFAULT, SCENE_NOISE},
+  {'R', NoiseResetAll, DEFAULT, SCENE_NOISE},
 };
 
 #endif /* CONFIG_H_ */
