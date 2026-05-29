@@ -1682,6 +1682,65 @@ SlideDef** BuildNoiseSlides(AppData* app, Dimensions size) {
 }
 
 /**
+ * Handle mouse click and scroll events on the white noise control slide.
+ *
+ * Determines which track row the event falls on (y + 8 + i*2 for tracks,
+ * y + 18 for master), then for clicks divides the row horizontally:
+ * left of the \x17 (minus) column toggles play/pause, the minus icon
+ * zone decreases volume, and the plus icon zone increases it.  Scroll
+ * events (BUTTON4/BUTTON5) adjust the volume of the targeted row by ±10.
+ *
+ * @param app     Pointer to the application data
+ * @param event   The ncurses mouse event
+ * @param is_click True if this is a click (BUTTON1_PRESSED), false for scroll
+ */
+void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  WhiteNoiseData* data = &app->noise_data;
+
+  int x = d->position.x;
+  int y = d->position.y;
+
+  int row = -1;
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+    if (event->y == y + 8 + i * 2) {
+      row = i;
+      break;
+    }
+  }
+  if (row < 0 && event->y == y + 18) row = NOISE_TRACK_COUNT;
+  if (row < 0) return;
+
+  data->selected = row;
+
+  if (is_click) {
+    int icon_type = GetConfigIconType();
+    int minus_w = utf8DisplayWidth(MINUS_VOLUME_ICONS[icon_type]);
+    int plus_w = utf8DisplayWidth(PLUS_VOLUME_ICONS[icon_type]);
+    int bar_w = (row == NOISE_TRACK_COUNT) ? 24 : 19;
+
+    int content_x = x + 1;
+    int minus_col = content_x + ((row == NOISE_TRACK_COUNT) ? 12 : 17);
+    int bar_start = minus_col + minus_w + 1;
+    int plus_col = bar_start + bar_w + 1;
+    int plus_end = plus_col + plus_w - 1;
+
+    if (event->x >= minus_col && event->x < bar_start)
+      NoiseVolumeDown(app);
+    else if (event->x >= plus_col && event->x <= plus_end)
+      NoiseVolumeUp(app);
+    else if (event->x < minus_col && row != NOISE_TRACK_COUNT)
+      NoiseTogglePlay(app);
+  } else {
+    if (event->bstate & BUTTON4_PRESSED)
+      NoiseVolumeUp(app);
+    else if (event->bstate & BUTTON5_PRESSED)
+      NoiseVolumeDown(app);
+  }
+}
+
+/**
  * Render the white noise control slide.
  *
  * Rebuilds the token stream every frame from the NOISE_TEMPLATE

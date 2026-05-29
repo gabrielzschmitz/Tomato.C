@@ -226,11 +226,27 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
   }
   if (is_click && !inside_popup &&
       app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
-      app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE) {
+      app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE &&
+      app->popup_dialog->slide_type != SLIDE_TYPE_NOISE) {
     ClosePopup(app);
     return;
   }
   if (inside_popup) {
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
+      FloatingDialog* d = app->popup_dialog;
+      if (!d || !d->slides || !d->slides[0]) return;
+      SlideDef* def = d->slides[0];
+      if (event->bstate & REPORT_MOUSE_POSITION) {
+        def->update(app, def);
+        flushinp();
+      }
+      if (is_click || (event->bstate & (BUTTON4_PRESSED | BUTTON5_PRESSED))) {
+        NoiseSlideMouseAction(app, event, is_click);
+        if (!app->popup_dialog) return;
+      }
+      if (is_click || event->bstate == BUTTON1_RELEASED) def->hovered = -1;
+      return;
+    }
     if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
         app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
       FloatingDialog* d = app->popup_dialog;
@@ -1146,6 +1162,10 @@ void NoiseVolumeUp(AppData* app) {
   if (nd->selected == NOISE_TRACK_COUNT) {
     if (nd->master_volume < 100) nd->master_volume += 10;
     if (nd->master_volume > 100) nd->master_volume = 100;
+    for (int i = 0; i < NOISE_TRACK_COUNT; i++)
+      if (nd->playing[i])
+        NoiseSetVolume(i, (float)nd->volume[i] *
+                           (float)nd->master_volume / 10000.0f);
   } else {
     if (nd->volume[nd->selected] < 100) nd->volume[nd->selected] += 10;
     if (nd->volume[nd->selected] > 100) nd->volume[nd->selected] = 100;
@@ -1166,6 +1186,10 @@ void NoiseVolumeDown(AppData* app) {
   if (nd->selected == NOISE_TRACK_COUNT) {
     if (nd->master_volume > 0) nd->master_volume -= 10;
     if (nd->master_volume < 0) nd->master_volume = 0;
+    for (int i = 0; i < NOISE_TRACK_COUNT; i++)
+      if (nd->playing[i])
+        NoiseSetVolume(i, (float)nd->volume[i] *
+                           (float)nd->master_volume / 10000.0f);
   } else {
     if (nd->volume[nd->selected] > 0) nd->volume[nd->selected] -= 10;
     if (nd->volume[nd->selected] < 0) nd->volume[nd->selected] = 0;

@@ -549,6 +549,21 @@ SlideDef** BuildContinueSlides(AppData* app, Dimensions size);
 SlideDef** BuildNoiseSlides(AppData* app, Dimensions size);
 
 /**
+ * Handle mouse click and scroll events on the white noise control slide.
+ *
+ * Determines which track row the event falls on (y + 8 + i*2 for tracks,
+ * y + 18 for master), then for clicks divides the row horizontally:
+ * left of the \x17 (minus) column toggles play/pause, the minus icon
+ * zone decreases volume, and the plus icon zone increases it.  Scroll
+ * events (BUTTON4/BUTTON5) adjust the volume of the targeted row by ±10.
+ *
+ * @param app     Pointer to the application data
+ * @param event   The ncurses mouse event
+ * @param is_click True if this is a click (BUTTON1_PRESSED), false for scroll
+ */
+void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click);
+
+/**
  * Default progress renderer for slides.
  * Draws the title with filled/empty dots ("Welcome ●●○○○") in
  * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
