@@ -542,8 +542,10 @@ SlideDef** BuildContinueSlides(AppData* app, Dimensions size);
 
 /**
  * Build an array of white noise slides (one slide).
+ * Height is computed dynamically from the registered track count
+ * as h = 15 + 2 * track_count (minimum 15).
  * @param app  Application state
- * @param size Slide dimensions
+ * @param size Slide dimensions (width used; height recomputed)
  * @return Array of 1 SlideDef pointer, or NULL on failure
  */
 SlideDef** BuildNoiseSlides(AppData* app, Dimensions size);

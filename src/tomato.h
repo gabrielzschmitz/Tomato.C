@@ -24,10 +24,6 @@
 #define DEBUG 0
 #endif
 
-static const char* NOISE_SOUND_PATHS[NOISE_TRACK_COUNT] = {
-  "./sounds/ambience-rain.mp3", "./sounds/ambience-fire.mp3",
-  "./sounds/ambience-wind.mp3", "./sounds/ambience-thunder.mp3"};
-
 /**
  * Pomodoro timer data structure.
  * Tracks the current state of the pomodoro cycle.

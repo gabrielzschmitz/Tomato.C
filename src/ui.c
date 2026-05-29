@@ -1031,7 +1031,8 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
  * @return Pointer to the created dialog, or NULL on failure
  */
 FloatingDialog* CreateNoiseDialog(AppData* app) {
-  Dimensions size = {.width = 51, .height = 23};
+  Dimensions size = {.width = 51,
+                     .height = -1}; /* height grows with track count */
   Vector2D pos = {.x = 0, .y = 0};
   MenuItem items[] = {{"Close", ClosePopup}};
   Menu menu = {.items = items,
@@ -1651,12 +1652,16 @@ static void abandonAndClose(AppData* app) {
 
 /**
  * Build an array of white noise slides (one slide).
+ * Height is computed dynamically from the registered track count
+ * as h = 15 + 2 * track_count (minimum 15).
  * @param app  Application state
- * @param size Slide dimensions
+ * @param size Slide dimensions (width used; height recomputed)
  * @return Array of 1 SlideDef pointer, or NULL on failure
  */
 SlideDef** BuildNoiseSlides(AppData* app, Dimensions size) {
-  (void)app;
+  int track_count = app->noise_data.track_count;
+  int h = (track_count == 0) ? 15 : 15 + 2 * track_count;
+
   SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
   if (!slides) return NULL;
 
@@ -1667,7 +1672,7 @@ SlideDef** BuildNoiseSlides(AppData* app, Dimensions size) {
   }
 
   def->size.width = size.width;
-  def->size.height = size.height;
+  def->size.height = h;
   def->render = noiseSlideRender;
   def->update = noiseSlideUpdate;
   def->slide_type = SLIDE_TYPE_NOISE;
@@ -1698,18 +1703,20 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
   FloatingDialog* d = app->popup_dialog;
   if (!d) return;
   WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
+  int master_row_y = d->position.y + 10 + track_count * 2;
 
   int x = d->position.x;
   int y = d->position.y;
 
   int row = -1;
-  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+  for (int i = 0; i < track_count; i++) {
     if (event->y == y + 8 + i * 2) {
       row = i;
       break;
     }
   }
-  if (row < 0 && event->y == y + 18) row = NOISE_TRACK_COUNT;
+  if (row < 0 && event->y == master_row_y) row = track_count;
   if (row < 0) return;
 
   data->selected = row;
@@ -1718,10 +1725,10 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
     int icon_type = GetConfigIconType();
     int minus_w = utf8DisplayWidth(MINUS_VOLUME_ICONS[icon_type]);
     int plus_w = utf8DisplayWidth(PLUS_VOLUME_ICONS[icon_type]);
-    int bar_w = (row == NOISE_TRACK_COUNT) ? 24 : 19;
+    int bar_w = (row == track_count) ? 24 : 19;
 
     int content_x = x + 1;
-    int minus_col = content_x + ((row == NOISE_TRACK_COUNT) ? 12 : 17);
+    int minus_col = content_x + ((row == track_count) ? 12 : 17);
     int bar_start = minus_col + minus_w + 1;
     int plus_col = bar_start + bar_w + 1;
     int plus_end = plus_col + plus_w - 1;
@@ -1730,7 +1737,7 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
       NoiseVolumeDown(app);
     else if (event->x >= plus_col && event->x <= plus_end)
       NoiseVolumeUp(app);
-    else if (event->x < minus_col && row != NOISE_TRACK_COUNT)
+    else if (event->x < minus_col && row != track_count)
       NoiseTogglePlay(app);
   } else {
     if (event->bstate & BUTTON4_PRESSED)
@@ -1743,38 +1750,16 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
 /**
  * Render the white noise control slide.
  *
- * Rebuilds the token stream every frame from the NOISE_TEMPLATE
- * (local static constant) with live volume-bar and playing-indicator
- * strings injected via snprintf.  Parses via parseSlideText, overrides
- * token colours for selection highlighting, then draws via
- * renderSlideTokens.  Keyboard hints are drawn directly at the bottom.
+ * Builds the text string dynamically every frame from the registered
+ * track list, injecting live volume-bar and playing-indicator strings,
+ * then parses via parseSlideText, overrides token colours for selection
+ * highlighting, and draws via renderSlideTokens. Keyboard hints are drawn
+ * directly at the bottom.
  *
  * @param app Pointer to the application data
  * @param def Slide definition (provides size, progress, callbacks)
  */
 static void noiseSlideRender(AppData* app, SlideDef* def) {
-  /* Token-format template for the white noise dialog content. Placeholders:
-   * {r}{f}{w}{t} = track icons, {m}{p} = minus/plus icons. %s = playing
-   * indicator or volume bar string (from snprintf). */
-  static const char* NOISE_TEMPLATE =
-    "\\n\\n\\n\\n"
-    "\\aC\\c07Mix ambient sounds for focus and relaxation\\n"
-    "\\n"
-    "\\c07\\x03───────────────────────────────────────────\\n"
-    "\\n"
-    "\\x03%s{r} Rain\\x17{m} %s {p}  %3d%%\\n"
-    "\\n"
-    "\\x03%s{f} Fire\\x17{m} %s {p}  %3d%%\\n"
-    "\\n"
-    "\\x03%s{w} Wind\\x17{m} %s {p}  %3d%%\\n"
-    "\\n"
-    "\\x03%s{t} Thunder\\x17{m} %s {p}  %3d%%\\n"
-    "\\n"
-    "\\c07\\x03───────────────────────────────────────────\\n"
-    "\\n"
-    "\\x03Master\\x12{m} %s {p}  %3d%%\\n"
-    "\\n";
-
   FloatingDialog* d = app->popup_dialog;
   int w = def->size.width;
   int h = def->size.height;
@@ -1785,6 +1770,7 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
   int y = d->position.y;
   int icon_type = GetConfigIconType();
   WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
 
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   for (int r = 0; r < h; r++)
@@ -1798,8 +1784,8 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
   if (def->render_progress && def->progress)
     def->render_progress(app, x, y + 1, w, def, def->progress);
 
-  char play_strs[NOISE_TRACK_COUNT][8];
-  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+  char play_strs[track_count][8];
+  for (int i = 0; i < track_count; i++) {
     if (data->playing[i]) {
       const char* raw = PLAYING_ICONS[icon_type];
       if (utf8DisplayWidth(raw) >= 2)
@@ -1810,13 +1796,10 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
       snprintf(play_strs[i], sizeof(play_strs[i]), "  ");
   }
 
-  char vol_bars[NOISE_TRACK_COUNT + 1][128];
-  const int bar_widths[] = {19, 19, 19, 19, 24};
-  int* volumes[] = {&data->volume[0], &data->volume[1], &data->volume[2],
-                    &data->volume[3], &data->master_volume};
-  for (int i = 0; i <= NOISE_TRACK_COUNT; i++) {
-    int bar_w = bar_widths[i];
-    int filled = (*volumes[i] * bar_w) / 100;
+  char vol_bars[track_count + 1][128];
+  for (int i = 0; i < track_count; i++) {
+    int bar_w = 19;
+    int filled = (data->volume[i] * bar_w) / 100;
     int empty = bar_w - filled;
     char* bp = vol_bars[i];
     for (int j = 0; j < filled; j++)
@@ -1825,12 +1808,66 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
       bp += sprintf(bp, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
     *bp = '\0';
   }
+  {
+    int bar_w = 24;
+    int filled = (data->master_volume * bar_w) / 100;
+    int empty = bar_w - filled;
+    char* bp = vol_bars[track_count];
+    for (int j = 0; j < filled; j++)
+      bp += sprintf(bp, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    for (int j = 0; j < empty; j++)
+      bp += sprintf(bp, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    *bp = '\0';
+  }
 
-  char text[1024];
-  snprintf(text, sizeof(text), NOISE_TEMPLATE, play_strs[0], vol_bars[0],
-           data->volume[0], play_strs[1], vol_bars[1], data->volume[1],
-           play_strs[2], vol_bars[2], data->volume[2], play_strs[3],
-           vol_bars[3], data->volume[3], vol_bars[4], data->master_volume);
+  char text[4096];
+  char* tp = text;
+  int remaining = sizeof(text);
+  int n;
+
+  n = snprintf(tp, remaining,
+               "\\n\\n\\n\\n"
+               "\\aC\\c07Mix ambient sounds for focus and relaxation\\n"
+               "\\n"
+               "\\c07\\x03───────────────────────────────────────────\\n"
+               "\\n");
+  tp += n;
+  remaining -= n;
+
+  if (track_count == 0) {
+    n = snprintf(tp, remaining,
+                 "\\c15\\x03No ambient sound tracks registered.\\n"
+                 "\\n"
+                 "\\c07\\x03───────────────────────────────────────────\\n"
+                 "\\n");
+    tp += n;
+    remaining -= n;
+    goto done_text;
+  }
+
+  for (int i = 0; i < track_count; i++) {
+    const char* icon = data->tracks[i].icons[icon_type];
+    n = snprintf(tp, remaining,
+                 "\\x03%s%s %s\\x17{m} %s {p}  %3d%%\\n"
+                 "\\n",
+                 play_strs[i], icon, data->tracks[i].name, vol_bars[i],
+                 data->volume[i]);
+    tp += n;
+    remaining -= n;
+  }
+
+  n = snprintf(tp, remaining,
+               "\\c07\\x03───────────────────────────────────────────\\n"
+               "\\n");
+  tp += n;
+  remaining -= n;
+
+  n = snprintf(tp, remaining,
+               "\\x03Master\\x12{m} %s {p}  %3d%%\\n"
+               "\\n",
+               vol_bars[track_count], data->master_volume);
+
+done_text:
 
   if (def->tokens) {
     SlideToken* t = def->tokens;
@@ -1845,14 +1882,17 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
 
   def->tokens = parseSlideText(text, icon_type);
   if (def->tokens) {
-    const int sel_colors[] = {14, 13, 15, 11};
-    for (SlideToken* t = def->tokens; t; t = t->next) {
-      int row = t->y;
-      if (row >= 8 && row <= 14 && (row % 2 == 0)) {
-        int ti = (row - 8) / 2;
-        t->color = (ti == data->selected) ? sel_colors[ti] : 7;
-      } else if (row == 18)
-        t->color = (data->selected == NOISE_TRACK_COUNT) ? 14 : 7;
+    if (track_count > 0) {
+      int sep_row = 8 + track_count * 2;
+      int master_row = 10 + track_count * 2;
+      for (SlideToken* t = def->tokens; t; t = t->next) {
+        int row = t->y;
+        if (row >= 8 && row < sep_row && (row % 2 == 0)) {
+          int ti = (row - 8) / 2;
+          t->color = (ti == data->selected) ? 14 : 7;
+        } else if (row == master_row)
+          t->color = (data->selected == track_count) ? 14 : 7;
+      }
     }
     renderSlideTokens(x, y, w, h, def->tokens);
 
@@ -1867,9 +1907,12 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
   }
 
   char hint_buf[128];
-  snprintf(hint_buf, sizeof(hint_buf),
-           "\\c15k/j \\c07Navigate  \\c15h/l \\c07Volume  \\c15space "
-           "\\c07Toggle  \\c15q \\c07Close");
+  if (track_count == 0)
+    snprintf(hint_buf, sizeof(hint_buf), "\\c15q \\c07Close");
+  else
+    snprintf(hint_buf, sizeof(hint_buf),
+             "\\c15k/j \\c07Navigate  \\c15h/l \\c07Volume  \\c15space "
+             "\\c07Toggle  \\c15q \\c07Close");
   SlideToken* hint_toks = parseSlideText(hint_buf, icon_type);
   if (hint_toks) {
     int total_w = 0;
@@ -1903,8 +1946,8 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
  * Update the selected noise track based on mouse position.
  *
  * Checks the mouse cursor against each track row (y + 8 + i*2)
- * and the master row (y + 18), updating data->selected and
- * dialog->hovered_button on match.
+ * and the master row (y + 10 + track_count*2), updating
+ * data->selected and dialog->hovered_button on match.
  *
  * @param app Pointer to the application data
  * @param def Slide definition (unused — state lives in app->noise_data)
@@ -1917,8 +1960,11 @@ static void noiseSlideUpdate(AppData* app, SlideDef* def) {
   int y = d->position.y;
 
   WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
+  int master_row = y + 10 + track_count * 2;
+
   int hovered = -1;
-  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+  for (int i = 0; i < track_count; i++) {
     int ry = y + 8 + i * 2;
     if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
         app->mouse_x <= x + d->size.width - 3) {
@@ -1927,12 +1973,10 @@ static void noiseSlideUpdate(AppData* app, SlideDef* def) {
     }
   }
 
-  if (hovered < 0) {
-    int ry = y + 18;
-    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
+  if (hovered < 0)
+    if (app->mouse_y == master_row && app->mouse_x >= x + 2 &&
         app->mouse_x <= x + d->size.width - 3)
-      hovered = NOISE_TRACK_COUNT;
-  }
+      hovered = track_count;
 
   if (hovered >= 0) {
     data->selected = hovered;

@@ -1134,8 +1134,9 @@ void NoiseClose(AppData* app) { ClosePopup(app); }
  */
 void NoiseSelectPrev(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
+  if (nd->track_count == 0) return;
   nd->selected--;
-  if (nd->selected < 0) nd->selected = NOISE_TRACK_COUNT;
+  if (nd->selected < 0) nd->selected = nd->track_count;
   app->popup_dialog->hovered_button = nd->selected;
 }
 
@@ -1145,8 +1146,9 @@ void NoiseSelectPrev(AppData* app) {
  */
 void NoiseSelectNext(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
+  if (nd->track_count == 0) return;
   nd->selected++;
-  if (nd->selected > NOISE_TRACK_COUNT) nd->selected = 0;
+  if (nd->selected > nd->track_count) nd->selected = 0;
   app->popup_dialog->hovered_button = nd->selected;
 }
 
@@ -1158,11 +1160,13 @@ void NoiseSelectNext(AppData* app) {
  */
 void NoiseTogglePlay(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
-  if (nd->selected >= 0 && nd->selected < NOISE_TRACK_COUNT) {
+  if (nd->selected >= 0 && nd->selected < nd->track_count) {
     nd->playing[nd->selected] = !nd->playing[nd->selected];
     if (nd->playing[nd->selected] && nd->volume[nd->selected] > 0)
-      NoiseStartTrack(nd->selected, (float)nd->volume[nd->selected] *
-                                      (float)nd->master_volume / 10000.0f);
+      NoiseStartTrack(nd->selected,
+                      nd->tracks[nd->selected].sound_path,
+                      (float)nd->volume[nd->selected] *
+                        (float)nd->master_volume / 10000.0f);
     else
       NoiseStopTrack(nd->selected);
   }
@@ -1176,10 +1180,11 @@ void NoiseTogglePlay(AppData* app) {
  */
 void NoiseVolumeUp(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
-  if (nd->selected == NOISE_TRACK_COUNT) {
+  if (nd->track_count == 0) return;
+  if (nd->selected == nd->track_count) {
     if (nd->master_volume < 100) nd->master_volume += 10;
     if (nd->master_volume > 100) nd->master_volume = 100;
-    for (int i = 0; i < NOISE_TRACK_COUNT; i++)
+    for (int i = 0; i < nd->track_count; i++)
       if (nd->playing[i])
         NoiseSetVolume(i, (float)nd->volume[i] *
                            (float)nd->master_volume / 10000.0f);
@@ -1200,10 +1205,11 @@ void NoiseVolumeUp(AppData* app) {
  */
 void NoiseVolumeDown(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
-  if (nd->selected == NOISE_TRACK_COUNT) {
+  if (nd->track_count == 0) return;
+  if (nd->selected == nd->track_count) {
     if (nd->master_volume > 0) nd->master_volume -= 10;
     if (nd->master_volume < 0) nd->master_volume = 0;
-    for (int i = 0; i < NOISE_TRACK_COUNT; i++)
+    for (int i = 0; i < nd->track_count; i++)
       if (nd->playing[i])
         NoiseSetVolume(i, (float)nd->volume[i] *
                            (float)nd->master_volume / 10000.0f);
@@ -1224,7 +1230,8 @@ void NoiseVolumeDown(AppData* app) {
  */
 void NoiseResetAll(AppData* app) {
   WhiteNoiseData* nd = &app->noise_data;
-  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+  if (nd->track_count == 0) return;
+  for (int i = 0; i < nd->track_count; i++) {
     nd->volume[i] = 50;
     nd->playing[i] = false;
   }
