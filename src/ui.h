@@ -90,6 +90,7 @@ typedef enum {
   SLIDE_TYPE_NONE,     /**< Not a slide-based dialog (regular menu popup) */
   SLIDE_TYPE_WELCOME,  /**< Multi-slide carousel with prev/next navigation */
   SLIDE_TYPE_CONTINUE, /**< Single-slide session dialog with action buttons */
+  SLIDE_TYPE_NOISE,    /**< Single-slide white noise dialog */
 } SlideType;
 
 /**
@@ -103,8 +104,9 @@ struct SlideDef {
   Dimensions size;    /**< Slide width and height in columns/rows */
   void (*render)(AppData* app, SlideDef* def); /**< Render this slide */
   void (*update)(AppData* app, SlideDef* def); /**< Update hover state */
-  int hovered;        /**< Currently hovered nav control (-1 = none) */
-  SlideType slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
+  int hovered; /**< Currently hovered nav control (-1 = none) */
+  SlideType
+    slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
   void (*render_progress)(AppData* app, int x, int y, int w, SlideDef* def,
                           SlideProgress* params); /**< Progress renderer */
   void (*render_controls)(AppData* app, int x, int y, int w, SlideDef* def,
@@ -207,11 +209,11 @@ struct FloatingDialog {
   Menu menu;         /**< Menu displayed inside the dialog */
   char* message;     /**< Message text displayed in the dialog */
   bool visible;      /**< Whether the dialog is currently shown */
-  SlideDef**
-    slides; /**< Pre-built slides [iconType * stride + slideIdx] */
-  int slideCount; /**< Total slides in array (3 * stride) */
-  int currentSlide; /**< Currently displayed slide index (0 to stride-1) */
-  SlideType slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
+  SlideDef** slides; /**< Pre-built slides [iconType * stride + slideIdx] */
+  int slideCount;    /**< Total slides in array (3 * stride) */
+  int currentSlide;  /**< Currently displayed slide index (0 to stride-1) */
+  SlideType
+    slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
   int hovered_button; /**< Currently hovered control button index (-1 = none) */
 };
 
@@ -478,6 +480,13 @@ FloatingDialog* CreateWelcomeDialog(AppData* app);
  */
 FloatingDialog* CreateContinueDialog(AppData* app);
 
+/**
+ * Create a white noise control dialog for ambient sounds.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateNoiseDialog(AppData* app);
+
 /* ---------------------------------------------------------------------------
  * Pomodoro
  * --------------------------------------------------------------------------- */
@@ -505,6 +514,14 @@ void RenderPomodoroControls(AppData* app, Vector2D pos);
  */
 
 /**
+ * Free all memory associated with a welcome slides array.
+ * Walks and frees each slide's token linked list, then the slide array.
+ * @param slides Array of SlideDef pointers to free
+ * @param count Number of elements in the array
+ */
+void FreeWelcomeSlides(SlideDef** slides, int count);
+
+/**
  * Build all welcome slide definitions for all icon types.
  * Allocates 3 * stride SlideDef instances, one per icon
  * type per slide. Index with [iconType * WELCOME_SLIDE_COUNT + slideIdx].
@@ -512,14 +529,6 @@ void RenderPomodoroControls(AppData* app, Vector2D pos);
  * @return Pointer to array of SlideDef pointers, or NULL on allocation failure
  */
 SlideDef** BuildWelcomeSlides(Dimensions size);
-
-/**
- * Free all memory associated with a welcome slides array.
- * Walks and frees each slide's token linked list, then the slide array.
- * @param slides Array of SlideDef pointers to free
- * @param count Number of elements in the array
- */
-void FreeWelcomeSlides(SlideDef** slides, int count);
 
 /**
  * Build a set of continue session slides (one per icon type).
@@ -530,6 +539,14 @@ void FreeWelcomeSlides(SlideDef** slides, int count);
  * @return Array of 3 SlideDef pointers (one per icon type), or NULL on failure
  */
 SlideDef** BuildContinueSlides(AppData* app, Dimensions size);
+
+/**
+ * Build an array of white noise slides (one slide).
+ * @param app  Application state
+ * @param size Slide dimensions
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
+SlideDef** BuildNoiseSlides(AppData* app, Dimensions size);
 
 /**
  * Default progress renderer for slides.
@@ -563,5 +580,15 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
  */
 void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
                          SlideControls* params);
+
+/**
+ * Draw the dialog frame with ACS line-drawing characters.
+ * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
+ * @param x X position of the dialog
+ * @param y Y position of the dialog
+ * @param w Width of the dialog
+ * @param h Height of the dialog
+ */
+void RenderSlideBox(int x, int y, int w, int h);
 
 #endif /* UI_H_ */

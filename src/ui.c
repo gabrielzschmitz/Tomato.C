@@ -19,16 +19,23 @@ static int utf8DisplayWidth(const char* s);
 static SlideToken* parseSlideText(const char* text, int icon_type);
 static SlideDef* buildSlideFromText(const char* text, int w, int h,
                                     int icon_type);
+
 static void welcomeRender(AppData* app, SlideDef* def);
 static void welcomeUpdate(AppData* app, SlideDef* def);
-static void renderSlideBox(int x, int y, int w, int h);
-static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
-static void continueAndClose(AppData* app);
-static void abandonAndClose(AppData* app);
 static void continueProgressRender(AppData* app, int x, int y, int w,
                                    SlideDef* def, SlideProgress* params);
+static void continueAndClose(AppData* app);
+static void abandonAndClose(AppData* app);
+static void noiseSlideRender(AppData* app, SlideDef* def);
+static void noiseSlideUpdate(AppData* app, SlideDef* def);
+static SlideToken* parseSlideText(const char* text, int icon_type);
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type);
+static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
 static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
+static int strDisplayWidth(const char* s);
+static int utf8DisplayWidth(const char* s);
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
 static void freePanel(Panel* panel);
@@ -991,7 +998,7 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
  * @return Pointer to the created dialog, or NULL on failure
  */
 FloatingDialog* CreateContinueDialog(AppData* app) {
-  Dimensions size = {.width = 39, .height = 19};
+  Dimensions size = {.width = 51, .height = 23};
   Vector2D pos = {.x = 0, .y = 0};
   MenuItem items[] = {{"Continue", continueAndClose},
                       {"Discard", abandonAndClose}};
@@ -1014,6 +1021,38 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
     }
     dialog->slideCount = 3;
     dialog->currentSlide = 0;
+  }
+  return dialog;
+}
+
+/**
+ * Create a white noise control dialog for ambient sounds.
+ * @param app Pointer to the application data
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateNoiseDialog(AppData* app) {
+  Dimensions size = {.width = 51, .height = 23};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Close", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 1};
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (dialog) {
+    dialog->slides = BuildNoiseSlides(app, size);
+    if (!dialog->slides) {
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    dialog->slideCount = 1;
+    dialog->currentSlide = 0;
+    dialog->slide_type = SLIDE_TYPE_NOISE;
+    dialog->hovered_button = -1;
   }
   return dialog;
 }
@@ -1141,6 +1180,34 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
  * Slides
  * ---------------------------------------------------------------------------
  */
+
+/**
+ * Free all memory associated with a welcome slides array.
+ * Walks and frees each slide's token linked list, then the slide array.
+ * @param slides Array of SlideDef pointers to free
+ * @param count Number of elements in the array
+ */
+void FreeWelcomeSlides(SlideDef** slides, int count) {
+  if (!slides) return;
+  for (int i = 0; i < count; i++) {
+    if (slides[i]) {
+      SlideToken* t = slides[i]->tokens;
+      while (t) {
+        SlideToken* next = t->next;
+        free(t->text);
+        free(t);
+        t = next;
+      }
+      free(slides[i]->progress);
+      if (slides[i]->controls) {
+        free(slides[i]->controls->buttons);
+        free(slides[i]->controls);
+      }
+      free(slides[i]);
+    }
+  }
+  free(slides);
+}
 
 /**
  * Build all welcome slide definitions for all icon types.
@@ -1348,74 +1415,88 @@ SlideDef** BuildWelcomeSlides(Dimensions size) {
 }
 
 /**
- * Free all memory associated with a welcome slides array.
- * Walks and frees each slide's token linked list, then the slide array.
- * @param slides Array of SlideDef pointers to free
- * @param count Number of elements in the array
+ * Render the current welcome slide into the popup dialog.
+ * Draws the box frame, progress indicator, content tokens, and nav controls.
+ * @param app Application state (provides popup_dialog, screen)
+ * @param def Slide definition to render
  */
-void FreeWelcomeSlides(SlideDef** slides, int count) {
-  if (!slides) return;
-  for (int i = 0; i < count; i++) {
-    if (slides[i]) {
-      SlideToken* t = slides[i]->tokens;
-      while (t) {
-        SlideToken* next = t->next;
-        free(t->text);
-        free(t);
-        t = next;
+static void welcomeRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  int w = def->size.width;
+  int h = def->size.height;
+
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  /* Sync keyboard-hovered button index into the slide def so
+   * SlideControlsRender highlights the right button.
+   * Only override when keyboard has made a selection (>=0)
+   * so mouse hover set by welcomeUpdate is not cleared for WELCOME slides. */
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+  if (def->render_progress && def->progress)
+    def->render_progress(app, x, y + 1, w, def, def->progress);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  renderSlideTokens(x, y, w, h, def->tokens);
+  if (def->render_controls && def->controls)
+    def->render_controls(app, x, y + h - 2, w, def, def->controls);
+}
+
+/**
+ * Track mouse hover over the nav controls (prev/next/close/start) on the
+ * current slide and update def->hovered accordingly.
+ * @param app Application state (provides click_regions, mouse coordinates)
+ * @param def Slide definition whose hovered field to update
+ */
+static void welcomeUpdate(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y + d->size.height - 2;
+  int w = def->size.width;
+  int hover_idx = -1;
+  if (def->controls) {
+    for (int i = 0; i < def->controls->count; i++) {
+      const ControlButton* btn = &def->controls->buttons[i];
+      int tw = utf8DisplayWidth(btn->text);
+      int bx;
+      switch (btn->align) {
+        case ALIGN_SLIDE_LEFT:
+          bx = x + 2;
+          break;
+        case ALIGN_SLIDE_CENTER:
+          bx = x + 1 + ((w - 2) - tw) / 2;
+          break;
+        case ALIGN_SLIDE_RIGHT:
+          bx = x + w - 2 - tw;
+          break;
+        default:
+          bx = x + 2;
+          break;
       }
-      free(slides[i]->progress);
-      if (slides[i]->controls) {
-        free(slides[i]->controls->buttons);
-        free(slides[i]->controls);
+      if (app->mouse_x >= bx && app->mouse_x < bx + tw && app->mouse_y == y) {
+        hover_idx = i;
+        break;
       }
-      free(slides[i]);
     }
   }
-  free(slides);
-}
-
-/**
- * Continue the session then close the dialog.
- * @param app Application state
- */
-static void continueAndClose(AppData* app) {
-  ContinuePreviousSession(app);
-  ClosePopup(app);
-}
-
-/**
- * Abandon the session then close the dialog.
- * @param app Application state
- */
-static void abandonAndClose(AppData* app) {
-  AbandonPreviousSession(app);
-  ClosePopup(app);
-}
-
-/**
- * Continue-dialog progress renderer: shows "{W} Resume Pomodoro Session"
- * centred in the title bar, with the icon expanded per icon type.
- * @param app    Application state (for icon type)
- * @param x      Absolute column position (slide left edge)
- * @param y      Absolute row position (progress line)
- * @param w      Slide width (unused)
- * @param def    Slide definition (unused)
- * @param params Unused (no dots needed)
- */
-static void continueProgressRender(AppData* app, int x, int y, int w,
-                                   SlideDef* def, SlideProgress* params) {
-  (void)app;
-  (void)def;
-  (void)params;
-  int icon_type = GetConfigIconType();
-  const char* icon = WORK_ICONS[icon_type];
-  char title[64];
-  snprintf(title, sizeof(title), "%s Resume Pomodoro Session",
-           (icon && icon[0]) ? icon : "");
-  int tw = utf8DisplayWidth(title);
-  SetColor(COLOR_MAGENTA, NO_COLOR, A_BOLD);
-  mvprintw(y, x + 1 + ((w - 2) - tw) / 2, "%s", title);
+  /* Update hovered_button when mouse is over a button */
+  if (hover_idx >= 0) {
+    def->hovered = hover_idx;
+    if (d->slide_type == SLIDE_TYPE_CONTINUE ||
+        d->slide_type == SLIDE_TYPE_WELCOME)
+      d->hovered_button = hover_idx;
+  }
 }
 
 /**
@@ -1526,6 +1607,281 @@ SlideDef** BuildContinueSlides(AppData* app, Dimensions size) {
 }
 
 /**
+ * Continue-dialog progress renderer: shows "{W} Resume Pomodoro Session"
+ * centred in the title bar, with the icon expanded per icon type.
+ * @param app    Application state (for icon type)
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width (unused)
+ * @param def    Slide definition (unused)
+ * @param params Unused (no dots needed)
+ */
+static void continueProgressRender(AppData* app, int x, int y, int w,
+                                   SlideDef* def, SlideProgress* params) {
+  (void)app;
+  (void)def;
+  (void)params;
+  int icon_type = GetConfigIconType();
+  const char* icon = WORK_ICONS[icon_type];
+  char title[64];
+  snprintf(title, sizeof(title), "%s Resume Pomodoro Session",
+           (icon && icon[0]) ? icon : "");
+  int tw = utf8DisplayWidth(title);
+  SetColor(COLOR_MAGENTA, NO_COLOR, A_BOLD);
+  mvprintw(y, x + 1 + ((w - 2) - tw) / 2, "%s", title);
+}
+
+/**
+ * Continue the session then close the dialog.
+ * @param app Application state
+ */
+static void continueAndClose(AppData* app) {
+  ContinuePreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
+ * Abandon the session then close the dialog.
+ * @param app Application state
+ */
+static void abandonAndClose(AppData* app) {
+  AbandonPreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
+ * Build an array of white noise slides (one slide).
+ * @param app  Application state
+ * @param size Slide dimensions
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
+SlideDef** BuildNoiseSlides(AppData* app, Dimensions size) {
+  (void)app;
+  SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+  if (!slides) return NULL;
+
+  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+  if (!def) {
+    free(slides);
+    return NULL;
+  }
+
+  def->size.width = size.width;
+  def->size.height = size.height;
+  def->render = noiseSlideRender;
+  def->update = noiseSlideUpdate;
+  def->slide_type = SLIDE_TYPE_NOISE;
+  def->hovered = -1;
+  {
+    SlideProgress prog = {"WHITE NOISE", " ", " ", 1, 0};
+    def->progress = slideProgressDup(&prog);
+  }
+  def->render_progress = SlideProgressRender;
+  slides[0] = def;
+  return slides;
+}
+
+/**
+ * Render the white noise control slide.
+ *
+ * Rebuilds the token stream every frame from the NOISE_TEMPLATE
+ * (local static constant) with live volume-bar and playing-indicator
+ * strings injected via snprintf.  Parses via parseSlideText, overrides
+ * token colours for selection highlighting, then draws via
+ * renderSlideTokens.  Keyboard hints are drawn directly at the bottom.
+ *
+ * @param app Pointer to the application data
+ * @param def Slide definition (provides size, progress, callbacks)
+ */
+static void noiseSlideRender(AppData* app, SlideDef* def) {
+  /* Token-format template for the white noise dialog content. Placeholders:
+   * {r}{f}{w}{t} = track icons, {m}{p} = minus/plus icons. %s = playing
+   * indicator or volume bar string (from snprintf). */
+  static const char* NOISE_TEMPLATE =
+    "\\n\\n\\n\\n"
+    "\\aC\\c07Mix ambient sounds for focus and relaxation\\n"
+    "\\n"
+    "\\c07\\x03───────────────────────────────────────────\\n"
+    "\\n"
+    "\\x03%s{r} Rain\\x17{m} %s {p}  %3d%%\\n"
+    "\\n"
+    "\\x03%s{f} Fire\\x17{m} %s {p}  %3d%%\\n"
+    "\\n"
+    "\\x03%s{w} Wind\\x17{m} %s {p}  %3d%%\\n"
+    "\\n"
+    "\\x03%s{t} Thunder\\x17{m} %s {p}  %3d%%\\n"
+    "\\n"
+    "\\c07\\x03───────────────────────────────────────────\\n"
+    "\\n"
+    "\\x03Master\\x12{m} %s {p}  %3d%%\\n"
+    "\\n";
+
+  FloatingDialog* d = app->popup_dialog;
+  int w = def->size.width;
+  int h = def->size.height;
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+  int icon_type = GetConfigIconType();
+  WhiteNoiseData* data = &app->noise_data;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+
+  if (def->render_progress && def->progress)
+    def->render_progress(app, x, y + 1, w, def, def->progress);
+
+  char play_strs[NOISE_TRACK_COUNT][8];
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+    if (data->playing[i]) {
+      const char* raw = PLAYING_ICONS[icon_type];
+      if (utf8DisplayWidth(raw) >= 2)
+        snprintf(play_strs[i], sizeof(play_strs[i]), "%s", raw);
+      else
+        snprintf(play_strs[i], sizeof(play_strs[i]), "%s ", raw);
+    } else
+      snprintf(play_strs[i], sizeof(play_strs[i]), "  ");
+  }
+
+  char vol_bars[NOISE_TRACK_COUNT + 1][128];
+  const int bar_widths[] = {19, 19, 19, 19, 24};
+  int* volumes[] = {&data->volume[0], &data->volume[1], &data->volume[2],
+                    &data->volume[3], &data->master_volume};
+  for (int i = 0; i <= NOISE_TRACK_COUNT; i++) {
+    int bar_w = bar_widths[i];
+    int filled = (*volumes[i] * bar_w) / 100;
+    int empty = bar_w - filled;
+    char* bp = vol_bars[i];
+    for (int j = 0; j < filled; j++)
+      bp += sprintf(bp, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    for (int j = 0; j < empty; j++)
+      bp += sprintf(bp, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    *bp = '\0';
+  }
+
+  char text[1024];
+  snprintf(text, sizeof(text), NOISE_TEMPLATE, play_strs[0], vol_bars[0],
+           data->volume[0], play_strs[1], vol_bars[1], data->volume[1],
+           play_strs[2], vol_bars[2], data->volume[2], play_strs[3],
+           vol_bars[3], data->volume[3], vol_bars[4], data->master_volume);
+
+  if (def->tokens) {
+    SlideToken* t = def->tokens;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+    def->tokens = NULL;
+  }
+
+  def->tokens = parseSlideText(text, icon_type);
+  if (def->tokens) {
+    const int sel_colors[] = {14, 13, 15, 11};
+    for (SlideToken* t = def->tokens; t; t = t->next) {
+      int row = t->y;
+      if (row >= 8 && row <= 14 && (row % 2 == 0)) {
+        int ti = (row - 8) / 2;
+        t->color = (ti == data->selected) ? sel_colors[ti] : 7;
+      } else if (row == 18)
+        t->color = (data->selected == NOISE_TRACK_COUNT) ? 14 : 7;
+    }
+    renderSlideTokens(x, y, w, h, def->tokens);
+
+    SlideToken* t = def->tokens;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+    def->tokens = NULL;
+  }
+
+  char hint_buf[128];
+  snprintf(hint_buf, sizeof(hint_buf),
+           "\\c15k/j \\c07Navigate  \\c15h/l \\c07Volume  \\c15space "
+           "\\c07Toggle  \\c15q \\c07Close");
+  SlideToken* hint_toks = parseSlideText(hint_buf, icon_type);
+  if (hint_toks) {
+    int total_w = 0;
+    for (SlideToken* t = hint_toks; t; t = t->next)
+      if (t->text) total_w += strDisplayWidth(t->text);
+    int cx = x + 1 + ((w - 2) - total_w) / 2;
+    int cy = y + h - 2;
+    for (SlideToken* t = hint_toks; t; t = t->next) {
+      if (!t->text || !*t->text) continue;
+      int dw = strDisplayWidth(t->text);
+      if (t->color < 0 || t->color >= 16)
+        SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+      else if (t->color >= 8)
+        SetColor(t->color - 8, NO_COLOR, A_BOLD);
+      else
+        SetColor(t->color, NO_COLOR, A_NORMAL);
+      mvprintw(cy, cx, "%s", t->text);
+      cx += dw;
+    }
+    SlideToken* t = hint_toks;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+  }
+}
+
+/**
+ * Update the selected noise track based on mouse position.
+ *
+ * Checks the mouse cursor against each track row (y + 8 + i*2)
+ * and the master row (y + 18), updating data->selected and
+ * dialog->hovered_button on match.
+ *
+ * @param app Pointer to the application data
+ * @param def Slide definition (unused — state lives in app->noise_data)
+ */
+static void noiseSlideUpdate(AppData* app, SlideDef* def) {
+  (void)def;
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y;
+
+  WhiteNoiseData* data = &app->noise_data;
+  int hovered = -1;
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+    int ry = y + 8 + i * 2;
+    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3) {
+      hovered = i;
+      break;
+    }
+  }
+
+  if (hovered < 0) {
+    int ry = y + 18;
+    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3)
+      hovered = NOISE_TRACK_COUNT;
+  }
+
+  if (hovered >= 0) {
+    data->selected = hovered;
+    d->hovered_button = hovered;
+  }
+}
+
+/**
  * Default progress renderer for slides.
  * Draws the title with filled/empty dots ("Welcome ●●○○○") in
  * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
@@ -1557,7 +1913,7 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
     *p = '\0';
   }
   int dot_w = utf8DisplayWidth(buf);
-  mvprintw(y, x + 1 + (39 - dot_w) / 2, "%s", buf);
+  mvprintw(y, x + 1 + ((w - 2) - dot_w) / 2, "%s", buf);
 }
 
 /**
@@ -1604,51 +1960,35 @@ void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
 }
 
 /**
- * Measure the total display width of a UTF-8 string.
- * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
- * @param s The UTF-8 input string
- * @return Display width in terminal columns
+ * Draw the dialog frame with ACS line-drawing characters.
+ * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
+ * @param x X position of the dialog
+ * @param y Y position of the dialog
+ * @param w Width of the dialog
+ * @param h Height of the dialog
  */
-static int strDisplayWidth(const char* s) {
-  int total = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      total++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      total += (c >= 0xF0) ? 2 : 1;
-      s += len;
-    }
-  }
-  return total;
-}
+void RenderSlideBox(int x, int y, int w, int h) {
+  mvaddch(y, x, ACS_ULCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y, x + i, ACS_HLINE);
+  mvaddch(y, x + w - 1, ACS_URCORNER);
 
-/**
- * Count the number of visible characters in a UTF-8 string.
- * Each multi-byte sequence counts as a single character regardless of byte width.
- * @param s The UTF-8 input string
- * @return Number of visible characters
- */
-static int utf8DisplayWidth(const char* s) {
-  int w = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      w++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      s += len;
-      w++;
-    }
+  mvaddch(y + h - 3, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 3, x + i, ACS_HLINE);
+  mvaddch(y + h - 3, x + w - 1, ACS_RTEE);
+
+  mvaddch(y + h - 1, x, ACS_LLCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 1, x + i, ACS_HLINE);
+  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
+
+  mvaddch(y + 2, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + 2, x + i, ACS_HLINE);
+  mvaddch(y + 2, x + w - 1, ACS_RTEE);
+
+  for (int i = 0; i < h; i++) {
+    if (i == 0 || i == 2 || i == h - 3 || i == h - 1) continue;
+    mvaddch(y + i, x, ACS_VLINE);
+    mvaddch(y + i, x + w - 1, ACS_VLINE);
   }
-  return w;
 }
 
 /**
@@ -1656,18 +1996,20 @@ static int utf8DisplayWidth(const char* s) {
  * SlideToken structs.
  *
  * Supported sequences:
- *   \\cN    – Set color (0-15; 0-7 no bold, 8-15 bold, ≥16 = NO_COLOR)
+ *   \\cNN   – Set color (0-15; 0-7 = normal, 8-15 = bold, >= 16 = NO_COLOR)
  *   \\aL/C/R – Set alignment (LEFT, CENTER, RIGHT)
- *   \\xNN   – Set absolute column offset (decimal digits)
- *   \\n     – Newline (emit buffer, y++, reset color/align/x)
- *   {W}{S}{P}{N}{M} – Expand icon placeholder for current icon_type
+ *   \\xNN   – Set absolute column offset (decimal 0-99)
+ *   \\n     – Newline (flush buffer, y++, reset colour/align/x)
+ *   {W}{S}{P}{N}{M} – Uppercase pomodoro/welcome icon placeholders
+ *   {r}{f}{w}{t}    – Lowercase noise track icon placeholders
+ *   {m}{p}          – Noise minus/plus volume icon placeholders
  *   \\\\    – Literal backslash
  *
- * Returns the head of the allocated linked list, or NULL on allocation failure.
- * The caller (buildSlideFromText) owns the list.
+ * The caller owns the returned linked list and must free each token's
+ * text and the token itself.
  *
  * @param text      Raw slide text with escape sequences
- * @param icon_type Icon type index (0=nerd, 1=emoji, 2=ascii)
+ * @param icon_type Icon type index (0 = nerd, 1 = emoji, 2 = ascii)
  * @return Head of SlideToken linked list, or NULL on failure
  */
 static SlideToken* parseSlideText(const char* text, int icon_type) {
@@ -1817,6 +2159,18 @@ static SlideToken* parseSlideText(const char* text, int icon_type) {
         icon = NOTES_ICONS[icon_type];
       else if (*text == 'M')
         icon = DEFAULT_MODE_ICONS[icon_type];
+      else if (*text == 'r')
+        icon = RAIN_ICONS[icon_type];
+      else if (*text == 'f')
+        icon = FIRE_ICONS[icon_type];
+      else if (*text == 'w')
+        icon = WIND_ICONS[icon_type];
+      else if (*text == 't')
+        icon = THUNDER_ICONS[icon_type];
+      else if (*text == 'm')
+        icon = MINUS_VOLUME_ICONS[icon_type];
+      else if (*text == 'p')
+        icon = PLUS_VOLUME_ICONS[icon_type];
 
       text++;
       if (*text == '}') text++;
@@ -1924,123 +2278,6 @@ static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
 }
 
 /**
- * Render the current welcome slide into the popup dialog.
- * Draws the box frame, progress indicator, content tokens, and nav controls.
- * @param app Application state (provides popup_dialog, screen)
- * @param def Slide definition to render
- */
-static void welcomeRender(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  int w = def->size.width;
-  int h = def->size.height;
-
-  d->size.width = w;
-  d->size.height = h;
-  UpdateFloatingDialog(d, app->screen);
-
-  int x = d->position.x;
-  int y = d->position.y;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  for (int r = 0; r < h; r++)
-    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
-
-  /* Sync keyboard-hovered button index into the slide def so
-   * SlideControlsRender highlights the right button.
-   * Only override when keyboard has made a selection (>=0)
-   * so mouse hover set by welcomeUpdate is not cleared for WELCOME slides. */
-  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  renderSlideBox(x, y, w, h);
-  if (def->render_progress && def->progress)
-    def->render_progress(app, x, y + 1, w, def, def->progress);
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  renderSlideTokens(x, y, w, h, def->tokens);
-  if (def->render_controls && def->controls)
-    def->render_controls(app, x, y + h - 2, w, def, def->controls);
-}
-
-/**
- * Track mouse hover over the nav controls (prev/next/close/start) on the
- * current slide and update def->hovered accordingly.
- * @param app Application state (provides click_regions, mouse coordinates)
- * @param def Slide definition whose hovered field to update
- */
-static void welcomeUpdate(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  if (!d) return;
-  int x = d->position.x;
-  int y = d->position.y + d->size.height - 2;
-  int w = def->size.width;
-  int hover_idx = -1;
-  if (def->controls) {
-    for (int i = 0; i < def->controls->count; i++) {
-      const ControlButton* btn = &def->controls->buttons[i];
-      int tw = utf8DisplayWidth(btn->text);
-      int bx;
-      switch (btn->align) {
-        case ALIGN_SLIDE_LEFT:
-          bx = x + 2;
-          break;
-        case ALIGN_SLIDE_CENTER:
-          bx = x + 1 + ((w - 2) - tw) / 2;
-          break;
-        case ALIGN_SLIDE_RIGHT:
-          bx = x + w - 2 - tw;
-          break;
-        default:
-          bx = x + 2;
-          break;
-      }
-      if (app->mouse_x >= bx && app->mouse_x < bx + tw && app->mouse_y == y) {
-        hover_idx = i;
-        break;
-      }
-    }
-  }
-  /* Update hovered_button when mouse is over a button */
-  if (hover_idx >= 0) {
-    def->hovered = hover_idx;
-    if (d->slide_type == SLIDE_TYPE_CONTINUE ||
-        d->slide_type == SLIDE_TYPE_WELCOME)
-      d->hovered_button = hover_idx;
-  }
-}
-
-/**
- * Draw the dialog frame with ACS line-drawing characters.
- * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
- * @param x X position of the dialog
- * @param y Y position of the dialog
- * @param w Width of the dialog
- * @param h Height of the dialog
- */
-static void renderSlideBox(int x, int y, int w, int h) {
-  mvaddch(y, x, ACS_ULCORNER);
-  for (int i = 1; i < w - 1; i++) mvaddch(y, x + i, ACS_HLINE);
-  mvaddch(y, x + w - 1, ACS_URCORNER);
-
-  mvaddch(y + h - 3, x, ACS_LTEE);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 3, x + i, ACS_HLINE);
-  mvaddch(y + h - 3, x + w - 1, ACS_RTEE);
-
-  mvaddch(y + h - 1, x, ACS_LLCORNER);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 1, x + i, ACS_HLINE);
-  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
-
-  mvaddch(y + 2, x, ACS_LTEE);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + 2, x + i, ACS_HLINE);
-  mvaddch(y + 2, x + w - 1, ACS_RTEE);
-
-  for (int i = 0; i < h; i++) {
-    if (i == 0 || i == 2 || i == h - 3 || i == h - 1) continue;
-    mvaddch(y + i, x, ACS_VLINE);
-    mvaddch(y + i, x + w - 1, ACS_VLINE);
-  }
-}
-
-/**
  * Duplicate a SlideProgress struct onto the heap.
  * @param p Source progress parameters
  * @return Heap-allocated copy, or NULL on failure
@@ -2068,4 +2305,52 @@ static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
   memcpy(c->buttons, btns, count * sizeof(ControlButton));
   c->count = count;
   return c;
+}
+
+/**
+ * Measure the total display width of a UTF-8 string.
+ * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
+ * @param s The UTF-8 input string
+ * @return Display width in terminal columns
+ */
+static int strDisplayWidth(const char* s) {
+  int total = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      total++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      total += (c >= 0xF0) ? 2 : 1;
+      s += len;
+    }
+  }
+  return total;
+}
+
+/**
+ * Count the number of visible characters in a UTF-8 string.
+ * Each multi-byte sequence counts as a single character regardless of byte width.
+ * @param s The UTF-8 input string
+ * @return Number of visible characters
+ */
+static int utf8DisplayWidth(const char* s) {
+  int w = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      w++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      s += len;
+      w++;
+    }
+  }
+  return w;
 }

@@ -177,6 +177,13 @@ ErrorType HandleMouseEvent(AppData* app, MEVENT* event) {
   return status;
 }
 
+/**
+ * Handle mouse cancel of edit mode.
+ * If the user clicks while in a non-DEFAULT mode (INSERT, NORMAL, VISUAL),
+ * the input is cleared and the panel returns to DEFAULT mode.
+ * @param app   Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
 static void handleMouseCancelEdit(AppData* app, MEVENT* event) {
   if (!(event->bstate & BUTTON1_PRESSED)) return;
   Panel* p = &app->screen->panels[app->screen->current_panel];
@@ -199,6 +206,14 @@ static void handleMouseCancelEdit(AppData* app, MEVENT* event) {
   refresh();
 }
 
+/**
+ * Handle mouse events on the popup dialog.
+ * Routes clicks to the correct action based on click region,
+ * closes the dialog on outside clicks (except for welcome/continue slides).
+ * For slide-based dialogs it forwards mouse movement to slide.update().
+ * @param app   Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
 static void handleMousePopup(AppData* app, MEVENT* event) {
   bool is_click = (event->bstate == BUTTON1_PRESSED);
 
@@ -209,7 +224,8 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     inside_popup = (event->x >= pos.x && event->x < pos.x + size.width &&
                     event->y >= pos.y && event->y < pos.y + size.height);
   }
-  if (is_click && !inside_popup && app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
+  if (is_click && !inside_popup &&
+      app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
       app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE) {
     ClosePopup(app);
     return;
@@ -266,6 +282,13 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
   }
 }
 
+/**
+ * Handle mouse hover to switch the active panel.
+ * When the cursor moves over a visible panel that is not the current
+ * panel, the focus switches to that panel.
+ * @param app   Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
 static void handleMousePanelSwitch(AppData* app, MEVENT* event) {
   for (int i = 0; i < MAX_PANELS; i++) {
     Panel* p = &app->screen->panels[i];
@@ -280,6 +303,12 @@ static void handleMousePanelSwitch(AppData* app, MEVENT* event) {
   }
 }
 
+/**
+ * Handle mouse events on the notes panel.
+ * Supports click selection, drag-to-reorder, and toggle-task on release.
+ * @param app   Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
 static void handleMouseNotes(AppData* app, MEVENT* event) {
   bool b1_press = event->bstate & BUTTON1_PRESSED;
   bool b1_release = event->bstate & BUTTON1_RELEASED;
@@ -343,6 +372,12 @@ static void handleMouseNotes(AppData* app, MEVENT* event) {
   }
 }
 
+/**
+ * Handle mouse events on panel content (menus, direct-action buttons).
+ * Dispatches hover updates for menu items and executes actions on click.
+ * @param app   Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ */
 static void handleMousePanel(AppData* app, MEVENT* event) {
   bool b1_press = event->bstate & BUTTON1_PRESSED;
 
@@ -489,6 +524,19 @@ ErrorType HandleVisualMode(AppData* app, int key) {
  */
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
+
+  /* White noise dialog — dispatch via configurable key bindings */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
+    size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+    for (size_t i = 0; i < numKeyFunctions; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_NOISE)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while noise dialog is active */
+  }
 
   /* Slide-based dialogs — LEFT/RIGHT selects options, ENTER executes */
   if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
@@ -1030,6 +1078,121 @@ void OpenResetMenu(AppData* app) {
 }
 
 /**
+ * Open the white noise control dialog.
+ * Creates the noise popup and initializes playback state if not already open.
+ * @param app Pointer to the application data
+ */
+void OpenNoiseMenu(AppData* app) {
+  if (app->popup_dialog) return;
+  if (!NOISE_ENABLED) return;
+  app->popup_dialog = CreateNoiseDialog(app);
+}
+
+/**
+ * Close the white noise dialog.
+ * Delegates to ClosePopup to free the dialog and clear the reference.
+ * @param app Pointer to the application data
+ */
+void NoiseClose(AppData* app) { ClosePopup(app); }
+
+/**
+ * Select the previous noise track (wraps to master at bottom).
+ * @param app Pointer to the application data
+ */
+void NoiseSelectPrev(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  nd->selected--;
+  if (nd->selected < 0) nd->selected = NOISE_TRACK_COUNT;
+  app->popup_dialog->hovered_button = nd->selected;
+}
+
+/**
+ * Select the next noise track (wraps to first track from master).
+ * @param app Pointer to the application data
+ */
+void NoiseSelectNext(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  nd->selected++;
+  if (nd->selected > NOISE_TRACK_COUNT) nd->selected = 0;
+  app->popup_dialog->hovered_button = nd->selected;
+}
+
+/**
+ * Toggle playback of the currently selected noise track.
+ * Starts the track via NoiseStartTrack if turning on and volume > 0,
+ * stops via NoiseStopTrack if turning off.
+ * @param app Pointer to the application data
+ */
+void NoiseTogglePlay(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  if (nd->selected >= 0 && nd->selected < NOISE_TRACK_COUNT) {
+    nd->playing[nd->selected] = !nd->playing[nd->selected];
+    if (nd->playing[nd->selected] && nd->volume[nd->selected] > 0)
+      NoiseStartTrack(nd->selected, (float)nd->volume[nd->selected] *
+                                      (float)nd->master_volume / 10000.0f);
+    else
+      NoiseStopTrack(nd->selected);
+  }
+}
+
+/**
+ * Increase volume of the selected track or master by 10.
+ * Clamps at 100.  Updates the miniaudio playback volume for
+ * actively playing tracks.
+ * @param app Pointer to the application data
+ */
+void NoiseVolumeUp(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  if (nd->selected == NOISE_TRACK_COUNT) {
+    if (nd->master_volume < 100) nd->master_volume += 10;
+    if (nd->master_volume > 100) nd->master_volume = 100;
+  } else {
+    if (nd->volume[nd->selected] < 100) nd->volume[nd->selected] += 10;
+    if (nd->volume[nd->selected] > 100) nd->volume[nd->selected] = 100;
+    if (nd->playing[nd->selected])
+      NoiseSetVolume(nd->selected, (float)nd->volume[nd->selected] *
+                                     (float)nd->master_volume / 10000.0f);
+  }
+}
+
+/**
+ * Decrease volume of the selected track or master by 10.
+ * Clamps at 0.  Updates the miniaudio playback volume for
+ * actively playing tracks.
+ * @param app Pointer to the application data
+ */
+void NoiseVolumeDown(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  if (nd->selected == NOISE_TRACK_COUNT) {
+    if (nd->master_volume > 0) nd->master_volume -= 10;
+    if (nd->master_volume < 0) nd->master_volume = 0;
+  } else {
+    if (nd->volume[nd->selected] > 0) nd->volume[nd->selected] -= 10;
+    if (nd->volume[nd->selected] < 0) nd->volume[nd->selected] = 0;
+    if (nd->playing[nd->selected])
+      NoiseSetVolume(nd->selected, (float)nd->volume[nd->selected] *
+                                     (float)nd->master_volume / 10000.0f);
+  }
+}
+
+/**
+ * Reset all noise tracks to default state.
+ * Sets all volumes to 50, master volume to 70, stops all
+ * tracks, and selects the first track.
+ * @param app Pointer to the application data
+ */
+void NoiseResetAll(AppData* app) {
+  WhiteNoiseData* nd = &app->noise_data;
+  for (int i = 0; i < NOISE_TRACK_COUNT; i++) {
+    nd->volume[i] = 50;
+    nd->playing[i] = false;
+  }
+  nd->master_volume = 70;
+  nd->selected = 0;
+  app->popup_dialog->hovered_button = 0;
+}
+
+/**
  * Reset the current pomodoro step (time only, not cycle).
  * @param app Pointer to the application data
  */
@@ -1252,8 +1415,7 @@ void SelectPrevButton(AppData* app) {
   if (!d->slides) return;
   SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
   if (!def) return;
-  if (def->controls && d->hovered_button > 0)
-    d->hovered_button--;
+  if (def->controls && d->hovered_button > 0) d->hovered_button--;
 }
 
 /**
@@ -1287,8 +1449,7 @@ void ExecuteButtonAction(AppData* app) {
   if (!d->slides) return;
   SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
   if (!def || !def->controls) return;
-  if (d->hovered_button >= 0 &&
-      d->hovered_button < def->controls->count &&
+  if (d->hovered_button >= 0 && d->hovered_button < def->controls->count &&
       def->controls->buttons[d->hovered_button].action)
     def->controls->buttons[d->hovered_button].action(app);
 }

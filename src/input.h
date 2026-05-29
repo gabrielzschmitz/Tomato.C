@@ -48,6 +48,7 @@ typedef enum {
   NOTES,       /**< Notes/text editor scene */
   HELP,        /**< Help screen scene */
   CONTINUE,    /**< Continue/pause scene */
+  NOISE,       /**< White noise control dialog scene */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -58,6 +59,7 @@ typedef enum {
 #define SCENE_NOTES (1 << NOTES)
 #define SCENE_HELP (1 << HELP)
 #define SCENE_CONTINUE (1 << CONTINUE)
+#define SCENE_NOISE (1 << NOISE)
 
 /**
  * Input state for text input in vim-like modes.
@@ -373,6 +375,54 @@ void StartPomodoro(AppData* app);
  * @param app Pointer to the application data
  */
 void OpenResetMenu(AppData* app);
+
+/**
+ * Open the white noise control dialog.
+ * @param app Pointer to the application data
+ */
+void OpenNoiseMenu(AppData* app);
+
+/**
+ * Close the white noise dialog.
+ * @param app Pointer to the application data
+ */
+void NoiseClose(AppData* app);
+
+/**
+ * Select the previous noise track.
+ * @param app Pointer to the application data
+ */
+void NoiseSelectPrev(AppData* app);
+
+/**
+ * Select the next noise track.
+ * @param app Pointer to the application data
+ */
+void NoiseSelectNext(AppData* app);
+
+/**
+ * Toggle play/stop for the currently selected noise track.
+ * @param app Pointer to the application data
+ */
+void NoiseTogglePlay(AppData* app);
+
+/**
+ * Increase the volume of the currently selected noise track or master.
+ * @param app Pointer to the application data
+ */
+void NoiseVolumeUp(AppData* app);
+
+/**
+ * Decrease the volume of the currently selected noise track or master.
+ * @param app Pointer to the application data
+ */
+void NoiseVolumeDown(AppData* app);
+
+/**
+ * Reset all noise tracks to default state.
+ * @param app Pointer to the application data
+ */
+void NoiseResetAll(AppData* app);
 
 /**
  * Reset the current pomodoro step (time only, not cycle).
