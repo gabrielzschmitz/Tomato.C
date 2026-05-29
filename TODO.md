@@ -63,7 +63,7 @@ extensible, terminal-based Pomodoro timer written in C.
 
 ## 🚧 In Progress
 ### 🧩 Extra Features
-- [ ] White noise playback for focus sessions
+- [X] White noise playback for focus sessions
 - [ ] Work history log (git-style commits)
 
 ---

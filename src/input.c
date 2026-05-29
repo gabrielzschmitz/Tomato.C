@@ -98,11 +98,19 @@ ErrorType HandleInputs(AppData* app) {
   }
 
   int key = app->user_input;
-  /* Handle mouse events — drain queue, keep only last position */
+  /* Handle mouse events — drain queue, process buttons from the first
+   * event so click/scroll are never overwritten by a subsequent
+   * REPORT_MOUSE_POSITION, then store the last event for hover tracking. */
   if (key == KEY_MOUSE) {
-    MEVENT event, last_event;
+    MEVENT event, last_event, button_event;
+    bool has_button = false;
     bool valid = false;
     while (getmouse(&event) == OK) {
+      if (event.bstate & (BUTTON1_PRESSED | BUTTON1_RELEASED |
+                          BUTTON4_PRESSED | BUTTON5_PRESSED)) {
+        button_event = event;
+        has_button = true;
+      }
       last_event = event;
       valid = true;
 
@@ -113,11 +121,20 @@ ErrorType HandleInputs(AppData* app) {
       }
     }
     if (valid) {
+      if (has_button) {
+        app->mouse_x = button_event.x;
+        app->mouse_y = button_event.y;
+        app->mouse_bstate = button_event.bstate;
+        ErrorType merr = HandleMouseEvent(app, &button_event);
+        if (merr != NO_ERROR) status = merr;
+      }
       app->mouse_x = last_event.x;
       app->mouse_y = last_event.y;
       app->mouse_bstate = last_event.bstate;
-      ErrorType merr = HandleMouseEvent(app, &last_event);
-      if (merr != NO_ERROR) status = merr;
+      if (!has_button) {
+        ErrorType merr = HandleMouseEvent(app, &last_event);
+        if (merr != NO_ERROR) status = merr;
+      }
     }
     flushinp();
     app->user_input = -1;
