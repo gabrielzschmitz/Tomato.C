@@ -15,6 +15,7 @@ typedef struct {
   const char** icons; /**< Icon array indexed by IconType (nerd/emoji/ascii) */
   const char* sound_path; /**< Path to the audio file */
   int default_volume;     /**< Default volume 0-100 */
+  int sel_color; /**< Ncurses color (0-15) when this track is selected */
 } WhiteNoiseTrackDef;
 
 /**
@@ -29,7 +30,8 @@ typedef struct {
   bool* playing;              /**< Per-track on/off state (track_count) */
   int* volume;                /**< Per-track volume 0-100 (track_count) */
   int master_volume;          /**< Master volume 0-100 */
-  int selected; /**< Currently selected track index (0..track_count) */
+  int master_sel_color; /**< Ncurses color (0-15) when master is selected */
+  int selected;         /**< Currently selected track index (0..track_count) */
 } WhiteNoiseData;
 
 /**

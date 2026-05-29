@@ -181,6 +181,7 @@ ErrorType RegisterWhiteNoiseTracks(WhiteNoiseData* data,
   }
   data->track_count = count;
   data->master_volume = NOISE_MASTER_VOLUME;
+  data->master_sel_color = 15;
   data->selected = 0;
 
   /* Resize the internal miniaudio sound array */

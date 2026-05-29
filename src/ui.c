@@ -1889,9 +1889,10 @@ done_text:
         int row = t->y;
         if (row >= 8 && row < sep_row && (row % 2 == 0)) {
           int ti = (row - 8) / 2;
-          t->color = (ti == data->selected) ? 14 : 7;
+          t->color = (ti == data->selected) ? data->tracks[ti].sel_color : 7;
         } else if (row == master_row)
-          t->color = (data->selected == track_count) ? 14 : 7;
+          t->color =
+            (data->selected == track_count) ? data->master_sel_color : 7;
       }
     }
     renderSlideTokens(x, y, w, h, def->tokens);

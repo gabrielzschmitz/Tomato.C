@@ -85,11 +85,14 @@ ErrorType InitApp(AppData* app) {
   InitWhiteNoiseData(&app->noise_data);
   {
     static const WhiteNoiseTrackDef default_tracks[] = {
-      {"Rain", (const char**)RAIN_ICONS, "./sounds/ambience-rain.mp3", 50},
-      {"Fire", (const char**)FIRE_ICONS, "./sounds/ambience-fire.mp3", 50},
-      {"Wind", (const char**)WIND_ICONS, "./sounds/ambience-wind.mp3", 50},
+      {"Rain", (const char**)RAIN_ICONS, "./sounds/ambience-rain.mp3",
+       NOISE_MASTER_VOLUME, 14},
+      {"Fire", (const char**)FIRE_ICONS, "./sounds/ambience-fire.mp3",
+       NOISE_MASTER_VOLUME, 13},
+      {"Wind", (const char**)WIND_ICONS, "./sounds/ambience-wind.mp3",
+       NOISE_MASTER_VOLUME, 15},
       {"Thunder", (const char**)THUNDER_ICONS, "./sounds/ambience-thunder.mp3",
-       50},
+       NOISE_MASTER_VOLUME, 11},
     };
     status = RegisterWhiteNoiseTracks(
       &app->noise_data, default_tracks,
