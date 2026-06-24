@@ -1,7 +1,9 @@
 #include "init.h"
 
 #include <ncurses.h>
+#include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "anim.h"
 #include "audio.h"
@@ -18,6 +20,8 @@
 /* PRIVATE INIT FUNCTIONS */
 /* Components */
 static ErrorType initMenus(AppData* app);
+
+static void debugSeedHistory(void);
 static ErrorType initStatusBar(AppData* app);
 static ErrorType initAnimations(AppData* app);
 static ErrorType initPomodoroData(AppData* app);
@@ -230,14 +234,15 @@ Border InitBorder(void) {
  */
 static ErrorType initMenus(AppData* app) {
   /* MAIN_MENU */
-  const int n_mainmenu = 4;
-  MenuItem main_menu_items[4] = {{"start", StartPomodoro},
+  const int n_mainmenu = 5;
+  MenuItem main_menu_items[5] = {{"start", StartPomodoro},
                                  {"preferences", NULL},
                                  {"help menu", NULL},
+                                 {"history", OpenHistoryPopup},
                                  {"leave", ForcefullyQuitApp}};
 
   Menu* main_menu_menu =
-    CreateMenu(main_menu_items, 4, COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
+    CreateMenu(main_menu_items, 5, COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
   if (main_menu_menu == NULL) return MALLOC_ERROR;
   app->menus[MAIN_MENU_MENU] = main_menu_menu;
   app->current_menu = MAIN_MENU_MENU;
@@ -346,6 +351,12 @@ static ErrorType initPomodoroData(AppData* app) {
     }
   }
 
+  /* Initialise history popup state */
+  memset(&app->history_data, 0, sizeof(app->history_data));
+
+  /* In DEBUG mode, seed the log with fake completed sessions */
+  if (DEBUG) debugSeedHistory();
+
   /* Discard any stale input before showing popups */
   flushinp();
 
@@ -369,4 +380,67 @@ static ErrorType initPomodoroData(AppData* app) {
   }
 
   return NO_ERROR;
+}
+
+/**
+ * @brief Seed the pomodoro log with fake completed sessions for testing.
+ * Creates a variety of daily session counts to exercise all 4 history levels
+ * (░░ 0, ▒▒ 1-2, ▓▓ 3-5, ██ 6+) and the streak counter.
+ */
+static void debugSeedHistory(void) {
+  FILE* f = fopen(POMODORO_LOG, "wb");
+  if (!f) return;
+
+  /* Days ago (positive) → session count */
+  static const int seed[] = {
+    0,  2, /* today:      ▒▒ */
+    1,  1, /* yesterday:  ▒▒ */
+    2,  5, /*             ▓▓ */
+    3,  1, /*             ▒▒ */
+    4,  8, /*             ██ */
+    5,  3, /*             ▓▓ */
+    6,  7, /*             ██ */
+    30, 4, /*             ▓▓ (isolated, breaks streak) */
+  };
+  int n = sizeof(seed) / sizeof(seed[0]) / 2;
+
+  time_t now = time(NULL);
+  struct tm* tm = localtime(&now);
+  int curYear = tm->tm_year + 1900;
+  int curMonth = tm->tm_mon + 1;
+  int curDay = tm->tm_mday;
+
+  uint32_t sessionIdx = 1;
+
+  for (int i = 0; i < n; i++) {
+    int daysAgo = seed[i * 2];
+    int count = seed[i * 2 + 1];
+
+    /* Compute the date for this batch */
+    struct tm dayTm = {0};
+    dayTm.tm_year = curYear - 1900;
+    dayTm.tm_mon = curMonth - 1;
+    dayTm.tm_mday = curDay - daysAgo;
+    mktime(&dayTm);
+
+    uint32_t startOfDay = (uint32_t)mktime(&dayTm);
+
+    for (int s = 0; s < count; s++) {
+      pomodoroLogRecord rec;
+      rec.session_index = (uint16_t)sessionIdx++;
+      rec.current_step = 1; /* WORK_TIME */
+      rec.current_cycle = (uint8_t)(s % 4);
+      rec.total_cycles = 4;
+      rec.work_time = 25;
+      rec.short_pause_time = 5;
+      rec.long_pause_time = 15;
+      rec.total_elapsed = (uint32_t)(s * 1800);
+      rec.current_step_time = 1500;
+      rec.status = 0; /* completed */
+      rec.session_start_time = startOfDay + (uint32_t)(s * 1800);
+      fwrite(&rec, sizeof(rec), 1, f);
+    }
+  }
+
+  fclose(f);
 }

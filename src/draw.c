@@ -301,7 +301,10 @@ static void renderDialogPopups(AppData* app) {
     RenderResetMenu(app);
   else if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
            app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE ||
-           app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
+           app->popup_dialog->slide_type == SLIDE_TYPE_NOISE ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_HISTORY_OVERVIEW ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_HISTORY_DAY ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_HISTORY_STATS) {
     int stride = app->popup_dialog->slideCount / 3;
     int icon_type = GetConfigIconType();
     int idx = icon_type * stride + app->popup_dialog->currentSlide;

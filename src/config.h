@@ -59,7 +59,7 @@ static const char* INSERT_CURSOR_ICON = "▏";
 static const char* BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
 static const char* PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
 static const char* SKIP_ICONS[3] = {"󰒬", "⏭️", "S"};
-static const char* HISTORY_ICONS[6] = {"▢", "◫", "☒", "▤", "▦", "■"};
+static const char* HISTORY_ICONS[4] = {"░░", "▒▒", "▓▓", "██"};
 
 /* Pomodoro Settings -------------------------------------------------------- */
 /* amount of pomodoros from 1 to 8 (default: 4) */
@@ -252,6 +252,7 @@ static const KeyFunction keys[] = {
   {KEY_ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
 
   /* White noise dialog controls */
+  {CTRLW, OpenNoiseMenu, DEFAULT, ALL_SCENES},
   {'w', OpenNoiseMenu, DEFAULT, ALL_SCENES},
   {'q', NoiseClose, DEFAULT, SCENE_NOISE},
   {ESC, NoiseClose, DEFAULT, SCENE_NOISE},
@@ -270,6 +271,48 @@ static const KeyFunction keys[] = {
   {'_', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
   {'r', NoiseResetAll, DEFAULT, SCENE_NOISE},
   {'R', NoiseResetAll, DEFAULT, SCENE_NOISE},
+
+  /* Continue dialog — keyboard navigation */
+  {'l', SelectNextButton, DEFAULT, SCENE_CONTINUE},
+  {'h', SelectPrevButton, DEFAULT, SCENE_CONTINUE},
+  {KEY_RIGHT, SelectNextButton, DEFAULT, SCENE_CONTINUE},
+  {KEY_LEFT, SelectPrevButton, DEFAULT, SCENE_CONTINUE},
+  {ENTER, ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
+  {'\r', ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
+  {KEY_ENTER, ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
+  {'q', ClosePopup, DEFAULT, SCENE_CONTINUE},
+  {ESC, ClosePopup, DEFAULT, SCENE_CONTINUE},
+
+  /* History Overview */
+  {CTRLH, OpenHistoryPopup, DEFAULT, ALL_SCENES},
+  {'h', HistoryCursorLeft, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'l', HistoryCursorRight, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'j', HistoryCursorDown, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'k', HistoryCursorUp, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {KEY_LEFT, HistoryCursorLeft, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {KEY_RIGHT, HistoryCursorRight, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {KEY_DOWN, HistoryCursorDown, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {KEY_UP, HistoryCursorUp, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {ENTER, HistoryOpenDayDetail, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'\r', HistoryOpenDayDetail, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'\t', HistoryOpenStatistics, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {'q', ClosePopup, DEFAULT, SCENE_HISTORY_OVERVIEW},
+  {ESC, ClosePopup, DEFAULT, SCENE_HISTORY_OVERVIEW},
+
+  /* History Day Detail */
+  {'j', HistoryScrollDown, DEFAULT, SCENE_HISTORY_DAY},
+  {'k', HistoryScrollUp, DEFAULT, SCENE_HISTORY_DAY},
+  {KEY_DOWN, HistoryScrollDown, DEFAULT, SCENE_HISTORY_DAY},
+  {KEY_UP, HistoryScrollUp, DEFAULT, SCENE_HISTORY_DAY},
+  {ENTER, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
+  {'\r', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
+  {ESC, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
+  {'q', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
+
+  /* History Statistics */
+  {'\t', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
+  {ESC, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
+  {'q', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
 };
 
 #endif /* CONFIG_H_ */

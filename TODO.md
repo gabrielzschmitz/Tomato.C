@@ -58,21 +58,26 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Mouse interaction
 - [X] Welcome screen
 - [X] Continue screen
+- [X] ESC/q close current existing popup instead of closing app.
+
+### 🧩 Extra Features
+- [X] White noise playback for focus sessions
+- [X] Work history log (git-style commits)
 
 ---
 
 ## 🚧 In Progress
-### 🧩 Extra Features
-- [X] White noise playback for focus sessions
-- [ ] Work history log (git-style commits)
+
+### ⚙️ Configuration
+- [ ] Move configuration from compiled to runtime paradigma
+- [ ] Modular preferences system
 
 ---
 
 ## 🗓️ Planned
 
-### ⚙️ Configuration
-- [ ] Move configuration from compiled to runtime paradigma
-- [ ] Modular preferences system
+### 👋 User Interface
+- [ ] Add help menu
 
 ---
 

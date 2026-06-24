@@ -91,6 +91,9 @@ typedef enum {
   SLIDE_TYPE_WELCOME,  /**< Multi-slide carousel with prev/next navigation */
   SLIDE_TYPE_CONTINUE, /**< Single-slide session dialog with action buttons */
   SLIDE_TYPE_NOISE,    /**< Single-slide white noise dialog */
+  SLIDE_TYPE_HISTORY_OVERVIEW, /**< History contribution graph */
+  SLIDE_TYPE_HISTORY_DAY,      /**< History single-day session details */
+  SLIDE_TYPE_HISTORY_STATS,    /**< History statistics */
 } SlideType;
 
 /**
@@ -607,5 +610,55 @@ void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
  * @param h Height of the dialog
  */
 void RenderSlideBox(int x, int y, int w, int h);
+
+/* ---------------------------------------------------------------------------
+ * History Popups
+ * --------------------------------------------------------------------------- */
+
+/**
+ * @brief Create the History Overview popup (contribution graph).
+ * @param app Application state
+ */
+void CreateHistoryOverviewDialog(AppData* app);
+
+/**
+ * @brief Create the Day Detail popup.
+ * @param app Application state
+ */
+void CreateHistoryDayDialog(AppData* app);
+
+/**
+ * @brief Create the Statistics popup.
+ * @param app Application state
+ */
+void CreateHistoryStatsDialog(AppData* app);
+
+/**
+ * @brief Resolve cursor position (cursorWeek, cursorDow) into a concrete date
+ *        stored in history_data (selYear, selMonth, selDay).
+ * @param app Application state
+ */
+void historyResolveCursor(AppData* app);
+
+/**
+ * @brief Build a single history slide with custom render/update callbacks.
+ * The slide is not token-based — the render function draws directly.
+ * @param size Slide dimensions
+ * @param render Custom render callback
+ * @param update Custom update callback (may be NULL)
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
+SlideDef** BuildHistorySlide(Dimensions size,
+                             void (*render)(AppData*, SlideDef*),
+                             void (*update)(AppData*, SlideDef*));
+
+/**
+ * @brief Build a token-based history slide from formatted text.
+ * @param text Token-format text with escape sequences
+ * @param size Slide dimensions
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
+SlideDef** BuildHistoryTextSlide(const char* text, Dimensions size,
+                                 int slide_type);
 
 #endif /* UI_H_ */

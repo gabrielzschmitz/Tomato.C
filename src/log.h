@@ -2,9 +2,25 @@
 #define LOG_H_
 
 #include <ncurses.h>
+#include <stdint.h>
 
 #include "error.h"
 #include "tomato.h"
+
+/** @brief Binary log record structure (packed, 28 bytes). */
+typedef struct __attribute__((packed)) {
+  uint16_t session_index;
+  uint8_t current_step;
+  uint8_t current_cycle;
+  uint8_t total_cycles;
+  uint8_t work_time;
+  uint8_t short_pause_time;
+  uint8_t long_pause_time;
+  uint32_t total_elapsed;
+  uint32_t current_step_time;
+  uint8_t status;
+  uint32_t session_start_time;
+} pomodoroLogRecord;
 
 /**
  * ---------------------------------------------------------------------------
@@ -116,5 +132,81 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data);
  * @param path File path for the pomodoro log
  */
 void GetPomodoroHistory(const char* path);
+
+/* ---------------------------------------------------------------------------
+ * History Data Query Functions
+ * --------------------------------------------------------------------------- */
+
+/**
+ * @brief Returns the number of days in a given month.
+ * @param year  Gregorian year (e.g. 2026)
+ * @param month Month (1-12)
+ * @return Days in month (28-31)
+ */
+int HistDaysInMonth(int year, int month);
+
+/**
+ * @brief Returns the day-of-week for a date.
+ * @param year  Gregorian year
+ * @param month Month (1-12)
+ * @param day   Day (1-31)
+ * @return 0=Sunday .. 6=Saturday
+ */
+int HistDayOfWeek(int year, int month, int day);
+
+/**
+ * @brief Fills daily session-count array for a given month from the binary log.
+ * @param path   Binary log path (POMODORO_LOG)
+ * @param year   Year
+ * @param month  Month (1-12)
+ * @param counts Output array[31] — count per day (0 for days outside month)
+ * @return Days in month (same as length of valid entries in counts)
+ */
+int HistDailyCounts(const char* path, int year, int month, int* counts);
+
+/**
+ * @brief Returns session records for a specific day from the binary log.
+ * @param path      Binary log path (POMODORO_LOG)
+ * @param year      Year
+ * @param month     Month (1-12)
+ * @param day       Day (1-31)
+ * @param indices   Output array of session indices
+ * @param startTimes Output array of unix timestamps
+ * @param durations Output array of durations in seconds
+ * @param statuses  Output array (0=completed, 1=uncompleted)
+ * @param maxCount  Capacity of output arrays
+ * @return Number of sessions found (capped at maxCount)
+ */
+int HistSessionsForDay(const char* path, int year, int month, int day,
+                       int* indices, time_t* startTimes,
+                       int* durations, int* statuses, int maxCount);
+
+/**
+ * @brief Computes current and longest streak ending at the given date.
+ * A streak is consecutive calendar days (past to present) with at
+ * least one completed session.
+ * @param path    Binary log path (POMODORO_LOG)
+ * @param year    Year of streak endpoint
+ * @param month   Month of streak endpoint
+ * @param day     Day of streak endpoint
+ * @param current Output — current streak length
+ * @param longest Output — longest streak ever
+ */
+void HistStreak(const char* path, int year, int month, int day,
+                int* current, int* longest);
+
+/**
+ * @brief Maps session count to contribution-icon index.
+ *
+ * Boundaries:
+ *   0   → 0 ("░░")
+ *   1-2 → 1 ("▒▒")
+ *   3-5 → 2 ("▓▓")
+ *   6+  → 3 ("██")
+ *
+ * @param count Number of sessions
+ * @return Icon index 0-3
+ */
+int HistLevelForCount(int count);
 
 #endif /* LOG_H_ */

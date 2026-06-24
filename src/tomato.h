@@ -15,6 +15,9 @@
 #define MAX_MENUS 2
 #define MAX_INPUT_MODES 3
 #define MAX_RECENT_SESSIONS 3
+
+/** @brief Number of consecutive months shown in the History Overview. */
+#define HISTORY_VISIBLE_MONTHS 5
 #define MAX_ERROR_ENTRIES 128
 #define FPMS 1000.0 / FPS
 
@@ -46,6 +49,26 @@ typedef struct {
 } PomodoroData;
 
 /**
+ * @brief Persistent state for the History popup views.
+ *
+ * Stores cursor position within the contribution graph,
+ * the scroll anchor (first visible month), the resolved
+ * selected date, and scroll offset for the day-detail list.
+ */
+typedef struct {
+  int cursorWeek;   /**< Week column index (0 .. totalWeeks-1) */
+  int cursorDow;    /**< Day-of-week row (0=Sun .. 6=Sat) */
+  int firstYear;    /**< Year of the first of 5 visible months */
+  int firstMonth;   /**< Month of the first of 5 visible months (1-12) */
+  int selYear;      /**< Resolved date — year */
+  int selMonth;     /**< Resolved date — month (1-12) */
+  int selDay;       /**< Resolved date — day (1-31) */
+  int dayScroll;    /**< Scroll offset for day-detail session list */
+  int hoverWeek;    /**< Week column under mouse (-1 = none) */
+  int hoverDow;     /**< Day-of-week row under mouse */
+} HistoryData;
+
+/**
  * Main application data structure.
  * Contains all state and references needed by the application.
  */
@@ -73,6 +96,8 @@ struct AppData {
 
   ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
   int click_region_count; /**< Number of registered click regions */
+
+  HistoryData history_data; /**< History popup state */
 
   int mouse_x;      /**< Last mouse x coordinate */
   int mouse_y;      /**< Last mouse y coordinate */

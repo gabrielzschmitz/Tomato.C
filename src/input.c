@@ -14,6 +14,19 @@
 #include "ui.h"
 #include "util.h"
 
+/* ---------------------------------------------------------------------------
+ * History Popup Helpers (private)
+ * --------------------------------------------------------------------------- */
+
+/** @brief Rebuild the overview dialog after cursor/window changes. */
+static void historyRebuildOverview(AppData* app) {
+  CreateHistoryOverviewDialog(app);
+}
+
+/* ---------------------------------------------------------------------------
+ * Public History Navigation Functions
+ * --------------------------------------------------------------------------- */
+
 /* PRIVATE INPUT FUNCTIONS */
 /* Mouse Handlers */
 static void handleMousePanel(AppData* app, MEVENT* event);
@@ -260,8 +273,65 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       if (is_click || (event->bstate & (BUTTON4_PRESSED | BUTTON5_PRESSED))) {
         NoiseSlideMouseAction(app, event, is_click);
         if (!app->popup_dialog) return;
+        /* Check registered click regions (e.g. "q Close") */
+        if (is_click) {
+          for (int i = 0; i < app->click_region_count; i++) {
+            ClickRegion* r = &app->click_regions[i];
+            if (r->type != REGION_WELCOME_NAV) continue;
+            if (event->x >= r->pos.x &&
+                event->x < r->pos.x + r->size.width &&
+                event->y >= r->pos.y &&
+                event->y < r->pos.y + r->size.height) {
+              if (r->action) r->action(app);
+              break;
+            }
+          }
+        }
       }
       if (is_click || event->bstate == BUTTON1_RELEASED) def->hovered = -1;
+      return;
+    }
+    /* History Overview — grid cell clicks and nav hint clicks */
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_HISTORY_OVERVIEW) {
+      FloatingDialog* d = app->popup_dialog;
+      if (!d->slides || !d->slides[0]) return;
+      SlideDef* def = d->slides[0];
+      if (event->bstate & REPORT_MOUSE_POSITION) {
+        def->update(app, def);
+      }
+      if (is_click) {
+        /* Check nav hint regions first */
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_WELCOME_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            if (r->action) r->action(app);
+            return;
+          }
+        }
+        /* Check grid area: compute week column and DOW from mouse position */
+        int gx = d->position.x + 2 + 3 + 1; /* x + border + dayLabelW + space */
+        int gy = d->position.y + 4;          /* grid top row */
+        if (event->y >= gy && event->y < gy + 7 &&
+            event->x >= gx) {
+          int col = (event->x - gx) / 3;
+          int dow = event->y - gy;
+          if (col >= 0 && dow >= 0 && dow < 7) {
+            HistoryData* h = &app->history_data;
+            /* If clicking same cell already selected, open day detail */
+            if (col == h->cursorWeek && dow == h->cursorDow &&
+                h->selDay > 0) {
+              HistoryOpenDayDetail(app);
+            } else {
+              h->cursorDow = dow;
+              h->cursorWeek = col;
+              historyResolveCursor(app);
+              CreateHistoryOverviewDialog(app);
+            }
+          }
+        }
+      }
       return;
     }
     if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
@@ -309,6 +379,8 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           app->popup_dialog->menu.selected_item = r->item_index;
           ExecuteMenuAction(app);
         }
+      } else if (r->type == REGION_WELCOME_NAV && is_click && r->action) {
+        r->action(app);
       }
       break;
     }
@@ -571,9 +643,8 @@ bool HandlePopupInput(AppData* app, int key) {
     return true; /* consume all keys while noise dialog is active */
   }
 
-  /* Slide-based dialogs — LEFT/RIGHT selects options, ENTER executes */
-  if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
-      app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+  /* Welcome dialog — LEFT/RIGHT selects options, ENTER executes */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME) {
     if (IsKeyAssignedToAction(key, SelectPrevButton)) {
       SelectPrevButton(app);
       return true;
@@ -591,6 +662,62 @@ bool HandlePopupInput(AppData* app, int key) {
       return true;
     }
     return true; /* consume all keys while a slide dialog is active */
+  }
+
+  /* Continue dialog — dispatch via configurable key bindings (noise pattern) */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
+    size_t nk = sizeof(keys) / sizeof(keys[0]);
+    /* Pass 1 — scene-specific only (not bare ALL_SCENES) */
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_CONTINUE) &&
+          keys[i].scene_types != ALL_SCENES) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    /* Pass 2 — ALL_SCENES fallback */
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & ALL_SCENES)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while continue dialog is active */
+  }
+
+  /* History popups — dispatch via configurable key bindings (noise pattern).
+   * Two-pass approach: first pass matches scene-specific keys only (ignoring
+   * ALL_SCENES bindings like QuitApp), second pass falls back to ALL_SCENES. */
+  {
+    int sceneMask = 0;
+    SlideType st = app->popup_dialog->slide_type;
+    if (st == SLIDE_TYPE_HISTORY_OVERVIEW) sceneMask = SCENE_HISTORY_OVERVIEW;
+    else if (st == SLIDE_TYPE_HISTORY_DAY) sceneMask = SCENE_HISTORY_DAY;
+    else if (st == SLIDE_TYPE_HISTORY_STATS) sceneMask = SCENE_HISTORY_STATS;
+    if (sceneMask) {
+      size_t nk = sizeof(keys) / sizeof(keys[0]);
+
+      /* Pass 1 — scene-specific only (not bare ALL_SCENES) */
+      for (size_t i = 0; i < nk; i++) {
+        if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+            (keys[i].scene_types & sceneMask) &&
+            keys[i].scene_types != ALL_SCENES) {
+          keys[i].action(app);
+          return true;
+        }
+      }
+      /* Pass 2 — ALL_SCENES fallback (e.g. resize, close) */
+      for (size_t i = 0; i < nk; i++) {
+        if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+            (keys[i].scene_types & ALL_SCENES)) {
+          keys[i].action(app);
+          return true;
+        }
+      }
+      return true; /* consume all keys while a history popup is active */
+    }
   }
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
@@ -1385,6 +1512,8 @@ void ClosePopup(AppData* app) {
   if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
 
   app->popup_dialog = NULL;
+  app->user_input = -1;
+  app->last_input = -1;
 }
 
 /**
@@ -1463,7 +1592,10 @@ void SelectPrevButton(AppData* app) {
   if (!d->slides) return;
   SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
   if (!def) return;
-  if (def->controls && d->hovered_button > 0) d->hovered_button--;
+  if (def->controls && d->hovered_button > 0) {
+    d->hovered_button--;
+    def->hovered = d->hovered_button;
+  }
 }
 
 /**
@@ -1479,8 +1611,10 @@ void SelectNextButton(AppData* app) {
   if (!d->slides) return;
   SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
   if (!def) return;
-  if (def->controls && d->hovered_button < def->controls->count - 1)
+  if (def->controls && d->hovered_button < def->controls->count - 1) {
     d->hovered_button++;
+    def->hovered = d->hovered_button;
+  }
 }
 
 /**
@@ -1994,4 +2128,253 @@ void QuitAppNotes(AppData* app) {
     return;
   }
   if (app->user_input == app->last_input) app->running = false;
+}
+
+/* ---------------------------------------------------------------------------
+ * History Popup Management
+ * --------------------------------------------------------------------------- */
+
+/**
+ * @brief Open the History Overview popup.
+ * Initialises the 5-month window ending at the current month and resolves
+ * the cursor to today.
+ */
+void OpenHistoryPopup(AppData* app) {
+  if (!app) return;
+  if (app->popup_dialog) return;
+
+  HistoryData* h = &app->history_data;
+
+  /* 5-month window ending at current month */
+  time_t now = time(NULL);
+  struct tm* tm = localtime(&now);
+  int curYear = tm->tm_year + 1900;
+  int curMonth = tm->tm_mon + 1;
+
+  h->firstYear = curYear;
+  h->firstMonth = curMonth;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
+    if (--h->firstMonth < 1) { h->firstMonth = 12; h->firstYear--; }
+  }
+
+  /* Resolve cursor to today */
+  h->selYear = curYear;
+  h->selMonth = curMonth;
+  h->selDay = tm->tm_mday;
+  h->cursorDow = tm->tm_wday;
+  h->cursorWeek = 0; /* will be corrected by resolveCursor if needed */
+  h->dayScroll = 0;
+
+  /* Determine which week column today falls in */
+  int mw[HISTORY_VISIBLE_MONTHS], msw[HISTORY_VISIBLE_MONTHS];
+  int md[HISTORY_VISIBLE_MONTHS], msd[HISTORY_VISIBLE_MONTHS];
+  int y = h->firstYear, m = h->firstMonth;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    md[i] = HistDaysInMonth(y, m);
+    msd[i] = HistDayOfWeek(y, m, 1);
+    mw[i] = (msd[i] + md[i] + 6) / 7;
+    msw[i] = (i == 0) ? 0 : msw[i-1] + mw[i-1];
+    if (y == curYear && m == curMonth) {
+      int dayOffset = curMonth - h->firstMonth;
+      if (dayOffset < 0) dayOffset += 12;
+      if (dayOffset < HISTORY_VISIBLE_MONTHS) {
+        int localWeek = (tm->tm_wday < msd[i]) ? 0 : (tm->tm_mday - 1 + msd[i]) / 7;
+        h->cursorWeek = msw[i] + localWeek;
+      }
+    }
+    if (++m > 12) { m = 1; y++; }
+  }
+
+  historyResolveCursor(app);
+  CreateHistoryOverviewDialog(app);
+}
+
+/**
+ * @brief Close the current history popup and return to the overview.
+ */
+void HistoryCloseToOverview(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  SlideType cur = app->popup_dialog->slide_type;
+  if (cur == SLIDE_TYPE_HISTORY_OVERVIEW) {
+    ClosePopup(app);
+    return;
+  }
+  ClosePopup(app);
+  CreateHistoryOverviewDialog(app);
+}
+
+/**
+ * @brief Open the Day Detail popup for the currently selected date.
+ */
+void HistoryOpenDayDetail(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+
+  /* Ensure cursor is resolved */
+  if (h->selDay == 0) historyResolveCursor(app);
+
+  h->dayScroll = 0;
+  ClosePopup(app);
+  CreateHistoryDayDialog(app);
+}
+
+/**
+ * @brief Open the Statistics popup.
+ */
+void HistoryOpenStatistics(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  ClosePopup(app);
+  CreateHistoryStatsDialog(app);
+}
+
+/* ---------------------------------------------------------------------------
+ * History Cursor / Scroll
+ * --------------------------------------------------------------------------- */
+
+/**
+ * @brief Move the history cursor by a given number of calendar days.
+ * Replaces grid-based cursor movement with proper date arithmetic so
+ * crossing month boundaries works correctly (up = day-1, down = day+1).
+ * If the target date falls outside the visible window it auto-scrolls.
+ */
+static void historyMoveCursorByDays(AppData* app, int dayDelta) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+
+  /* Start from current resolved date, or today if none */
+  int y = h->selYear, m = h->selMonth, d = h->selDay;
+  if (d <= 0) {
+    time_t now = time(NULL);
+    struct tm* tm = localtime(&now);
+    y = tm->tm_year + 1900;
+    m = tm->tm_mon + 1;
+    d = tm->tm_mday;
+  }
+
+  /* Add dayDelta via mktime normalization */
+  struct tm date = {0};
+  date.tm_year = y - 1900;
+  date.tm_mon  = m - 1;
+  date.tm_mday = d + dayDelta;
+  mktime(&date);
+  int newYear = date.tm_year + 1900;
+  int newMon  = date.tm_mon + 1;
+  int newDay  = date.tm_mday;
+  int newDow  = date.tm_wday;
+
+  /* Check if new date is within current 5-month window */
+  {
+    int wy = h->firstYear, wm = h->firstMonth;
+    int inWindow = 0;
+    for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+      if (wy == newYear && wm == newMon) { inWindow = 1; break; }
+      if (++wm > 12) { wm = 1; wy++; }
+    }
+    if (!inWindow) {
+      /* Scroll window so the new date is in the last visible month */
+      h->firstYear = newYear;
+      h->firstMonth = newMon;
+      for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
+        if (--h->firstMonth < 1) { h->firstMonth = 12; h->firstYear--; }
+      }
+    }
+  }
+
+  /* Compute grid layout for the (possibly scrolled) window */
+  int mw[HISTORY_VISIBLE_MONTHS], msw[HISTORY_VISIBLE_MONTHS];
+  int md[HISTORY_VISIBLE_MONTHS], msd[HISTORY_VISIBLE_MONTHS];
+  {
+    int y2 = h->firstYear, m2 = h->firstMonth;
+    int acc = 0;
+    for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+      md[i] = HistDaysInMonth(y2, m2);
+      msd[i] = HistDayOfWeek(y2, m2, 1);
+      mw[i] = (msd[i] + md[i] + 6) / 7;
+      msw[i] = acc;
+      acc += mw[i];
+      if (++m2 > 12) { m2 = 1; y2++; }
+    }
+  }
+
+  /* Find the month index and compute grid position */
+  {
+    int my = h->firstYear, mm = h->firstMonth;
+    for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+      if (my == newYear && mm == newMon) {
+        int localWeek = (msd[i] + newDay - 1) / 7;
+        if (localWeek >= mw[i]) localWeek = mw[i] - 1;
+        h->cursorWeek = msw[i] + localWeek;
+        h->cursorDow  = newDow;
+        break;
+      }
+      if (++mm > 12) { mm = 1; my++; }
+    }
+  }
+
+  h->selYear  = newYear;
+  h->selMonth = newMon;
+  h->selDay   = newDay;
+  historyRebuildOverview(app);
+}
+
+/**
+ * @brief Move the history cursor left.
+ * When near the first week of the month (day ≤ 7) moves by 1 day to
+ * cross the boundary cleanly; otherwise moves by a full week (7 days).
+ */
+void HistoryCursorLeft(AppData* app) {
+  if (!app) return;
+  HistoryData* h = &app->history_data;
+  int delta = (h->selDay > 0 && h->selDay <= 7) ? -1 : -7;
+  historyMoveCursorByDays(app, delta);
+}
+
+/**
+ * @brief Move the history cursor right.
+ * When near the last week of the month (day > dim-7) moves by 1 day to
+ * cross the boundary cleanly; otherwise moves by a full week (7 days).
+ */
+void HistoryCursorRight(AppData* app) {
+  if (!app) return;
+  HistoryData* h = &app->history_data;
+  int dim = (h->selDay > 0) ? HistDaysInMonth(h->selYear, h->selMonth) : 31;
+  int delta = (h->selDay > 0 && h->selDay > dim - 7) ? 1 : 7;
+  historyMoveCursorByDays(app, delta);
+}
+
+/**
+ * @brief Move the history cursor up by one calendar day.
+ */
+void HistoryCursorUp(AppData* app) {
+  historyMoveCursorByDays(app, -1);
+}
+
+/**
+ * @brief Move the history cursor down by one calendar day.
+ */
+void HistoryCursorDown(AppData* app) {
+  historyMoveCursorByDays(app, 1);
+}
+
+/**
+ * @brief Scroll the day-detail session list up.
+ */
+void HistoryScrollUp(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  if (h->dayScroll > 0) h->dayScroll--;
+}
+
+/**
+ * @brief Scroll the day-detail session list down.
+ */
+void HistoryScrollDown(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  int indices[100];
+  time_t times[100];
+  int dur[100], st[100];
+  int total = HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth,
+                                 h->selDay, indices, times, dur, st, 100);
+  if (h->dayScroll < total - 1) h->dayScroll++;
 }

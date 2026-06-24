@@ -11,6 +11,7 @@
 #define ESC 27
 #define ENTER 10
 #define CTRLC 3
+#define CTRLH 8
 #define CTRLP 16
 #define CTRLS 19
 #define CTRLX 24
@@ -48,7 +49,10 @@ typedef enum {
   NOTES,       /**< Notes/text editor scene */
   HELP,        /**< Help screen scene */
   CONTINUE,    /**< Continue/pause scene */
-  NOISE,       /**< White noise control dialog scene */
+  NOISE,              /**< White noise control dialog scene */
+  HISTORY_OVERVIEW,   /**< History contribution graph overview */
+  HISTORY_DAY,        /**< History single-day session details */
+  HISTORY_STATS,      /**< History statistics popup */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -60,6 +64,9 @@ typedef enum {
 #define SCENE_HELP (1 << HELP)
 #define SCENE_CONTINUE (1 << CONTINUE)
 #define SCENE_NOISE (1 << NOISE)
+#define SCENE_HISTORY_OVERVIEW (1 << HISTORY_OVERVIEW)
+#define SCENE_HISTORY_DAY (1 << HISTORY_DAY)
+#define SCENE_HISTORY_STATS (1 << HISTORY_STATS)
 
 /**
  * Input state for text input in vim-like modes.
@@ -637,5 +644,49 @@ void DemoteNoteWrapper(AppData* app);
  * @param app Pointer to the application data
  */
 void QuitAppNotes(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * History Popup Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * @brief Open the History Overview popup (contribution graph).
+ * Called from menu action or via CTRL+H keybind.
+ * @param app Application state
+ */
+void OpenHistoryPopup(AppData* app);
+
+/**
+ * @brief Close current history view and re-open the Overview popup.
+ * @param app Application state
+ */
+void HistoryCloseToOverview(AppData* app);
+
+/**
+ * @brief Switch from overview to day-detail popup.
+ * @param app Application state
+ */
+void HistoryOpenDayDetail(AppData* app);
+
+/**
+ * @brief Switch from overview to statistics popup.
+ * @param app Application state
+ */
+void HistoryOpenStatistics(AppData* app);
+
+/** @brief Move cursor left (overview). */
+void HistoryCursorLeft(AppData* app);
+/** @brief Move cursor right (overview). */
+void HistoryCursorRight(AppData* app);
+/** @brief Move cursor up (overview). */
+void HistoryCursorUp(AppData* app);
+/** @brief Move cursor down (overview). */
+void HistoryCursorDown(AppData* app);
+/** @brief Scroll session list up (day detail). */
+void HistoryScrollUp(AppData* app);
+/** @brief Scroll session list down (day detail). */
+void HistoryScrollDown(AppData* app);
 
 #endif /* INPUT_H_ */

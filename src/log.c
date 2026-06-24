@@ -25,20 +25,6 @@
 #define SOCKET_RETRY_COUNT 3
 #define SOCKET_RETRY_DELAY_NS 1000000000L /* 1000ms */
 
-typedef struct __attribute__((packed)) {
-  uint16_t session_index;
-  uint8_t current_step;
-  uint8_t current_cycle;
-  uint8_t total_cycles;
-  uint8_t work_time;
-  uint8_t short_pause_time;
-  uint8_t long_pause_time;
-  uint32_t total_elapsed;
-  uint32_t current_step_time;
-  uint8_t status;
-  uint32_t session_start_time;
-} pomodoroLogRecord;
-
 typedef struct {
   int sessionIndex;
   int cycle;
@@ -949,4 +935,212 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
   }
 
   return stats;
+}
+
+/* ---------------------------------------------------------------------------
+ * History Data Query Functions
+ * --------------------------------------------------------------------------- */
+
+int HistDaysInMonth(int year, int month) {
+  static const int days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (month < 1 || month > 12) return 0;
+  int d = days[month - 1];
+  if (month == 2 && ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0))
+    d++;
+  return d;
+}
+
+int HistDayOfWeek(int year, int month, int day) {
+  /* Tomohiko Sakamoto's algorithm */
+  static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  if (month < 3) year--;
+  return (year + year / 4 - year / 100 + year / 400 + t[month - 1] + day) % 7;
+}
+
+/**
+ * @brief Check if a unix timestamp falls on a given calendar date.
+ * @return true if ts is on (year, month, day)
+ */
+static bool histIsSameDay(time_t ts, int year, int month, int day) {
+  struct tm* tm = localtime(&ts);
+  if (!tm) return false;
+  return (tm->tm_year + 1900 == year && tm->tm_mon + 1 == month &&
+          tm->tm_mday == day);
+}
+
+/**
+ * @brief Check if a unix timestamp falls within a given year/month.
+ * @return true if ts is in (year, month)
+ */
+static bool histIsSameMonth(time_t ts, int year, int month) {
+  struct tm* tm = localtime(&ts);
+  if (!tm) return false;
+  return (tm->tm_year + 1900 == year && tm->tm_mon + 1 == month);
+}
+
+/**
+ * @brief Check if a unix timestamp falls on a given calendar date or earlier.
+ * @return true if ts is on or before (year, month, day)
+ */
+int HistDailyCounts(const char* path, int year, int month, int* counts) {
+  int dim = HistDaysInMonth(year, month);
+  for (int i = 0; i < 31 && i < dim; i++) counts[i] = 0;
+
+  FILE* file = fopen(path, "rb");
+  if (!file) return dim;
+
+  pomodoroLogRecord record;
+  while (fread(&record, sizeof(record), 1, file) == 1) {
+    if (record.session_index == 0) continue;
+    time_t ts = (time_t)record.session_start_time;
+    if (!histIsSameMonth(ts, year, month)) continue;
+    struct tm* tm = localtime(&ts);
+    int d = tm->tm_mday - 1;
+    if (d >= 0 && d < dim) counts[d]++;
+  }
+  fclose(file);
+  return dim;
+}
+
+int HistSessionsForDay(const char* path, int year, int month, int day,
+                       int* indices, time_t* startTimes, int* durations,
+                       int* statuses, int maxCount) {
+  int count = 0;
+
+  FILE* file = fopen(path, "rb");
+  if (!file) return 0;
+
+  pomodoroLogRecord record;
+  while (fread(&record, sizeof(record), 1, file) == 1) {
+    if (record.session_index == 0) continue;
+    time_t ts = (time_t)record.session_start_time;
+    if (!histIsSameDay(ts, year, month, day)) continue;
+    if (count >= maxCount) break;
+
+    /* Each unique session_index is one session */
+    /* Check if we already have this session index */
+    int dup = 0;
+    for (int i = 0; i < count; i++) {
+      if (indices[i] == record.session_index) {
+        dup = 1;
+        break;
+      }
+    }
+    if (dup) continue;
+
+    indices[count] = record.session_index;
+    startTimes[count] = ts;
+    durations[count] = (int)record.current_step_time;
+    statuses[count] = record.status;
+    count++;
+  }
+  fclose(file);
+  return count;
+}
+
+void HistStreak(const char* path, int year, int month, int day, int* current,
+                int* longest) {
+  *current = 0;
+  *longest = 0;
+
+  /* Read all unique session dates */
+  time_t sessionDates[2000];
+  int nDates = 0;
+
+  FILE* file = fopen(path, "rb");
+  if (file) {
+    pomodoroLogRecord record;
+    while (fread(&record, sizeof(record), 1, file) == 1) {
+      if (record.session_index == 0) continue;
+      time_t ts = (time_t)record.session_start_time;
+      struct tm* tm = localtime(&ts);
+      if (!tm) continue;
+      int y = tm->tm_year + 1900;
+      int m = tm->tm_mon + 1;
+      int d = tm->tm_mday;
+
+      /* Check for duplicates */
+      int dup = 0;
+      for (int i = 0; i < nDates; i++) {
+        struct tm* dtm = localtime(&sessionDates[i]);
+        if (dtm && dtm->tm_year + 1900 == y && dtm->tm_mon + 1 == m &&
+            dtm->tm_mday == d) {
+          dup = 1;
+          break;
+        }
+      }
+      if (!dup) {
+        /* Store normalized timestamp (midnight) */
+        struct tm nd = {0};
+        nd.tm_year = y - 1900;
+        nd.tm_mon = m - 1;
+        nd.tm_mday = d;
+        time_t nt = mktime(&nd);
+        if (nt != (time_t)-1) sessionDates[nDates++] = nt;
+        if (nDates >= 2000) break;
+      }
+    }
+    fclose(file);
+  }
+
+  if (nDates == 0) return;
+
+  /* Sort dates */
+  for (int i = 0; i < nDates - 1; i++) {
+    for (int j = i + 1; j < nDates; j++) {
+      if (sessionDates[j] < sessionDates[i]) {
+        time_t tmp = sessionDates[i];
+        sessionDates[i] = sessionDates[j];
+        sessionDates[j] = tmp;
+      }
+    }
+  }
+
+  /* Compute end-of-day timestamp for the given date */
+  struct tm endTm = {0};
+  endTm.tm_year = year - 1900;
+  endTm.tm_mon = month - 1;
+  endTm.tm_mday = day;
+  endTm.tm_hour = 23;
+  endTm.tm_min = 59;
+  endTm.tm_sec = 59;
+  time_t endTs = mktime(&endTm);
+  if (endTs == (time_t)-1) return;
+
+  /* Current streak: count backwards from end date */
+  *current = 0;
+  time_t cursor = endTs;
+  int daySecs = 86400;
+  for (int i = nDates - 1; i >= 0; i--) {
+    if (sessionDates[i] > endTs) continue;
+    /* Check if this date is within range of our streak */
+    if (sessionDates[i] <= cursor && sessionDates[i] > cursor - daySecs) {
+      (*current)++;
+      cursor = sessionDates[i] - daySecs; /* move to previous day */
+    } else if (sessionDates[i] < cursor - daySecs) {
+      break; /* gap found */
+    }
+  }
+
+  /* Longest streak: scan all dates */
+  *longest = 0;
+  if (nDates > 0) {
+    int run = 1;
+    for (int i = 1; i < nDates; i++) {
+      if (sessionDates[i] - sessionDates[i - 1] <= daySecs + 3600) {
+        run++;
+      } else {
+        if (run > *longest) *longest = run;
+        run = 1;
+      }
+    }
+    if (run > *longest) *longest = run;
+  }
+}
+
+int HistLevelForCount(int count) {
+  if (count == 0) return 0;
+  if (count <= 2) return 1;
+  if (count <= 5) return 2;
+  return 3;
 }
