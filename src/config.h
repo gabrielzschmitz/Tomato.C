@@ -118,6 +118,13 @@ static const int AUTOSTART_WORK = 1;
 static const int AUTOSTART_PAUSE = 1;
 
 /* Misc Settings ------------------------------------------------------------ */
+/* the system-wide configuration path.
+ * standard practice is "/etc/" for system-wide configuration files. */
+static const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config";
+/* the base directory for user configuration.
+ * the application should append "/tomato/config" to this.
+ * default if XDG_CONFIG_HOME is unset is $HOME/.config */
+static const char* DEFAULT_USER_CONFIG_DIR = ".config";
 /* 1 if you're in WSL, 0 if not (default: 0)
  * Note: you'll need wsl-notify-send for the notifications. The notifications
  * sounds and white noises will not work */
@@ -131,6 +138,7 @@ static const int FPS = 120;
 /* maximum depth for hierarchical notes/subtasks (default: 1, valid: 0-3) */
 static const int MAX_NOTE_DEPTH = 1;
 
+/* Keybind Settings --------------------------------------------------------- */
 /* Scene types bitmask for key binding filters */
 #define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
 #define ALL_SCENES                                                \
