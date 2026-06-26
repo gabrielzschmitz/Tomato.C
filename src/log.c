@@ -25,30 +25,38 @@
 #define SOCKET_RETRY_COUNT 3
 #define SOCKET_RETRY_DELAY_NS 1000000000L /* 1000ms */
 
+/**
+ * Summary of a single recent pomodoro session for history display.
+ */
 typedef struct {
-  int sessionIndex;
-  int cycle;
-  int totalCycles;
-  int workTime;
-  int shortPause;
-  int longPause;
-  int totalElapsed;
-  int step;
-  int status;
-  int sessionMins;
+  int sessionIndex; /**< Session index from the binary log */
+  int cycle;        /**< Current cycle number (1-based) */
+  int totalCycles;  /**< Total pomodoro cycles configured */
+  int workTime;     /**< Work time duration in minutes */
+  int shortPause;   /**< Short pause duration in minutes */
+  int longPause;    /**< Long pause duration in minutes */
+  int totalElapsed; /**< Total elapsed time across steps (seconds) */
+  int
+    step; /**< Current step at last record (0=work, 1=short pause, 2=long pause) */
+  int status;      /**< 0 = completed, 1 = uncompleted */
+  int sessionMins; /**< Total session time in minutes (completed only) */
 } recentSessionInfo;
 
+/**
+ * Aggregated pomodoro history statistics for the CLI report.
+ */
 typedef struct {
-  int totalSessions;
-  int completedSessions;
-  int totalWorkMinutes;
-  int workHours;
-  int workMins;
-  int totalSessionMinutes;
-  int sessionHours;
-  int sessionMins;
-  int numRecent;
-  recentSessionInfo recentSessions[MAX_RECENT_SESSIONS];
+  int totalSessions;       /**< Total unique sessions */
+  int completedSessions;   /**< Count of completed sessions */
+  int totalWorkMinutes;    /**< Total work time in minutes */
+  int workHours;           /**< Work hours (totalWorkMinutes / 60) */
+  int workMins;            /**< Work minutes remainder */
+  int totalSessionMinutes; /**< Total session time including pauses (minutes) */
+  int sessionHours;        /**< Session hours (totalSessionMinutes / 60) */
+  int sessionMins;         /**< Session minutes remainder */
+  int numRecent;           /**< Number of recent session entries populated */
+  recentSessionInfo recentSessions
+    [MAX_RECENT_SESSIONS]; /**< Array of recent session summaries */
 } pomodoroHistoryStats;
 
 /* Notes */
@@ -536,12 +544,9 @@ static NoteState charToNoteState(char c) {
  */
 
 /**
- * Save current pomodoro state to a log file.
- * Format: timestamp|step|current/total|work|short|long|current_step_time|last_step|elapsed/total
+ * Read the binary pomodoro log and return the next session index.
  * @param path File path for the pomodoro log
- * @param data Pointer to the pomodoro data to save
- * @param append If true, append new line; if false, update last line (rewrite file)
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return The next session index (last index + 1), or FILE_ERROR on failure
  */
 static int GetLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
@@ -555,6 +560,11 @@ static int GetLastLogIndex(const char* path) {
   return last_index + 1;
 }
 
+/**
+ * Get the last used index from the pomodoro log.
+ * @param path File path for the pomodoro log
+ * @return Last used index (0 if file is empty), or FILE_ERROR on failure
+ */
 int GetLastLogIndexOnly(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return FILE_ERROR;
@@ -567,6 +577,13 @@ int GetLastLogIndexOnly(const char* path) {
   return last_index;
 }
 
+/**
+ * Remove completed entries matching the given session index.
+ * Writes all non-matching records to a temp file, then renames.
+ * @param path  File path for the pomodoro log
+ * @param index Session index whose completed entries to remove
+ * @return ErrorType NO_ERROR on success, or TIMER_LOG_ERROR / FILE_ERROR on failure
+ */
 ErrorType RemoveUncompletedEntries(const char* path, int index) {
   FILE* read_file = fopen(path, "rb");
   if (!read_file) return TIMER_LOG_ERROR;
@@ -595,6 +612,14 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
   return NO_ERROR;
 }
 
+/**
+ * Save current pomodoro state to a log file.
+ * Format: timestamp|step|current/total|work|short|long|current_step_time|last_step|elapsed/total
+ * @param path   File path for the pomodoro log
+ * @param data   Pointer to the pomodoro data to save
+ * @param append If true, append new line; if false, update last line (rewrite file)
+ * @return ErrorType NO_ERROR on success, or TIMER_LOG_ERROR on failure
+ */
 ErrorType SavePomodoro(const char* path, const PomodoroData* data,
                        bool append) {
   if (!path || !data) return NO_ERROR;
@@ -676,6 +701,11 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   return NO_ERROR;
 }
 
+/**
+ * Print pomodoro history statistics from the log file.
+ * Displays totals, work/session times, and recent session details.
+ * @param path File path for the pomodoro log
+ */
 void GetPomodoroHistory(const char* path) {
   pomodoroHistoryStats stats =
     createPomodoroHistoryStats(path, MAX_RECENT_SESSIONS);
@@ -793,6 +823,12 @@ void GetPomodoroHistory(const char* path) {
   printLineBottom(W1, W2);
 }
 
+/**
+ * Compute the display width of a UTF-8 string.
+ * Multi-byte continuation bytes (0x80-0xBF) are skipped.
+ * @param s Input string
+ * @return Display column width
+ */
 static int strwidth(const char* s) {
   int w = 0;
   while (*s) {
@@ -803,6 +839,12 @@ static int strwidth(const char* s) {
   return w;
 }
 
+/**
+ * Print a horizontal table line with box-drawing characters.
+ * @param w1     Width of the first column
+ * @param w2     Width of the second column
+ * @param is_top Non-zero for top border (┌┬┐), zero for middle border (├┼┤)
+ */
 static void printLine(int w1, int w2, int is_top) {
   const char* tl = is_top ? "┌" : "├";
   const char* tr = is_top ? "┐" : "┤";
@@ -817,6 +859,11 @@ static void printLine(int w1, int w2, int is_top) {
   printf("%s\n", tr);
 }
 
+/**
+ * Print the bottom border of a table with box-drawing characters.
+ * @param w1 Width of the first column
+ * @param w2 Width of the second column
+ */
 static void printLineBottom(int w1, int w2) {
   printf("└");
   for (int i = 0; i < w1 + 2; i++) printf("─");
@@ -825,6 +872,13 @@ static void printLineBottom(int w1, int w2) {
   printf("┘\n");
 }
 
+/**
+ * Print a table row with two columns enclosed in box-drawing characters.
+ * @param w1    Width of the first column
+ * @param w2    Width of the second column
+ * @param label Left-column content
+ * @param value Right-column content
+ */
 static void printRow(int w1, int w2, const char* label, const char* value) {
   int label_w = strwidth(label);
   int value_w = strwidth(value);
@@ -839,6 +893,12 @@ static void formatTime(char* buf, int size, int hours, int minutes) {
     snprintf(buf, size, "%d min", minutes);
 }
 
+/**
+ * Read the binary log and compute aggregated history statistics.
+ * @param path     Binary log path (POMODORO_LOG)
+ * @param maxRecent Maximum number of recent sessions to include
+ * @return Populated pomodoroHistoryStats struct
+ */
 static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
                                                        int maxRecent) {
   pomodoroHistoryStats stats = {0};
@@ -937,10 +997,18 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
   return stats;
 }
 
-/* ---------------------------------------------------------------------------
- * History Data Query Functions
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History
+ * ---------------------------------------------------------------------------
+ */
 
+/**
+ * Returns the number of days in a given month.
+ * @param year  Gregorian year (e.g. 2026)
+ * @param month Month (1-12)
+ * @return Days in month (28-31)
+ */
 int HistDaysInMonth(int year, int month) {
   static const int days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
   if (month < 1 || month > 12) return 0;
@@ -950,6 +1018,13 @@ int HistDaysInMonth(int year, int month) {
   return d;
 }
 
+/**
+ * Returns the day-of-week for a date.
+ * @param year  Gregorian year
+ * @param month Month (1-12)
+ * @param day   Day (1-31)
+ * @return 0=Sunday .. 6=Saturday
+ */
 int HistDayOfWeek(int year, int month, int day) {
   /* Tomohiko Sakamoto's algorithm */
   static int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
@@ -958,7 +1033,11 @@ int HistDayOfWeek(int year, int month, int day) {
 }
 
 /**
- * @brief Check if a unix timestamp falls on a given calendar date.
+ * Check if a unix timestamp falls on a given calendar date.
+ * @param ts    Unix timestamp
+ * @param year  Gregorian year
+ * @param month Month (1-12)
+ * @param day   Day (1-31)
  * @return true if ts is on (year, month, day)
  */
 static bool histIsSameDay(time_t ts, int year, int month, int day) {
@@ -969,7 +1048,10 @@ static bool histIsSameDay(time_t ts, int year, int month, int day) {
 }
 
 /**
- * @brief Check if a unix timestamp falls within a given year/month.
+ * Check if a unix timestamp falls within a given year/month.
+ * @param ts    Unix timestamp
+ * @param year  Gregorian year
+ * @param month Month (1-12)
  * @return true if ts is in (year, month)
  */
 static bool histIsSameMonth(time_t ts, int year, int month) {
@@ -979,8 +1061,12 @@ static bool histIsSameMonth(time_t ts, int year, int month) {
 }
 
 /**
- * @brief Check if a unix timestamp falls on a given calendar date or earlier.
- * @return true if ts is on or before (year, month, day)
+ * Fills daily session-count array for a given month from the binary log.
+ * @param path   Binary log path (POMODORO_LOG)
+ * @param year   Year
+ * @param month  Month (1-12)
+ * @param counts Output array[31] — count per day (0 for days outside month)
+ * @return Days in month (same as length of valid entries in counts)
  */
 int HistDailyCounts(const char* path, int year, int month, int* counts) {
   int dim = HistDaysInMonth(year, month);
@@ -1002,6 +1088,19 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
   return dim;
 }
 
+/**
+ * Returns session records for a specific day from the binary log.
+ * @param path       Binary log path (POMODORO_LOG)
+ * @param year       Year
+ * @param month      Month (1-12)
+ * @param day        Day (1-31)
+ * @param indices    Output array of session indices
+ * @param startTimes Output array of unix timestamps
+ * @param durations  Output array of durations in seconds
+ * @param statuses   Output array (0=completed, 1=uncompleted)
+ * @param maxCount   Capacity of output arrays
+ * @return Number of sessions found (capped at maxCount)
+ */
 int HistSessionsForDay(const char* path, int year, int month, int day,
                        int* indices, time_t* startTimes, int* durations,
                        int* statuses, int maxCount) {
@@ -1038,6 +1137,17 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
   return count;
 }
 
+/**
+ * Computes current and longest streak ending at the given date.
+ * A streak is consecutive calendar days (past to present) with at
+ * least one completed session.
+ * @param path    Binary log path (POMODORO_LOG)
+ * @param year    Year of streak endpoint
+ * @param month   Month of streak endpoint
+ * @param day     Day of streak endpoint
+ * @param current Output — current streak length
+ * @param longest Output — longest streak ever
+ */
 void HistStreak(const char* path, int year, int month, int day, int* current,
                 int* longest) {
   *current = 0;
@@ -1138,6 +1248,18 @@ void HistStreak(const char* path, int year, int month, int day, int* current,
   }
 }
 
+/**
+ * Maps session count to contribution-icon index.
+ *
+ * Boundaries:
+ *   0   → 0 ("░░")
+ *   1-2 → 1 ("▒▒")
+ *   3-5 → 2 ("▓▓")
+ *   6+  → 3 ("██")
+ *
+ * @param count Number of sessions
+ * @return Icon index 0-3
+ */
 int HistLevelForCount(int count) {
   if (count == 0) return 0;
   if (count <= 2) return 1;

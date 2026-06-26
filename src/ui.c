@@ -20,7 +20,6 @@ static int utf8DisplayWidth(const char* s);
 static SlideToken* parseSlideText(const char* text, int icon_type);
 static SlideDef* buildSlideFromText(const char* text, int w, int h,
                                     int icon_type);
-
 static void welcomeRender(AppData* app, SlideDef* def);
 static void welcomeUpdate(AppData* app, SlideDef* def);
 static void continueProgressRender(AppData* app, int x, int y, int w,
@@ -37,8 +36,13 @@ static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
 static int strDisplayWidth(const char* s);
 static int utf8DisplayWidth(const char* s);
-
 /* History */
+static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
+                              int* monthStartWeek, int* monthDays,
+                              int* monthStartDow);
+static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
+                        int* monthWeeks, int* monthStartWeek, int* monthDays,
+                        int* monthStartDow, int* outYear, int* outMonth);
 static void historyOverviewRender(AppData* app, SlideDef* def);
 static void historyOverviewUpdate(AppData* app, SlideDef* def);
 static int computeMonthWeeks(int year, int month, int startDow);
@@ -2442,10 +2446,20 @@ static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
   return c;
 }
 
-/* ---------------------------------------------------------------------------
- * History Popup — Generic Slide Builders
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History Popup 
+ * ---------------------------------------------------------------------------
+ */
 
+/**
+ * Build a single history slide with custom render/update callbacks.
+ * The slide is not token-based — the render function draws directly.
+ * @param size Slide dimensions
+ * @param render Custom render callback
+ * @param update Custom update callback (may be NULL)
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
 SlideDef** BuildHistorySlide(Dimensions size,
                              void (*render)(AppData*, SlideDef*),
                              void (*update)(AppData*, SlideDef*)) {
@@ -2467,6 +2481,13 @@ SlideDef** BuildHistorySlide(Dimensions size,
   return slides;
 }
 
+/**
+ * Build a token-based history slide from formatted text.
+ * @param text Token-format text with escape sequences
+ * @param size Slide dimensions
+ * @param slide_type Slide type identifier
+ * @return Array of 1 SlideDef pointer, or NULL on failure
+ */
 SlideDef** BuildHistoryTextSlide(const char* text, Dimensions size,
                                  int slide_type) {
   SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
@@ -2488,75 +2509,12 @@ SlideDef** BuildHistoryTextSlide(const char* text, Dimensions size,
   return slides;
 }
 
-/* ---------------------------------------------------------------------------
- * History Overview
- * --------------------------------------------------------------------------- */
-
 /**
- * @brief Compute the number of 7-day week columns a month spans.
- * Accounts for the starting day-of-week offset.
+ * Resolve cursor position (cursorWeek, cursorDow) into a concrete date
+ * stored in history_data (selYear, selMonth, selDay).
+ * @param app Application state
  */
-static int computeMonthWeeks(int year, int month, int startDow) {
-  int dim = HistDaysInMonth(year, month);
-  int totalCells = startDow + dim;
-  return (totalCells + 6) / 7; /* ceiling division */
-}
-
-/**
- * @brief Dynamically compute the contribution graph dimensions and the list
- * of month boundaries. Returns total week columns across all 5 months.
- */
-static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
-                              int* monthStartWeek, int* monthDays,
-                              int* monthStartDow) {
-  int totalWeeks = 0;
-  int y = firstYear, m = firstMonth;
-  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    monthDays[i] = HistDaysInMonth(y, m);
-    monthStartDow[i] = HistDayOfWeek(y, m, 1);
-    monthWeeks[i] = computeMonthWeeks(y, m, monthStartDow[i]);
-    monthStartWeek[i] = totalWeeks;
-    totalWeeks += monthWeeks[i];
-    if (++m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return totalWeeks;
-}
-
-/**
- * @brief Given a week column and day-of-week, resolve to a date.
- * Returns the date (1-31) within a specific month, or 0 if out of range.
- */
-static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
-                        int* monthWeeks, int* monthStartWeek, int* monthDays,
-                        int* monthStartDow, int* outYear, int* outMonth) {
-  /* Find which month this week falls in */
-  int y = firstYear, m = firstMonth;
-  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    if (weekCol < monthStartWeek[i] + monthWeeks[i]) {
-      int localWeek = weekCol - monthStartWeek[i];
-      int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
-      if (dayNum >= 1 && dayNum <= monthDays[i]) {
-        *outYear = y;
-        *outMonth = m;
-        return dayNum;
-      }
-      return 0;
-    }
-    if (++m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return 0;
-}
-
-/**
- * @brief Resolve cursor to a selected date and store in history_data.
- */
-void historyResolveCursor(AppData* app) {
+void HistoryResolveCursor(AppData* app) {
   HistoryData* h = &app->history_data;
   int monthWeeks[HISTORY_VISIBLE_MONTHS];
   int monthStartWeek[HISTORY_VISIBLE_MONTHS];
@@ -2581,6 +2539,10 @@ void historyResolveCursor(AppData* app) {
   }
 }
 
+/**
+ * Create the History Overview popup (contribution graph).
+ * @param app Application state
+ */
 void CreateHistoryOverviewDialog(AppData* app) {
   HistoryData* h = &app->history_data;
 
@@ -2593,7 +2555,7 @@ void CreateHistoryOverviewDialog(AppData* app) {
                                       monthStartWeek, monthDays, monthStartDow);
 
   /* Resolve cursor → date */
-  historyResolveCursor(app);
+  HistoryResolveCursor(app);
 
   /* Dialog dimensions — width adapts to grid size */
   int dayLabelW = 3;
@@ -2634,7 +2596,415 @@ void CreateHistoryOverviewDialog(AppData* app) {
 }
 
 /**
- * @brief Render the History Overview contribution graph slide.
+ * Create the Day Detail popup showing sessions for the selected date.
+ * @param app Application state
+ */
+void CreateHistoryDayDialog(AppData* app) {
+  HistoryData* h = &app->history_data;
+
+  int indices[100];
+  time_t startTimes[100];
+  int durations[100];
+  int statuses[100];
+  int scount =
+    HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
+                       indices, startTimes, durations, statuses, 100);
+
+  if (h->dayScroll < 0) h->dayScroll = 0;
+  int maxVisible = 10;
+  if (h->dayScroll > scount - maxVisible) h->dayScroll = scount - maxVisible;
+  if (h->dayScroll < 0) h->dayScroll = 0;
+
+  int visible = (scount < maxVisible) ? scount : maxVisible;
+  int hdr =
+    11; /* borders + title + separator + stats + table header + separator + nav hints */
+  int height = hdr + visible;
+  if (height < 14) height = 14;
+
+  int w = 38;
+
+  /* Build text buffer for the slide */
+  char text[2048];
+  char* tp = text;
+  int remaining = (int)sizeof(text);
+  int n;
+
+  /* Title at y=1 (title bar), \\n\\n skips separator row to y=3 */
+  n = snprintf(tp, remaining, "\\n\\c13\\aC%04d-%02d-%02d\\n\\n", h->selYear,
+               h->selMonth, h->selDay);
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  /* Stats summary */
+  int completed = 0, totalMins = 0;
+  for (int i = 0; i < scount; i++) {
+    if (statuses[i] == 0) completed++;
+    totalMins += durations[i] / 60;
+  }
+  int pct = (scount > 0) ? (completed * 100 / scount) : 0;
+  n = snprintf(tp, remaining,
+               "\\aL\\c15Sessions:\\x13\\c07%d\\n"
+               "\\aL\\c15Focus Time:\\x13\\c07%d min\\n"
+               "\\aL\\c15Completed:\\x13\\c07%d%%\\n",
+               scount, totalMins, pct);
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  /* Table header */
+  n = snprintf(tp, remaining,
+               "\\aL\\x01\\c15#\\x07Start\\x17End\\x27Duration\\n");
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  /* Session rows */
+  int startRow = h->dayScroll;
+  int endRow = startRow + visible;
+  for (int i = startRow; i < endRow && i < scount; i++) {
+    time_t endT = startTimes[i] + durations[i];
+    struct tm* stm = localtime(&startTimes[i]);
+    struct tm* etm = localtime(&endT);
+    char sts[6], ets[6];
+    strftime(sts, 6, "%H:%M", stm);
+    strftime(ets, 6, "%H:%M", etm);
+    n = snprintf(tp, remaining, "\\aL\\c07\\x01#%-3d\\x07%s\\x17%s\\x27%dm\\n",
+                 indices[i], sts, ets, durations[i] / 60);
+    tp += n;
+    remaining = (int)(sizeof(text) - (tp - text));
+  }
+
+  /* Fill remaining lines with blanks, leaving row for controls */
+  int usedLines =
+    3 + 1 + (endRow - startRow); /* title + stats(3) + header + rows */
+  int totalBody = height - 4;    /* minus borders */
+  int maxUsed = totalBody - 2;   /* leave last 2 rows for controls gap */
+  for (int r = usedLines; r < maxUsed; r++) {
+    n = snprintf(tp, remaining, "\\aL\\n");
+    tp += n;
+    remaining = (int)(sizeof(text) - (tp - text));
+  }
+
+  /* Create dialog */
+  Dimensions size = {.width = w, .height = height};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Close", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 1};
+
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (!dialog) return;
+
+  SlideDef** slides = BuildHistoryTextSlide(text, size, SLIDE_TYPE_HISTORY_DAY);
+
+  if (!slides) {
+    FreeFloatingDialog(dialog);
+    return;
+  }
+
+  /* Add clickable controls for day detail */
+  {
+    ControlButton btns[] = {
+      {"Esc Back", ALIGN_SLIDE_RIGHT, (SlideNavAction)HistoryCloseToOverview}};
+    slides[0]->controls = slideControlsDup(btns, 1);
+    slides[0]->render_controls = SlideControlsRender;
+    slides[0]->update = welcomeUpdate;
+  }
+
+  dialog->slides = slides;
+  dialog->slideCount = 1;
+  dialog->currentSlide = 0;
+  dialog->slide_type = SLIDE_TYPE_HISTORY_DAY;
+  dialog->hovered_button = -1;
+
+  app->popup_dialog = dialog;
+}
+
+/**
+ * Create the Statistics popup with aggregated history data.
+ * @param app Application state
+ */
+void CreateHistoryStatsDialog(AppData* app) {
+  HistoryData* h = &app->history_data;
+
+  /* Compute stats from 365 days of data */
+  int currentStreak = 0, longestStreak = 0;
+  HistStreak(POMODORO_LOG, h->selYear, h->selMonth, h->selDay, &currentStreak,
+             &longestStreak);
+
+  /* Total stats for last 365 days */
+  time_t now = time(NULL);
+  struct tm* tmNow = localtime(&now);
+  int endYear = tmNow->tm_year + 1900;
+  int endMonth = tmNow->tm_mon + 1;
+  int endDay = tmNow->tm_mday;
+
+  /* Scan log for totals */
+  int totalSessions = 0;
+  int totalFocusMins = 0;
+  int dayCounts[7] = {0}; /* Sun=0...Sat=6 */
+  int monthCounts[12] = {0};
+  int bestDayCount = 0, bestDayIdx = -1;
+  int bestDow = 0, bestDowCount = 0;
+  int bestMonth = 0, bestMonthCount = 0;
+  int totalDaysWithData = 0;
+  int levelCounts[4] = {0};
+
+  /* Read log and aggregate */
+  FILE* file = fopen(POMODORO_LOG, "rb");
+  if (file) {
+    pomodoroLogRecord rec;
+    while (fread(&rec, sizeof(rec), 1, file) == 1) {
+      if (rec.session_index == 0) continue;
+      time_t ts = (time_t)rec.session_start_time;
+      struct tm* rtm = localtime(&ts);
+      if (!rtm) continue;
+      int y = rtm->tm_year + 1900;
+      int m = rtm->tm_mon + 1;
+
+      /* Check if within last year: =end year-1 to end year */
+      bool inRange = false;
+      if (y == endYear || (y == endYear - 1 && m > endMonth) ||
+          (y == endYear && m <= endMonth)) {
+        inRange = true;
+      }
+      if (!inRange && endYear > 0) continue;
+
+      totalSessions++;
+      totalFocusMins += rec.current_step_time / 60;
+      dayCounts[rtm->tm_wday]++;
+      monthCounts[m - 1]++;
+    }
+    fclose(file);
+  }
+
+  for (int i = 0; i < 7; i++) {
+    if (dayCounts[i] > bestDowCount) {
+      bestDowCount = dayCounts[i];
+      bestDow = i;
+    }
+  }
+  for (int i = 0; i < 12; i++) {
+    if (monthCounts[i] > bestMonthCount) {
+      bestMonthCount = monthCounts[i];
+      bestMonth = i;
+    }
+  }
+
+  /* Build a 365-day breakdown of level counts */
+  {
+    struct tm cursor = {0};
+    cursor.tm_year = endYear - 1900;
+    cursor.tm_mon = endMonth - 1;
+    cursor.tm_mday = endDay;
+    time_t endTS = mktime(&cursor);
+    if (endTS != (time_t)-1) {
+      for (int i = 0; i < 365; i++) {
+        time_t dayTS = endTS - (time_t)(i * 86400);
+        struct tm* dtm = localtime(&dayTS);
+        if (!dtm) continue;
+        int y = dtm->tm_year + 1900;
+        int m = dtm->tm_mon + 1;
+        int d = dtm->tm_mday;
+
+        int ids[50];
+        time_t sts[50];
+        int drs[50];
+        int stsArr[50];
+        int count =
+          HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, drs, stsArr, 50);
+        int level = HistLevelForCount(count);
+        levelCounts[level]++;
+      }
+    }
+  }
+
+  /* Build text */
+  char text[2048];
+  char* tp = text;
+  int remaining = (int)sizeof(text);
+  int n;
+
+  n = snprintf(tp, remaining, "\\n\\c13\\aCHISTORY STATISTICS\\n\\n");
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  n = snprintf(tp, remaining,
+               "\\aL\\c15Current Streak:         \\x24\\c07%d days\\n"
+               "\\aL\\c15Longest Streak:         \\x24\\c07%d days\\n"
+               "\\n"
+               "\\aL\\c15Total Sessions:         \\x24\\c07%d\\n"
+               "\\aL\\c15Total Focus Time:       \\x24\\c07%dh %dm\\n"
+               "\\n"
+               "\\aL\\c15Most Productive DOW:    \\x24\\c07%s\\n"
+               "\\aL\\c15Most Productive Month:  \\x24\\c07%s %d\\n",
+               currentStreak, longestStreak, totalSessions, totalFocusMins / 60,
+               totalFocusMins % 60,
+               (const char*[]){"Sunday", "Monday", "Tuesday", "Wednesday",
+                               "Thursday", "Friday", "Saturday"}[bestDow],
+               (const char*[]){"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
+                               "Aug", "Sep", "Oct", "Nov", "Dec"}[bestMonth],
+               endYear);
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  // if (count == 0) return 0;
+  // if (count <= 2) return 1;
+  // if (count <= 5) return 2;
+  // return 3;
+  n = snprintf(tp, remaining,
+               "\\n\\aL\\c15Last 365 Days\\n"
+               "\\n"
+               "\\aL\\c07%s (0 s) %d days\\x19%s (1-2 s) %d days\\n"
+               "\\aL\\c07%s (3-5 s) %d days\\x19%s (6+ s) %d days\\n",
+               HISTORY_ICONS[0], levelCounts[0], HISTORY_ICONS[1],
+               levelCounts[1], HISTORY_ICONS[2], levelCounts[2],
+               HISTORY_ICONS[3], levelCounts[3]);
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  n = snprintf(tp, remaining, "\\aL\\c07\\n");
+  tp += n;
+  remaining = (int)(sizeof(text) - (tp - text));
+
+  /* Create dialog */
+  int w = 45;
+  int height = 19;
+  Dimensions size = {.width = w, .height = height};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Close", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 1};
+
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (!dialog) return;
+
+  SlideDef** slides =
+    BuildHistoryTextSlide(text, size, SLIDE_TYPE_HISTORY_STATS);
+  if (!slides) {
+    FreeFloatingDialog(dialog);
+    return;
+  }
+
+  /* Add clickable controls for statistics */
+  {
+    ControlButton btns[] = {
+      {"Tab Overview", ALIGN_SLIDE_LEFT,
+       (SlideNavAction)HistoryCloseToOverview},
+      {"Esc Back", ALIGN_SLIDE_RIGHT, (SlideNavAction)HistoryCloseToOverview}};
+    slides[0]->controls = slideControlsDup(btns, 2);
+    slides[0]->render_controls = SlideControlsRender;
+    slides[0]->update = welcomeUpdate;
+  }
+
+  dialog->slides = slides;
+  dialog->slideCount = 1;
+  dialog->currentSlide = 0;
+  dialog->slide_type = SLIDE_TYPE_HISTORY_STATS;
+  dialog->hovered_button = -1;
+
+  app->popup_dialog = dialog;
+}
+
+/**
+ * Compute the number of 7-day week columns a month spans.
+ * Accounts for the starting day-of-week offset.
+ * @param year Gregorian year
+ * @param month Month (1-12)
+ * @param startDow Day-of-week of the 1st of the month (0=Sunday)
+ * @return Number of week columns
+ */
+static int computeMonthWeeks(int year, int month, int startDow) {
+  int dim = HistDaysInMonth(year, month);
+  int totalCells = startDow + dim;
+  return (totalCells + 6) / 7; /* ceiling division */
+}
+
+/**
+ * Dynamically compute the contribution graph dimensions and the list
+ * of month boundaries.
+ * @param firstYear First visible year
+ * @param firstMonth First visible month (1-12)
+ * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] — weeks per month
+ * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] — starting week column per month
+ * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] — days per month
+ * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] — starting day-of-week per month
+ * @return Total week columns across all 5 months
+ */
+static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
+                              int* monthStartWeek, int* monthDays,
+                              int* monthStartDow) {
+  int totalWeeks = 0;
+  int y = firstYear, m = firstMonth;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    monthDays[i] = HistDaysInMonth(y, m);
+    monthStartDow[i] = HistDayOfWeek(y, m, 1);
+    monthWeeks[i] = computeMonthWeeks(y, m, monthStartDow[i]);
+    monthStartWeek[i] = totalWeeks;
+    totalWeeks += monthWeeks[i];
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return totalWeeks;
+}
+
+/**
+ * Given a week column and day-of-week, resolve to a date.
+ * Returns the date (1-31) within a specific month, or 0 if out of range.
+ * @param weekCol Week column index
+ * @param dow Day-of-week row (0=Sunday)
+ * @param firstYear First visible year
+ * @param firstMonth First visible month
+ * @param monthWeeks Weeks-per-month array
+ * @param monthStartWeek Starting week column per month
+ * @param monthDays Days-per-month array
+ * @param monthStartDow Starting day-of-week per month
+ * @param outYear Output — resolved year
+ * @param outMonth Output — resolved month
+ * @return Day of month (1-31), or 0 if out of range
+ */
+static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
+                        int* monthWeeks, int* monthStartWeek, int* monthDays,
+                        int* monthStartDow, int* outYear, int* outMonth) {
+  /* Find which month this week falls in */
+  int y = firstYear, m = firstMonth;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    if (weekCol < monthStartWeek[i] + monthWeeks[i]) {
+      int localWeek = weekCol - monthStartWeek[i];
+      int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
+      if (dayNum >= 1 && dayNum <= monthDays[i]) {
+        *outYear = y;
+        *outMonth = m;
+        return dayNum;
+      }
+      return 0;
+    }
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Render the History Overview contribution graph slide.
+ * Draws the month headers, day grid with contribution icons, streak info,
+ * selected-day sidebar, session summary, and navigation hints.
+ * @param app Application state
+ * @param def Slide definition
  */
 static void historyOverviewRender(AppData* app, SlideDef* def) {
   FloatingDialog* d = app->popup_dialog;
@@ -2912,8 +3282,10 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
 }
 
 /**
- * @brief Mouse update for the overview — tracks hover on grid cells
+ * Mouse update for the overview — tracks hover on grid cells
  * and nav hint segments.
+ * @param app Application state
+ * @param def Slide definition
  */
 static void historyOverviewUpdate(AppData* app, SlideDef* def) {
   HistoryData* h = &app->history_data;
@@ -2967,327 +3339,6 @@ static void historyOverviewUpdate(AppData* app, SlideDef* def) {
     }
   }
   h->hoverWeek = -1;
-}
-
-/* ---------------------------------------------------------------------------
- * History Day Detail
- * --------------------------------------------------------------------------- */
-
-void CreateHistoryDayDialog(AppData* app) {
-  HistoryData* h = &app->history_data;
-
-  int indices[100];
-  time_t startTimes[100];
-  int durations[100];
-  int statuses[100];
-  int scount =
-    HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
-                       indices, startTimes, durations, statuses, 100);
-
-  if (h->dayScroll < 0) h->dayScroll = 0;
-  int maxVisible = 10;
-  if (h->dayScroll > scount - maxVisible) h->dayScroll = scount - maxVisible;
-  if (h->dayScroll < 0) h->dayScroll = 0;
-
-  int visible = (scount < maxVisible) ? scount : maxVisible;
-  int hdr =
-    11; /* borders + title + separator + stats + table header + separator + nav hints */
-  int height = hdr + visible;
-  if (height < 14) height = 14;
-
-  int w = 38;
-
-  /* Build text buffer for the slide */
-  char text[2048];
-  char* tp = text;
-  int remaining = (int)sizeof(text);
-  int n;
-
-  /* Title at y=1 (title bar), \\n\\n skips separator row to y=3 */
-  n = snprintf(tp, remaining, "\\n\\c13\\aC%04d-%02d-%02d\\n\\n", h->selYear,
-               h->selMonth, h->selDay);
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  /* Stats summary */
-  int completed = 0, totalMins = 0;
-  for (int i = 0; i < scount; i++) {
-    if (statuses[i] == 0) completed++;
-    totalMins += durations[i] / 60;
-  }
-  int pct = (scount > 0) ? (completed * 100 / scount) : 0;
-  n = snprintf(tp, remaining,
-               "\\aL\\c15Sessions:\\x13\\c07%d\\n"
-               "\\aL\\c15Focus Time:\\x13\\c07%d min\\n"
-               "\\aL\\c15Completed:\\x13\\c07%d%%\\n",
-               scount, totalMins, pct);
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  /* Table header */
-  n = snprintf(tp, remaining,
-               "\\aL\\x01\\c15#\\x07Start\\x17End\\x27Duration\\n");
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  /* Session rows */
-  int startRow = h->dayScroll;
-  int endRow = startRow + visible;
-  for (int i = startRow; i < endRow && i < scount; i++) {
-    time_t endT = startTimes[i] + durations[i];
-    struct tm* stm = localtime(&startTimes[i]);
-    struct tm* etm = localtime(&endT);
-    char sts[6], ets[6];
-    strftime(sts, 6, "%H:%M", stm);
-    strftime(ets, 6, "%H:%M", etm);
-    n = snprintf(tp, remaining, "\\aL\\c07\\x01#%-3d\\x07%s\\x17%s\\x27%dm\\n",
-                 indices[i], sts, ets, durations[i] / 60);
-    tp += n;
-    remaining = (int)(sizeof(text) - (tp - text));
-  }
-
-  /* Fill remaining lines with blanks, leaving row for controls */
-  int usedLines =
-    3 + 1 + (endRow - startRow); /* title + stats(3) + header + rows */
-  int totalBody = height - 4;    /* minus borders */
-  int maxUsed = totalBody - 2;   /* leave last 2 rows for controls gap */
-  for (int r = usedLines; r < maxUsed; r++) {
-    n = snprintf(tp, remaining, "\\aL\\n");
-    tp += n;
-    remaining = (int)(sizeof(text) - (tp - text));
-  }
-
-  /* Create dialog */
-  Dimensions size = {.width = w, .height = height};
-  Vector2D pos = {.x = 0, .y = 0};
-  MenuItem items[] = {{"Close", ClosePopup}};
-  Menu menu = {.items = items,
-               .selected_item = 0,
-               .focused_color = COLOR_WHITE,
-               .unfocused_color = COLOR_WHITE,
-               .select_style_left = "",
-               .select_style_right = "",
-               .item_count = 1};
-
-  FloatingDialog* dialog =
-    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
-  if (!dialog) return;
-
-  SlideDef** slides = BuildHistoryTextSlide(text, size, SLIDE_TYPE_HISTORY_DAY);
-
-  if (!slides) {
-    FreeFloatingDialog(dialog);
-    return;
-  }
-
-  /* Add clickable controls for day detail */
-  {
-    ControlButton btns[] = {
-      {"Esc Back", ALIGN_SLIDE_RIGHT, (SlideNavAction)HistoryCloseToOverview}};
-    slides[0]->controls = slideControlsDup(btns, 1);
-    slides[0]->render_controls = SlideControlsRender;
-    slides[0]->update = welcomeUpdate;
-  }
-
-  dialog->slides = slides;
-  dialog->slideCount = 1;
-  dialog->currentSlide = 0;
-  dialog->slide_type = SLIDE_TYPE_HISTORY_DAY;
-  dialog->hovered_button = -1;
-
-  app->popup_dialog = dialog;
-}
-
-/* ---------------------------------------------------------------------------
- * History Statistics
- * --------------------------------------------------------------------------- */
-
-void CreateHistoryStatsDialog(AppData* app) {
-  HistoryData* h = &app->history_data;
-
-  /* Compute stats from 365 days of data */
-  int currentStreak = 0, longestStreak = 0;
-  HistStreak(POMODORO_LOG, h->selYear, h->selMonth, h->selDay, &currentStreak,
-             &longestStreak);
-
-  /* Total stats for last 365 days */
-  time_t now = time(NULL);
-  struct tm* tmNow = localtime(&now);
-  int endYear = tmNow->tm_year + 1900;
-  int endMonth = tmNow->tm_mon + 1;
-  int endDay = tmNow->tm_mday;
-
-  /* Scan log for totals */
-  int totalSessions = 0;
-  int totalFocusMins = 0;
-  int dayCounts[7] = {0}; /* Sun=0...Sat=6 */
-  int monthCounts[12] = {0};
-  int bestDayCount = 0, bestDayIdx = -1;
-  int bestDow = 0, bestDowCount = 0;
-  int bestMonth = 0, bestMonthCount = 0;
-  int totalDaysWithData = 0;
-  int levelCounts[4] = {0};
-
-  /* Read log and aggregate */
-  FILE* file = fopen(POMODORO_LOG, "rb");
-  if (file) {
-    pomodoroLogRecord rec;
-    while (fread(&rec, sizeof(rec), 1, file) == 1) {
-      if (rec.session_index == 0) continue;
-      time_t ts = (time_t)rec.session_start_time;
-      struct tm* rtm = localtime(&ts);
-      if (!rtm) continue;
-      int y = rtm->tm_year + 1900;
-      int m = rtm->tm_mon + 1;
-
-      /* Check if within last year: =end year-1 to end year */
-      bool inRange = false;
-      if (y == endYear || (y == endYear - 1 && m > endMonth) ||
-          (y == endYear && m <= endMonth)) {
-        inRange = true;
-      }
-      if (!inRange && endYear > 0) continue;
-
-      totalSessions++;
-      totalFocusMins += rec.current_step_time / 60;
-      dayCounts[rtm->tm_wday]++;
-      monthCounts[m - 1]++;
-    }
-    fclose(file);
-  }
-
-  for (int i = 0; i < 7; i++) {
-    if (dayCounts[i] > bestDowCount) {
-      bestDowCount = dayCounts[i];
-      bestDow = i;
-    }
-  }
-  for (int i = 0; i < 12; i++) {
-    if (monthCounts[i] > bestMonthCount) {
-      bestMonthCount = monthCounts[i];
-      bestMonth = i;
-    }
-  }
-
-  /* Build a 365-day breakdown of level counts */
-  {
-    struct tm cursor = {0};
-    cursor.tm_year = endYear - 1900;
-    cursor.tm_mon = endMonth - 1;
-    cursor.tm_mday = endDay;
-    time_t endTS = mktime(&cursor);
-    if (endTS != (time_t)-1) {
-      for (int i = 0; i < 365; i++) {
-        time_t dayTS = endTS - (time_t)(i * 86400);
-        struct tm* dtm = localtime(&dayTS);
-        if (!dtm) continue;
-        int y = dtm->tm_year + 1900;
-        int m = dtm->tm_mon + 1;
-        int d = dtm->tm_mday;
-
-        int ids[50];
-        time_t sts[50];
-        int drs[50];
-        int stsArr[50];
-        int count =
-          HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, drs, stsArr, 50);
-        int level = HistLevelForCount(count);
-        levelCounts[level]++;
-      }
-    }
-  }
-
-  /* Build text */
-  char text[2048];
-  char* tp = text;
-  int remaining = (int)sizeof(text);
-  int n;
-
-  n = snprintf(tp, remaining, "\\n\\c13\\aCHISTORY STATISTICS\\n\\n");
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  n = snprintf(tp, remaining,
-               "\\aL\\c15Current Streak:         \\x24\\c07%d days\\n"
-               "\\aL\\c15Longest Streak:         \\x24\\c07%d days\\n"
-               "\\n"
-               "\\aL\\c15Total Sessions:         \\x24\\c07%d\\n"
-               "\\aL\\c15Total Focus Time:       \\x24\\c07%dh %dm\\n"
-               "\\n"
-               "\\aL\\c15Most Productive DOW:    \\x24\\c07%s\\n"
-               "\\aL\\c15Most Productive Month:  \\x24\\c07%s %d\\n",
-               currentStreak, longestStreak, totalSessions, totalFocusMins / 60,
-               totalFocusMins % 60,
-               (const char*[]){"Sunday", "Monday", "Tuesday", "Wednesday",
-                               "Thursday", "Friday", "Saturday"}[bestDow],
-               (const char*[]){"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-                               "Aug", "Sep", "Oct", "Nov", "Dec"}[bestMonth],
-               endYear);
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  // if (count == 0) return 0;
-  // if (count <= 2) return 1;
-  // if (count <= 5) return 2;
-  // return 3;
-  n = snprintf(tp, remaining,
-               "\\n\\aL\\c15Last 365 Days\\n"
-               "\\n"
-               "\\aL\\c07%s (0 s) %d days\\x19%s (1-2 s) %d days\\n"
-               "\\aL\\c07%s (3-5 s) %d days\\x19%s (6+ s) %d days\\n",
-               HISTORY_ICONS[0], levelCounts[0], HISTORY_ICONS[1],
-               levelCounts[1], HISTORY_ICONS[2], levelCounts[2],
-               HISTORY_ICONS[3], levelCounts[3]);
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  n = snprintf(tp, remaining, "\\aL\\c07\\n");
-  tp += n;
-  remaining = (int)(sizeof(text) - (tp - text));
-
-  /* Create dialog */
-  int w = 45;
-  int height = 19;
-  Dimensions size = {.width = w, .height = height};
-  Vector2D pos = {.x = 0, .y = 0};
-  MenuItem items[] = {{"Close", ClosePopup}};
-  Menu menu = {.items = items,
-               .selected_item = 0,
-               .focused_color = COLOR_WHITE,
-               .unfocused_color = COLOR_WHITE,
-               .select_style_left = "",
-               .select_style_right = "",
-               .item_count = 1};
-
-  FloatingDialog* dialog =
-    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
-  if (!dialog) return;
-
-  SlideDef** slides =
-    BuildHistoryTextSlide(text, size, SLIDE_TYPE_HISTORY_STATS);
-  if (!slides) {
-    FreeFloatingDialog(dialog);
-    return;
-  }
-
-  /* Add clickable controls for statistics */
-  {
-    ControlButton btns[] = {
-      {"Tab Overview", ALIGN_SLIDE_LEFT,
-       (SlideNavAction)HistoryCloseToOverview},
-      {"Esc Back", ALIGN_SLIDE_RIGHT, (SlideNavAction)HistoryCloseToOverview}};
-    slides[0]->controls = slideControlsDup(btns, 2);
-    slides[0]->render_controls = SlideControlsRender;
-    slides[0]->update = welcomeUpdate;
-  }
-
-  dialog->slides = slides;
-  dialog->slideCount = 1;
-  dialog->currentSlide = 0;
-  dialog->slide_type = SLIDE_TYPE_HISTORY_STATS;
-  dialog->hovered_button = -1;
-
-  app->popup_dialog = dialog;
 }
 
 /**

@@ -21,7 +21,7 @@
 /* Components */
 static ErrorType initMenus(AppData* app);
 
-static void debugSeedHistory(void);
+static ErrorType debugSeedHistory(void);
 static ErrorType initStatusBar(AppData* app);
 static ErrorType initAnimations(AppData* app);
 static ErrorType initPomodoroData(AppData* app);
@@ -355,7 +355,7 @@ static ErrorType initPomodoroData(AppData* app) {
   memset(&app->history_data, 0, sizeof(app->history_data));
 
   /* In DEBUG mode, seed the log with fake completed sessions */
-  if (DEBUG) debugSeedHistory();
+  if (DEBUG) { ErrorType err = debugSeedHistory(); (void)err; }
 
   /* Discard any stale input before showing popups */
   flushinp();
@@ -383,13 +383,14 @@ static ErrorType initPomodoroData(AppData* app) {
 }
 
 /**
- * @brief Seed the pomodoro log with fake completed sessions for testing.
+ * Seed the pomodoro log with fake completed sessions for testing.
  * Creates a variety of daily session counts to exercise all 4 history levels
  * (░░ 0, ▒▒ 1-2, ▓▓ 3-5, ██ 6+) and the streak counter.
+ * @return ErrorType NO_ERROR on success, or FILE_ERROR on failure
  */
-static void debugSeedHistory(void) {
+static ErrorType debugSeedHistory(void) {
   FILE* f = fopen(POMODORO_LOG, "wb");
-  if (!f) return;
+  if (!f) return FILE_ERROR;
 
   /* Days ago (positive) → session count */
   static const int seed[] = {
@@ -443,4 +444,5 @@ static void debugSeedHistory(void) {
   }
 
   fclose(f);
+  return NO_ERROR;
 }

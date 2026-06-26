@@ -15,15 +15,6 @@
 #include "util.h"
 
 /* ---------------------------------------------------------------------------
- * History Popup Helpers (private)
- * --------------------------------------------------------------------------- */
-
-/** @brief Rebuild the overview dialog after cursor/window changes. */
-static void historyRebuildOverview(AppData* app) {
-  CreateHistoryOverviewDialog(app);
-}
-
-/* ---------------------------------------------------------------------------
  * Public History Navigation Functions
  * --------------------------------------------------------------------------- */
 
@@ -34,6 +25,8 @@ static void handleMouseNotes(AppData* app, MEVENT* event);
 static void handleMousePanelSwitch(AppData* app, MEVENT* event);
 static void handleMousePopup(AppData* app, MEVENT* event);
 static void handleMouseCancelEdit(AppData* app, MEVENT* event);
+static void historyRebuildOverview(AppData* app);
+static void historyMoveCursorByDays(AppData* app, int dayDelta);
 
 /**
  * ---------------------------------------------------------------------------
@@ -119,8 +112,8 @@ ErrorType HandleInputs(AppData* app) {
     bool has_button = false;
     bool valid = false;
     while (getmouse(&event) == OK) {
-      if (event.bstate & (BUTTON1_PRESSED | BUTTON1_RELEASED |
-                          BUTTON4_PRESSED | BUTTON5_PRESSED)) {
+      if (event.bstate & (BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON4_PRESSED |
+                          BUTTON5_PRESSED)) {
         button_event = event;
         has_button = true;
       }
@@ -278,10 +271,8 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           for (int i = 0; i < app->click_region_count; i++) {
             ClickRegion* r = &app->click_regions[i];
             if (r->type != REGION_WELCOME_NAV) continue;
-            if (event->x >= r->pos.x &&
-                event->x < r->pos.x + r->size.width &&
-                event->y >= r->pos.y &&
-                event->y < r->pos.y + r->size.height) {
+            if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+                event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
               if (r->action) r->action(app);
               break;
             }
@@ -312,21 +303,19 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
         }
         /* Check grid area: compute week column and DOW from mouse position */
         int gx = d->position.x + 2 + 3 + 1; /* x + border + dayLabelW + space */
-        int gy = d->position.y + 4;          /* grid top row */
-        if (event->y >= gy && event->y < gy + 7 &&
-            event->x >= gx) {
+        int gy = d->position.y + 4;         /* grid top row */
+        if (event->y >= gy && event->y < gy + 7 && event->x >= gx) {
           int col = (event->x - gx) / 3;
           int dow = event->y - gy;
           if (col >= 0 && dow >= 0 && dow < 7) {
             HistoryData* h = &app->history_data;
             /* If clicking same cell already selected, open day detail */
-            if (col == h->cursorWeek && dow == h->cursorDow &&
-                h->selDay > 0) {
+            if (col == h->cursorWeek && dow == h->cursorDow && h->selDay > 0) {
               HistoryOpenDayDetail(app);
             } else {
               h->cursorDow = dow;
               h->cursorWeek = col;
-              historyResolveCursor(app);
+              HistoryResolveCursor(app);
               CreateHistoryOverviewDialog(app);
             }
           }
@@ -693,9 +682,12 @@ bool HandlePopupInput(AppData* app, int key) {
   {
     int sceneMask = 0;
     SlideType st = app->popup_dialog->slide_type;
-    if (st == SLIDE_TYPE_HISTORY_OVERVIEW) sceneMask = SCENE_HISTORY_OVERVIEW;
-    else if (st == SLIDE_TYPE_HISTORY_DAY) sceneMask = SCENE_HISTORY_DAY;
-    else if (st == SLIDE_TYPE_HISTORY_STATS) sceneMask = SCENE_HISTORY_STATS;
+    if (st == SLIDE_TYPE_HISTORY_OVERVIEW)
+      sceneMask = SCENE_HISTORY_OVERVIEW;
+    else if (st == SLIDE_TYPE_HISTORY_DAY)
+      sceneMask = SCENE_HISTORY_DAY;
+    else if (st == SLIDE_TYPE_HISTORY_STATS)
+      sceneMask = SCENE_HISTORY_STATS;
     if (sceneMask) {
       size_t nk = sizeof(keys) / sizeof(keys[0]);
 
@@ -1290,10 +1282,9 @@ void NoiseTogglePlay(AppData* app) {
   if (nd->selected >= 0 && nd->selected < nd->track_count) {
     nd->playing[nd->selected] = !nd->playing[nd->selected];
     if (nd->playing[nd->selected] && nd->volume[nd->selected] > 0)
-      NoiseStartTrack(nd->selected,
-                      nd->tracks[nd->selected].sound_path,
-                      (float)nd->volume[nd->selected] *
-                        (float)nd->master_volume / 10000.0f);
+      NoiseStartTrack(
+        nd->selected, nd->tracks[nd->selected].sound_path,
+        (float)nd->volume[nd->selected] * (float)nd->master_volume / 10000.0f);
     else
       NoiseStopTrack(nd->selected);
   }
@@ -1313,8 +1304,8 @@ void NoiseVolumeUp(AppData* app) {
     if (nd->master_volume > 100) nd->master_volume = 100;
     for (int i = 0; i < nd->track_count; i++)
       if (nd->playing[i])
-        NoiseSetVolume(i, (float)nd->volume[i] *
-                           (float)nd->master_volume / 10000.0f);
+        NoiseSetVolume(
+          i, (float)nd->volume[i] * (float)nd->master_volume / 10000.0f);
   } else {
     if (nd->volume[nd->selected] < 100) nd->volume[nd->selected] += 10;
     if (nd->volume[nd->selected] > 100) nd->volume[nd->selected] = 100;
@@ -1338,8 +1329,8 @@ void NoiseVolumeDown(AppData* app) {
     if (nd->master_volume < 0) nd->master_volume = 0;
     for (int i = 0; i < nd->track_count; i++)
       if (nd->playing[i])
-        NoiseSetVolume(i, (float)nd->volume[i] *
-                           (float)nd->master_volume / 10000.0f);
+        NoiseSetVolume(
+          i, (float)nd->volume[i] * (float)nd->master_volume / 10000.0f);
   } else {
     if (nd->volume[nd->selected] > 0) nd->volume[nd->selected] -= 10;
     if (nd->volume[nd->selected] < 0) nd->volume[nd->selected] = 0;
@@ -2130,14 +2121,17 @@ void QuitAppNotes(AppData* app) {
   if (app->user_input == app->last_input) app->running = false;
 }
 
-/* ---------------------------------------------------------------------------
- * History Popup Management
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History Actions
+ * ---------------------------------------------------------------------------
+ */
 
 /**
- * @brief Open the History Overview popup.
+ * Open the History Overview popup.
  * Initialises the 5-month window ending at the current month and resolves
  * the cursor to today.
+ * @param app Application state
  */
 void OpenHistoryPopup(AppData* app) {
   if (!app) return;
@@ -2154,7 +2148,10 @@ void OpenHistoryPopup(AppData* app) {
   h->firstYear = curYear;
   h->firstMonth = curMonth;
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
-    if (--h->firstMonth < 1) { h->firstMonth = 12; h->firstYear--; }
+    if (--h->firstMonth < 1) {
+      h->firstMonth = 12;
+      h->firstYear--;
+    }
   }
 
   /* Resolve cursor to today */
@@ -2173,24 +2170,29 @@ void OpenHistoryPopup(AppData* app) {
     md[i] = HistDaysInMonth(y, m);
     msd[i] = HistDayOfWeek(y, m, 1);
     mw[i] = (msd[i] + md[i] + 6) / 7;
-    msw[i] = (i == 0) ? 0 : msw[i-1] + mw[i-1];
+    msw[i] = (i == 0) ? 0 : msw[i - 1] + mw[i - 1];
     if (y == curYear && m == curMonth) {
       int dayOffset = curMonth - h->firstMonth;
       if (dayOffset < 0) dayOffset += 12;
       if (dayOffset < HISTORY_VISIBLE_MONTHS) {
-        int localWeek = (tm->tm_wday < msd[i]) ? 0 : (tm->tm_mday - 1 + msd[i]) / 7;
+        int localWeek =
+          (tm->tm_wday < msd[i]) ? 0 : (tm->tm_mday - 1 + msd[i]) / 7;
         h->cursorWeek = msw[i] + localWeek;
       }
     }
-    if (++m > 12) { m = 1; y++; }
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
   }
 
-  historyResolveCursor(app);
+  HistoryResolveCursor(app);
   CreateHistoryOverviewDialog(app);
 }
 
 /**
- * @brief Close the current history popup and return to the overview.
+ * Close the current history popup and return to the overview.
+ * @param app Application state
  */
 void HistoryCloseToOverview(AppData* app) {
   if (!app || !app->popup_dialog) return;
@@ -2204,14 +2206,15 @@ void HistoryCloseToOverview(AppData* app) {
 }
 
 /**
- * @brief Open the Day Detail popup for the currently selected date.
+ * Open the Day Detail popup for the currently selected date.
+ * @param app Application state
  */
 void HistoryOpenDayDetail(AppData* app) {
   if (!app || !app->popup_dialog) return;
   HistoryData* h = &app->history_data;
 
   /* Ensure cursor is resolved */
-  if (h->selDay == 0) historyResolveCursor(app);
+  if (h->selDay == 0) HistoryResolveCursor(app);
 
   h->dayScroll = 0;
   ClosePopup(app);
@@ -2219,7 +2222,8 @@ void HistoryOpenDayDetail(AppData* app) {
 }
 
 /**
- * @brief Open the Statistics popup.
+ * Open the Statistics popup.
+ * @param app Application state
  */
 void HistoryOpenStatistics(AppData* app) {
   if (!app || !app->popup_dialog) return;
@@ -2227,15 +2231,86 @@ void HistoryOpenStatistics(AppData* app) {
   CreateHistoryStatsDialog(app);
 }
 
-/* ---------------------------------------------------------------------------
- * History Cursor / Scroll
- * --------------------------------------------------------------------------- */
+/**
+ * Move the history cursor left.
+ * When near the first week of the month (day ≤ 7) moves by 1 day to
+ * cross the boundary cleanly; otherwise moves by a full week (7 days).
+ * @param app Application state
+ */
+void HistoryCursorLeft(AppData* app) {
+  if (!app) return;
+  HistoryData* h = &app->history_data;
+  int delta = (h->selDay > 0 && h->selDay <= 7) ? -1 : -7;
+  historyMoveCursorByDays(app, delta);
+}
 
 /**
- * @brief Move the history cursor by a given number of calendar days.
+ * Move the history cursor right.
+ * When near the last week of the month (day > dim-7) moves by 1 day to
+ * cross the boundary cleanly; otherwise moves by a full week (7 days).
+ * @param app Application state
+ */
+void HistoryCursorRight(AppData* app) {
+  if (!app) return;
+  HistoryData* h = &app->history_data;
+  int dim = (h->selDay > 0) ? HistDaysInMonth(h->selYear, h->selMonth) : 31;
+  int delta = (h->selDay > 0 && h->selDay > dim - 7) ? 1 : 7;
+  historyMoveCursorByDays(app, delta);
+}
+
+/**
+ * Move the history cursor up by one calendar day.
+ * @param app Application state
+ */
+void HistoryCursorUp(AppData* app) { historyMoveCursorByDays(app, -1); }
+
+/**
+ * Move the history cursor down by one calendar day.
+ * @param app Application state
+ */
+void HistoryCursorDown(AppData* app) { historyMoveCursorByDays(app, 1); }
+
+/**
+ * Scroll the day-detail session list up.
+ * @param app Application state
+ */
+void HistoryScrollUp(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  if (h->dayScroll > 0) h->dayScroll--;
+}
+
+/**
+ * Scroll the day-detail session list down.
+ * @param app Application state
+ */
+void HistoryScrollDown(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  int indices[100];
+  time_t times[100];
+  int dur[100], st[100];
+  int total = HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth,
+                                 h->selDay, indices, times, dur, st, 100);
+  if (h->dayScroll < total - 1) h->dayScroll++;
+}
+
+/**
+ * Rebuild the history overview popup in-place.
+ * Closes the current dialog and re-creates it.
+ * @param app Application state
+ */
+static void historyRebuildOverview(AppData* app) {
+  CreateHistoryOverviewDialog(app);
+}
+
+/**
+ * Move the history cursor by a given number of calendar days.
  * Replaces grid-based cursor movement with proper date arithmetic so
  * crossing month boundaries works correctly (up = day-1, down = day+1).
  * If the target date falls outside the visible window it auto-scrolls.
+ * @param app Application state
+ * @param dayDelta Number of days to move (positive = forward, negative = backward)
  */
 static void historyMoveCursorByDays(AppData* app, int dayDelta) {
   if (!app || !app->popup_dialog) return;
@@ -2254,28 +2329,37 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
   /* Add dayDelta via mktime normalization */
   struct tm date = {0};
   date.tm_year = y - 1900;
-  date.tm_mon  = m - 1;
+  date.tm_mon = m - 1;
   date.tm_mday = d + dayDelta;
   mktime(&date);
   int newYear = date.tm_year + 1900;
-  int newMon  = date.tm_mon + 1;
-  int newDay  = date.tm_mday;
-  int newDow  = date.tm_wday;
+  int newMon = date.tm_mon + 1;
+  int newDay = date.tm_mday;
+  int newDow = date.tm_wday;
 
   /* Check if new date is within current 5-month window */
   {
     int wy = h->firstYear, wm = h->firstMonth;
     int inWindow = 0;
     for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-      if (wy == newYear && wm == newMon) { inWindow = 1; break; }
-      if (++wm > 12) { wm = 1; wy++; }
+      if (wy == newYear && wm == newMon) {
+        inWindow = 1;
+        break;
+      }
+      if (++wm > 12) {
+        wm = 1;
+        wy++;
+      }
     }
     if (!inWindow) {
       /* Scroll window so the new date is in the last visible month */
       h->firstYear = newYear;
       h->firstMonth = newMon;
       for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
-        if (--h->firstMonth < 1) { h->firstMonth = 12; h->firstYear--; }
+        if (--h->firstMonth < 1) {
+          h->firstMonth = 12;
+          h->firstYear--;
+        }
       }
     }
   }
@@ -2292,7 +2376,10 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
       mw[i] = (msd[i] + md[i] + 6) / 7;
       msw[i] = acc;
       acc += mw[i];
-      if (++m2 > 12) { m2 = 1; y2++; }
+      if (++m2 > 12) {
+        m2 = 1;
+        y2++;
+      }
     }
   }
 
@@ -2304,77 +2391,18 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
         int localWeek = (msd[i] + newDay - 1) / 7;
         if (localWeek >= mw[i]) localWeek = mw[i] - 1;
         h->cursorWeek = msw[i] + localWeek;
-        h->cursorDow  = newDow;
+        h->cursorDow = newDow;
         break;
       }
-      if (++mm > 12) { mm = 1; my++; }
+      if (++mm > 12) {
+        mm = 1;
+        my++;
+      }
     }
   }
 
-  h->selYear  = newYear;
+  h->selYear = newYear;
   h->selMonth = newMon;
-  h->selDay   = newDay;
+  h->selDay = newDay;
   historyRebuildOverview(app);
-}
-
-/**
- * @brief Move the history cursor left.
- * When near the first week of the month (day ≤ 7) moves by 1 day to
- * cross the boundary cleanly; otherwise moves by a full week (7 days).
- */
-void HistoryCursorLeft(AppData* app) {
-  if (!app) return;
-  HistoryData* h = &app->history_data;
-  int delta = (h->selDay > 0 && h->selDay <= 7) ? -1 : -7;
-  historyMoveCursorByDays(app, delta);
-}
-
-/**
- * @brief Move the history cursor right.
- * When near the last week of the month (day > dim-7) moves by 1 day to
- * cross the boundary cleanly; otherwise moves by a full week (7 days).
- */
-void HistoryCursorRight(AppData* app) {
-  if (!app) return;
-  HistoryData* h = &app->history_data;
-  int dim = (h->selDay > 0) ? HistDaysInMonth(h->selYear, h->selMonth) : 31;
-  int delta = (h->selDay > 0 && h->selDay > dim - 7) ? 1 : 7;
-  historyMoveCursorByDays(app, delta);
-}
-
-/**
- * @brief Move the history cursor up by one calendar day.
- */
-void HistoryCursorUp(AppData* app) {
-  historyMoveCursorByDays(app, -1);
-}
-
-/**
- * @brief Move the history cursor down by one calendar day.
- */
-void HistoryCursorDown(AppData* app) {
-  historyMoveCursorByDays(app, 1);
-}
-
-/**
- * @brief Scroll the day-detail session list up.
- */
-void HistoryScrollUp(AppData* app) {
-  if (!app || !app->popup_dialog) return;
-  HistoryData* h = &app->history_data;
-  if (h->dayScroll > 0) h->dayScroll--;
-}
-
-/**
- * @brief Scroll the day-detail session list down.
- */
-void HistoryScrollDown(AppData* app) {
-  if (!app || !app->popup_dialog) return;
-  HistoryData* h = &app->history_data;
-  int indices[100];
-  time_t times[100];
-  int dur[100], st[100];
-  int total = HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth,
-                                 h->selDay, indices, times, dur, st, 100);
-  if (h->dayScroll < total - 1) h->dayScroll++;
 }

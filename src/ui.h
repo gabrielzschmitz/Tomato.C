@@ -612,36 +612,36 @@ void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
 void RenderSlideBox(int x, int y, int w, int h);
 
 /* ---------------------------------------------------------------------------
- * History Popups
+ * History Popup
  * --------------------------------------------------------------------------- */
 
 /**
- * @brief Create the History Overview popup (contribution graph).
+ * Create the History Overview popup (contribution graph).
  * @param app Application state
  */
 void CreateHistoryOverviewDialog(AppData* app);
 
 /**
- * @brief Create the Day Detail popup.
+ * Create the Day Detail popup.
  * @param app Application state
  */
 void CreateHistoryDayDialog(AppData* app);
 
 /**
- * @brief Create the Statistics popup.
+ * Create the Statistics popup.
  * @param app Application state
  */
 void CreateHistoryStatsDialog(AppData* app);
 
 /**
- * @brief Resolve cursor position (cursorWeek, cursorDow) into a concrete date
- *        stored in history_data (selYear, selMonth, selDay).
+ * Resolve cursor position (cursorWeek, cursorDow) into a concrete date
+ * stored in history_data (selYear, selMonth, selDay).
  * @param app Application state
  */
-void historyResolveCursor(AppData* app);
+void HistoryResolveCursor(AppData* app);
 
 /**
- * @brief Build a single history slide with custom render/update callbacks.
+ * Build a single history slide with custom render/update callbacks.
  * The slide is not token-based — the render function draws directly.
  * @param size Slide dimensions
  * @param render Custom render callback
@@ -653,7 +653,7 @@ SlideDef** BuildHistorySlide(Dimensions size,
                              void (*update)(AppData*, SlideDef*));
 
 /**
- * @brief Build a token-based history slide from formatted text.
+ * Build a token-based history slide from formatted text.
  * @param text Token-format text with escape sequences
  * @param size Slide dimensions
  * @return Array of 1 SlideDef pointer, or NULL on failure

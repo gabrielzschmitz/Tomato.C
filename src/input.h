@@ -42,17 +42,17 @@ typedef enum {
  * Used for routing input and determining which UI to display.
  */
 typedef enum {
-  MAIN_MENU,   /**< Main menu scene */
-  WORK_TIME,   /**< Work session timer scene */
-  SHORT_PAUSE, /**< Short break timer scene */
-  LONG_PAUSE,  /**< Long break timer scene */
-  NOTES,       /**< Notes/text editor scene */
-  HELP,        /**< Help screen scene */
-  CONTINUE,    /**< Continue/pause scene */
-  NOISE,              /**< White noise control dialog scene */
-  HISTORY_OVERVIEW,   /**< History contribution graph overview */
-  HISTORY_DAY,        /**< History single-day session details */
-  HISTORY_STATS,      /**< History statistics popup */
+  MAIN_MENU,        /**< Main menu scene */
+  WORK_TIME,        /**< Work session timer scene */
+  SHORT_PAUSE,      /**< Short break timer scene */
+  LONG_PAUSE,       /**< Long break timer scene */
+  NOTES,            /**< Notes/text editor scene */
+  HELP,             /**< Help screen scene */
+  CONTINUE,         /**< Continue/pause scene */
+  NOISE,            /**< White noise control dialog scene */
+  HISTORY_OVERVIEW, /**< History contribution graph overview */
+  HISTORY_DAY,      /**< History single-day session details */
+  HISTORY_STATS,    /**< History statistics popup */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -647,46 +647,69 @@ void QuitAppNotes(AppData* app);
 
 /**
  * ---------------------------------------------------------------------------
- * History Popup Actions
+ * History Actions
  * ---------------------------------------------------------------------------
  */
 
 /**
- * @brief Open the History Overview popup (contribution graph).
+ * Open the History Overview popup (contribution graph).
  * Called from menu action or via CTRL+H keybind.
  * @param app Application state
  */
 void OpenHistoryPopup(AppData* app);
 
 /**
- * @brief Close current history view and re-open the Overview popup.
+ * Close current history view and re-open the Overview popup.
  * @param app Application state
  */
 void HistoryCloseToOverview(AppData* app);
 
 /**
- * @brief Switch from overview to day-detail popup.
+ * Switch from overview to day-detail popup.
  * @param app Application state
  */
 void HistoryOpenDayDetail(AppData* app);
 
 /**
- * @brief Switch from overview to statistics popup.
+ * Switch from overview to statistics popup.
  * @param app Application state
  */
 void HistoryOpenStatistics(AppData* app);
 
-/** @brief Move cursor left (overview). */
+/**
+ * Move cursor left (overview).
+ * @param app Application state
+ */
 void HistoryCursorLeft(AppData* app);
-/** @brief Move cursor right (overview). */
+
+/**
+ * Move cursor right (overview).
+ * @param app Application state
+ */
 void HistoryCursorRight(AppData* app);
-/** @brief Move cursor up (overview). */
+
+/**
+ * Move cursor up (overview).
+ * @param app Application state
+ */
 void HistoryCursorUp(AppData* app);
-/** @brief Move cursor down (overview). */
+
+/**
+ * Move cursor down (overview).
+ * @param app Application state
+ */
 void HistoryCursorDown(AppData* app);
-/** @brief Scroll session list up (day detail). */
+
+/**
+ * Scroll session list up (day detail).
+ * @param app Application state
+ */
 void HistoryScrollUp(AppData* app);
-/** @brief Scroll session list down (day detail). */
+
+/**
+ * Scroll session list down (day detail).
+ * @param app Application state
+ */
 void HistoryScrollDown(AppData* app);
 
 #endif /* INPUT_H_ */

@@ -7,19 +7,22 @@
 #include "error.h"
 #include "tomato.h"
 
-/** @brief Binary log record structure (packed, 28 bytes). */
+/**
+ * Binary log record structure (packed, 28 bytes).
+ */
 typedef struct __attribute__((packed)) {
-  uint16_t session_index;
-  uint8_t current_step;
-  uint8_t current_cycle;
-  uint8_t total_cycles;
-  uint8_t work_time;
-  uint8_t short_pause_time;
-  uint8_t long_pause_time;
-  uint32_t total_elapsed;
-  uint32_t current_step_time;
-  uint8_t status;
-  uint32_t session_start_time;
+  uint16_t session_index; /**< Unique session identifier */
+  uint8_t
+    current_step; /**< Current step (0=work, 1=short pause, 2=long pause) */
+  uint8_t current_cycle;       /**< Current cycle number (1-based) */
+  uint8_t total_cycles;        /**< Total pomodoro cycles configured */
+  uint8_t work_time;           /**< Work time duration in minutes */
+  uint8_t short_pause_time;    /**< Short pause duration in minutes */
+  uint8_t long_pause_time;     /**< Long pause duration in minutes */
+  uint32_t total_elapsed;      /**< Total elapsed time across steps (seconds) */
+  uint32_t current_step_time;  /**< Elapsed time in current step (seconds) */
+  uint8_t status;              /**< 0 = completed, 1 = uncompleted */
+  uint32_t session_start_time; /**< Unix timestamp when session started */
 } pomodoroLogRecord;
 
 /**
@@ -133,12 +136,14 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data);
  */
 void GetPomodoroHistory(const char* path);
 
-/* ---------------------------------------------------------------------------
- * History Data Query Functions
- * --------------------------------------------------------------------------- */
+/**
+ * ---------------------------------------------------------------------------
+ * History
+ * ---------------------------------------------------------------------------
+ */
 
 /**
- * @brief Returns the number of days in a given month.
+ * Returns the number of days in a given month.
  * @param year  Gregorian year (e.g. 2026)
  * @param month Month (1-12)
  * @return Days in month (28-31)
@@ -146,7 +151,7 @@ void GetPomodoroHistory(const char* path);
 int HistDaysInMonth(int year, int month);
 
 /**
- * @brief Returns the day-of-week for a date.
+ * Returns the day-of-week for a date.
  * @param year  Gregorian year
  * @param month Month (1-12)
  * @param day   Day (1-31)
@@ -155,7 +160,7 @@ int HistDaysInMonth(int year, int month);
 int HistDayOfWeek(int year, int month, int day);
 
 /**
- * @brief Fills daily session-count array for a given month from the binary log.
+ * Fills daily session-count array for a given month from the binary log.
  * @param path   Binary log path (POMODORO_LOG)
  * @param year   Year
  * @param month  Month (1-12)
@@ -165,7 +170,7 @@ int HistDayOfWeek(int year, int month, int day);
 int HistDailyCounts(const char* path, int year, int month, int* counts);
 
 /**
- * @brief Returns session records for a specific day from the binary log.
+ * Returns session records for a specific day from the binary log.
  * @param path      Binary log path (POMODORO_LOG)
  * @param year      Year
  * @param month     Month (1-12)
@@ -178,11 +183,11 @@ int HistDailyCounts(const char* path, int year, int month, int* counts);
  * @return Number of sessions found (capped at maxCount)
  */
 int HistSessionsForDay(const char* path, int year, int month, int day,
-                       int* indices, time_t* startTimes,
-                       int* durations, int* statuses, int maxCount);
+                       int* indices, time_t* startTimes, int* durations,
+                       int* statuses, int maxCount);
 
 /**
- * @brief Computes current and longest streak ending at the given date.
+ * Computes current and longest streak ending at the given date.
  * A streak is consecutive calendar days (past to present) with at
  * least one completed session.
  * @param path    Binary log path (POMODORO_LOG)
@@ -192,11 +197,11 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
  * @param current Output — current streak length
  * @param longest Output — longest streak ever
  */
-void HistStreak(const char* path, int year, int month, int day,
-                int* current, int* longest);
+void HistStreak(const char* path, int year, int month, int day, int* current,
+                int* longest);
 
 /**
- * @brief Maps session count to contribution-icon index.
+ * Maps session count to contribution-icon index.
  *
  * Boundaries:
  *   0   → 0 ("░░")
