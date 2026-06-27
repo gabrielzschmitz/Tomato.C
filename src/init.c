@@ -194,6 +194,8 @@ ErrorType InitScreen(void) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 ErrorType EndScreen(void) {
+  /* Disable xterm mouse tracking */
+  printf("\033[?1003l\033[?1000l\033[?1006l");
   int err = endwin();
   if (err == ERR) return WINDOW_DELETION_ERROR;
 
