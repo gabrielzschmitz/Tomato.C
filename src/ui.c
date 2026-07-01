@@ -3244,7 +3244,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
   /* Navigation hints — key (15/bold) + description (07/normal), clickable */
   {
     int hintY = y + d->size.height - 2;
-    static const char* keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
+    static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
     static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
     static MenuAction actions[] = {NULL, (MenuAction)HistoryOpenDayDetail,
                                    (MenuAction)HistoryOpenStatistics,
@@ -3252,7 +3252,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
     int nSeg = 4;
     int keyW[4], descW[4], segW[4], totalW = 0;
     for (int i = 0; i < nSeg; i++) {
-      keyW[i] = utf8DisplayWidth(keys[i]);
+      keyW[i] = utf8DisplayWidth(hint_keys[i]);
       descW[i] = utf8DisplayWidth(descs[i]);
       segW[i] = keyW[i] + descW[i];
       totalW += segW[i];
@@ -3265,7 +3265,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
       int hover = (def->hovered == i);
       SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
       if (hover) attron(A_REVERSE);
-      mvprintw(hintY, cx, "%s", keys[i]);
+      mvprintw(hintY, cx, "%s", hint_keys[i]);
       if (hover) attroff(A_REVERSE);
       SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
       if (hover) attron(A_REVERSE);
@@ -3297,12 +3297,12 @@ static void historyOverviewUpdate(AppData* app, SlideDef* def) {
   int w = def->size.width;
 
   /* Check nav hint segments first */
-  static const char* keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
+  static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
   static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
   int nSeg = 4;
   int keyW[4], descW[4], segW[4], totalW = 0;
   for (int i = 0; i < nSeg; i++) {
-    keyW[i] = utf8DisplayWidth(keys[i]);
+    keyW[i] = utf8DisplayWidth(hint_keys[i]);
     descW[i] = utf8DisplayWidth(descs[i]);
     segW[i] = keyW[i] + descW[i];
     totalW += segW[i];

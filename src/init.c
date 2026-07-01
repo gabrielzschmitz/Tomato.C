@@ -39,6 +39,7 @@ static ErrorType initPomodoroData(AppData* app);
  */
 ErrorType InitApp(AppData* app) {
   ErrorType status = NO_ERROR;
+  LoadConfig();
   if (!CheckConfigIconType()) return INVALID_CONFIG;
 
   app->screen = CreateScreen();
@@ -88,7 +89,7 @@ ErrorType InitApp(AppData* app) {
 
   InitWhiteNoiseData(&app->noise_data);
   {
-    static const WhiteNoiseTrackDef default_tracks[] = {
+    WhiteNoiseTrackDef default_tracks[] = {
       {"Rain", (const char**)RAIN_ICONS, "./sounds/ambience-rain.mp3",
        NOISE_MASTER_VOLUME, 14},
       {"Fire", (const char**)FIRE_ICONS, "./sounds/ambience-fire.mp3",
@@ -150,21 +151,18 @@ ErrorType InitScreen(void) {
   if (initscr() == NULL) return WINDOW_CREATION_ERROR;
 #endif
   if (has_colors()) {
-    if (BG_TRANSPARENCY == 1) use_default_colors();
-    if (start_color() == ERR) return WINDOW_CREATION_ERROR;
-
-    /* Initialize pairs with both foreground and background colors */
-    for (int bg = 0; bg < PALETTE_SIZE; bg++) {
-      for (int fg = 0; fg < PALETTE_SIZE; fg++) {
-        int pair_number = (bg * PALETTE_SIZE) + fg + 1;
-        if (init_pair(pair_number, fg, bg) == ERR) return WINDOW_CREATION_ERROR;
+    use_default_colors();
+    if (start_color() != ERR) {
+      for (int bg = 0; bg < PALETTE_SIZE; bg++) {
+        for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+          int pair_number = (bg * PALETTE_SIZE) + fg + 1;
+          if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, bg);
+        }
       }
-    }
-
-    /* Initialize pairs with foreground colors and transparent background */
-    for (int fg = 0; fg < PALETTE_SIZE; fg++) {
-      int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
-      if (init_pair(pair_number, fg, -1) == ERR) return WINDOW_CREATION_ERROR;
+      for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+        int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
+        if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, -1);
+      }
     }
   }
   /* Disable echoing user input */
@@ -357,7 +355,10 @@ static ErrorType initPomodoroData(AppData* app) {
   memset(&app->history_data, 0, sizeof(app->history_data));
 
   /* In DEBUG mode, seed the log with fake completed sessions */
-  if (DEBUG) { ErrorType err = debugSeedHistory(); (void)err; }
+  if (DEBUG) {
+    ErrorType err = debugSeedHistory();
+    (void)err;
+  }
 
   /* Discard any stale input before showing popups */
   flushinp();

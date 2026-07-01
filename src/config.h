@@ -5,322 +5,339 @@
 
 #include "input.h"
 
-/* Visual Settings ---------------------------------------------------------- */
-/* 1 if you want animations, 0 if not (default: 1) */
-static const int ANIMATIONS = 1;
-/* nerd-icons - emojis - ascii (default: nerd-icons)
- * Note: you'll need a patched nerdicons for that option */
-static const char* ICONS = "nerd-icons";
-/* 1 if you want transparent background, 0 if not (default: 1)
- * Note: you'll need a terminal already transparent */
-static const int BG_TRANSPARENCY = 1;
-/* amount of space between status bar modules (default: 1) */
-static const int STATUS_BAR_SPACING = 1;
-/* either 1 for top, or 0 for bottom (default: 0) */
-static const int STATUS_BAR_POSITION = 0;
-/* 0-7 BLACK-WHITE, color for the unfocused panels (default: 7) */
-static const int UNFOCUSED_PANEL_COLOR = 7;
-/* 0-7 BLACK-WHITE, color for the focused panel (default: 1) */
-static const int FOCUSED_PANEL_COLOR = 1;
+/* ── Config struct hierarchy ── */
 
-/* UI Settings -------------------------------------------------------------- */
-/* Note: icons need to follow this pattern: nerd-icons - emojis - ascii */
-/* Noise Icons */
-static const char* RAIN_ICONS[3] = {"󰖖", "☔", "R"};
-static const char* FIRE_ICONS[3] = {"󰈸", "🔥", "F"};
-static const char* WIND_ICONS[3] = {"󰖝", "🍃", "W"};
-static const char* THUNDER_ICONS[3] = {"󱐋", "⚡", "T"};
-static const char* PLAYING_ICONS[3] = {"", "▶", "P"};
-static const char* PLUS_VOLUME_ICONS[3] = {"", "➕", "+"};
-static const char* MINUS_VOLUME_ICONS[3] = {"", "➖", "-"};
-static const char* ACTIVE_VOLUME_BAR_ICONS[3] = {"█", "█", "█"};
-static const char* INACTIVE_VOLUME_BAR_ICONS[3] = {"▒", "▒", "▒"};
-static const char* ACTIVE_PROGRESS_BAR_ICONS[3] = {"█", "█", "█"};
-static const char* INACTIVE_PROGRESS_BAR_ICONS[3] = {"▒", "▒", "▒"};
-/* Pomodoro Icons */
-static const char* MAIN_MENU_ICONS[3] = {"󰍜", "🧾", ""};
-static const char* WORK_ICONS[3] = {"", "🍅", ""};
-static const char* SHORT_PAUSE_ICONS[3] = {"", "☕", ""};
-static const char* LONG_PAUSE_ICONS[3] = {"", "🌴", ""};
-static const char* NOTES_ICONS[3] = {"", "📝", ""};
-static const char* HELP_ICONS[3] = {"", "⁉️", ""};
-static const char* CONTINUE_ICONS[3] = {"", "⏯️", ""};
-static const char* IDLE_ICONS[3] = {"", "🌙", ""};
-/* Input Icons */
-static const char* DEFAULT_MODE_ICONS[3] = {"", "🌐", ""};
-static const char* NORMAL_MODE_ICONS[3] = {"", "🧭", ""};
-static const char* INSERT_MODE_ICONS[3] = {"", "✏ ", ""};
-static const char* VISUAL_MODE_ICONS[3] = {"󰕢", "🔲", ""};
-static const char* REAL_TIME_MODULE_ICONS[3] = {"", "🕘", ""};
-static const char* LINE_COLUMN_MODULE_ICONS[3] = {"", "▶", ""};
-static const char* VISUAL_CURSOR_ICON = "█";
-static const char* INSERT_CURSOR_ICON = "▏";
-/* Misc Icons */
-static const char* BORDER_CHARS[6] = {"┏", "┓", "┗", "┛", "━", "┃"};
-static const char* PAUSE_ICONS[3] = {"󰏤", "⏸️", "P"};
-static const char* SKIP_ICONS[3] = {"󰒬", "⏭️", "S"};
-static const char* HISTORY_ICONS[4] = {"░░", "▒▒", "▓▓", "██"};
+/**
+ * Icons for white-noise tracks.
+ */
+typedef struct {
+  const char* rain[3];     /**< [nerd, emoji, ascii] */
+  const char* fire[3];     /**< [nerd, emoji, ascii] */
+  const char* wind[3];     /**< [nerd, emoji, ascii] */
+  const char* thunder[3];  /**< [nerd, emoji, ascii] */
+} ConfigNoiseIcons;
+
+/**
+ * Icons for pomodoro-stage screens.
+ */
+typedef struct {
+  const char* main_menu[3];     /**< [nerd, emoji, ascii] */
+  const char* work[3];          /**< [nerd, emoji, ascii] */
+  const char* short_pause[3];   /**< [nerd, emoji, ascii] */
+  const char* long_pause[3];    /**< [nerd, emoji, ascii] */
+  const char* notes[3];         /**< [nerd, emoji, ascii] */
+  const char* help[3];          /**< [nerd, emoji, ascii] */
+  const char* continue_icon[3]; /**< [nerd, emoji, ascii] */
+  const char* idle[3];          /**< [nerd, emoji, ascii] */
+} ConfigPomodoroIcons;
+
+/**
+ * Icons for input-mode indicators in the status bar.
+ */
+typedef struct {
+  const char* default_mode[3];      /**< [nerd, emoji, ascii] */
+  const char* normal_mode[3];       /**< [nerd, emoji, ascii] */
+  const char* insert_mode[3];       /**< [nerd, emoji, ascii] */
+  const char* visual_mode[3];       /**< [nerd, emoji, ascii] */
+  const char* real_time_module[3];  /**< [nerd, emoji, ascii] */
+  const char* line_column_module[3];/**< [nerd, emoji, ascii] */
+} ConfigInputIcons;
+
+/**
+ * Miscellaneous icons (player controls, progress bars, cursors, borders, etc.).
+ */
+typedef struct {
+  const char* playing[3];              /**< [nerd, emoji, ascii] */
+  const char* plus_volume[3];          /**< [nerd, emoji, ascii] */
+  const char* minus_volume[3];         /**< [nerd, emoji, ascii] */
+  const char* active_volume_bar[3];    /**< [nerd, emoji, ascii] */
+  const char* inactive_volume_bar[3];  /**< [nerd, emoji, ascii] */
+  const char* active_progress_bar[3];  /**< [nerd, emoji, ascii] */
+  const char* inactive_progress_bar[3];/**< [nerd, emoji, ascii] */
+  const char* pause[3];                /**< [nerd, emoji, ascii] */
+  const char* skip[3];                 /**< [nerd, emoji, ascii] */
+  const char* visual_cursor;           /**< single string (not triplet) */
+  const char* insert_cursor;           /**< single string (not triplet) */
+  const char* border_chars[6];         /**< [tl, tr, bl, br, h, v] */
+  const char* history[4];              /**< levels: 0=none, 1, 2, 3+ */
+} ConfigMiscIcons;
+
+/**
+ * All icon sets grouped by category.
+ */
+typedef struct {
+  ConfigNoiseIcons noise;
+  ConfigPomodoroIcons pomodoro;
+  ConfigInputIcons input;
+  ConfigMiscIcons misc;
+} ConfigUiIcons;
+
+/**
+ * Sub-table for visual.ui — wraps icon sets.
+ */
+typedef struct {
+  ConfigUiIcons icons;
+} ConfigUi;
+
+/**
+ * Visual/appearance settings.
+ */
+typedef struct {
+  int animations;           /**< 0/1 — enable sprite animations */
+  const char* icons;        /**< "nerd-icons" | "emojis" | "ascii" */
+  int bg_transparency;      /**< 0/1 — transparent background */
+  int status_bar_spacing;   /**< spaces between status bar modules */
+  int status_bar_position;  /**< 0=bottom, 1=top */
+  int unfocused_panel_color;/**< 0-7 ncurses COLOR_* */
+  int focused_panel_color;  /**< 0-7 ncurses COLOR_* */
+  ConfigUi ui;              /**< icon sets */
+} ConfigVisual;
+
+/**
+ * Pomodoro timer durations.
+ */
+typedef struct {
+  int amount;       /**< pomodoros per cycle (1-8) */
+  int work_time;    /**< work stage minutes (5-75, step 5) */
+  int short_pause;  /**< short pause minutes (1-10) */
+  int long_pause;   /**< long pause minutes (5-60, step 5) */
+} ConfigPomodoro;
+
+/**
+ * Desktop notification settings.
+ */
+typedef struct {
+  int enabled;       /**< 0/1 — requires libnotify */
+  int sound;         /**< 0/1 — requires mpv */
+  float sound_volume;/**< 0.0 – 1.0 */
+} ConfigNotifications;
+
+/**
+ * White-noise playback settings.
+ */
+typedef struct {
+  int enabled;        /**< 0/1 — requires mpv */
+  int master_volume;  /**< 0-100 */
+} ConfigNoise;
+
+/**
+ * File paths and toggles for all application logs.
+ */
+typedef struct {
+  const char* pomodoro_log;   /**< path to pomodoro binary log */
+  const char* notes_log;      /**< path to notes text log */
+  const char* error_log;      /**< path to error log */
+  int timer_log;              /**< 0/1 — enables `-t` CLI flag */
+  const char* timer_file;     /**< path to timer socket file */
+  int work_log;               /**< 0/1 — enables cycle resume */
+  int notepad_log;            /**< 0/1 — save notes on exit */
+  int timerlog_icons;         /**< 0/1 — icons in timer log */
+} ConfigLogging;
+
+/**
+ * Auto-start toggles for pomodoro cycles.
+ */
+typedef struct {
+  int work;  /**< 0/1 — ask to continue after work */
+  int pause; /**< 0/1 — ask to continue after pause */
+} ConfigAutostart;
+
+/**
+ * Miscellaneous platform / behavior settings.
+ */
+typedef struct {
+  int wsl;            /**< 0/1 — WSL mode (wsl-notify-send) */
+  int fps;            /**< target frame rate */
+  int max_note_depth; /**< 0-3 — hierarchical sub-note depth */
+} ConfigMisc;
+
+/**
+ * Top-level runtime configuration.
+ *
+ * Every field is overridable via TOML files at
+ * /etc/tomato/config.toml and $XDG_CONFIG_HOME/tomato/config.
+ */
+typedef struct {
+  ConfigVisual visual;
+  ConfigPomodoro pomodoro;
+  ConfigNotifications notifications;
+  ConfigNoise noise;
+  ConfigLogging logging;
+  ConfigAutostart autostart;
+  ConfigMisc misc;
+  KeyFunction* key_bindings; /**< dynamic keybinding array */
+  size_t num_keys;           /**< length of key_bindings */
+} Config;
+
+/** Global configuration singleton. */
+extern Config g_config;
+
+/** Load (or reload) configuration from TOML files and set defaults. */
+void LoadConfig(void);
+
+/* ── Accessor macros ── */
+
+/* Visual Settings ---------------------------------------------------------- */
+
+/** 0/1 — enable sprite animations (default: 1) */
+#define ANIMATIONS (g_config.visual.animations)
+/** Icon set: "nerd-icons" | "emojis" | "ascii" (default: "nerd-icons") */
+#define ICONS (g_config.visual.icons)
+/** 0/1 — transparent background (default: 1) */
+#define BG_TRANSPARENCY (g_config.visual.bg_transparency)
+/** Spaces between status bar modules (default: 1) */
+#define STATUS_BAR_SPACING (g_config.visual.status_bar_spacing)
+/** 0=bottom, 1=top (default: 0) */
+#define STATUS_BAR_POSITION (g_config.visual.status_bar_position)
+/** Color of unfocused panels, 0-7 (default: 7) */
+#define UNFOCUSED_PANEL_COLOR (g_config.visual.unfocused_panel_color)
+/** Color of focused panel, 0-7 (default: 1) */
+#define FOCUSED_PANEL_COLOR (g_config.visual.focused_panel_color)
+
+/* UI / Icons --------------------------------------------------------------- */
+
+/** @name Noise icons [nerd, emoji, ascii] */
+/**@{*/
+#define RAIN_ICONS (g_config.visual.ui.icons.noise.rain)
+#define FIRE_ICONS (g_config.visual.ui.icons.noise.fire)
+#define WIND_ICONS (g_config.visual.ui.icons.noise.wind)
+#define THUNDER_ICONS (g_config.visual.ui.icons.noise.thunder)
+/**@}*/
+
+/** @name Media-player icons [nerd, emoji, ascii] */
+/**@{*/
+#define PLAYING_ICONS (g_config.visual.ui.icons.misc.playing)
+#define PLUS_VOLUME_ICONS (g_config.visual.ui.icons.misc.plus_volume)
+#define MINUS_VOLUME_ICONS (g_config.visual.ui.icons.misc.minus_volume)
+#define ACTIVE_VOLUME_BAR_ICONS \
+  (g_config.visual.ui.icons.misc.active_volume_bar)
+#define INACTIVE_VOLUME_BAR_ICONS \
+  (g_config.visual.ui.icons.misc.inactive_volume_bar)
+#define ACTIVE_PROGRESS_BAR_ICONS \
+  (g_config.visual.ui.icons.misc.active_progress_bar)
+#define INACTIVE_PROGRESS_BAR_ICONS \
+  (g_config.visual.ui.icons.misc.inactive_progress_bar)
+/**@}*/
+
+/** @name Pomodoro screen icons [nerd, emoji, ascii] */
+/**@{*/
+#define MAIN_MENU_ICONS (g_config.visual.ui.icons.pomodoro.main_menu)
+#define WORK_ICONS (g_config.visual.ui.icons.pomodoro.work)
+#define SHORT_PAUSE_ICONS (g_config.visual.ui.icons.pomodoro.short_pause)
+#define LONG_PAUSE_ICONS (g_config.visual.ui.icons.pomodoro.long_pause)
+#define NOTES_ICONS (g_config.visual.ui.icons.pomodoro.notes)
+#define HELP_ICONS (g_config.visual.ui.icons.pomodoro.help)
+#define CONTINUE_ICONS (g_config.visual.ui.icons.pomodoro.continue_icon)
+#define IDLE_ICONS (g_config.visual.ui.icons.pomodoro.idle)
+/**@}*/
+
+/** @name Input-mode icons [nerd, emoji, ascii] */
+/**@{*/
+#define DEFAULT_MODE_ICONS (g_config.visual.ui.icons.input.default_mode)
+#define NORMAL_MODE_ICONS (g_config.visual.ui.icons.input.normal_mode)
+#define INSERT_MODE_ICONS (g_config.visual.ui.icons.input.insert_mode)
+#define VISUAL_MODE_ICONS (g_config.visual.ui.icons.input.visual_mode)
+#define REAL_TIME_MODULE_ICONS (g_config.visual.ui.icons.input.real_time_module)
+#define LINE_COLUMN_MODULE_ICONS \
+  (g_config.visual.ui.icons.input.line_column_module)
+/**@}*/
+
+/** Cursor icons (single string, not triplet). */
+#define VISUAL_CURSOR_ICON (g_config.visual.ui.icons.misc.visual_cursor)
+#define INSERT_CURSOR_ICON (g_config.visual.ui.icons.misc.insert_cursor)
+
+/** @name Misc UI icons */
+/**@{*/
+#define BORDER_CHARS (g_config.visual.ui.icons.misc.border_chars)
+#define PAUSE_ICONS (g_config.visual.ui.icons.misc.pause)
+#define SKIP_ICONS (g_config.visual.ui.icons.misc.skip)
+#define HISTORY_ICONS (g_config.visual.ui.icons.misc.history)
+/**@}*/
 
 /* Pomodoro Settings -------------------------------------------------------- */
-/* amount of pomodoros from 1 to 8 (default: 4) */
-static const int POMODOROS_AMOUNT = 4;
-/* time for a work stage from 5 to 75 (default: 25) (increment it by 5 by 5) */
-static const int WORKTIME_TIME = 25;
-/* time for short pause from 1 to 10 (default: 5) */
-static const int SHORT_PAUSE_TIME = 5;
-/* time for long pause from 5 to 60 (default: 30) (increment it by 5 by 5) */
-static const int LONG_PAUSE_TIME = 30;
+
+/** Pomodoros per cycle, 1-8 (default: 4). */
+#define POMODOROS_AMOUNT (g_config.pomodoro.amount)
+/** Work stage duration in minutes, 5-75 step 5 (default: 25). */
+#define WORKTIME_TIME (g_config.pomodoro.work_time)
+/** Short pause minutes, 1-10 (default: 5). */
+#define SHORT_PAUSE_TIME (g_config.pomodoro.short_pause)
+/** Long pause minutes, 5-60 step 5 (default: 30). */
+#define LONG_PAUSE_TIME (g_config.pomodoro.long_pause)
 
 /* Notification Settings ---------------------------------------------------- */
-/* 1 means notifications on, 0 off (default: 1)
- * Note: you'll need libnotify if you're at linux */
-static const int NOTIFICATIONS = 1;
-/* 1 means notification sound on, 0 off (default: 1)
- * Note: you'll need mpv */
-static const int NOTIFICATIONS_SOUND = 1;
-/* volume for the notification sounds in percentage from 0.0 to 1.0 */
-static const float NOTIFICATIONS_SOUND_VOLUME = 0.5;
 
-/* Noise Settings ----------------------------------------------------------- */
-/* 1 means noises on, 0 off (default: 1)
- * Note: you'll need mpv */
-static const int NOISE_ENABLED = 1;
-static const int NOISE_MASTER_VOLUME = 50;
+/** 0/1 — desktop notifications via libnotify (default: 1). */
+#define NOTIFICATIONS (g_config.notifications.enabled)
+/** 0/1 — notification sounds via mpv (default: 1). */
+#define NOTIFICATIONS_SOUND (g_config.notifications.sound)
+/** Notification volume 0.0 – 1.0 (default: 0.5). */
+#define NOTIFICATIONS_SOUND_VOLUME (g_config.notifications.sound_volume)
+
+/* Noise / White-Noise Settings --------------------------------------------- */
+
+/** 0/1 — white-noise playback via mpv (default: 1). */
+#define NOISE_ENABLED (g_config.noise.enabled)
+/** Master volume 0-100 (default: 50). */
+#define NOISE_MASTER_VOLUME (g_config.noise.master_volume)
 
 /* Logging Settings --------------------------------------------------------- */
-/* the file path for the pomodoro log (default: /tmp/tomato_pomodoro.bin) */
-static const char* POMODORO_LOG = "/tmp/tomato_pomodoro.bin";
-/* the file path for the notes log (default: /tmp/tomato_notes.log) */
-static const char* NOTES_LOG = "/tmp/tomato_notes.log";
-/* the file path for the errors log (default: /tmp/tomato_errors.log) */
-static const char* ERROR_LOG = "/tmp/tomato_errors.log";
-/* 1 means timer log on, 0 off (default: 1)
- * Note: if you turn it off "$tomato -t" will not work */
-static const int TIMER_LOG = 1;
-/* the file path for the timer log (default: /tmp/tomato_timer.sock) */
-static const char* TIMER_FILE = "/tmp/tomato_timer.sock";
-/* 1 means work log on, 0 off (default: 1)
- * Note: if you turn it off the app will not resume from unfinished cycle
- * anymore */
-static const int WORK_LOG = 1;
-/* 1 means notepad log on, 0 off (default: 1)
- * Note: if you turn it off notepad will not be saved when you exit */
-static const int NOTEPAD_LOG = 1;
-/* 1 means icons ontimer log on, 0 off (default: 1) */
-static const int TIMERLOG_ICONS = 1;
+
+/** Path to pomodoro binary log (default: /tmp/tomato_pomodoro.bin). */
+#define POMODORO_LOG (g_config.logging.pomodoro_log)
+/** Path to notes log (default: /tmp/tomato_notes.log). */
+#define NOTES_LOG (g_config.logging.notes_log)
+/** Path to error log (default: /tmp/tomato_errors.log). */
+#define ERROR_LOG (g_config.logging.error_log)
+/** 0/1 — enables `-t` timer-log CLI flag (default: 1). */
+#define TIMER_LOG (g_config.logging.timer_log)
+/** Path to timer IPC socket (default: /tmp/tomato_timer.sock). */
+#define TIMER_FILE (g_config.logging.timer_file)
+/** 0/1 — enables resume from unfinished cycle (default: 1). */
+#define WORK_LOG (g_config.logging.work_log)
+/** 0/1 — save notepad data on exit (default: 1). */
+#define NOTEPAD_LOG (g_config.logging.notepad_log)
+/** 0/1 — icons in timer-log output (default: 1). */
+#define TIMERLOG_ICONS (g_config.logging.timerlog_icons)
 
 /* Auto-Start Settings ------------------------------------------------------ */
-/* 1 means you'll be asked to continue after each work cycle, 0 means not
- * (default: 1) */
-static const int AUTOSTART_WORK = 1;
-/* 1 means you'll be asked to continue after each pause, 0 means not
- * (default: 1) */
-static const int AUTOSTART_PAUSE = 1;
+
+/** 0/1 — ask to auto-start next work cycle (default: 1). */
+#define AUTOSTART_WORK (g_config.autostart.work)
+/** 0/1 — ask to auto-start next pause (default: 1). */
+#define AUTOSTART_PAUSE (g_config.autostart.pause)
 
 /* Misc Settings ------------------------------------------------------------ */
-/* the system-wide configuration path.
- * standard practice is "/etc/" for system-wide configuration files. */
-static const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config";
-/* the base directory for user configuration.
- * the application should append "/tomato/config" to this.
- * default if XDG_CONFIG_HOME is unset is $HOME/.config */
-static const char* DEFAULT_USER_CONFIG_DIR = ".config";
-/* 1 if you're in WSL, 0 if not (default: 0)
- * Note: you'll need wsl-notify-send for the notifications. The notifications
- * sounds and white noises will not work */
-static const int WSL = 0;
-/* string used in the sprites to separate the types of sprites
- * Note: just tweak if strictly necessary */
+
+/** System-wide config file path. */
+extern const char* system_config_path;
+/** Base directory name under $HOME for user config (e.g. ".config"). */
+extern const char* default_user_config_dir;
+/** 0/1 — WSL mode (default: 0). */
+#define WSL (g_config.misc.wsl)
+/** Sprite separator string. */
 static const char* SEPARATOR =
   "---------------------------------------------------------------------------";
-/* sets the fps app runs (default: 120) */
-static const int FPS = 120;
-/* maximum depth for hierarchical notes/subtasks (default: 1, valid: 0-3) */
-static const int MAX_NOTE_DEPTH = 1;
+/** Target frame rate (default: 120). */
+#define FPS (g_config.misc.fps)
+/** Maximum hierarchical note depth, 0-3 (default: 1). */
+#define MAX_NOTE_DEPTH (g_config.misc.max_note_depth)
 
 /* Keybind Settings --------------------------------------------------------- */
-/* Scene types bitmask for key binding filters */
+
+/** Bitmask of all pomodoro timer scenes. */
 #define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
+/** Bitmask of every scene type. */
 #define ALL_SCENES                                                \
   (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | \
    SCENE_CONTINUE)
 
-/* Struct to map a key to a function */
-static const KeyFunction keys[] = {
-  /* NORMAL mode - editing keys (when Panel.input != NULL) */
-  {'h', InputCursorLeft, NORMAL, SCENE_NOTES},
-  {'l', InputCursorRight, NORMAL, SCENE_NOTES},
-  {KEY_LEFT, InputCursorLeft, NORMAL, SCENE_NOTES},
-  {KEY_RIGHT, InputCursorRight, NORMAL, SCENE_NOTES},
-  {'x', InputDeleteChar, NORMAL, SCENE_NOTES},
-  {ESC, InputESC, NORMAL, SCENE_NOTES},
-  {ENTER, InputCommit, NORMAL, SCENE_NOTES},
-  {'\r', InputCommit, NORMAL, SCENE_NOTES},
-  {KEY_ENTER, InputCommit, NORMAL, SCENE_NOTES},
-  {'i', SwitchToInsertMode, NORMAL, SCENE_NOTES},
-  {'a', SwitchToInsertModeAppend, NORMAL, SCENE_NOTES},
-  {'v', SwitchToVisualMode, NORMAL, SCENE_NOTES},
-  {'u', UndoNotes, NORMAL, SCENE_NOTES},
-  {CTRLR, RedoNotes, NORMAL, SCENE_NOTES},
+/** Shorthand for g_config.key_bindings. */
+#define keys (g_config.key_bindings)
 
-  /* INSERT mode keys */
-  {KEY_LEFT, InputCursorLeft, INSERT, SCENE_NOTES},
-  {KEY_RIGHT, InputCursorRight, INSERT, SCENE_NOTES},
-  {KEY_BACKSPACE, InputBackspace, INSERT, SCENE_NOTES},
-  {BACKSPACE, InputBackspace, INSERT, SCENE_NOTES},
-  {ENTER, InputCommit, INSERT, SCENE_NOTES},
-  {'\r', InputCommit, INSERT, SCENE_NOTES},
-  {KEY_ENTER, InputCommit, INSERT, SCENE_NOTES},
-  {ESC, InputESC, INSERT, SCENE_NOTES},
-  {'v', SwitchToVisualMode, INSERT, SCENE_NOTES},
-  {-1, InputInsertChar, INSERT, SCENE_NOTES}, /* printable chars */
-
-  /* VISUAL mode keys */
-  {'h', InputCursorLeft, VISUAL, SCENE_NOTES},
-  {'l', InputCursorRight, VISUAL, SCENE_NOTES},
-  {KEY_LEFT, InputCursorLeft, VISUAL, SCENE_NOTES},
-  {KEY_RIGHT, InputCursorRight, VISUAL, SCENE_NOTES},
-  {'x', InputVisualDelete, VISUAL, SCENE_NOTES},
-  {ENTER, InputCommit, VISUAL, SCENE_NOTES},
-  {'\r', InputCommit, VISUAL, SCENE_NOTES},
-  {KEY_ENTER, InputCommit, VISUAL, SCENE_NOTES},
-  {ESC, InputESC, VISUAL, SCENE_NOTES},
-  {'a', InputSwitchToInsertFromVisual, VISUAL, SCENE_NOTES},
-  {'i', SwitchToInsertMode, VISUAL, SCENE_NOTES},
-
-  /* Scene-specific keybindings - Before ALL_SCENES keys */
-  {'V', ToggleMoveMode, DEFAULT, SCENE_NOTES},
-  {'j', MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
-  {'k', MoveNoteUpWrapper, DEFAULT, SCENE_NOTES},
-  {KEY_DOWN, MoveNoteDownWrapper, DEFAULT, SCENE_NOTES},
-  {KEY_UP, MoveNoteUpWrapper, DEFAULT, SCENE_NOTES},
-  {'h', PromoteNoteWrapper, DEFAULT, SCENE_NOTES},
-  {KEY_LEFT, PromoteNoteWrapper, DEFAULT, SCENE_NOTES},
-  {'l', DemoteNoteWrapper, DEFAULT, SCENE_NOTES},
-  {KEY_RIGHT, DemoteNoteWrapper, DEFAULT, SCENE_NOTES},
-  {'d', DeleteNoteAtNotes, DEFAULT, SCENE_NOTES},
-  {'t', AddNewTask, DEFAULT, SCENE_NOTES},
-  {'n', AddNewNote, DEFAULT, SCENE_NOTES},
-  {'T', AddSubtask, DEFAULT, SCENE_NOTES},
-  {'N', AddSubnote, DEFAULT, SCENE_NOTES},
-  {'e', EditCurrentNote, DEFAULT, SCENE_NOTES},
-  {ENTER, ToggleTaskAtNotes, DEFAULT, SCENE_NOTES},
-  {'u', UndoNotes, DEFAULT, SCENE_NOTES},
-  {CTRLR, RedoNotes, DEFAULT, SCENE_NOTES},
-  {ESC, QuitAppNotes, DEFAULT, SCENE_NOTES},
-  {'q', QuitAppNotes, DEFAULT, SCENE_NOTES},
-  {KEY_DOWN, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
-  {KEY_UP, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
-  {KEY_RIGHT, SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
-  {KEY_LEFT, SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
-  {'j', SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
-  {'k', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
-  {'l', SelectNextItem, DEFAULT, SCENE_MAIN_MENU},
-  {'h', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
-  {ENTER, ExecuteMenuAction, DEFAULT, SCENE_MAIN_MENU},
-
-  /* General keybindings - DEFAULT mode, ALL_SCENES */
-  {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
-  {'k', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
-  {KEY_LEFT, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
-  {'h', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
-  {KEY_DOWN, ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
-  {'j', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
-  {KEY_RIGHT, ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
-  {'l', ChangeSelectedItemRight, DEFAULT, ALL_SCENES},
-  {ENTER, ExecuteMenuAction, DEFAULT, ALL_SCENES},
-  {KEY_ENTER, ExecuteMenuAction, DEFAULT, ALL_SCENES},
-  {'\n', ExecuteMenuAction, DEFAULT, ALL_SCENES},
-  {'\r', ExecuteMenuAction, DEFAULT, ALL_SCENES},
-  {' ', NextPanel, DEFAULT, ALL_SCENES},
-  {'s', SkipPomodoroStep, DEFAULT, POMODORO_SCENES},
-  {'p', TogglePause, DEFAULT, POMODORO_SCENES},
-  {CTRLR, OpenResetMenu, DEFAULT, POMODORO_SCENES},
-  {'q', QuitApp, DEFAULT, ALL_SCENES},
-  {ESC, QuitApp, DEFAULT, ALL_SCENES},
-
-  /* Slide Navigation */
-  {KEY_LEFT, GoPrevSlide, DEFAULT, ALL_SCENES},
-  {'h', GoPrevSlide, DEFAULT, ALL_SCENES},
-  {KEY_RIGHT, GoNextSlide, DEFAULT, ALL_SCENES},
-  {'l', GoNextSlide, DEFAULT, ALL_SCENES},
-  {ENTER, ClosePopup, DEFAULT, ALL_SCENES},
-  {'\r', ClosePopup, DEFAULT, ALL_SCENES},
-  {KEY_ENTER, ClosePopup, DEFAULT, ALL_SCENES},
-  {'q', ClosePopup, DEFAULT, ALL_SCENES},
-  {ESC, ClosePopup, DEFAULT, ALL_SCENES},
-
-  /* Continue dialog — button navigation */
-  {KEY_LEFT, SelectPrevButton, DEFAULT, ALL_SCENES},
-  {'h', SelectPrevButton, DEFAULT, ALL_SCENES},
-  {KEY_RIGHT, SelectNextButton, DEFAULT, ALL_SCENES},
-  {'l', SelectNextButton, DEFAULT, ALL_SCENES},
-  {ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
-  {'\r', ExecuteButtonAction, DEFAULT, ALL_SCENES},
-  {KEY_ENTER, ExecuteButtonAction, DEFAULT, ALL_SCENES},
-
-  /* White noise dialog controls */
-  {CTRLW, OpenNoiseMenu, DEFAULT, ALL_SCENES},
-  {'w', OpenNoiseMenu, DEFAULT, ALL_SCENES},
-  {'q', NoiseClose, DEFAULT, SCENE_NOISE},
-  {ESC, NoiseClose, DEFAULT, SCENE_NOISE},
-  {'k', NoiseSelectPrev, DEFAULT, SCENE_NOISE},
-  {KEY_UP, NoiseSelectPrev, DEFAULT, SCENE_NOISE},
-  {'j', NoiseSelectNext, DEFAULT, SCENE_NOISE},
-  {KEY_DOWN, NoiseSelectNext, DEFAULT, SCENE_NOISE},
-  {' ', NoiseTogglePlay, DEFAULT, SCENE_NOISE},
-  {'l', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
-  {KEY_RIGHT, NoiseVolumeUp, DEFAULT, SCENE_NOISE},
-  {'+', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
-  {'=', NoiseVolumeUp, DEFAULT, SCENE_NOISE},
-  {'h', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
-  {KEY_LEFT, NoiseVolumeDown, DEFAULT, SCENE_NOISE},
-  {'-', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
-  {'_', NoiseVolumeDown, DEFAULT, SCENE_NOISE},
-  {'r', NoiseResetAll, DEFAULT, SCENE_NOISE},
-  {'R', NoiseResetAll, DEFAULT, SCENE_NOISE},
-
-  /* Continue dialog — keyboard navigation */
-  {'l', SelectNextButton, DEFAULT, SCENE_CONTINUE},
-  {'h', SelectPrevButton, DEFAULT, SCENE_CONTINUE},
-  {KEY_RIGHT, SelectNextButton, DEFAULT, SCENE_CONTINUE},
-  {KEY_LEFT, SelectPrevButton, DEFAULT, SCENE_CONTINUE},
-  {ENTER, ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
-  {'\r', ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
-  {KEY_ENTER, ExecuteButtonAction, DEFAULT, SCENE_CONTINUE},
-  {'q', ClosePopup, DEFAULT, SCENE_CONTINUE},
-  {ESC, ClosePopup, DEFAULT, SCENE_CONTINUE},
-
-  /* History Overview */
-  {CTRLH, OpenHistoryPopup, DEFAULT, ALL_SCENES},
-  {'h', HistoryCursorLeft, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'l', HistoryCursorRight, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'j', HistoryCursorDown, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'k', HistoryCursorUp, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {KEY_LEFT, HistoryCursorLeft, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {KEY_RIGHT, HistoryCursorRight, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {KEY_DOWN, HistoryCursorDown, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {KEY_UP, HistoryCursorUp, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {ENTER, HistoryOpenDayDetail, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'\r', HistoryOpenDayDetail, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'\t', HistoryOpenStatistics, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {'q', ClosePopup, DEFAULT, SCENE_HISTORY_OVERVIEW},
-  {ESC, ClosePopup, DEFAULT, SCENE_HISTORY_OVERVIEW},
-
-  /* History Day Detail */
-  {'j', HistoryScrollDown, DEFAULT, SCENE_HISTORY_DAY},
-  {'k', HistoryScrollUp, DEFAULT, SCENE_HISTORY_DAY},
-  {KEY_DOWN, HistoryScrollDown, DEFAULT, SCENE_HISTORY_DAY},
-  {KEY_UP, HistoryScrollUp, DEFAULT, SCENE_HISTORY_DAY},
-  {ENTER, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
-  {'\r', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
-  {ESC, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
-  {'q', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_DAY},
-
-  /* History Statistics */
-  {'\t', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
-  {ESC, HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
-  {'q', HistoryCloseToOverview, DEFAULT, SCENE_HISTORY_STATS},
-};
+/** Compile-time default keybinding array. Used as fallback when no TOML override is present. */
+extern const KeyFunction default_keys[];
+/** Number of entries in default_keys[]. */
+extern const size_t default_keys_count;
 
 #endif /* CONFIG_H_ */

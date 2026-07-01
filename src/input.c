@@ -40,7 +40,7 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta);
  * @param key The key code that was pressed
  */
 void ProcessKeyInput(AppData* app, int key) {
-  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  size_t numKeyFunctions = g_config.num_keys;
   int current_mode = app->screen->panels[app->screen->current_panel].mode;
   int current_scene =
     app->screen->panels[app->screen->current_panel].scene_history->present;
@@ -79,7 +79,7 @@ void ProcessKeyInput(AppData* app, int key) {
  * @return 1 if key is assigned to action, 0 otherwise
  */
 int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
-  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  size_t numKeyFunctions = g_config.num_keys;
   for (size_t i = 0; i < numKeyFunctions; i++)
     if (keys[i].key == key && keys[i].action == action) return 1;
   return 0;
@@ -621,7 +621,7 @@ bool HandlePopupInput(AppData* app, int key) {
 
   /* White noise dialog — dispatch via configurable key bindings */
   if (app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
-    size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+    size_t numKeyFunctions = g_config.num_keys;
     for (size_t i = 0; i < numKeyFunctions; i++) {
       if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
           (keys[i].scene_types & SCENE_NOISE)) {
@@ -655,7 +655,7 @@ bool HandlePopupInput(AppData* app, int key) {
 
   /* Continue dialog — dispatch via configurable key bindings (noise pattern) */
   if (app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
-    size_t nk = sizeof(keys) / sizeof(keys[0]);
+    size_t nk = g_config.num_keys;
     /* Pass 1 — scene-specific only (not bare ALL_SCENES) */
     for (size_t i = 0; i < nk; i++) {
       if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
@@ -689,7 +689,7 @@ bool HandlePopupInput(AppData* app, int key) {
     else if (st == SLIDE_TYPE_HISTORY_STATS)
       sceneMask = SCENE_HISTORY_STATS;
     if (sceneMask) {
-      size_t nk = sizeof(keys) / sizeof(keys[0]);
+      size_t nk = g_config.num_keys;
 
       /* Pass 1 — scene-specific only (not bare ALL_SCENES) */
       for (size_t i = 0; i < nk; i++) {
@@ -714,7 +714,7 @@ bool HandlePopupInput(AppData* app, int key) {
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
    * scene-specific keys (like ToggleTaskAtNotes) intercepting popup input */
-  size_t numKeyFunctions = sizeof(keys) / sizeof(keys[0]);
+  size_t numKeyFunctions = g_config.num_keys;
   for (size_t i = 0; i < numKeyFunctions; i++) {
     if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
         keys[i].scene_types == ALL_SCENES) {
@@ -2053,11 +2053,11 @@ void ExitMoveMode(AppData* app) {
   if (!app || !app->notes) return;
   if (app->notes->is_move_mode) {
     app->notes->is_move_mode = false;
+    app->user_input = -1;
+    app->last_input = -1;
   } else {
-    if (app->user_input == app->last_input) app->running = false;
+    ToggleTaskAtNotes(app);
   }
-  app->user_input = -1;
-  app->last_input = -1;
 }
 
 /**

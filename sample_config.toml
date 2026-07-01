@@ -1,0 +1,306 @@
+# =============================================================================
+# Tomato.C — sample configuration
+# =============================================================================
+# Place this file at:
+#   System-wide: /etc/tomato/config.toml
+#   User:        $XDG_CONFIG_HOME/tomato/config.toml
+#                or $HOME/.config/tomato/config.toml
+#
+# User config overrides system config; both override built-in defaults.
+# Unset values keep their defaults (shown below).
+
+
+# Visual Settings -------------------------------------------------------------
+[visual]
+animations           = 1            # 0/1 — enable animations
+icons                = "nerd-icons" # "nerd-icons" | "emojis" | "ascii"
+bg_transparency      = 1            # 0/1 — transparent background
+                                    # (needs transparent term)
+status_bar_spacing   = 1            # spaces between status bar modules
+status_bar_position  = 0            # 0 = bottom, 1 = top
+unfocused_panel_color = 7           # 0-7 (BLACK–WHITE)
+focused_panel_color  = 1            # 0-7
+
+# UI — Icon Sets --------------------------------------------------------------
+# Each icon set is a 3-element array: [nerd, emoji, ascii]
+[visual.ui.icons.noise]
+rain    = ["󰖖", "☔", "R"]
+fire    = ["󰈸", "🔥", "F"]
+wind    = ["󰖝", "🍃", "W"]
+thunder = ["󱐋", "⚡", "T"]
+
+[visual.ui.icons.pomodoro]
+main_menu     = ["󰍜", "🧾", ""]
+work          = ["", "🍅", ""]
+short_pause   = ["", "☕", ""]
+long_pause    = ["", "🌴", ""]
+notes         = ["", "📝", ""]
+help          = ["", "⁉️", ""]
+continue_icon = ["", "⏯️", ""]
+idle          = ["", "🌙", ""]
+
+[visual.ui.icons.input]
+default_mode      = ["", "🌐", ""]
+normal_mode       = ["", "🧭", ""]
+insert_mode       = ["", "✏ ", ""]
+visual_mode       = ["󰕢", "🔲", ""]
+real_time_module  = ["", "🕘", ""]
+line_column_module = ["", "▶", ""]
+
+[visual.ui.icons.misc]
+playing              = ["", "▶", "P"]
+plus_volume          = ["", "➕", "+"]
+minus_volume         = ["", "➖", "-"]
+active_volume_bar    = ["█", "█", "█"]
+inactive_volume_bar  = ["▒", "▒", "▒"]
+active_progress_bar  = ["█", "█", "█"]
+inactive_progress_bar = ["▒", "▒", "▒"]
+pause                = ["󰏤", "⏸️", "P"]
+skip                 = ["󰒬", "⏭️", "S"]
+visual_cursor        = "█"
+insert_cursor        = "▏"
+border_chars         = ["┏", "┓", "┗", "┛", "━", "┃"]
+history              = ["░░", "▒▒", "▓▓", "██"]
+
+# Pomodoro Settings -----------------------------------------------------------
+[pomodoro]
+amount      = 4       # pomodoros per cycle (1-8)
+work_time   = 25      # minutes (5-75, step 5)
+short_pause = 5       # minutes (1-10)
+long_pause  = 30      # minutes (5-60, step 5)
+
+# Notification Settings -------------------------------------------------------
+# Requires libnotify on Linux.
+
+[notifications]
+enabled      = true   # 0/1
+sound        = true   # 0/1 — requires mpv
+sound_volume = 0.5    # 0.0 – 1.0
+
+# Noise / White-Noise Settings ------------------------------------------------
+# Requires mpv.
+[noise]
+enabled       = true  # 0/1
+master_volume = 50     # 0-100
+
+# Logging Settings ------------------------------------------------------------
+[logging]
+pomodoro_log  = "/tmp/tomato_pomodoro.bin"
+notes_log     = "/tmp/tomato_notes.log"
+error_log     = "/tmp/tomato_errors.log"
+timer_log     = true     # 0/1 — disable -t flag if off
+timer_file    = "/tmp/tomato_timer.sock"
+work_log      = true     # 0/1 — disable resume-from-unfinished-cycle if off
+notepad_log   = true     # 0/1 — save notepad on exit
+timerlog_icons = true    # 0/1 — icons in timer log
+
+# Auto-Start Settings ---------------------------------------------------------
+# Ask to continue after each work/pause cycle.
+[autostart]
+work  = true   # 0/1
+pause = true   # 0/1
+
+# Misc Settings ---------------------------------------------------------------
+[misc]
+wsl            = false  # 0/1 — WSL notifications & no noise
+fps            = 120    # target frame rate
+max_note_depth = 1      # 0-3 — hierarchical sub-note depth
+
+# Keybindings -----------------------------------------------------------------
+# Format:
+#   [keybindings.MODE.SCENE]
+#   key_name = "ActionName"
+#
+# MODE:  DEFAULT | NORMAL | INSERT | VISUAL
+# SCENE: SCENE_MAIN_MENU | SCENE_WORK_TIME | SCENE_SHORT_PAUSE
+#        | SCENE_LONG_PAUSE | SCENE_NOTES | SCENE_HELP
+#        | SCENE_CONTINUE | SCENE_NOISE | SCENE_HISTORY_OVERVIEW
+#        | SCENE_HISTORY_DAY | SCENE_HISTORY_STATS
+#        | ALL_SCENES | POMODORO_SCENES
+#
+# Key names: single printable character, or named constant:
+#   KEY_LEFT  KEY_RIGHT  KEY_UP    KEY_DOWN
+#   KEY_ENTER KEY_BACKSPACE  BACKSPACE
+#   ENTER     ESC       CTRLR     CTRLW
+#   CTRLH     SPACE
+#
+# Action names: see action_map in config.c (e.g. InputCursorLeft, QuitApp, …)
+# NORMAL mode — NOTES scene (editing keys when Panel.input != NULL)
+[NORMAL.SCENE_NOTES]
+h       = "InputCursorLeft"
+l       = "InputCursorRight"
+KEY_LEFT  = "InputCursorLeft"
+KEY_RIGHT = "InputCursorRight"
+x       = "InputDeleteChar"
+ESC     = "InputESC"
+CTRLC   = "InputESC"
+ENTER   = "InputCommit"
+KEY_ENTER = "InputCommit"
+i       = "SwitchToInsertMode"
+a       = "SwitchToInsertModeAppend"
+v       = "SwitchToVisualMode"
+u       = "UndoNotes"
+CTRLR   = "RedoNotes"
+
+# INSERT mode — NOTES scene
+[INSERT.SCENE_NOTES]
+KEY_LEFT      = "InputCursorLeft"
+KEY_RIGHT     = "InputCursorRight"
+KEY_BACKSPACE = "InputBackspace"
+BACKSPACE     = "InputBackspace"
+ENTER         = "InputCommit"
+KEY_ENTER     = "InputCommit"
+ESC           = "InputESC"
+CTRLC         = "InputESC"
+v             = "SwitchToVisualMode"
+
+# VISUAL mode — NOTES scene
+[VISUAL.SCENE_NOTES]
+h       = "InputCursorLeft"
+l       = "InputCursorRight"
+KEY_LEFT  = "InputCursorLeft"
+KEY_RIGHT = "InputCursorRight"
+x       = "InputVisualDelete"
+ENTER   = "InputCommit"
+KEY_ENTER = "InputCommit"
+ESC     = "InputESC"
+CTRLC   = "InputESC"
+a       = "InputSwitchToInsertFromVisual"
+i       = "SwitchToInsertMode"
+
+# DEFAULT mode — scene-specific keys
+[DEFAULT.SCENE_NOTES]
+V         = "ToggleMoveMode"
+j         = "MoveNoteDownWrapper"
+k         = "MoveNoteUpWrapper"
+KEY_DOWN  = "MoveNoteDownWrapper"
+KEY_UP    = "MoveNoteUpWrapper"
+h         = "PromoteNoteWrapper"
+KEY_LEFT  = "PromoteNoteWrapper"
+l         = "DemoteNoteWrapper"
+KEY_RIGHT = "DemoteNoteWrapper"
+d         = "DeleteNoteAtNotes"
+t         = "AddNewTask"
+n         = "AddNewNote"
+T         = "AddSubtask"
+N         = "AddSubnote"
+e         = "EditCurrentNote"
+ENTER     = "ExitMoveMode"
+ENTER     = "ToggleTaskAtNotes"
+u         = "UndoNotes"
+CTRLR     = "RedoNotes"
+ESC       = "QuitAppNotes"
+CTRLC     = "QuitAppNotes"
+q         = "QuitAppNotes"
+
+[DEFAULT.SCENE_MAIN_MENU]
+KEY_DOWN  = "SelectNextItem"
+KEY_UP    = "SelectPreviousItem"
+KEY_RIGHT = "SelectNextItem"
+KEY_LEFT  = "SelectPreviousItem"
+j         = "SelectNextItem"
+k         = "SelectPreviousItem"
+l         = "SelectNextItem"
+h         = "SelectPreviousItem"
+ENTER     = "ExecuteMenuAction"
+
+# DEFAULT mode — ALL_SCENES (general keys)
+#
+# NOTE: TOML requires unique keys per table. The C default_keys array
+# defines multiple bindings for the same key+scene (e.g. `q` = QuitApp AND
+# ClosePopup).  Only the *first* binding per key is shown here; to add back
+# a duplicate, remove or comment out the earlier entry.
+[DEFAULT.ALL_SCENES]
+KEY_UP    = "ChangeSelectedItemLeft"
+k         = "ChangeSelectedItemLeft"
+KEY_LEFT  = "ChangeSelectedItemLeft"
+h         = "ChangeSelectedItemLeft"
+KEY_DOWN  = "ChangeSelectedItemRight"
+j         = "ChangeSelectedItemRight"
+KEY_RIGHT = "ChangeSelectedItemRight"
+l         = "ChangeSelectedItemRight"
+ENTER     = "ExecuteMenuAction"
+KEY_ENTER = "ExecuteMenuAction"
+SPACE     = "NextPanel"
+s         = "SkipPomodoroStep"
+p         = "TogglePause"
+CTRLR     = "OpenResetMenu"
+q         = "QuitApp"
+ESC       = "QuitApp"
+CTRLC     = "QuitApp"
+CTRLW     = "OpenNoiseMenu"
+w         = "OpenNoiseMenu"
+CTRLH     = "OpenHistoryPopup"
+
+# DEFAULT mode — POMODORO_SCENES (timer-related keys)
+[DEFAULT.POMODORO_SCENES]
+s     = "SkipPomodoroStep"
+p     = "TogglePause"
+CTRLR = "OpenResetMenu"
+
+# Noise dialog
+[DEFAULT.SCENE_NOISE]
+q           = "NoiseClose"
+ESC         = "NoiseClose"
+CTRLC       = "NoiseClose"
+k           = "NoiseSelectPrev"
+KEY_UP      = "NoiseSelectPrev"
+j           = "NoiseSelectNext"
+KEY_DOWN    = "NoiseSelectNext"
+SPACE       = "NoiseTogglePlay"
+l           = "NoiseVolumeUp"
+KEY_RIGHT   = "NoiseVolumeUp"
+"+"         = "NoiseVolumeUp"
+"="         = "NoiseVolumeUp"
+h           = "NoiseVolumeDown"
+KEY_LEFT    = "NoiseVolumeDown"
+"-"         = "NoiseVolumeDown"
+"_"         = "NoiseVolumeDown"
+r           = "NoiseResetAll"
+R           = "NoiseResetAll"
+
+# Continue dialog
+[DEFAULT.SCENE_CONTINUE]
+l           = "SelectNextButton"
+h           = "SelectPrevButton"
+KEY_RIGHT   = "SelectNextButton"
+KEY_LEFT    = "SelectPrevButton"
+ENTER       = "ExecuteButtonAction"
+KEY_ENTER   = "ExecuteButtonAction"
+q           = "ClosePopup"
+ESC         = "ClosePopup"
+CTRLC       = "ClosePopup"
+
+# History Overview
+[DEFAULT.SCENE_HISTORY_OVERVIEW]
+l           = "HistoryCursorRight"
+h           = "HistoryCursorLeft"
+j           = "HistoryCursorDown"
+k           = "HistoryCursorUp"
+KEY_LEFT    = "HistoryCursorLeft"
+KEY_RIGHT   = "HistoryCursorRight"
+KEY_DOWN    = "HistoryCursorDown"
+KEY_UP      = "HistoryCursorUp"
+ENTER       = "HistoryOpenDayDetail"
+KEY_ENTER   = "HistoryOpenDayDetail"
+q           = "ClosePopup"
+ESC         = "ClosePopup"
+CTRLC       = "ClosePopup"
+
+# History Day Detail
+[DEFAULT.SCENE_HISTORY_DAY]
+j           = "HistoryScrollDown"
+k           = "HistoryScrollUp"
+KEY_DOWN    = "HistoryScrollDown"
+KEY_UP      = "HistoryScrollUp"
+ENTER       = "HistoryCloseToOverview"
+KEY_ENTER   = "HistoryCloseToOverview"
+ESC         = "HistoryCloseToOverview"
+CTRLC       = "HistoryCloseToOverview"
+q           = "HistoryCloseToOverview"
+
+# History Statistics
+[DEFAULT.SCENE_HISTORY_STATS]
+q           = "HistoryCloseToOverview"
+ESC         = "HistoryCloseToOverview"
+CTRLC       = "HistoryCloseToOverview"

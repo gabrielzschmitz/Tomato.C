@@ -31,12 +31,15 @@
 void SetColor(short int fg, short int bg, chtype attr) {
   chtype color;
 
-  /* Handle background color when BGTRANSPARENCY is disabled */
   if (!BG_TRANSPARENCY && bg == NO_COLOR) bg = COLOR_BLACK;
 
-  if (bg == NO_COLOR && BG_TRANSPARENCY)
-    color = COLOR_PAIR((fg + 1) + (PALETTE_SIZE * PALETTE_SIZE));
-  else
+  if (bg == NO_COLOR && BG_TRANSPARENCY) {
+    int pair = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
+    if (pair < COLOR_PAIRS)
+      color = COLOR_PAIR(pair);
+    else
+      color = COLOR_PAIR((COLOR_BLACK * PALETTE_SIZE) + fg + 1);
+  } else
     color = COLOR_PAIR((bg * PALETTE_SIZE) + fg + 1);
 
   color |= attr;
