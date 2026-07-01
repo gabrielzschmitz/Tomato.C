@@ -69,15 +69,19 @@ extensible, terminal-based Pomodoro timer written in C.
 ## 🚧 In Progress
 
 ### ⚙️ Configuration
-- [ ] Move configuration from compiled to runtime paradigma
+- [X] Move configuration from compiled to runtime paradigma
+
+### 👋 User Interface
 - [ ] Modular preferences system
+- [ ] Add help menu
+- [ ] Make CLI history more like runtime history
 
 ---
 
 ## 🗓️ Planned
 
 ### 👋 User Interface
-- [ ] Add help menu
+- [ ] Pause emoji turns into play emoji when session paused
 
 ---
 
@@ -95,3 +99,4 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Documentation to HTML pages
 - [ ] Updated README with install, usage, and config details
 - [ ] Changelog for version tracking
+
