@@ -1158,7 +1158,8 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
   int step = app->pomodoro_data.current_step;
   int icon_type = GetConfigIconType();
   const char* skip_icon = SKIP_ICONS[icon_type];
-  const char* pause_icon = PAUSE_ICONS[icon_type];
+  const char* pause_icon =
+    app->is_paused ? PLAY_ICONS[icon_type] : PAUSE_ICONS[icon_type];
   int color;
 
   if (step == WORK_TIME)
@@ -1183,7 +1184,7 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
   RegisterClickRegion(app, pos.x + skip_length, pos.y, strlen(pause_icon), 1,
                       REGION_DIRECT, TogglePause, -1, -1, -1);
 
-  SetColor(app->is_paused ? color : COLOR_BLACK, NO_COLOR, A_BOLD);
+  SetColor(color, NO_COLOR, A_BOLD);
   mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);
 }
 

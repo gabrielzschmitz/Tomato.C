@@ -11,10 +11,10 @@
  * Icons for white-noise tracks.
  */
 typedef struct {
-  const char* rain[3];     /**< [nerd, emoji, ascii] */
-  const char* fire[3];     /**< [nerd, emoji, ascii] */
-  const char* wind[3];     /**< [nerd, emoji, ascii] */
-  const char* thunder[3];  /**< [nerd, emoji, ascii] */
+  const char* rain[3];    /**< [nerd, emoji, ascii] */
+  const char* fire[3];    /**< [nerd, emoji, ascii] */
+  const char* wind[3];    /**< [nerd, emoji, ascii] */
+  const char* thunder[3]; /**< [nerd, emoji, ascii] */
 } ConfigNoiseIcons;
 
 /**
@@ -35,31 +35,32 @@ typedef struct {
  * Icons for input-mode indicators in the status bar.
  */
 typedef struct {
-  const char* default_mode[3];      /**< [nerd, emoji, ascii] */
-  const char* normal_mode[3];       /**< [nerd, emoji, ascii] */
-  const char* insert_mode[3];       /**< [nerd, emoji, ascii] */
-  const char* visual_mode[3];       /**< [nerd, emoji, ascii] */
-  const char* real_time_module[3];  /**< [nerd, emoji, ascii] */
-  const char* line_column_module[3];/**< [nerd, emoji, ascii] */
+  const char* default_mode[3];       /**< [nerd, emoji, ascii] */
+  const char* normal_mode[3];        /**< [nerd, emoji, ascii] */
+  const char* insert_mode[3];        /**< [nerd, emoji, ascii] */
+  const char* visual_mode[3];        /**< [nerd, emoji, ascii] */
+  const char* real_time_module[3];   /**< [nerd, emoji, ascii] */
+  const char* line_column_module[3]; /**< [nerd, emoji, ascii] */
 } ConfigInputIcons;
 
 /**
  * Miscellaneous icons (player controls, progress bars, cursors, borders, etc.).
  */
 typedef struct {
-  const char* playing[3];              /**< [nerd, emoji, ascii] */
-  const char* plus_volume[3];          /**< [nerd, emoji, ascii] */
-  const char* minus_volume[3];         /**< [nerd, emoji, ascii] */
-  const char* active_volume_bar[3];    /**< [nerd, emoji, ascii] */
-  const char* inactive_volume_bar[3];  /**< [nerd, emoji, ascii] */
-  const char* active_progress_bar[3];  /**< [nerd, emoji, ascii] */
-  const char* inactive_progress_bar[3];/**< [nerd, emoji, ascii] */
-  const char* pause[3];                /**< [nerd, emoji, ascii] */
-  const char* skip[3];                 /**< [nerd, emoji, ascii] */
-  const char* visual_cursor;           /**< single string (not triplet) */
-  const char* insert_cursor;           /**< single string (not triplet) */
-  const char* border_chars[6];         /**< [tl, tr, bl, br, h, v] */
-  const char* history[4];              /**< levels: 0=none, 1, 2, 3+ */
+  const char* playing[3];               /**< [nerd, emoji, ascii] */
+  const char* plus_volume[3];           /**< [nerd, emoji, ascii] */
+  const char* minus_volume[3];          /**< [nerd, emoji, ascii] */
+  const char* active_volume_bar[3];     /**< [nerd, emoji, ascii] */
+  const char* inactive_volume_bar[3];   /**< [nerd, emoji, ascii] */
+  const char* active_progress_bar[3];   /**< [nerd, emoji, ascii] */
+  const char* inactive_progress_bar[3]; /**< [nerd, emoji, ascii] */
+  const char* pause[3];                 /**< [nerd, emoji, ascii] */
+  const char* play[3];                  /**< [nerd, emoji, ascii] */
+  const char* skip[3];                  /**< [nerd, emoji, ascii] */
+  const char* visual_cursor;            /**< single string (not triplet) */
+  const char* insert_cursor;            /**< single string (not triplet) */
+  const char* border_chars[6];          /**< [tl, tr, bl, br, h, v] */
+  const char* history[4];               /**< levels: 0=none, 1, 2, 3+ */
 } ConfigMiscIcons;
 
 /**
@@ -83,55 +84,55 @@ typedef struct {
  * Visual/appearance settings.
  */
 typedef struct {
-  int animations;           /**< 0/1 — enable sprite animations */
-  const char* icons;        /**< "nerd-icons" | "emojis" | "ascii" */
-  int bg_transparency;      /**< 0/1 — transparent background */
-  int status_bar_spacing;   /**< spaces between status bar modules */
-  int status_bar_position;  /**< 0=bottom, 1=top */
-  int unfocused_panel_color;/**< 0-7 ncurses COLOR_* */
-  int focused_panel_color;  /**< 0-7 ncurses COLOR_* */
-  ConfigUi ui;              /**< icon sets */
+  int animations;            /**< 0/1 — enable sprite animations */
+  const char* icons;         /**< "nerd-icons" | "emojis" | "ascii" */
+  int bg_transparency;       /**< 0/1 — transparent background */
+  int status_bar_spacing;    /**< spaces between status bar modules */
+  int status_bar_position;   /**< 0=bottom, 1=top */
+  int unfocused_panel_color; /**< 0-7 ncurses COLOR_* */
+  int focused_panel_color;   /**< 0-7 ncurses COLOR_* */
+  ConfigUi ui;               /**< icon sets */
 } ConfigVisual;
 
 /**
  * Pomodoro timer durations.
  */
 typedef struct {
-  int amount;       /**< pomodoros per cycle (1-8) */
-  int work_time;    /**< work stage minutes (5-75, step 5) */
-  int short_pause;  /**< short pause minutes (1-10) */
-  int long_pause;   /**< long pause minutes (5-60, step 5) */
+  int amount;      /**< pomodoros per cycle (1-8) */
+  int work_time;   /**< work stage minutes (5-75, step 5) */
+  int short_pause; /**< short pause minutes (1-10) */
+  int long_pause;  /**< long pause minutes (5-60, step 5) */
 } ConfigPomodoro;
 
 /**
  * Desktop notification settings.
  */
 typedef struct {
-  int enabled;       /**< 0/1 — requires libnotify */
-  int sound;         /**< 0/1 — requires mpv */
-  float sound_volume;/**< 0.0 – 1.0 */
+  int enabled;        /**< 0/1 — requires libnotify */
+  int sound;          /**< 0/1 — requires mpv */
+  float sound_volume; /**< 0.0 – 1.0 */
 } ConfigNotifications;
 
 /**
  * White-noise playback settings.
  */
 typedef struct {
-  int enabled;        /**< 0/1 — requires mpv */
-  int master_volume;  /**< 0-100 */
+  int enabled;       /**< 0/1 — requires mpv */
+  int master_volume; /**< 0-100 */
 } ConfigNoise;
 
 /**
  * File paths and toggles for all application logs.
  */
 typedef struct {
-  const char* pomodoro_log;   /**< path to pomodoro binary log */
-  const char* notes_log;      /**< path to notes text log */
-  const char* error_log;      /**< path to error log */
-  int timer_log;              /**< 0/1 — enables `-t` CLI flag */
-  const char* timer_file;     /**< path to timer socket file */
-  int work_log;               /**< 0/1 — enables cycle resume */
-  int notepad_log;            /**< 0/1 — save notes on exit */
-  int timerlog_icons;         /**< 0/1 — icons in timer log */
+  const char* pomodoro_log; /**< path to pomodoro binary log */
+  const char* notes_log;    /**< path to notes text log */
+  const char* error_log;    /**< path to error log */
+  int timer_log;            /**< 0/1 — enables `-t` CLI flag */
+  const char* timer_file;   /**< path to timer socket file */
+  int work_log;             /**< 0/1 — enables cycle resume */
+  int notepad_log;          /**< 0/1 — save notes on exit */
+  int timerlog_icons;       /**< 0/1 — icons in timer log */
 } ConfigLogging;
 
 /**
@@ -250,6 +251,7 @@ void LoadConfig(void);
 /**@{*/
 #define BORDER_CHARS (g_config.visual.ui.icons.misc.border_chars)
 #define PAUSE_ICONS (g_config.visual.ui.icons.misc.pause)
+#define PLAY_ICONS (g_config.visual.ui.icons.misc.play)
 #define SKIP_ICONS (g_config.visual.ui.icons.misc.skip)
 #define HISTORY_ICONS (g_config.visual.ui.icons.misc.history)
 /**@}*/

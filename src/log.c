@@ -347,7 +347,7 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
   int icon_type = GetConfigIconType();
   int duration = 0;
 
-  if (is_paused) pause_icon = PAUSE_ICONS[icon_type];
+  if (is_paused) pause_icon = PLAY_ICONS[icon_type];
 
   switch (data.current_step) {
     case WORK_TIME:

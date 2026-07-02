@@ -56,6 +56,7 @@ inactive_volume_bar  = ["▒", "▒", "▒"]
 active_progress_bar  = ["█", "█", "█"]
 inactive_progress_bar = ["▒", "▒", "▒"]
 pause                = ["󰏤", "⏸️", "P"]
+play                 = ["󰐊", "▶️", "P"]
 skip                 = ["󰒬", "⏭️", "S"]
 visual_cursor        = "█"
 insert_cursor        = "▏"

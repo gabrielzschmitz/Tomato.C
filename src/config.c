@@ -498,6 +498,9 @@ static void setDefaults(void) {
   g_config.visual.ui.icons.misc.pause[0] = "󰏤";
   g_config.visual.ui.icons.misc.pause[1] = "⏸️";
   g_config.visual.ui.icons.misc.pause[2] = "P";
+  g_config.visual.ui.icons.misc.play[0] = "󰐊";
+  g_config.visual.ui.icons.misc.play[1] = "▶️";
+  g_config.visual.ui.icons.misc.play[2] = "P";
   g_config.visual.ui.icons.misc.skip[0] = "󰒬";
   g_config.visual.ui.icons.misc.skip[1] = "⏭️";
   g_config.visual.ui.icons.misc.skip[2] = "S";
@@ -859,6 +862,8 @@ static void loadTomlFile(const char* path) {
                 g_config.visual.ui.icons.misc.inactive_progress_bar);
   readIconArray(root, "visual.ui.icons.misc.pause",
                 g_config.visual.ui.icons.misc.pause);
+  readIconArray(root, "visual.ui.icons.misc.play",
+                g_config.visual.ui.icons.misc.play);
   readIconArray(root, "visual.ui.icons.misc.skip",
                 g_config.visual.ui.icons.misc.skip);
 
