@@ -117,7 +117,7 @@ void play_audio(char *sound_file) {
     char *command[max_audio_cmd_length];
 
     snprintf((char *)command, max_audio_cmd_length,
-             "mpv --no-vid --no-input-terminal --volume=50 %s/%s --really-quiet &",
+             "mpv --loop=no --keep-open=no --no-vid --no-input-terminal --volume=50 %s/%s --really-quiet &",
              SOUNDS, sound_file);
     (void)system((char *)command);
   }
