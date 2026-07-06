@@ -20,11 +20,11 @@
 /* PRIVATE INIT FUNCTIONS */
 /* Components */
 static ErrorType initMenus(AppData* app);
-
-static ErrorType debugSeedHistory(void);
 static ErrorType initStatusBar(AppData* app);
 static ErrorType initAnimations(AppData* app);
 static ErrorType initPomodoroData(AppData* app);
+static void initPrefsData(PrefsState* state);
+static ErrorType debugSeedHistory(void);
 
 /**
  * ---------------------------------------------------------------------------
@@ -41,6 +41,7 @@ ErrorType InitApp(AppData* app) {
   ErrorType status = NO_ERROR;
   LoadConfig();
   if (!CheckConfigIconType()) return INVALID_CONFIG;
+  initPrefsData(&app->prefs);
 
   app->screen = CreateScreen();
   if (app->screen == NULL) return MALLOC_ERROR;
@@ -236,7 +237,7 @@ static ErrorType initMenus(AppData* app) {
   /* MAIN_MENU */
   const int n_mainmenu = 5;
   MenuItem main_menu_items[5] = {{"start", StartPomodoro},
-                                 {"preferences", NULL},
+                                 {"preferences", OpenPreferencesMenu},
                                  {"help menu", NULL},
                                  {"history", OpenHistoryPopup},
                                  {"leave", ForcefullyQuitApp}};
@@ -448,4 +449,90 @@ static ErrorType debugSeedHistory(void) {
 
   fclose(f);
   return NO_ERROR;
+}
+
+/**
+ * Set up the preferences data model with field definitions and initial
+ * sub-dialog state.
+ *
+ * Defines the static PrefField array that describes every row in the
+ * preferences dialog (section headers, toggles, steppers, and selects),
+ * points each field at the corresponding g_config variable, hooks up
+ * preview callbacks, and initialises the sub-dialog tracking indices to -1.
+ * @param state  Pointer to the app's PrefsState to populate
+ */
+static void initPrefsData(PrefsState* state) {
+  static const char* icons_options[] = {"nerd-icons", "emojis", "ascii"};
+  static const char* bar_position_options[] = {"Bottom", "Top"};
+
+  static PrefField fields[] = {
+    /* Visual */
+    {"Visual", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"Icons", PREF_SELECT, &g_config.visual.icons_index, NULL, 0, 0, 0, NULL,
+     icons_options, 3, NULL},
+    {"Background Transparency", PREF_TOGGLE, &g_config.visual.bg_transparency,
+     NULL, 0, 1, 1, NULL, NULL, 0, NULL},
+    {"Status Bar Spacing", PREF_STEPPER_INT,
+     &g_config.visual.status_bar_spacing, NULL, 0, 5, 1, NULL, NULL, 0, NULL},
+    {"Status Bar Position", PREF_SELECT, &g_config.visual.status_bar_position,
+     NULL, 0, 0, 0, NULL, bar_position_options, 2, NULL},
+    {"Unfocused Panel Color", PREF_STEPPER_INT,
+     &g_config.visual.unfocused_panel_color, NULL, 0, 7, 1, NULL, NULL, 0,
+     NULL},
+    {"Focused Panel Color", PREF_STEPPER_INT,
+     &g_config.visual.focused_panel_color, NULL, 0, 7, 1, NULL, NULL, 0, NULL},
+    {"24 Hour Clock", PREF_TOGGLE, &g_config.visual.clock_24h, NULL, 0, 1, 1,
+     NULL, NULL, 0, NULL},
+
+    /* Notifications */
+    {"Notifications", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"Desktop Notifications", PREF_TOGGLE, &g_config.notifications.enabled,
+     NULL, 0, 1, 1, NULL, NULL, 0, PrefsPreviewDesktop},
+    {"Sound", PREF_TOGGLE, &g_config.notifications.sound, NULL, 0, 1, 1, NULL,
+     NULL, 0, PrefsPreviewSound},
+    {"Sound Volume", PREF_STEPPER_FLOAT, NULL,
+     &g_config.notifications.sound_volume, 0, 100, 10, "%", NULL, 0,
+     PrefsPreviewSound},
+
+    /* Pomodoro */
+    {"Pomodoro", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"Sessions Until Long Break", PREF_STEPPER_INT, &g_config.pomodoro.amount,
+     NULL, 1, 8, 1, "", NULL, 0, NULL},
+    {"Work Duration", PREF_STEPPER_INT, &g_config.pomodoro.work_time, NULL, 5,
+     75, 5, "min", NULL, 0, NULL},
+    {"Short Break Duration", PREF_STEPPER_INT, &g_config.pomodoro.short_pause,
+     NULL, 1, 10, 1, "min", NULL, 0, NULL},
+    {"Long Break Duration", PREF_STEPPER_INT, &g_config.pomodoro.long_pause,
+     NULL, 5, 60, 5, "min", NULL, 0, NULL},
+
+    /* Noise */
+    {"Noise", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"Enabled", PREF_TOGGLE, &g_config.noise.enabled, NULL, 0, 1, 1, NULL, NULL,
+     0, NULL},
+    {"Master Volume", PREF_STEPPER_INT, &g_config.noise.master_volume, NULL, 0,
+     100, 1, "", NULL, 0, NULL},
+
+    /* Autostart */
+    {"Autostart", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"Work", PREF_TOGGLE, &g_config.autostart.work, NULL, 0, 1, 1, NULL, NULL,
+     0, NULL},
+    {"Pause", PREF_TOGGLE, &g_config.autostart.pause, NULL, 0, 1, 1, NULL, NULL,
+     0, NULL},
+
+    /* Misc */
+    {"Misc", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL},
+    {"FPS", PREF_STEPPER_INT, &g_config.misc.fps, NULL, 30, 240, 30, "", NULL,
+     0, NULL},
+    {"Max Note Depth", PREF_STEPPER_INT, &g_config.misc.max_note_depth, NULL, 0,
+     3, 1, "", NULL, 0, NULL},
+    {"Resume Unfinished Session", PREF_TOGGLE, &g_config.logging.work_log, NULL,
+     0, 1, 1, NULL, NULL, 0, NULL},
+  };
+
+  state->fields = fields;
+  state->count = sizeof(fields) / sizeof(fields[0]);
+  state->edit_index = -1;
+  state->edit_temp = 0;
+  state->select_index = -1;
+  state->scroll_row = 0;
 }

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "audio.h"
 #include "config.h"
 #include "draw.h"
 #include "error.h"
@@ -25,8 +26,11 @@ static void handleMouseNotes(AppData* app, MEVENT* event);
 static void handleMousePanelSwitch(AppData* app, MEVENT* event);
 static void handleMousePopup(AppData* app, MEVENT* event);
 static void handleMouseCancelEdit(AppData* app, MEVENT* event);
+/* History */
 static void historyRebuildOverview(AppData* app);
 static void historyMoveCursorByDays(AppData* app, int dayDelta);
+/* Preferences */
+static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
 
 /**
  * ---------------------------------------------------------------------------
@@ -270,7 +274,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
         if (is_click) {
           for (int i = 0; i < app->click_region_count; i++) {
             ClickRegion* r = &app->click_regions[i];
-            if (r->type != REGION_WELCOME_NAV) continue;
+            if (r->type != REGION_SLIDE_NAV) continue;
             if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
                 event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
               if (r->action) r->action(app);
@@ -294,7 +298,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
         /* Check nav hint regions first */
         for (int i = 0; i < app->click_region_count; i++) {
           ClickRegion* r = &app->click_regions[i];
-          if (r->type != REGION_WELCOME_NAV) continue;
+          if (r->type != REGION_SLIDE_NAV) continue;
           if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
               event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
             if (r->action) r->action(app);
@@ -323,6 +327,28 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       }
       return;
     }
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_PREFERENCES) {
+      FloatingDialog* d = app->popup_dialog;
+      if (!d->slides || !d->slides[0]) return;
+      SlideDef* def = d->slides[0];
+      if (event->bstate & REPORT_MOUSE_POSITION) def->update(app, def);
+      if (event->bstate & BUTTON4_PRESSED)
+        PrefsScrollUp(app);
+      else if (event->bstate & BUTTON5_PRESSED)
+        PrefsScrollDown(app);
+      if (is_click) {
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_SLIDE_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            if (r->action) r->action(app);
+            break;
+          }
+        }
+      }
+      return;
+    }
     if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
         app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
       FloatingDialog* d = app->popup_dialog;
@@ -338,7 +364,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
         def->hovered = -1;
         for (int i = 0; i < app->click_region_count; i++) {
           ClickRegion* r = &app->click_regions[i];
-          if (r->type != REGION_WELCOME_NAV) continue;
+          if (r->type != REGION_SLIDE_NAV) continue;
           if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
               event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
             if (r->action) r->action(app);
@@ -355,6 +381,24 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       }
       return;
     }
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_SELECT) {
+      FloatingDialog* d = app->popup_dialog;
+      if (!d->slides || !d->slides[0]) return;
+      SlideDef* def = d->slides[0];
+      if (event->bstate & REPORT_MOUSE_POSITION) def->update(app, def);
+      if (is_click) {
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_SLIDE_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            if (r->action) r->action(app);
+            break;
+          }
+        }
+      }
+      return;
+    }
     for (int i = 0; i < app->click_region_count; i++) {
       ClickRegion* r = &app->click_regions[i];
       if (event->x < r->pos.x || event->x >= r->pos.x + r->size.width) continue;
@@ -368,7 +412,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           app->popup_dialog->menu.selected_item = r->item_index;
           ExecuteMenuAction(app);
         }
-      } else if (r->type == REGION_WELCOME_NAV && is_click && r->action) {
+      } else if (r->type == REGION_SLIDE_NAV && is_click && r->action) {
         r->action(app);
       }
       break;
@@ -630,6 +674,45 @@ bool HandlePopupInput(AppData* app, int key) {
       }
     }
     return true; /* consume all keys while noise dialog is active */
+  }
+
+  /* Preferences dialog — dispatch via configurable key bindings */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_PREFERENCES) {
+    size_t numKeyFunctions = g_config.num_keys;
+    for (size_t i = 0; i < numKeyFunctions; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_PREFERENCES)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while preferences dialog is active */
+  }
+
+  /* Preferences stepper sub-dialog — dispatch via configurable key bindings */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_STEPPER) {
+    size_t nk = g_config.num_keys;
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_PREFS_STEPPER)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while stepper is active */
+  }
+
+  /* Preferences select sub-dialog — dispatch via configurable key bindings */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_SELECT) {
+    size_t nk = g_config.num_keys;
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_PREFS_SELECT)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while select is active */
   }
 
   /* Welcome dialog — LEFT/RIGHT selects options, ENTER executes */
@@ -2405,4 +2488,413 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
   h->selMonth = newMon;
   h->selDay = newDay;
   historyRebuildOverview(app);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Preferences Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open the preferences dialog from the main menu.
+ * @param app Application state
+ */
+void OpenPreferencesMenu(AppData* app) {
+  if (app->popup_dialog) return;
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * After a selection change, ensure the selected field is visible by adjusting
+ * scroll_row.
+ */
+static int contentRowForField(AppData* app, int field_idx);
+static int totalPrefContentRows(AppData* app);
+
+static void ensurePrefVisible(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  if (sel == 0) {
+    app->prefs.scroll_row = 0;
+    return;
+  }
+  int idx = prefFieldIndexBySelectOffset(app, sel);
+  if (idx < 0) return;
+  int row = contentRowForField(app, idx);
+  int h = app->popup_dialog->size.height;
+  int max_visible = h - 6;
+  int sr = app->prefs.scroll_row;
+  int total_cr = totalPrefContentRows(app);
+  int end_cr = sr + max_visible;
+  if (end_cr > total_cr) end_cr = total_cr;
+  bool show_up = (sr > 0);
+  bool show_down = (end_cr < total_cr);
+  int field_cap = max_visible - (show_up ? 1 : 0) - (show_down ? 1 : 0);
+  if (field_cap < 1) field_cap = 1;
+  if (row < sr)
+    app->prefs.scroll_row = row;
+  else if (row >= sr + field_cap)
+    app->prefs.scroll_row = row - field_cap + 1;
+}
+
+/**
+ * Select the previous setting in the preferences dialog.
+ * @param app Application state
+ */
+void PrefsSelectPrev(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  if (sel > 0) sel--;
+  app->popup_dialog->hovered_button = sel;
+  ensurePrefVisible(app);
+}
+
+/**
+ * Select the next setting in the preferences dialog.
+ * @param app Application state
+ */
+void PrefsSelectNext(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  int max = 0;
+  for (int i = 0; i < app->prefs.count; i++)
+    if (app->prefs.fields[i].type != PREF_SECTION) max++;
+  if (sel < max - 1) sel++;
+  app->popup_dialog->hovered_button = sel;
+  ensurePrefVisible(app);
+}
+
+/**
+ * Decrease the value of the selected setting.
+ * @param app Application state
+ */
+void PrefsValueDown(AppData* app) {
+  if (!app->popup_dialog) return;
+  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (f->type == PREF_SELECT) {
+    int val = *f->int_value - 1;
+    if (val < 0) val = f->option_count - 1;
+    *f->int_value = val;
+    return;
+  }
+  int val = (f->type == PREF_STEPPER_FLOAT)
+              ? (int)(*f->float_value * 100.0f + 0.5f)
+              : *f->int_value;
+  val -= f->step;
+  if (val < f->min) val = f->min;
+  if (f->type == PREF_STEPPER_FLOAT)
+    *f->float_value = val / 100.0f;
+  else
+    *f->int_value = val;
+}
+
+/**
+ * Increase the value of the selected setting.
+ * @param app Application state
+ */
+void PrefsValueUp(AppData* app) {
+  if (!app->popup_dialog) return;
+  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (f->type == PREF_SELECT) {
+    int val = *f->int_value + 1;
+    if (val >= f->option_count) val = 0;
+    *f->int_value = val;
+    return;
+  }
+  int val = (f->type == PREF_STEPPER_FLOAT)
+              ? (int)(*f->float_value * 100.0f + 0.5f)
+              : *f->int_value;
+  val += f->step;
+  if (val > f->max) val = f->max;
+  if (f->type == PREF_STEPPER_FLOAT)
+    *f->float_value = val / 100.0f;
+  else
+    *f->int_value = val;
+}
+
+/**
+ * Toggle a boolean setting.
+ * @param app Application state
+ */
+void PrefsToggle(AppData* app) {
+  if (!app->popup_dialog) return;
+  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (f->type == PREF_SELECT) {
+    int val = *f->int_value + 1;
+    if (val >= f->option_count) val = 0;
+    *f->int_value = val;
+    return;
+  }
+  if (f->type != PREF_TOGGLE) return;
+  *f->int_value = !*f->int_value;
+}
+
+/**
+ * Open the edit sub-dialog for the selected setting (stepper/selector).
+ * @param app Application state
+ */
+void PrefsEdit(AppData* app) {
+  if (!app->popup_dialog) return;
+  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (f->type == PREF_TOGGLE || f->type == PREF_STEPPER_INT ||
+      f->type == PREF_STEPPER_FLOAT) {
+    FloatingDialog* d = CreatePrefsStepperDialog(app, idx);
+    if (d) {
+      FreeFloatingDialog(app->popup_dialog);
+      app->popup_dialog = d;
+    }
+    return;
+  }
+  if (f->type == PREF_SELECT) {
+    FloatingDialog* d = CreatePrefsSelectDialog(app, idx);
+    if (d) {
+      FreeFloatingDialog(app->popup_dialog);
+      app->popup_dialog = d;
+    }
+    return;
+  }
+  FloatingDialog* d = CreatePrefsStepperDialog(app, idx);
+  if (d) {
+    FreeFloatingDialog(app->popup_dialog);
+    app->popup_dialog = d;
+  }
+}
+
+/**
+ * Go back from the preferences dialog.
+ * @param app Application state
+ */
+void PrefsBack(AppData* app) { ClosePopup(app); }
+
+/**
+ * After a scroll, clamp the selection so it stays inside the visible field
+ * area (between the More indicators).
+ */
+static int contentRowForField(AppData* app, int field_idx) {
+  int r = 0;
+  for (int i = 0; i < field_idx; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION) {
+      if (i > 0) r += 2;
+      else r++;
+    } else {
+      r++;
+    }
+  }
+  return r;
+}
+
+static int totalPrefContentRows(AppData* app) {
+  int r = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
+      r += 2;
+    } else {
+      r++;
+    }
+  }
+  return r;
+}
+
+static void clampSelectionToView(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  int idx = prefFieldIndexBySelectOffset(app, sel);
+  if (idx < 0) return;
+  int h = app->popup_dialog->size.height;
+  int max_visible = h - 6;
+  int sr = app->prefs.scroll_row;
+  int total_cr = totalPrefContentRows(app);
+  int end_cr = sr + max_visible;
+  if (end_cr > total_cr) end_cr = total_cr;
+  bool show_down = (end_cr < total_cr);
+  bool show_up = (sr > 0);
+  int field_cap = max_visible - (show_up ? 1 : 0) - (show_down ? 1 : 0);
+  if (field_cap < 1) field_cap = 1;
+  int sel_cr = contentRowForField(app, idx);
+  if (sel_cr < sr) {
+    while (sel_cr < sr && sel < app->prefs.count) {
+      sel++;
+      int nidx = prefFieldIndexBySelectOffset(app, sel);
+      if (nidx < 0) break;
+      sel_cr = contentRowForField(app, nidx);
+    }
+    app->popup_dialog->hovered_button = sel;
+  }
+  if (sel_cr >= sr + field_cap) {
+    while (sel_cr >= sr + field_cap && sel > 0) {
+      sel--;
+      int nidx = prefFieldIndexBySelectOffset(app, sel);
+      if (nidx < 0) break;
+      sel_cr = contentRowForField(app, nidx);
+    }
+    app->popup_dialog->hovered_button = sel;
+  }
+}
+
+/**
+ * Scroll the preferences list up by one content row.
+ * @param app Application state
+ */
+void PrefsScrollUp(AppData* app) {
+  if (app->prefs.scroll_row > 0) {
+    app->prefs.scroll_row--;
+    clampSelectionToView(app);
+  }
+}
+
+/**
+ * Scroll the preferences list down by one content row.
+ * @param app Application state
+ */
+void PrefsScrollDown(AppData* app) {
+  int total_cr = totalPrefContentRows(app);
+  int h = app->popup_dialog ? app->popup_dialog->size.height : 25;
+  int max_visible = h - 6;
+  if (app->prefs.scroll_row + max_visible < total_cr) {
+    app->prefs.scroll_row++;
+    clampSelectionToView(app);
+  }
+}
+
+/**
+ * Preview the currently selected setting. For sound/notification fields: plays
+ * the example audio/test notification. Not bound to keyboard, only accessible
+ * via mouse hover in stepper/select popups.
+ * @param app Application state
+ */
+void PrefsPreview(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx;
+  if (d->slide_type == SLIDE_TYPE_PREFS_SELECT)
+    idx = app->prefs.select_index;
+  else if (d->slide_type == SLIDE_TYPE_PREFS_STEPPER)
+    idx = d->hovered_button;
+  else
+    idx = prefFieldIndexBySelectOffset(app, d->hovered_button);
+  if (idx < 0 || idx >= app->prefs.count) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (f->preview) f->preview(app);
+}
+
+/**
+ * Decrement the value in a preferences stepper sub-dialog.
+ * Used for numeric settings (stepper INT/FLOAT).
+ * @param app Application state
+ */
+void StepperDecrement(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = d->hovered_button;
+  if (idx < 0 || idx >= app->prefs.count) return;
+  PrefField* f = &app->prefs.fields[idx];
+  int val = GetPrefInt(app, idx);
+  val -= f->step;
+  if (val < f->min) val = f->min;
+  if (f->type == PREF_STEPPER_FLOAT)
+    *f->float_value = val / 100.0f;
+  else
+    *f->int_value = val;
+}
+
+/**
+ * Increment the value in a preferences stepper sub-dialog.
+ * Used for numeric settings (stepper INT/FLOAT).
+ * @param app Application state
+ */
+void StepperIncrement(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = d->hovered_button;
+  if (idx < 0 || idx >= app->prefs.count) return;
+  PrefField* f = &app->prefs.fields[idx];
+  int val = GetPrefInt(app, idx);
+  val += f->step;
+  if (val > f->max) val = f->max;
+  if (f->type == PREF_STEPPER_FLOAT)
+    *f->float_value = val / 100.0f;
+  else
+    *f->int_value = val;
+}
+
+/**
+ * Close the stepper sub-dialog and return to the main preferences dialog.
+ * @param app Application state
+ */
+void StepperClose(AppData* app) {
+  SyncIconsFromIndex();
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Apply the selected value and close the option selector sub-dialog.
+ * @param app Application state
+ */
+void SelectApply(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = app->prefs.select_index;
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  *f->int_value = d->hovered_button;
+  ClosePrefsSelect(app);
+}
+
+/**
+ * Cancel selection and return to the main preferences dialog.
+ * @param app Application state
+ */
+void SelectCancel(AppData* app) { ClosePrefsSelect(app); }
+
+/**
+ * Navigate to the previous option in a preferences select sub-dialog.
+ * @param app Application state
+ */
+void SelectPrevOption(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = app->prefs.select_index;
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (d->hovered_button > 0) d->hovered_button--;
+}
+
+/**
+ * Navigate to the next option in a preferences select sub-dialog.
+ * @param app Application state
+ */
+void SelectNextOption(AppData* app) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = app->prefs.select_index;
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  if (d->hovered_button < f->option_count - 1) d->hovered_button++;
+}
+
+/**
+ * Convert a selectable offset to a preference field index.
+ * Walks through app->prefs.fields and skips PREF_SECTION entries.
+ * Selectable offset: 0 for first non-section preference, 1 for second, etc.
+ * @param sel_off Selectable offset (0-based after skipping sections)
+ * @return Preference field index, or -1 if out of range
+ */
+static int prefFieldIndexBySelectOffset(AppData* app, int sel_off) {
+  int n = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION) continue;
+    if (n == sel_off) return i;
+    n++;
+  }
+  return -1;
 }

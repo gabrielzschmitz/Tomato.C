@@ -92,6 +92,8 @@ typedef struct {
   int unfocused_panel_color; /**< 0-7 ncurses COLOR_* */
   int focused_panel_color;   /**< 0-7 ncurses COLOR_* */
   ConfigUi ui;               /**< icon sets */
+  int clock_24h;             /**< 0/1 — use 24-hour clock */
+  int icons_index;           /**< 0=nerd-icons, 1=emojis, 2=ascii */
 } ConfigVisual;
 
 /**
@@ -109,7 +111,7 @@ typedef struct {
  */
 typedef struct {
   int enabled;        /**< 0/1 — requires libnotify */
-  int sound;          /**< 0/1 — requires mpv */
+  int sound;          /**< 0/1 — requires miniaudio (included on external) */
   float sound_volume; /**< 0.0 – 1.0 */
 } ConfigNotifications;
 
@@ -117,7 +119,7 @@ typedef struct {
  * White-noise playback settings.
  */
 typedef struct {
-  int enabled;       /**< 0/1 — requires mpv */
+  int enabled;       /**< 0/1 — requires miniaudio (included on external) */
   int master_volume; /**< 0-100 */
 } ConfigNoise;
 
@@ -175,6 +177,9 @@ extern Config g_config;
 
 /** Load (or reload) configuration from TOML files and set defaults. */
 void LoadConfig(void);
+
+/** Sync g_config.visual.icons string from icons_index (0-2). */
+void SyncIconsFromIndex(void);
 
 /* ── Accessor macros ── */
 
@@ -271,14 +276,14 @@ void LoadConfig(void);
 
 /** 0/1 — desktop notifications via libnotify (default: 1). */
 #define NOTIFICATIONS (g_config.notifications.enabled)
-/** 0/1 — notification sounds via mpv (default: 1). */
+/** 0/1 — notification sounds via miniaudio (included on external) (default: 1). */
 #define NOTIFICATIONS_SOUND (g_config.notifications.sound)
 /** Notification volume 0.0 – 1.0 (default: 0.5). */
 #define NOTIFICATIONS_SOUND_VOLUME (g_config.notifications.sound_volume)
 
 /* Noise / White-Noise Settings --------------------------------------------- */
 
-/** 0/1 — white-noise playback via mpv (default: 1). */
+/** 0/1 — white-noise playback via miniaudio (included on external) (default: 1). */
 #define NOISE_ENABLED (g_config.noise.enabled)
 /** Master volume 0-100 (default: 50). */
 #define NOISE_MASTER_VOLUME (g_config.noise.master_volume)
@@ -332,7 +337,7 @@ static const char* SEPARATOR =
 /** Bitmask of every scene type. */
 #define ALL_SCENES                                                \
   (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | \
-   SCENE_CONTINUE)
+   SCENE_CONTINUE | SCENE_PREFERENCES)
 
 /** Shorthand for g_config.key_bindings. */
 #define keys (g_config.key_bindings)

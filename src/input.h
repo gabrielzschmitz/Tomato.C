@@ -53,6 +53,9 @@ typedef enum {
   HISTORY_OVERVIEW, /**< History contribution graph overview */
   HISTORY_DAY,      /**< History single-day session details */
   HISTORY_STATS,    /**< History statistics popup */
+  PREFERENCES,      /**< Preferences dialog */
+  PREFS_STEPPER,    /**< Preferences stepper sub-dialog */
+  PREFS_SELECT,     /**< Preferences select sub-dialog */
 } SceneType;
 
 /* Scene type bitmasks for key binding filters */
@@ -67,6 +70,9 @@ typedef enum {
 #define SCENE_HISTORY_OVERVIEW (1 << HISTORY_OVERVIEW)
 #define SCENE_HISTORY_DAY (1 << HISTORY_DAY)
 #define SCENE_HISTORY_STATS (1 << HISTORY_STATS)
+#define SCENE_PREFERENCES (1 << PREFERENCES)
+#define SCENE_PREFS_STEPPER (1 << PREFS_STEPPER)
+#define SCENE_PREFS_SELECT (1 << PREFS_SELECT)
 
 /**
  * Input state for text input in vim-like modes.
@@ -711,5 +717,123 @@ void HistoryScrollUp(AppData* app);
  * @param app Application state
  */
 void HistoryScrollDown(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Preferences Actions
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open the preferences dialog from the main menu.
+ * @param app Application state
+ */
+void OpenPreferencesMenu(AppData* app);
+
+/**
+ * Select the previous setting in the preferences dialog.
+ * @param app Application state
+ */
+void PrefsSelectPrev(AppData* app);
+
+/**
+ * Select the next setting in the preferences dialog.
+ * @param app Application state
+ */
+void PrefsSelectNext(AppData* app);
+
+/**
+ * Decrease the value of the selected setting.
+ * @param app Application state
+ */
+void PrefsValueDown(AppData* app);
+
+/**
+ * Increase the value of the selected setting.
+ * @param app Application state
+ */
+void PrefsValueUp(AppData* app);
+
+/**
+ * Toggle a boolean setting.
+ * @param app Application state
+ */
+void PrefsToggle(AppData* app);
+
+/**
+ * Open the edit sub-dialog for the selected setting (stepper/selector).
+ * @param app Application state
+ */
+void PrefsEdit(AppData* app);
+
+/**
+ * Go back from the preferences dialog.
+ * @param app Application state
+ */
+void PrefsBack(AppData* app);
+
+/**
+ * Preview the currently selected setting. For sound/notification fields: plays
+ * the example audio/test notification. Not bound to keyboard, only accessible
+ * via mouse hover in stepper/select popups.
+ * @param app Application state
+ */
+void PrefsPreview(AppData* app);
+
+/**
+ * Scroll the preferences list up (reveal earlier items).
+ * @param app Application state
+ */
+void PrefsScrollUp(AppData* app);
+
+/**
+ * Scroll the preferences list down (reveal later items).
+ * @param app Application state
+ */
+void PrefsScrollDown(AppData* app);
+
+/**
+ * Decrement the value in a preferences stepper sub-dialog.
+ * Used for numeric settings (stepper INT/FLOAT).
+ * @param app Application state
+ */
+void StepperDecrement(AppData* app);
+
+/**
+ * Increment the value in a preferences stepper sub-dialog.
+ * Used for numeric settings (stepper INT/FLOAT).
+ * @param app Application state
+ */
+void StepperIncrement(AppData* app);
+
+/**
+ * Close the stepper sub-dialog and return to the main preferences dialog.
+ * @param app Application state
+ */
+void StepperClose(AppData* app);
+
+/**
+ * Apply the selected value and close the option selector sub-dialog.
+ * @param app Application state
+ */
+void SelectApply(AppData* app);
+
+/**
+ * Cancel selection and return to the main preferences dialog.
+ * @param app Application state
+ */
+void SelectCancel(AppData* app);
+
+/**
+ * Navigate to the previous option in a preferences select sub-dialog.
+ * @param app Application state
+ */
+void SelectPrevOption(AppData* app);
+
+/**
+ * Navigate to the next option in a preferences select sub-dialog.
+ * @param app Application state
+ */
+void SelectNextOption(AppData* app);
 
 #endif /* INPUT_H_ */

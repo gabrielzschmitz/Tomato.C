@@ -437,8 +437,13 @@ void RealTimeModule(AppData* app, StatusBarModule* module, Panel* panel) {
   const char* icon = (char*)REAL_TIME_MODULE_ICONS[icon_type];
 
   int color = COLOR_CYAN;
-  char current_time[6]; /* "HH:MM" + null terminator */
-  GetCurrentTime(current_time, sizeof(current_time));
+  char current_time[12];
+  time_t now = time(NULL);
+  struct tm* tm_info = localtime(&now);
+  if (g_config.visual.clock_24h)
+    strftime(current_time, sizeof(current_time), "%H:%M", tm_info);
+  else
+    strftime(current_time, sizeof(current_time), "%I:%M %p", tm_info);
 
   module->bg_color = color;
   module->fg_color = COLOR_BLACK;

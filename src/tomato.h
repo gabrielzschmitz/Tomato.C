@@ -95,6 +95,8 @@ struct AppData {
 
   HistoryData history_data; /**< History popup state */
 
+  PrefsState prefs; /**< Preferences data & sub-dialog state */
+
   int mouse_x;      /**< Last mouse x coordinate */
   int mouse_y;      /**< Last mouse y coordinate */
   int mouse_bstate; /**< Last mouse button state */

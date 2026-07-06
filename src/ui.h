@@ -94,6 +94,9 @@ typedef enum {
   SLIDE_TYPE_HISTORY_OVERVIEW, /**< History contribution graph */
   SLIDE_TYPE_HISTORY_DAY,      /**< History single-day session details */
   SLIDE_TYPE_HISTORY_STATS,    /**< History statistics */
+  SLIDE_TYPE_PREFERENCES,      /**< Preferences dialog */
+  SLIDE_TYPE_PREFS_STEPPER,    /**< Preferences stepper sub-dialog */
+  SLIDE_TYPE_PREFS_SELECT,     /**< Preferences option-select sub-dialog */
 } SlideType;
 
 /**
@@ -117,6 +120,49 @@ struct SlideDef {
   SlideProgress* progress; /**< Progress params (heap-allocated, owned) */
   SlideControls* controls; /**< Controls params (heap-allocated, owned) */
 };
+
+/**
+ * Type of a preference field entry.
+ * Determines how the field is rendered and edited in the preferences dialog.
+ */
+typedef enum {
+  PREF_SECTION,     /**< Category header label (not interactive) */
+  PREF_TOGGLE,      /**< Boolean on/off switch */
+  PREF_STEPPER_INT, /**< Integer value with +/- buttons and range */
+  PREF_STEPPER_FLOAT, /**< Float value with +/- buttons and range (stored as scaled int) */
+  PREF_SELECT, /**< Selection from a list of named options */
+} PrefFieldType;
+
+/**
+ * A single entry in the preferences field list.
+ * Each entry represents one row in the preferences dialog and can be a
+ * section header, a toggle, a stepper (int or float), or a select list.
+ */
+typedef struct {
+  const char* label;    /**< Display label shown in the preferences list */
+  PrefFieldType type;   /**< Determines rendering and edit behaviour */
+  int* int_value;       /**< Pointer to the int config variable or NULL */
+  float* float_value;   /**< Pointer to the float config variable or NULL */
+  int min, max, step;   /**< Range and step for stepper fields */
+  const char* unit;     /**< Unit string (e.g. "min", "%") or NULL */
+  const char** options; /**< Option label array for PREF_SELECT, or NULL */
+  int option_count;     /**< Number of entries in options */
+  void (*preview)(AppData* app); /**< Preview callback (NULL if none) */
+} PrefField;
+
+/**
+ * Runtime state for the preferences system.
+ * Holds the field array pointer, sub-dialog state, and supporting data.
+ * Initialised in InitPrefsData() called from InitApp().
+ */
+typedef struct {
+  PrefField* fields;
+  int count;
+  int edit_index;   /**< Stepper field index (-1 = none) */
+  int edit_temp;    /**< Original value for Cancel restore */
+  int select_index; /**< Select field index (-1 = none) */
+  int scroll_row;   /**< Content rows scrolled past in main prefs list */
+} PrefsState;
 
 /**
  * Type definition for menu item action functions.
@@ -224,11 +270,11 @@ struct FloatingDialog {
  * Mouse click region types.
  */
 typedef enum {
-  REGION_DIRECT,      /**< Direct action (skip/pause buttons) */
-  REGION_MENU_ITEM,   /**< Regular menu item */
-  REGION_POPUP_ITEM,  /**< Popup dialog menu item */
-  REGION_NOTE_ITEM,   /**< Note/task item in the notes panel */
-  REGION_WELCOME_NAV, /**< Welcome dialog navigation control */
+  REGION_DIRECT,     /**< Direct action (skip/pause buttons) */
+  REGION_MENU_ITEM,  /**< Regular menu item */
+  REGION_POPUP_ITEM, /**< Popup dialog menu item */
+  REGION_NOTE_ITEM,  /**< Note/task item in the notes panel */
+  REGION_SLIDE_NAV,  /**< Slide dialog navigation control */
 } RegionType;
 
 /**
@@ -590,7 +636,7 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
  *   CENTER → centered within (w - 2)
  *   RIGHT  → x + w - 2 - text_width
  * Draws with A_REVERSE when def->hovered matches the button index,
- * and registers a REGION_WELCOME_NAV click region with the action.
+ * and registers a REGION_SLIDE_NAV click region with the action.
  * @param app    Application state
  * @param x      Absolute column position (slide left edge)
  * @param y      Absolute row position (controls line)
@@ -660,5 +706,75 @@ SlideDef** BuildHistorySlide(Dimensions size,
  */
 SlideDef** BuildHistoryTextSlide(const char* text, Dimensions size,
                                  int slide_type);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Preferences
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open the main preferences list dialog.
+ * @param app Application state
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreatePreferencesDialog(AppData* app);
+
+/**
+ * Open a stepper sub-dialog for editing a single numeric or toggle field.
+ * The dialog shows [-] value [+] controls, a range label, and a footer with
+ * keyboard/mouse actions.  The field index is stored in app->prefs.edit_index
+ * and the original value in app->prefs.edit_temp for Cancel restore.
+ * @param app Application state
+ * @param idx  Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx);
+
+/**
+ * Open a select sub-dialog for picking from a list of named options.
+ * The field index is stored in app->prefs.select_index.
+ * @param app Application state
+ * @param idx  Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreatePrefsSelectDialog(AppData* app, int idx);
+
+/**
+ * Read the current integer representation of a preference field.
+ * For PREF_STEPPER_FLOAT the stored float is returned as (int)(float * 100).
+ * @param app Application state
+ * @param idx Preference field index
+ * @return Integer value
+ */
+int GetPrefInt(AppData* app, int idx);
+
+/**
+ * Save the stepper edit (restores original value) and return to the main
+ * preferences dialog.
+ * @param app Application state
+ */
+void ClosePrefsEdit(AppData* app);
+
+/**
+ * Close the select sub-dialog and return to the main preferences dialog.
+ * The selected value is committed by SelectApply() before calling this.
+ * @param app Application state
+ */
+void ClosePrefsSelect(AppData* app);
+
+/**
+ * Show a desktop notification as a preview of the "Desktop Notifications"
+ * preference.
+ * @param app Application state
+ */
+void PrefsPreviewDesktop(AppData* app);
+
+/**
+ * Play the default notification sound as a preview of the "Sound" toggle
+ * or "Sound Volume" stepper.
+ * @param app Application state
+ */
+void PrefsPreviewSound(AppData* app);
 
 #endif /* UI_H_ */

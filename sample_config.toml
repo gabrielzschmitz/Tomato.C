@@ -9,18 +9,6 @@
 # User config overrides system config; both override built-in defaults.
 # Unset values keep their defaults (shown below).
 
-
-# Visual Settings -------------------------------------------------------------
-[visual]
-animations           = 1            # 0/1 — enable animations
-icons                = "nerd-icons" # "nerd-icons" | "emojis" | "ascii"
-bg_transparency      = 1            # 0/1 — transparent background
-                                    # (needs transparent term)
-status_bar_spacing   = 1            # spaces between status bar modules
-status_bar_position  = 0            # 0 = bottom, 1 = top
-unfocused_panel_color = 7           # 0-7 (BLACK–WHITE)
-focused_panel_color  = 1            # 0-7
-
 # UI — Icon Sets --------------------------------------------------------------
 # Each icon set is a 3-element array: [nerd, emoji, ascii]
 [visual.ui.icons.noise]
@@ -63,6 +51,25 @@ insert_cursor        = "▏"
 border_chars         = ["┏", "┓", "┗", "┛", "━", "┃"]
 history              = ["░░", "▒▒", "▓▓", "██"]
 
+# Visual Settings -------------------------------------------------------------
+[visual]
+animations           = 1            # 0/1 — enable animations
+icons                = "nerd-icons" # "nerd-icons" | "emojis" | "ascii"
+bg_transparency      = 1            # 0/1 — transparent background
+                                    # (needs transparent term)
+status_bar_spacing   = 1            # spaces between status bar modules
+status_bar_position  = 0            # 0 = bottom, 1 = top
+unfocused_panel_color = 7           # 0-7 (BLACK–WHITE)
+focused_panel_color  = 1            # 0-7
+clock_24h           = 0           # 0/1 — use 24-hour clock
+
+# Notification Settings -------------------------------------------------------
+# Requires libnotify on Linux.
+[notifications]
+enabled      = true   # 0/1
+sound        = true   # 0/1 — requires miniaudio (included on external)
+sound_volume = 0.5    # 0.0 – 1.0
+
 # Pomodoro Settings -----------------------------------------------------------
 [pomodoro]
 amount      = 4       # pomodoros per cycle (1-8)
@@ -70,16 +77,8 @@ work_time   = 25      # minutes (5-75, step 5)
 short_pause = 5       # minutes (1-10)
 long_pause  = 30      # minutes (5-60, step 5)
 
-# Notification Settings -------------------------------------------------------
-# Requires libnotify on Linux.
-
-[notifications]
-enabled      = true   # 0/1
-sound        = true   # 0/1 — requires mpv
-sound_volume = 0.5    # 0.0 – 1.0
-
 # Noise / White-Noise Settings ------------------------------------------------
-# Requires mpv.
+# Requires miniaudio (included on external).
 [noise]
 enabled       = true  # 0/1
 master_volume = 50     # 0-100
@@ -89,11 +88,11 @@ master_volume = 50     # 0-100
 pomodoro_log  = "/tmp/tomato_pomodoro.bin"
 notes_log     = "/tmp/tomato_notes.log"
 error_log     = "/tmp/tomato_errors.log"
-timer_log     = true     # 0/1 — disable -t flag if off
 timer_file    = "/tmp/tomato_timer.sock"
-work_log      = true     # 0/1 — disable resume-from-unfinished-cycle if off
-notepad_log   = true     # 0/1 — save notepad on exit
+timer_log     = true     # 0/1 — disable -t flag if off
 timerlog_icons = true    # 0/1 — icons in timer log
+work_log      = true     # 0/1 — disable resume_from_unfinished_session if off
+notepad_log   = true     # 0/1 — save notepad on exit
 
 # Auto-Start Settings ---------------------------------------------------------
 # Ask to continue after each work/pause cycle.
@@ -103,10 +102,11 @@ pause = true   # 0/1
 
 # Misc Settings ---------------------------------------------------------------
 [misc]
-wsl            = false  # 0/1 — WSL notifications & no noise
-fps            = 120    # target frame rate
-max_note_depth = 1      # 0-3 — hierarchical sub-note depth
-
+wsl                             = false # 0/1 — WSL notifications & no noise
+fps                             = 120   # target frame rate
+max_note_depth                  = 1     # 0-3 — hierarchical sub-note depth
+resume_from_unfinished_session  = true  # 0/1 — get resume from unfinished
+                                        # session menu at startup
 # Keybindings -----------------------------------------------------------------
 # Format:
 #   [keybindings.MODE.SCENE]
@@ -117,6 +117,7 @@ max_note_depth = 1      # 0-3 — hierarchical sub-note depth
 #        | SCENE_LONG_PAUSE | SCENE_NOTES | SCENE_HELP
 #        | SCENE_CONTINUE | SCENE_NOISE | SCENE_HISTORY_OVERVIEW
 #        | SCENE_HISTORY_DAY | SCENE_HISTORY_STATS
+#        | SCENE_PREFERENCES
 #        | ALL_SCENES | POMODORO_SCENES
 #
 # Key names: single printable character, or named constant:
@@ -299,6 +300,23 @@ KEY_ENTER   = "HistoryCloseToOverview"
 ESC         = "HistoryCloseToOverview"
 CTRLC       = "HistoryCloseToOverview"
 q           = "HistoryCloseToOverview"
+
+# Preferences dialog
+[DEFAULT.SCENE_PREFERENCES]
+KEY_UP    = "PrefsSelectPrev"
+k         = "PrefsSelectPrev"
+KEY_DOWN  = "PrefsSelectNext"
+j         = "PrefsSelectNext"
+KEY_LEFT  = "PrefsValueDown"
+h         = "PrefsValueDown"
+KEY_RIGHT = "PrefsValueUp"
+l         = "PrefsValueUp"
+SPACE     = "PrefsToggle"
+ENTER     = "PrefsEdit"
+KEY_ENTER = "PrefsEdit"
+q         = "PrefsBack"
+ESC       = "PrefsBack"
+CTRLC     = "PrefsBack"
 
 # History Statistics
 [DEFAULT.SCENE_HISTORY_STATS]

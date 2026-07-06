@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "audio.h"
 #include "config.h"
 #include "error.h"
 #include "init.h"
 #include "input.h"
 #include "log.h"
+#include "notify.h"
 #include "tomato.h"
 #include "util.h"
 
@@ -46,6 +48,15 @@ static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
 static void historyOverviewRender(AppData* app, SlideDef* def);
 static void historyOverviewUpdate(AppData* app, SlideDef* def);
 static int computeMonthWeeks(int year, int month, int startDow);
+
+/* Preferences */
+static void setPrefInt(AppData* app, int idx, int val);
+static int selectablePrefCount(AppData* app);
+static void prefsSlideRender(AppData* app, SlideDef* def);
+static void prefsSlideUpdate(AppData* app, SlideDef* def);
+static void prefsStepperRender(AppData* app, SlideDef* def);
+static void prefsSelectRender(AppData* app, SlideDef* def);
+static void prefsSelectUpdate(AppData* app, SlideDef* def);
 
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
@@ -1957,7 +1968,7 @@ done_text:
       mvprintw(cy, close_x, "q Close");
       attroff(A_REVERSE);
     }
-    RegisterClickRegion(app, close_x, cy, close_w, 1, REGION_WELCOME_NAV,
+    RegisterClickRegion(app, close_x, cy, close_w, 1, REGION_SLIDE_NAV,
                         (MenuAction)NoiseClose, -1, 0, 0);
     SlideToken* t = hint_toks;
     while (t) {
@@ -2053,7 +2064,7 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
  *   CENTER → centered within (w - 2)
  *   RIGHT  → x + w - 2 - text_width
  * Draws with A_REVERSE when def->hovered matches the button index,
- * and registers a REGION_WELCOME_NAV click region with the action.
+ * and registers a REGION_SLIDE_NAV click region with the action.
  * @param app    Application state
  * @param x      Absolute column position (slide left edge)
  * @param y      Absolute row position (controls line)
@@ -2094,7 +2105,7 @@ void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
       mvprintw(y, bx + keyW, "%s", space);
       if (hover) attroff(A_REVERSE);
     }
-    RegisterClickRegion(app, bx, y, tw, 1, REGION_WELCOME_NAV,
+    RegisterClickRegion(app, bx, y, tw, 1, REGION_SLIDE_NAV,
                         (MenuAction)btn->action, -1, i, 0);
   }
 }
@@ -3273,7 +3284,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
       mvprintw(hintY, cx + keyW[i], "%s", descs[i]);
       if (hover) attroff(A_REVERSE);
       if (actions[i])
-        RegisterClickRegion(app, cx, hintY, segW[i], 1, REGION_WELCOME_NAV,
+        RegisterClickRegion(app, cx, hintY, segW[i], 1, REGION_SLIDE_NAV,
                             actions[i], -1, i, 0);
       cx += segW[i] + gapW;
     }
@@ -3388,4 +3399,860 @@ static int utf8DisplayWidth(const char* s) {
     }
   }
   return w;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Preferences
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create the main preferences dialog showing the full list of preference
+ * fields with keyboard and mouse navigation.
+ * @param app Application state
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreatePreferencesDialog(AppData* app) {
+  (void)app;
+  Dimensions size = {.width = 56, .height = 25};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Back", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 1};
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (dialog) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = prefsSlideRender;
+    def->update = prefsSlideUpdate;
+    def->slide_type = SLIDE_TYPE_PREFERENCES;
+    def->hovered = 0;
+    slides[0] = def;
+    dialog->slides = slides;
+    dialog->slideCount = 1;
+    dialog->currentSlide = 0;
+    dialog->slide_type = SLIDE_TYPE_PREFERENCES;
+    dialog->hovered_button = 0;
+  }
+  return dialog;
+}
+
+/**
+ * Open a stepper sub-dialog for editing a single integer, float, or toggle
+ * preference field.  Stores the field index in app->prefs.edit_index and a
+ * snapshot of the current value in app->prefs.edit_temp for Cancel restore.
+ * @param app Application state
+ * @param idx Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx) {
+  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
+                      app->prefs.fields[idx].preview != NULL);
+  Dimensions size = {.width = has_preview ? 56 : 44, .height = 8};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem mi[] = {{"Save", ClosePrefsEdit}, {"Cancel", ClosePrefsEdit}};
+  Menu menu = {.items = mi,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 2};
+  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (d) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = prefsStepperRender;
+    def->slide_type = SLIDE_TYPE_PREFS_STEPPER;
+    slides[0] = def;
+    d->slides = slides;
+    d->slideCount = 1;
+    d->currentSlide = 0;
+    d->slide_type = SLIDE_TYPE_PREFS_STEPPER;
+    d->hovered_button = idx;
+    app->prefs.edit_index = idx;
+    app->prefs.edit_temp = GetPrefInt(app, idx);
+  }
+  return d;
+}
+
+/**
+ * Open a select sub-dialog for picking from a list of named options.
+ * Stores the field index in app->prefs.select_index.
+ * @param app Application state
+ * @param idx Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreatePrefsSelectDialog(AppData* app, int idx) {
+  int cnt = app->prefs.fields[idx].option_count;
+  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
+                      app->prefs.fields[idx].preview != NULL);
+  int nw = has_preview ? 56 : 44;
+  int nh = cnt + 6;
+  if (nh < 9) nh = 9;
+  if (nh > 20) nh = 20;
+  Dimensions size = {.width = nw, .height = nh};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem mi[] = {{"Apply", ClosePrefsSelect}, {"Cancel", ClosePrefsSelect}};
+  Menu menu = {.items = mi,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 2};
+  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (d) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = prefsSelectRender;
+    def->update = prefsSelectUpdate;
+    def->slide_type = SLIDE_TYPE_PREFS_SELECT;
+    def->hovered = *app->prefs.fields[idx].int_value;
+    slides[0] = def;
+    d->slides = slides;
+    d->slideCount = 1;
+    d->currentSlide = 0;
+    d->slide_type = SLIDE_TYPE_PREFS_SELECT;
+    d->hovered_button = *app->prefs.fields[idx].int_value;
+    app->prefs.select_index = idx;
+  }
+  return d;
+}
+
+/**
+ * Read the current value of a preference field as an integer.
+ * For PREF_STEPPER_FLOAT the stored float is multiplied by 100 and rounded.
+ * @param app Application state
+ * @param idx Preference field index
+ * @return Current integer representation of the field value
+ */
+int GetPrefInt(AppData* app, int idx) {
+  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
+    return (int)(*app->prefs.fields[idx].float_value * 100.0f + 0.5f);
+  return *app->prefs.fields[idx].int_value;
+}
+
+/**
+ * Close the stepper sub-dialog, restoring the original value saved in
+ * app->prefs.edit_temp, and return to the main preferences list.
+ * @param app Application state
+ */
+void ClosePrefsEdit(AppData* app) {
+  if (app->prefs.edit_index >= 0) {
+    setPrefInt(app, app->prefs.edit_index, app->prefs.edit_temp);
+    app->prefs.edit_index = -1;
+  }
+  SyncIconsFromIndex();
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Close the select sub-dialog and return to the main preferences list.
+ * The option value is already committed by SelectApply() before this runs.
+ * @param app Application state
+ */
+void ClosePrefsSelect(AppData* app) {
+  app->prefs.select_index = -1;
+  SyncIconsFromIndex();
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Preview callback for "Desktop Notifications" — sends a test notification.
+ * @param app Application state
+ */
+void PrefsPreviewDesktop(AppData* app) {
+  (void)app;
+  Notification notif = {"Test Notification",
+                        "This is a test notification from settings.", NULL};
+  Notify(&notif);
+}
+
+/**
+ * Preview callback for "Sound" toggle and "Sound Volume" stepper —
+ * plays the default notification sound at the configured volume.
+ * @param app Application state
+ */
+void PrefsPreviewSound(AppData* app) {
+  (void)app;
+  PlayAudio("./sounds/dfltnotify.mp3", NOTIFICATIONS_SOUND_VOLUME, false);
+}
+
+/**
+ * Write an integer value back to a preference field, converting to float
+ * for PREF_STEPPER_FLOAT fields.
+ * @param app Application state
+ * @param idx Preference field index
+ * @param val Integer value to store
+ */
+static void setPrefInt(AppData* app, int idx, int val) {
+  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
+    *app->prefs.fields[idx].float_value = val / 100.0f;
+  else
+    *app->prefs.fields[idx].int_value = val;
+}
+
+/**
+ * Count how many preference fields are selectable (skip PREF_SECTION headers).
+ * @param app Application state
+ * @return Number of interactive fields
+ */
+static int selectablePrefCount(AppData* app) {
+  int n = 0;
+  for (int i = 0; i < app->prefs.count; i++)
+    if (app->prefs.fields[i].type != PREF_SECTION) n++;
+  return n;
+}
+
+/**
+ * Format the current value of a preference field into a display buffer.
+ * Toggles show [✓] Enabled / [ ] Disabled, selects show the option label,
+ * and steppers show the numeric value with unit.
+ * @param app Application state
+ * @param buf  Output buffer
+ * @param len  Buffer size
+ * @param idx  Preference field index
+ */
+static void renderPrefValue(AppData* app, char* buf, int len, int idx) {
+  PrefField* f = &app->prefs.fields[idx];
+  int val = GetPrefInt(app, idx);
+  if (f->type == PREF_TOGGLE) {
+    snprintf(buf, len, "[%s] %s", val ? "\u2713" : " ",
+             val ? "Enabled" : "Disabled");
+  } else if (f->type == PREF_SELECT) {
+    if (f->options && val >= 0 && val < f->option_count)
+      snprintf(buf, len, "%s", f->options[val]);
+    else
+      snprintf(buf, len, "?");
+  } else {
+    const char* u = f->unit ? f->unit : "";
+    if (f->type == PREF_STEPPER_FLOAT)
+      snprintf(buf, len, "%d%s", val, u);
+    else
+      snprintf(buf, len, "%d %s", val, u);
+  }
+}
+
+/**
+ * Compute the display width (terminal cell count) of a UTF-8 string.
+ * Multi-byte continuation bytes (0x80–0xBF) are not counted.
+ * @param s  Null-terminated UTF-8 string
+ * @return  Number of terminal cells occupied
+ */
+static int displayWidth(const char* s) {
+  int n = (int)strlen(s);
+  int cont = 0;
+  for (const char* p = s; *p; p++) {
+    if (((unsigned char)*p & 0xC0) == 0x80) cont++;
+  }
+  return n - cont;
+}
+
+/**
+ * Render the main preferences list dialog.
+ * Draws each field as a row with label, dots, current value, and an arrow.
+ * Section headers are rendered in cyan bold.  The footer shows evenly-spaced
+ * navigation hints with mouse click regions.
+ * @param app Application state
+ * @param def Slide definition (provides width, height, hovered index)
+ */
+static void prefsSlideRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int w = def->size.width;
+  int h = def->size.height;
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  int title_x = x + (w - 11) / 2;
+  mvprintw(y + 1, title_x, "Preferences");
+
+  /* Pre-compute content rows for each field */
+  int total_cr = 0;
+  int content_row[64];
+  for (int i = 0; i < app->prefs.count && i < 64; i++) {
+    content_row[i] = total_cr;
+    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
+      total_cr += 2;  /* blank line + header */
+    } else {
+      total_cr++;
+    }
+  }
+
+  int max_visible = h - 6;
+  int sr = app->prefs.scroll_row;
+  int end_cr = sr + max_visible;
+  if (end_cr > total_cr) end_cr = total_cr;
+  bool show_up = (sr > 0);
+  bool show_down = (end_cr < total_cr);
+
+  int sel = d->hovered_button;
+  int cnt = 0;
+  int row_avail = w - 4;
+
+  int field_start_row = 3 + (show_up ? 1 : 0);
+  int field_end_row = h - 3;
+  if (show_down) field_end_row--;
+
+  if (show_up) {
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    mvprintw(y + 3, x + 2 + row_avail - 7, "\u25b2 More");
+    RegisterClickRegion(app, x + 2 + row_avail - 7, y + 3, 7, 1,
+                        REGION_SLIDE_NAV, (MenuAction)PrefsScrollUp, -1, 0, 0);
+  }
+
+  int row = field_start_row;
+  for (int i = 0; i < app->prefs.count; i++) {
+    int cr = content_row[i];
+    bool is_sec = (app->prefs.fields[i].type == PREF_SECTION);
+    if (is_sec && i > 0) {
+      if (cr + 1 < sr) continue;
+      if (cr >= end_cr) break;
+    } else {
+      if (cr < sr) {
+        if (!is_sec) cnt++;
+        continue;
+      }
+      if (cr >= end_cr) break;
+    }
+    if (row >= field_end_row) break;
+
+    if (is_sec) {
+      if (i > 0 && cr >= sr) {
+        SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+        for (int c = 0; c < row_avail; c++) mvprintw(y + row, x + 2 + c, " ");
+        row++;
+      }
+      SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+      mvprintw(y + row, x + 2, "%s", app->prefs.fields[i].label);
+      row++;
+      continue;
+    }
+
+    int is_sel = (cnt == sel);
+    cnt++;
+
+    char val_buf[48];
+    renderPrefValue(app, val_buf, sizeof(val_buf), i);
+
+    int fg = is_sel ? COLOR_BLACK : COLOR_WHITE;
+    int bg = is_sel ? COLOR_WHITE : NO_COLOR;
+    int attr = is_sel ? A_BOLD : A_NORMAL;
+    SetColor(fg, bg, attr);
+    for (int c = 0; c < row_avail; c++) mvprintw(y + row, x + 2 + c, " ");
+
+    int L = (int)strlen(app->prefs.fields[i].label);
+    int V = displayWidth(val_buf);
+    int fill = row_avail - 6 - L - V;
+    if (fill < 0) fill = 0;
+    char dots[64];
+    int dot_len = fill < (int)sizeof(dots) - 1 ? fill : (int)sizeof(dots) - 1;
+    memset(dots, '.', dot_len);
+    dots[dot_len] = '\0';
+
+    mvprintw(y + row, x + 2, "%c %s", is_sel ? '>' : ' ',
+             app->prefs.fields[i].label);
+    mvprintw(y + row, x + 4 + L + 1, "%s %s", dots, val_buf);
+    mvprintw(y + row, x + 2 + row_avail - 2, " \u25b6");
+    RegisterClickRegion(app, x + 2, y + row, row_avail, 1, REGION_SLIDE_NAV,
+                        app->prefs.fields[i].type == PREF_TOGGLE
+                          ? (MenuAction)PrefsToggle
+                          : (MenuAction)PrefsEdit,
+                        -1, 0, 0);
+    row++;
+  }
+
+  if (show_down) {
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    mvprintw(y + h - 4, x + 2 + row_avail - 7, "\u25bc More");
+    RegisterClickRegion(app, x + 2 + row_avail - 7, y + h - 4, 7, 1,
+                        REGION_SLIDE_NAV, (MenuAction)PrefsScrollDown, -1, 0, 0);
+  }
+
+  /* Evenly spaced sections across the full width */
+  int s1w = displayWidth("\u2191/\u2193 Navigate");
+  int s2w = displayWidth("\u2190/\u2192 Change");
+  int s3w = displayWidth("Space Toggle");
+  int s4w = displayWidth("q Back");
+  int total_cw = s1w + s2w + s3w + s4w;
+  int gap_avail = row_avail - total_cw;
+  int gap = gap_avail / 3;
+  int gap_rem = gap_avail - gap * 3;
+  int fx = x + 2;
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(y + h - 2, fx, "\u2191/\u2193 ");
+  fx += displayWidth("\u2191/\u2193 ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y + h - 2, fx, "Navigate");
+  fx += displayWidth("Navigate");
+  fx += gap + (gap_rem-- > 0 ? 1 : 0);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(y + h - 2, fx, "\u2190/\u2192 ");
+  fx += displayWidth("\u2190/\u2192 ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y + h - 2, fx, "Change");
+  fx += displayWidth("Change");
+  fx += gap + (gap_rem-- > 0 ? 1 : 0);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(y + h - 2, fx, "Space ");
+  fx += displayWidth("Space ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y + h - 2, fx, "Toggle");
+  fx += displayWidth("Toggle");
+  int qx = fx + gap + (gap_rem-- > 0 ? 1 : 0);
+  int qw = displayWidth("q Back");
+  int qy = y + h - 2;
+  bool on_q =
+    (app->mouse_y == qy && app->mouse_x >= qx && app->mouse_x < qx + qw);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  if (on_q) attron(A_REVERSE);
+  mvprintw(qy, qx, "q ");
+  if (on_q) attroff(A_REVERSE);
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  if (on_q) attron(A_REVERSE);
+  mvprintw(qy, qx + displayWidth("q "), "Back");
+  if (on_q) attroff(A_REVERSE);
+  RegisterClickRegion(app, qx, qy, qw, 1, REGION_SLIDE_NAV,
+                      (MenuAction)ClosePopup, -1, 0, 0);
+}
+
+/**
+ * Update mouse hover state for the main preferences list.
+ * Maps the mouse row to the corresponding selectable field index and stores
+ * it in d->hovered_button and def->hovered.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void prefsSlideUpdate(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y;
+  int w = def->size.width;
+  int h = def->size.height;
+  int my = app->mouse_y;
+  int mx = app->mouse_x;
+  int sel_cnt = selectablePrefCount(app);
+  if (my < y + 3 || my >= y + h - 2 || mx < x + 2 || mx >= x + w - 2) {
+    if (d->hovered_button >= sel_cnt) d->hovered_button = sel_cnt - 1;
+    if (d->hovered_button < 0) d->hovered_button = 0;
+    def->hovered = d->hovered_button;
+    return;
+  }
+  int target_row = my - y;
+  int max_visible = h - 6;
+  int sr = app->prefs.scroll_row;
+  int end_cr = sr + max_visible;
+  int total_cr = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
+      total_cr += 2;
+    } else {
+      total_cr++;
+    }
+  }
+  if (end_cr > total_cr) end_cr = total_cr;
+  bool show_up = (sr > 0);
+  bool show_down = (end_cr < total_cr);
+
+  int field_start_row = 3 + (show_up ? 1 : 0);
+  int field_end_row = h - 3;
+  if (show_down) field_end_row--;
+
+  if (target_row < field_start_row || target_row >= field_end_row) {
+    if (d->hovered_button >= sel_cnt) d->hovered_button = sel_cnt - 1;
+    if (d->hovered_button < 0) d->hovered_button = 0;
+    def->hovered = d->hovered_button;
+    return;
+  }
+
+  int total_cr2 = 0;
+  int content_row[64];
+  for (int i = 0; i < app->prefs.count && i < 64; i++) {
+    content_row[i] = total_cr2;
+    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
+      total_cr2 += 2;
+    } else {
+      total_cr2++;
+    }
+  }
+
+  int row = field_start_row;
+  int cnt = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    int cr = content_row[i];
+    bool is_sec = (app->prefs.fields[i].type == PREF_SECTION);
+    if (is_sec && i > 0) {
+      if (cr + 1 < sr) continue;
+      if (cr >= end_cr) break;
+    } else {
+      if (cr < sr) {
+        if (!is_sec) cnt++;
+        continue;
+      }
+      if (cr >= end_cr) break;
+    }
+    if (row >= field_end_row) break;
+    if (is_sec) {
+      if (i > 0 && cr >= sr) row++;
+      row++;
+      continue;
+    }
+    if (row == target_row) {
+      d->hovered_button = cnt;
+      def->hovered = cnt;
+      return;
+    }
+    cnt++;
+    row++;
+  }
+  if (d->hovered_button >= sel_cnt) d->hovered_button = sel_cnt - 1;
+  if (d->hovered_button < 0) d->hovered_button = 0;
+  def->hovered = d->hovered_button;
+}
+
+/**
+ * Render the stepper sub-dialog for editing a numeric or toggle field.
+ * Shows [-] value [+] controls, a range string, and footer with
+ * ←/→ Change, conditional p Preview, Enter Save, and Esc Cancel.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void prefsStepperRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int w = def->size.width;
+  int h = def->size.height;
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+
+  int idx = d->hovered_button;
+  PrefField* f = &app->prefs.fields[idx];
+  const char* label = f->label;
+  int val = GetPrefInt(app, idx);
+  int min = f->min;
+  int max = f->max;
+  int step = f->step;
+  const char* unit = f->unit ? f->unit : "";
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  int title_x = x + (w - (int)strlen(label)) / 2;
+  mvprintw(y + 1, title_x, "%s", label);
+
+  char val_str[32];
+  if (f->type == PREF_TOGGLE)
+    snprintf(val_str, sizeof(val_str), val ? "On" : "Off");
+  else if (f->type == PREF_STEPPER_FLOAT)
+    snprintf(val_str, sizeof(val_str), "%d%s", val, unit);
+  else
+    snprintf(val_str, sizeof(val_str), "%d %s", val, unit);
+
+  char range_str[64];
+  if (f->type == PREF_TOGGLE)
+    snprintf(range_str, sizeof(range_str), "Off\u2013On");
+  else if (f->type == PREF_STEPPER_FLOAT)
+    snprintf(range_str, sizeof(range_str), "Range: %d\u2013%d%s", min, max,
+             unit);
+  else
+    snprintf(range_str, sizeof(range_str), "Range: %d\u2013%d %s", min, max,
+             unit);
+
+  int range_center = x + (w - displayWidth(range_str)) / 2;
+
+  /* [ - ] value [ + ] */
+  const char* minus = "[-]";
+  const char* plus = "[+]";
+  int val_dw = displayWidth(val_str);
+  int val_start = x + (w - val_dw) / 2;
+  int minus_x = val_start - (int)strlen(minus) - 2;
+  int plus_x = val_start + val_dw + 2;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  int val_row = 3;
+  RegisterClickRegion(app, minus_x, y + val_row, (int)strlen(minus), 1,
+                      REGION_SLIDE_NAV, (MenuAction)StepperDecrement, -1, 0, 0);
+  mvprintw(y + val_row, minus_x, "%s", minus);
+  SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+  mvprintw(y + val_row, val_start, "%s", val_str);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  int plus_w = (int)strlen(plus);
+  RegisterClickRegion(app, plus_x, y + val_row, plus_w, 1, REGION_SLIDE_NAV,
+                      (MenuAction)StepperIncrement, -1, 0, 0);
+  mvprintw(y + val_row, plus_x, "%s", plus);
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y + val_row + 1, range_center, "%s", range_str);
+
+  /* Footer: BOLD keys, NORMAL descriptions, A_REVERSE on hover for clickable */
+  int fy = y + h - 2;
+  int fx = x + 2;
+  bool has_preview = (f->preview != NULL);
+  /* ←/→ Change */
+  int s1 = fx;
+  int w1 = displayWidth("\u2190/\u2192 Change");
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(fy, fx, "\u2190/\u2192 ");
+  fx += displayWidth("\u2190/\u2192 ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(fy, fx, "Change");
+  fx += displayWidth("Change") + 4;
+  /* p Preview (conditional) */
+  if (has_preview) {
+    int s = fx;
+    int w = displayWidth("p Preview");
+    bool on = (app->mouse_y == fy && app->mouse_x >= s && app->mouse_x < s + w);
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    if (on) attron(A_REVERSE);
+    mvprintw(fy, fx, "p ");
+    if (on) attroff(A_REVERSE);
+    fx += displayWidth("p ");
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    if (on) attron(A_REVERSE);
+    mvprintw(fy, fx, "Preview");
+    if (on) attroff(A_REVERSE);
+    fx += displayWidth("Preview") + 4;
+    RegisterClickRegion(app, s, fy, w, 1, REGION_SLIDE_NAV,
+                        (MenuAction)PrefsPreview, -1, 0, 0);
+  }
+  /* Enter Save */
+  int s2 = fx;
+  int w2 = displayWidth("Enter Save");
+  bool on_enter =
+    (app->mouse_y == fy && app->mouse_x >= s2 && app->mouse_x < s2 + w2);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  if (on_enter) attron(A_REVERSE);
+  mvprintw(fy, fx, "Enter ");
+  if (on_enter) attroff(A_REVERSE);
+  fx += displayWidth("Enter ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  if (on_enter) attron(A_REVERSE);
+  mvprintw(fy, fx, "Save");
+  if (on_enter) attroff(A_REVERSE);
+  RegisterClickRegion(app, s2, fy, w2, 1, REGION_SLIDE_NAV,
+                      (MenuAction)StepperClose, -1, 0, 0);
+  fx += displayWidth("Save") + 4;
+  /* Esc Cancel */
+  int s3 = fx;
+  int w3 = displayWidth("Esc Cancel");
+  bool on_esc =
+    (app->mouse_y == fy && app->mouse_x >= s3 && app->mouse_x < s3 + w3);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  if (on_esc) attron(A_REVERSE);
+  mvprintw(fy, fx, "Esc ");
+  if (on_esc) attroff(A_REVERSE);
+  fx += displayWidth("Esc ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  if (on_esc) attron(A_REVERSE);
+  mvprintw(fy, fx, "Cancel");
+  if (on_esc) attroff(A_REVERSE);
+  RegisterClickRegion(app, s3, fy, w3, 1, REGION_SLIDE_NAV,
+                      (MenuAction)StepperClose, -1, 0, 0);
+}
+
+/**
+ * Update mouse hover state for the select sub-dialog.
+ * Maps the mouse row to an option index and stores it in d->hovered_button
+ * and def->hovered.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void prefsSelectUpdate(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int idx = app->prefs.select_index;
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+  int x = d->position.x;
+  int y = d->position.y;
+  int w = def->size.width;
+  int h = def->size.height;
+  int my = app->mouse_y;
+  int mx = app->mouse_x;
+  if (my < y + 3 || my >= y + h - 3 || mx < x + 2 || mx >= x + w - 2) return;
+  int prow = my - y - 3;
+  if (prow >= 0 && prow < f->option_count) {
+    d->hovered_button = prow;
+    def->hovered = prow;
+  }
+}
+
+/**
+ * Render the select sub-dialog showing all options for a PREF_SELECT field.
+ * The currently selected option is highlighted with reverse video and a '>'
+ * marker.  The footer shows ↑/↓ Select, conditional p Preview, Enter Apply,
+ * and Esc Cancel with mouse click regions.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void prefsSelectRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int w = def->size.width;
+  int h = def->size.height;
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+
+  int idx = app->prefs.select_index;
+  if (idx < 0) return;
+  PrefField* f = &app->prefs.fields[idx];
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  int title_x = x + (w - (int)strlen(f->label)) / 2;
+  mvprintw(y + 1, title_x, "%s", f->label);
+
+  int row = 3;
+  int sel = d->hovered_button;
+  int inner_w = w - 4;
+  for (int i = 0; i < f->option_count && row < h - 3; i++) {
+    int is_sel = (i == sel);
+    SetColor(is_sel ? COLOR_BLACK : COLOR_WHITE,
+             is_sel ? COLOR_WHITE : NO_COLOR, is_sel ? A_BOLD : A_NORMAL);
+    int text_x = x + (w - (int)strlen(f->options[i])) / 2;
+    mvprintw(y + row, text_x - 2, "%c ", is_sel ? '>' : ' ');
+    mvprintw(y + row, text_x, "%s", f->options[i]);
+    RegisterClickRegion(app, x + 2, y + row, inner_w, 1, REGION_SLIDE_NAV,
+                        (MenuAction)SelectApply, -1, 0, 0);
+    row++;
+  }
+
+  /* Footer: BOLD keys, NORMAL descriptions, A_REVERSE on clickable */
+  int fy = y + h - 2;
+  int fx = x + 2;
+  bool has_preview = (f->preview != NULL);
+  /* ↑/↓ Select */
+  int s1 = fx;
+  int w1 = displayWidth("\u2191/\u2193 Select");
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(fy, fx, "\u2191/\u2193 ");
+  fx += displayWidth("\u2191/\u2193 ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(fy, fx, "Select");
+  fx += displayWidth("Select") + 4;
+  /* p Preview (conditional) */
+  if (has_preview) {
+    int s = fx;
+    int w = displayWidth("p Preview");
+    bool on = (app->mouse_y == fy && app->mouse_x >= s && app->mouse_x < s + w);
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    if (on) attron(A_REVERSE);
+    mvprintw(fy, fx, "p ");
+    if (on) attroff(A_REVERSE);
+    fx += displayWidth("p ");
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    if (on) attron(A_REVERSE);
+    mvprintw(fy, fx, "Preview");
+    if (on) attroff(A_REVERSE);
+    fx += displayWidth("Preview") + 4;
+    RegisterClickRegion(app, s, fy, w, 1, REGION_SLIDE_NAV,
+                        (MenuAction)PrefsPreview, -1, 0, 0);
+  }
+  /* Enter Apply */
+  int s2 = fx;
+  int w2 = displayWidth("Enter Apply");
+  bool on_ent =
+    (app->mouse_y == fy && app->mouse_x >= s2 && app->mouse_x < s2 + w2);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  if (on_ent) attron(A_REVERSE);
+  mvprintw(fy, fx, "Enter ");
+  if (on_ent) attroff(A_REVERSE);
+  fx += displayWidth("Enter ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  if (on_ent) attron(A_REVERSE);
+  mvprintw(fy, fx, "Apply");
+  if (on_ent) attroff(A_REVERSE);
+  RegisterClickRegion(app, s2, fy, w2, 1, REGION_SLIDE_NAV,
+                      (MenuAction)SelectApply, -1, 0, 0);
+  fx += displayWidth("Apply") + 4;
+  /* Esc Cancel */
+  int s3 = fx;
+  int w3 = displayWidth("Esc Cancel");
+  bool on_esc =
+    (app->mouse_y == fy && app->mouse_x >= s3 && app->mouse_x < s3 + w3);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  if (on_esc) attron(A_REVERSE);
+  mvprintw(fy, fx, "Esc ");
+  if (on_esc) attroff(A_REVERSE);
+  fx += displayWidth("Esc ");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  if (on_esc) attron(A_REVERSE);
+  mvprintw(fy, fx, "Cancel");
+  if (on_esc) attroff(A_REVERSE);
+  RegisterClickRegion(app, s3, fy, w3, 1, REGION_SLIDE_NAV,
+                      (MenuAction)ClosePrefsSelect, -1, 0, 0);
 }

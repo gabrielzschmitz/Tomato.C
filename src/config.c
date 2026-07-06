@@ -103,6 +103,51 @@ const KeyFunction DEFAULT_KEYS[] = {
   {'h', SelectPreviousItem, DEFAULT, SCENE_MAIN_MENU},
   {ENTER, ExecuteMenuAction, DEFAULT, SCENE_MAIN_MENU},
 
+  /* Preferences dialog — navigation */
+  {KEY_UP, PrefsSelectPrev, DEFAULT, SCENE_PREFERENCES},
+  {'k', PrefsSelectPrev, DEFAULT, SCENE_PREFERENCES},
+  {KEY_DOWN, PrefsSelectNext, DEFAULT, SCENE_PREFERENCES},
+  {'j', PrefsSelectNext, DEFAULT, SCENE_PREFERENCES},
+  {'u', PrefsScrollUp, DEFAULT, SCENE_PREFERENCES},
+  {'d', PrefsScrollDown, DEFAULT, SCENE_PREFERENCES},
+  {KEY_LEFT, PrefsValueDown, DEFAULT, SCENE_PREFERENCES},
+  {'h', PrefsValueDown, DEFAULT, SCENE_PREFERENCES},
+  {KEY_RIGHT, PrefsValueUp, DEFAULT, SCENE_PREFERENCES},
+  {'l', PrefsValueUp, DEFAULT, SCENE_PREFERENCES},
+  {' ', PrefsToggle, DEFAULT, SCENE_PREFERENCES},
+  {ENTER, PrefsEdit, DEFAULT, SCENE_PREFERENCES},
+  {'\r', PrefsEdit, DEFAULT, SCENE_PREFERENCES},
+  {KEY_ENTER, PrefsEdit, DEFAULT, SCENE_PREFERENCES},
+  {'q', PrefsBack, DEFAULT, SCENE_PREFERENCES},
+  {ESC, PrefsBack, DEFAULT, SCENE_PREFERENCES},
+  {CTRLC, PrefsBack, DEFAULT, SCENE_PREFERENCES},
+
+  /* Preferences stepper sub-dialog */
+  {'h', StepperDecrement, DEFAULT, SCENE_PREFS_STEPPER},
+  {KEY_LEFT, StepperDecrement, DEFAULT, SCENE_PREFS_STEPPER},
+  {'l', StepperIncrement, DEFAULT, SCENE_PREFS_STEPPER},
+  {KEY_RIGHT, StepperIncrement, DEFAULT, SCENE_PREFS_STEPPER},
+  {'p', PrefsPreview, DEFAULT, SCENE_PREFS_STEPPER},
+  {ENTER, StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+  {'\r', StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+  {KEY_ENTER, StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+  {'q', StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+  {ESC, StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+  {CTRLC, StepperClose, DEFAULT, SCENE_PREFS_STEPPER},
+
+  /* Preferences select sub-dialog */
+  {'k', SelectPrevOption, DEFAULT, SCENE_PREFS_SELECT},
+  {KEY_UP, SelectPrevOption, DEFAULT, SCENE_PREFS_SELECT},
+  {'j', SelectNextOption, DEFAULT, SCENE_PREFS_SELECT},
+  {KEY_DOWN, SelectNextOption, DEFAULT, SCENE_PREFS_SELECT},
+  {'p', PrefsPreview, DEFAULT, SCENE_PREFS_SELECT},
+  {ENTER, SelectApply, DEFAULT, SCENE_PREFS_SELECT},
+  {'\r', SelectApply, DEFAULT, SCENE_PREFS_SELECT},
+  {KEY_ENTER, SelectApply, DEFAULT, SCENE_PREFS_SELECT},
+  {'q', SelectCancel, DEFAULT, SCENE_PREFS_SELECT},
+  {ESC, SelectCancel, DEFAULT, SCENE_PREFS_SELECT},
+  {CTRLC, SelectCancel, DEFAULT, SCENE_PREFS_SELECT},
+
   /* General keybindings - DEFAULT mode, ALL_SCENES */
   {KEY_UP, ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
   {'k', ChangeSelectedItemLeft, DEFAULT, ALL_SCENES},
@@ -317,6 +362,24 @@ static const struct {
   {"HistoryScrollUp", HistoryScrollUp},
   {"HistoryCloseToOverview", HistoryCloseToOverview},
   {"NextPanel", NextPanel},
+  {"OpenPreferencesMenu", OpenPreferencesMenu},
+  {"PrefsSelectPrev", PrefsSelectPrev},
+  {"PrefsSelectNext", PrefsSelectNext},
+  {"PrefsValueDown", PrefsValueDown},
+  {"PrefsValueUp", PrefsValueUp},
+  {"PrefsToggle", PrefsToggle},
+  {"PrefsEdit", PrefsEdit},
+  {"PrefsBack", PrefsBack},
+  {"PrefsPreview", PrefsPreview},
+  {"PrefsScrollUp", PrefsScrollUp},
+  {"PrefsScrollDown", PrefsScrollDown},
+  {"StepperDecrement", StepperDecrement},
+  {"StepperIncrement", StepperIncrement},
+  {"StepperClose", StepperClose},
+  {"SelectApply", SelectApply},
+  {"SelectCancel", SelectCancel},
+  {"SelectPrevOption", SelectPrevOption},
+  {"SelectNextOption", SelectNextOption},
 };
 
 /**
@@ -350,6 +413,9 @@ static const struct {
   {"SCENE_HISTORY_OVERVIEW", SCENE_HISTORY_OVERVIEW},
   {"SCENE_HISTORY_DAY", SCENE_HISTORY_DAY},
   {"SCENE_HISTORY_STATS", SCENE_HISTORY_STATS},
+  {"SCENE_PREFERENCES", SCENE_PREFERENCES},
+  {"SCENE_PREFS_STEPPER", SCENE_PREFS_STEPPER},
+  {"SCENE_PREFS_SELECT", SCENE_PREFS_SELECT},
   {"ALL_SCENES", ALL_SCENES},
   {"POMODORO_SCENES", POMODORO_SCENES},
 };
@@ -541,12 +607,28 @@ static void setDefaults(void) {
   g_config.autostart.work = 1;
   g_config.autostart.pause = 1;
 
+  g_config.visual.clock_24h = 1;
+  g_config.visual.icons_index = 0;
+
   g_config.misc.wsl = 0;
   g_config.misc.fps = 120;
   g_config.misc.max_note_depth = 1;
 
   g_config.key_bindings = (KeyFunction*)DEFAULT_KEYS;
   g_config.num_keys = DEFAULT_KEYS_COUNT;
+}
+
+/**
+ * Sync g_config.visual.icons from icons_index (0=nerd-icons, 1=emojis, 2=ascii).
+ * Called after any preference dialog commit that changes icons_index.
+ */
+void SyncIconsFromIndex(void) {
+  switch (g_config.visual.icons_index) {
+    case 0: g_config.visual.icons = "nerd-icons"; break;
+    case 1: g_config.visual.icons = "emojis"; break;
+    case 2: g_config.visual.icons = "ascii"; break;
+    default: g_config.visual.icons = "nerd-icons"; break;
+  }
 }
 
 /**
@@ -800,6 +882,13 @@ static void loadTomlFile(const char* path) {
 
   readInt(root, "visual.animations", &g_config.visual.animations);
   readString(root, "visual.icons", &g_config.visual.icons);
+  /* Sync icons_index from the string after TOML override */
+  if (strcmp(g_config.visual.icons, "nerd-icons") == 0)
+    g_config.visual.icons_index = 0;
+  else if (strcmp(g_config.visual.icons, "emojis") == 0)
+    g_config.visual.icons_index = 1;
+  else
+    g_config.visual.icons_index = 2;
   readInt(root, "visual.bg_transparency", &g_config.visual.bg_transparency);
   readInt(root, "visual.status_bar_spacing",
           &g_config.visual.status_bar_spacing);
