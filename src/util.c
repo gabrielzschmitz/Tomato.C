@@ -1,10 +1,13 @@
 #include "util.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -302,4 +305,58 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
   }
 
   return (Dimensions){widest, tallest};
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * File I/O
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open a file for writing, refusing to follow symlinks.
+ * Internally uses open() with O_NOFOLLOW, then wraps the fd with fdopen().
+ * @param path File path to open
+ * @param mode File mode ("r", "w", "a", "wb", "ab", etc.)
+ * @return FILE pointer on success, NULL on error (sets errno)
+ */
+FILE* FOpenNoFollow(const char* path, const char* mode) {
+  int flags = O_NOFOLLOW;
+  if (mode[0] == 'a' || (mode[0] == 'a' && mode[1] == 'b'))
+    flags |= O_WRONLY | O_APPEND | O_CREAT;
+  else if (mode[0] == 'w')
+    flags |= O_WRONLY | O_TRUNC | O_CREAT;
+  else
+    return fopen(path, mode); /* read-only: follow is acceptable */
+
+  int fd = open(path, flags, 0644);
+  if (fd == -1) return NULL;
+  return fdopen(fd, mode);
+}
+
+/**
+ * Create a directory (and parents) if it does not exist.
+ * @param dir Path to the directory to create
+ * @return 0 on success, -1 on failure (sets errno)
+ */
+int EnsureDir(const char* dir) {
+  char tmp[4096];
+  size_t len = strlen(dir);
+  if (len >= sizeof(tmp) || len == 0) {
+    errno = len == 0 ? EINVAL : ENAMETOOLONG;
+    return -1;
+  }
+  memcpy(tmp, dir, len + 1);
+
+  /* Skip leading '/' so we don't call mkdir("") */
+  size_t start = (tmp[0] == '/') ? 1 : 0;
+  for (size_t i = start; i < len; i++) {
+    if (tmp[i] == '/') {
+      tmp[i] = '\0';
+      if (mkdir(tmp, 0755) == -1 && errno != EEXIST) return -1;
+      tmp[i] = '/';
+    }
+  }
+  if (mkdir(tmp, 0755) == -1 && errno != EEXIST) return -1;
+  return 0;
 }

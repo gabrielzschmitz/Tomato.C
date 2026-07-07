@@ -2,6 +2,7 @@
 #define UTIL_H_
 
 #include <ncurses.h>
+#include <stdio.h>
 
 typedef struct AppData AppData;
 
@@ -183,5 +184,27 @@ void ResetInput(AppData* app);
  * @return Dimensions struct with max width and height
  */
 Dimensions GetWidestAndTallestAnimation(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * File I/O
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open a file for writing, refusing to follow symlinks.
+ * Internally uses open() with O_NOFOLLOW, then wraps the fd with fdopen().
+ * @param path File path to open
+ * @param mode File mode ("r", "w", "a", "wb", "ab", etc.)
+ * @return FILE pointer on success, NULL on error (sets errno)
+ */
+FILE* FOpenNoFollow(const char* path, const char* mode);
+
+/**
+ * Create a directory (and parents) if it does not exist.
+ * @param dir Path to the directory to create
+ * @return 0 on success, -1 on failure (sets errno)
+ */
+int EnsureDir(const char* dir);
 
 #endif /* UTIL_H_ */

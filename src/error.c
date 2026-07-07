@@ -35,7 +35,7 @@ void LogError(const char* context, ErrorType error) {
   snprintf(message, sizeof(message), "[%s] %s: %s (Code: %d)", error_level,
            context, error_message, error);
 
-  FILE* logFile = fopen(ERROR_LOG, "a");
+  FILE* logFile = FOpenNoFollow(ERROR_LOG, "a");
   if (logFile != NULL) {
     fprintf(logFile, "%s\n", message);
     fclose(logFile);
@@ -249,7 +249,7 @@ void TestErrorLine(AppData* app, const char* message, ErrorLevel level,
     const char* level_str = getErrorLevelMessage(level);
     char log_msg[256];
     snprintf(log_msg, sizeof(log_msg), "[%s] Test: %s", level_str, message);
-    FILE* logFile = fopen(ERROR_LOG, "a");
+    FILE* logFile = FOpenNoFollow(ERROR_LOG, "a");
     if (logFile != NULL) {
       fprintf(logFile, "%s\n", log_msg);
       fclose(logFile);

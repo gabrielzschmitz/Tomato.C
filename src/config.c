@@ -6,9 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "external/toml-c.h"
+#include "util.h"
+
+/* toml-c.h poisons strdup — restore the system declaration for our use */
+#undef strdup
 
 /** Path to the system-wide TOML configuration file. */
 const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config.toml";
@@ -595,11 +600,40 @@ static void setDefaults(void) {
   g_config.noise.enabled = 1;
   g_config.noise.master_volume = 50;
 
-  g_config.logging.pomodoro_log = "/tmp/tomato_pomodoro.bin";
-  g_config.logging.notes_log = "/tmp/tomato_notes.log";
-  g_config.logging.error_log = "/tmp/tomato_errors.log";
+  /* Resolve XDG-compliant paths for log files and socket */
+  {
+    const char* state_home = getenv("XDG_STATE_HOME");
+    const char* home = getenv("HOME");
+    char state_dir[4096];
+    if (state_home && state_home[0] == '/')
+      snprintf(state_dir, sizeof(state_dir), "%s/tomato", state_home);
+    else if (home)
+      snprintf(state_dir, sizeof(state_dir), "%s/.local/state/tomato", home);
+    else
+      snprintf(state_dir, sizeof(state_dir), "/tmp/tomato");
+
+    const char* runtime_dir = getenv("XDG_RUNTIME_DIR");
+    char socket_dir[4096];
+    if (runtime_dir && runtime_dir[0] == '/')
+      snprintf(socket_dir, sizeof(socket_dir), "%s", runtime_dir);
+    else
+      snprintf(socket_dir, sizeof(socket_dir), "%s", state_dir);
+
+    /* Create both directories (mkdir -p) */
+    EnsureDir(state_dir);
+    EnsureDir(socket_dir);
+
+    char buf[8192];
+    snprintf(buf, sizeof(buf), "%s/pomodoro.bin", state_dir);
+    g_config.logging.pomodoro_log = strdup(buf);
+    snprintf(buf, sizeof(buf), "%s/notes.log", state_dir);
+    g_config.logging.notes_log = strdup(buf);
+    snprintf(buf, sizeof(buf), "%s/errors.log", state_dir);
+    g_config.logging.error_log = strdup(buf);
+    snprintf(buf, sizeof(buf), "%s/tomato_timer.sock", socket_dir);
+    g_config.logging.timer_file = strdup(buf);
+  }
   g_config.logging.timer_log = 1;
-  g_config.logging.timer_file = "/tmp/tomato_timer.sock";
   g_config.logging.work_log = 1;
   g_config.logging.notepad_log = 1;
   g_config.logging.timerlog_icons = 1;
@@ -624,10 +658,18 @@ static void setDefaults(void) {
  */
 void SyncIconsFromIndex(void) {
   switch (g_config.visual.icons_index) {
-    case 0: g_config.visual.icons = "nerd-icons"; break;
-    case 1: g_config.visual.icons = "emojis"; break;
-    case 2: g_config.visual.icons = "ascii"; break;
-    default: g_config.visual.icons = "nerd-icons"; break;
+    case 0:
+      g_config.visual.icons = "nerd-icons";
+      break;
+    case 1:
+      g_config.visual.icons = "emojis";
+      break;
+    case 2:
+      g_config.visual.icons = "ascii";
+      break;
+    default:
+      g_config.visual.icons = "nerd-icons";
+      break;
   }
 }
 
@@ -777,7 +819,9 @@ static void readIconArray(toml_table_t* root, const char* path,
     }
   }
   if (!arr || toml_array_len(arr) < 3) return;
-  for (int i = 0; i < 3; i++) {
+  int len = toml_array_len(arr);
+  if (len > 3) len = 3;
+  for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
     if (v.ok) out[i] = v.u.s;
   }
@@ -979,10 +1023,18 @@ static void loadTomlFile(const char* path) {
   readInt(root, "noise.master_volume", &g_config.noise.master_volume);
 
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
+  if (g_config.logging.pomodoro_log)
+    g_config.logging.pomodoro_log = strdup(g_config.logging.pomodoro_log);
   readString(root, "logging.notes_log", &g_config.logging.notes_log);
+  if (g_config.logging.notes_log)
+    g_config.logging.notes_log = strdup(g_config.logging.notes_log);
   readString(root, "logging.error_log", &g_config.logging.error_log);
+  if (g_config.logging.error_log)
+    g_config.logging.error_log = strdup(g_config.logging.error_log);
   readBool(root, "logging.timer_log", &g_config.logging.timer_log);
   readString(root, "logging.timer_file", &g_config.logging.timer_file);
+  if (g_config.logging.timer_file)
+    g_config.logging.timer_file = strdup(g_config.logging.timer_file);
   readBool(root, "logging.work_log", &g_config.logging.work_log);
   readBool(root, "logging.notepad_log", &g_config.logging.notepad_log);
   readBool(root, "logging.timerlog_icons", &g_config.logging.timerlog_icons);

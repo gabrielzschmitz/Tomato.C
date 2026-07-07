@@ -24,9 +24,9 @@ TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
 ifdef __APPLE__
-CFLAGS = -std=c99 -g -Wall $(GCCFLAGS) $(DFLAGS)
+CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS)
 else
-CFLAGS = -std=c99 -g -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
 endif
 
 # Debug flag
@@ -35,3 +35,10 @@ ifeq ($(DEBUG), 1)
     DFLAGS += -DDEBUG_FLAG
     CFLAGS += -g
 endif
+
+# Security hardening
+HARDEN_CFLAGS  = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE
+HARDEN_LDFLAGS = -pie -Wl,-z,relro,-z,now -z noexecstack
+
+CFLAGS  += $(HARDEN_CFLAGS)
+LDFLAGS += $(HARDEN_LDFLAGS)

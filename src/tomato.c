@@ -23,6 +23,8 @@ static void handleErrorAndExit(const char* context, ErrorType error,
                                AppData* app, pid_t pid);
 
 int main(int argc, char* argv[]) {
+  LoadConfig();
+
   if (argc == 2 && !strcmp("-t", argv[1])) {
     if (TIMER_LOG == 1) return GetTimerLog(TIMER_FILE, true);
     printf("enable timer log to use [-t]\n");

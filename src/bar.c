@@ -130,14 +130,15 @@ static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
   new_widget->id = 0;
 
   if (content != NULL) {
-    new_widget->content_length = strlen(content);
-    new_widget->content = (char*)malloc(new_widget->content_length + 1);
+    size_t clen = strlen(content);
+    new_widget->content_length = clen;
+    new_widget->content = (char*)malloc(clen + 1);
     if (new_widget->content == NULL) {
       free(new_widget);
       return NULL;
     }
-    strncpy(new_widget->content, content, new_widget->content_length);
-    new_widget->content[new_widget->content_length] = '\0';
+    memcpy(new_widget->content, content, clen);
+    new_widget->content[clen] = '\0';
   } else {
     new_widget->content = NULL;
     new_widget->content_length = 0;
@@ -182,28 +183,20 @@ static void renderStatusBarModule(const StatusBarModule* module, int start_y,
                                   int start_x, int max_width) {
   if (module == NULL || module->content == NULL) return;
 
-  if (GetConfigIconType() == NERD_ICONS) {
-    /* Calculate the number of characters that fit within max_width */
+  {
     int byte_count = 0;
-    int char_count = UTF16CharFitWidth(module->content, max_width, &byte_count);
-
-    char buffer[byte_count + 1];
-    strncpy(buffer, module->content, byte_count);
-    buffer[byte_count] = '\0';
-
-    SetColor(module->fg_color, module->bg_color, A_BOLD);
-    if (DEBUG) mvprintw(start_y - 1, start_x, "%d", module->id);
-    mvprintw(start_y, start_x, "%s", buffer);
-  } else {
-    int byte_count = 0;
-    int char_count = UTF16CharFitWidth(module->content, max_width, &byte_count);
-
-    char buffer[byte_count + 1];
-    strncpy(buffer, module->content, byte_count);
-    buffer[byte_count] = '\0';
-
-    SetColor(module->fg_color, module->bg_color, A_BOLD);
-    mvprintw(start_y, start_x, "%s", buffer);
+    UTF16CharFitWidth(module->content, max_width, &byte_count);
+    int alloc = byte_count + 1;
+    char* buffer = (char*)malloc(alloc > 0 ? (size_t)alloc : 1);
+    if (buffer) {
+      strncpy(buffer, module->content, byte_count);
+      buffer[byte_count] = '\0';
+      SetColor(module->fg_color, module->bg_color, A_BOLD);
+      if (DEBUG && GetConfigIconType() == NERD_ICONS)
+        mvprintw(start_y - 1, start_x, "%d", module->id);
+      mvprintw(start_y, start_x, "%s", buffer);
+      free(buffer);
+    }
   }
 }
 

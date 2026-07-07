@@ -84,11 +84,15 @@ enabled       = true  # 0/1
 master_volume = 50     # 0-100
 
 # Logging Settings ------------------------------------------------------------
+# pomodoro_log = $XDG_STATE_HOME/tomato/pomodoro.bin
+#                or $HOME/.local/state/tomato/pomodoro.bin
+# notes_log    = $XDG_STATE_HOME/tomato/notes.log
+#                or $HOME/.local/state/tomato/notes.log
+# error_log    = $XDG_STATE_HOME/tomato/errors.log
+#                or $HOME/.local/state/tomato/errors.log
+# timer_file   = $XDG_RUNTIME_DIR/tomato_timer.sock
+#                or same directory as the state logs
 [logging]
-pomodoro_log  = "/tmp/tomato_pomodoro.bin"
-notes_log     = "/tmp/tomato_notes.log"
-error_log     = "/tmp/tomato_errors.log"
-timer_file    = "/tmp/tomato_timer.sock"
 timer_log     = true     # 0/1 — disable -t flag if off
 timerlog_icons = true    # 0/1 — icons in timer log
 work_log      = true     # 0/1 — disable resume_from_unfinished_session if off

@@ -12,7 +12,11 @@
 #define MA_NO_RUNTIME_LINKING
 #endif
 #define MINIAUDIO_IMPLEMENTATION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include "external/miniaudio.h"
+#pragma GCC diagnostic pop
 
 /* PRIVATE AUDIO FUNCTIONS */
 /* Audio Playback */

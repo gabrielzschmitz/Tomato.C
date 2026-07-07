@@ -3,6 +3,8 @@
 #include <libnotify/notify.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "audio.h"
 #include "config.h"
@@ -49,23 +51,75 @@ static ErrorType sendNotification(const char* title, const char* description) {
   if (title == NULL || description == NULL) return NULL_POINTER_ERROR;
 
 #ifdef __APPLE__
-  char command[512];
-  snprintf(command, sizeof(command),
-           "osascript -e 'display notification \"%s\" with title \"%s\"'",
-           description, title);
-  int result = system(command);
-  if (result != 0) {
+  /* Escape double-quotes for AppleScript string literals */
+  char* esc_desc = NULL;
+  char* esc_title = NULL;
+  size_t desc_len = strlen(description);
+  size_t title_len = strlen(title);
+  esc_desc = malloc(desc_len * 2 + 1);
+  esc_title = malloc(title_len * 2 + 1);
+  if (!esc_desc || !esc_title) {
+    free(esc_desc);
+    free(esc_title);
+    LogError("sendNotification", MALLOC_ERROR);
+    return MALLOC_ERROR;
+  }
+  {
+    size_t j = 0;
+    for (size_t i = 0; i < desc_len; i++) {
+      if (description[i] == '"') esc_desc[j++] = '\\';
+      esc_desc[j++] = description[i];
+    }
+    esc_desc[j] = '\0';
+  }
+  {
+    size_t j = 0;
+    for (size_t i = 0; i < title_len; i++) {
+      if (title[i] == '"') esc_title[j++] = '\\';
+      esc_title[j++] = title[i];
+    }
+    esc_title[j] = '\0';
+  }
+
+  pid_t pid = fork();
+  if (pid == -1) {
+    free(esc_desc);
+    free(esc_title);
+    LogError("sendNotification", FORK_ERROR);
+    return FORK_ERROR;
+  }
+  if (pid == 0) {
+    char script[1024];
+    snprintf(script, sizeof(script),
+             "display notification \"%s\" with title \"%s\"", esc_desc,
+             esc_title);
+    execlp("osascript", "osascript", "-e", script, NULL);
+    _exit(1);
+  }
+  free(esc_desc);
+  free(esc_title);
+
+  int status;
+  if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status) ||
+      WEXITSTATUS(status) != 0) {
     LogError("sendNotification", NOTIFICATION_SEND_ERROR);
     return NOTIFICATION_SEND_ERROR;
   }
 #else
   if (WSL) {
-    char command[512];
-    snprintf(command, sizeof(command),
-             "notify-send -t 5000 -a Tomato.C \"%s\" \"%s\"", title,
-             description);
-    int result = system(command);
-    if (result != 0) {
+    pid_t pid = fork();
+    if (pid == -1) {
+      LogError("sendNotification", FORK_ERROR);
+      return FORK_ERROR;
+    }
+    if (pid == 0) {
+      execlp("notify-send", "notify-send", "-t", "5000", "-a", "Tomato.C",
+             title, description, NULL);
+      _exit(1);
+    }
+    int status;
+    if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0) {
       LogError("sendNotification", NOTIFICATION_SEND_ERROR);
       return NOTIFICATION_SEND_ERROR;
     }

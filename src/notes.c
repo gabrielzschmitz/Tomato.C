@@ -874,16 +874,20 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           }
           for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
             if (wl == 0) {
-              char buffer[max_width + 1];
               int left_len =
                 (input->cursor <= input->len) ? input->cursor : input->len;
-              char left_part[left_len + 1];
-              strncpy(left_part, input->buffer, left_len);
-              left_part[left_len] = '\0';
-              const char* right_part = input->buffer + input->cursor;
-              snprintf(buffer, max_width + 1, "%s%s|%s", prefix, left_part,
-                       right_part);
-              mvprintw(render_y, start_x + indent, "%s", buffer);
+              char* buffer = (char*)malloc((size_t)(max_width + 1));
+              char* left_part = (char*)malloc((size_t)(left_len + 1));
+              if (buffer && left_part) {
+                strncpy(left_part, input->buffer, left_len);
+                left_part[left_len] = '\0';
+                const char* right_part = input->buffer + input->cursor;
+                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix, left_part,
+                         right_part);
+                mvprintw(render_y, start_x + indent, "%s", buffer);
+              }
+              free(buffer);
+              free(left_part);
             } else {
               const char* line =
                 wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "";
@@ -1006,10 +1010,13 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
         SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
 
       if (wl == 0) {
-        char buffer[max_width + 1];
-        snprintf(buffer, max_width + 1, "%s%s", prefix,
-                 wrapped_lines[wl] ? wrapped_lines[wl] : "");
-        mvprintw(render_y, start_x + indent, "%s", buffer);
+        char* buffer = (char*)malloc((size_t)(max_width + 1));
+        if (buffer) {
+          snprintf(buffer, (size_t)(max_width + 1), "%s%s", prefix,
+                   wrapped_lines[wl] ? wrapped_lines[wl] : "");
+          mvprintw(render_y, start_x + indent, "%s", buffer);
+          free(buffer);
+        }
       } else
         mvprintw(render_y, start_x + indent + prefix_len, "%s",
                  wrapped_lines[wl] ? wrapped_lines[wl] : "");
@@ -1072,16 +1079,20 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           }
           for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
             if (wl == 0) {
-              char buffer[max_width + 1];
               int left_len =
                 (input->cursor <= input->len) ? input->cursor : input->len;
-              char left_part[left_len + 1];
-              strncpy(left_part, input->buffer, left_len);
-              left_part[left_len] = '\0';
-              const char* right_part = input->buffer + input->cursor;
-              snprintf(buffer, max_width + 1, "%s%s|%s", prefix, left_part,
-                       right_part);
-              mvprintw(render_y, start_x + indent, "%s", buffer);
+              char* buffer = (char*)malloc((size_t)(max_width + 1));
+              char* left_part = (char*)malloc((size_t)(left_len + 1));
+              if (buffer && left_part) {
+                strncpy(left_part, input->buffer, left_len);
+                left_part[left_len] = '\0';
+                const char* right_part = input->buffer + input->cursor;
+                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix, left_part,
+                         right_part);
+                mvprintw(render_y, start_x + indent, "%s", buffer);
+              }
+              free(buffer);
+              free(left_part);
             } else {
               const char* line =
                 wrapped_input && wrapped_input[wl] ? wrapped_input[wl] : "";
@@ -1093,9 +1104,13 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
             if (wrapped_input[wl]) free(wrapped_input[wl]);
           free(wrapped_input);
         } else {
-          char buffer[max_width + 1];
-          snprintf(buffer, max_width + 1, "%s%s", prefix, INSERT_CURSOR_ICON);
-          mvprintw(render_y, start_x + indent, "%s", buffer);
+          char* buffer = (char*)malloc((size_t)(max_width + 1));
+          if (buffer) {
+            snprintf(buffer, (size_t)(max_width + 1), "%s%s", prefix,
+                     INSERT_CURSOR_ICON);
+            mvprintw(render_y, start_x + indent, "%s", buffer);
+            free(buffer);
+          }
           render_y++;
         }
       } else if ((mode == NORMAL || mode == VISUAL) && input) {
@@ -1227,16 +1242,20 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
         render_y++;
         continue;
       } else if (mode == INSERT && wl == 0 && input_len > 0) {
-        char display_buf[max_width + 1];
         int left_len =
           (input_cursor_pos <= input_len) ? input_cursor_pos : input_len;
-        char left_part[left_len + 1];
-        strncpy(left_part, input_buffer, left_len);
-        left_part[left_len] = '\0';
-        const char* right_part = input_buffer + input_cursor_pos;
-        snprintf(display_buf, max_width + 1, "%s%s|%s", prefix, left_part,
-                 right_part);
-        mvprintw(render_y, start_x, "%s", display_buf);
+        char* display_buf = (char*)malloc((size_t)(max_width + 1));
+        char* left_part = (char*)malloc((size_t)(left_len + 1));
+        if (display_buf && left_part) {
+          strncpy(left_part, input_buffer, left_len);
+          left_part[left_len] = '\0';
+          const char* right_part = input_buffer + input_cursor_pos;
+          snprintf(display_buf, (size_t)(max_width + 1), "%s%s|%s", prefix,
+                   left_part, right_part);
+          mvprintw(render_y, start_x, "%s", display_buf);
+        }
+        free(display_buf);
+        free(left_part);
         render_y++;
         continue;
       } else if (mode == INSERT && wl > 0) {

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -122,6 +123,7 @@ ErrorType CreateTimerLog(const char* path) {
     close(server_sock);
     return SOCKET_BIND_ERROR;
   }
+  chmod(path, 0700); /* restrict socket to owner only */
   if (listen(server_sock, 5) == -1) {
     LogError("CreateTimerLog", SOCKET_LISTEN_ERROR);
     close(server_sock);
@@ -163,6 +165,7 @@ ErrorType CreateTimerLog(const char* path) {
             char* newline = strchr(buffer, '\n');
             if (newline) *newline = '\0';
             strncpy(last_message, buffer, buffer_size - 1);
+            last_message[buffer_size - 1] = '\0';
 
             /* Broadcast last message */
             for (int j = 0; j <= max_sd; j++) {
@@ -331,6 +334,7 @@ ErrorType SetTimerLog(const char* path, const char* log) {
 
   /* Update the last log */
   strncpy(last_log, log, sizeof(last_log) - 1);
+  last_log[sizeof(last_log) - 1] = '\0';
 
   return NO_ERROR;
 }
@@ -403,7 +407,7 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
 ErrorType SaveNotes(const char* path, const NotesData* notes) {
   if (!path || !notes) return NO_ERROR;
 
-  FILE* file = fopen(path, "w");
+  FILE* file = FOpenNoFollow(path, "w");
   if (!file) return FILE_ERROR;
 
   for (int i = 0; i < notes->count; i++) {
@@ -590,12 +594,8 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
 
   char temp_path[256];
   snprintf(temp_path, sizeof(temp_path), "%s.tmp", path);
-  FILE* write_file = fopen(temp_path, "wb");
+  FILE* write_file = FOpenNoFollow(temp_path, "wb");
   if (!write_file) return FILE_ERROR;
-  if (!write_file) {
-    fclose(read_file);
-    return TIMER_LOG_ERROR;
-  }
 
   pomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, read_file) == 1) {
@@ -640,7 +640,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
     .status = (uint8_t)data->status,
     .session_start_time = (uint32_t)data->session_start_time};
 
-  FILE* file = fopen(path, append ? "ab" : "wb");
+  FILE* file = FOpenNoFollow(path, append ? "ab" : "wb");
   if (!file) return TIMER_LOG_ERROR;
 
   if (fwrite(&record, sizeof(record), 1, file) != 1) {

@@ -39,7 +39,6 @@ static ErrorType debugSeedHistory(void);
  */
 ErrorType InitApp(AppData* app) {
   ErrorType status = NO_ERROR;
-  LoadConfig();
   if (!CheckConfigIconType()) return INVALID_CONFIG;
   initPrefsData(&app->prefs);
 
@@ -393,7 +392,7 @@ static ErrorType initPomodoroData(AppData* app) {
  * @return ErrorType NO_ERROR on success, or FILE_ERROR on failure
  */
 static ErrorType debugSeedHistory(void) {
-  FILE* f = fopen(POMODORO_LOG, "wb");
+  FILE* f = FOpenNoFollow(POMODORO_LOG, "wb");
   if (!f) return FILE_ERROR;
 
   /* Days ago (positive) → session count */
