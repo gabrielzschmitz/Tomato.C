@@ -65,6 +65,8 @@ static NoteState charToNoteState(char c);
 /* Pomodoro */
 static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
                                                        int maxRecent);
+static bool histIsSameDay(time_t ts, int year, int month, int day);
+static bool histIsSameMonth(time_t ts, int year, int month);
 /* Socket */
 static void socketRetryDelay(void) {
   struct timespec ts = {0, SOCKET_RETRY_DELAY_NS};
@@ -719,7 +721,10 @@ void GetPomodoroHistory(const char* path) {
 
   /* Compute 5-month window ending with current month */
   int firstYear = curYear, firstMonth = curMonth - 4;
-  while (firstMonth < 1) { firstMonth += 12; firstYear--; }
+  while (firstMonth < 1) {
+    firstMonth += 12;
+    firstYear--;
+  }
 
   /* Graph layout arrays */
   int monthWeeks[5], monthStartWeek[5], monthDays[5], monthStartDow[5];
@@ -734,7 +739,10 @@ void GetPomodoroHistory(const char* path) {
     monthStartWeek[i] = totalWeeks;
     totalWeeks += monthWeeks[i];
     HistDailyCounts(path, y, m, dailyCounts[i]);
-    if (++m > 12) { m = 1; y++; }
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
   }
 
   /* Streaks for today */
@@ -745,8 +753,7 @@ void GetPomodoroHistory(const char* path) {
   int cellW = 3;
   int monthGap = 3;
   int gapBefore[5] = {0};
-  for (int i = 1; i < 5; i++)
-    gapBefore[i] = gapBefore[i-1] + monthGap;
+  for (int i = 1; i < 5; i++) gapBefore[i] = gapBefore[i - 1] + monthGap;
   int gridW = totalWeeks * cellW + gapBefore[4];
   int innerW = 4 + gridW;
   int boxW = innerW + 2;
@@ -767,8 +774,10 @@ void GetPomodoroHistory(const char* path) {
     printf("│%*sPomodoro History%*s│\n", pad, "", innerW - tl - pad, "");
   }
 
-  /* Blank separator */
-  printf("│%*s│\n", innerW, "");
+  /* Separator */
+  printf("├");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
+  printf("┤\n");
 
   /* Month headers row */
   {
@@ -781,8 +790,7 @@ void GetPomodoroHistory(const char* path) {
         int nl = (int)strlen(name);
         int bw = monthWeeks[i] * cellW;
         int p = 4 + monthStartWeek[i] * cellW + gapBefore[i] + (bw - nl) / 2;
-        if (p >= 0 && p + nl <= innerW)
-          memcpy(row + p, name, nl);
+        if (p >= 0 && p + nl <= innerW) memcpy(row + p, name, nl);
       }
       if (++em > 12) em = 1;
     }
@@ -796,7 +804,8 @@ void GetPomodoroHistory(const char* path) {
     for (int wc = 0; wc < totalWeeks; wc++) {
       int found = 0;
       for (int mi = 0; mi < 5; mi++) {
-        if (wc >= monthStartWeek[mi] && wc < monthStartWeek[mi] + monthWeeks[mi]) {
+        if (wc >= monthStartWeek[mi] &&
+            wc < monthStartWeek[mi] + monthWeeks[mi]) {
           int dn = (wc - monthStartWeek[mi]) * 7 + dow - monthStartDow[mi] + 1;
           if (dn >= 1 && dn <= monthDays[mi]) {
             int level = HistLevelForCount(dailyCounts[mi][dn - 1]);
@@ -830,7 +839,8 @@ void GetPomodoroHistory(const char* path) {
     snprintf(c1s, sizeof(c1s), "Total sessions: %d", stats.totalSessions);
     snprintf(c2s, sizeof(c2s), "Completed: %d", stats.completedSessions);
     if (stats.workHours > 0)
-      snprintf(c3s, sizeof(c3s), "Work: %dh %dm", stats.workHours, stats.workMins);
+      snprintf(c3s, sizeof(c3s), "Work: %dh %dm", stats.workHours,
+               stats.workMins);
     else
       snprintf(c3s, sizeof(c3s), "Work: %d min", stats.totalWorkMinutes);
 
@@ -851,6 +861,155 @@ void GetPomodoroHistory(const char* path) {
   }
 
   /* Bottom border */
+  printf("└");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
+  printf("┘\n");
+}
+
+/**
+ * Print pomodoro history for the current day, matching SLIDE_TYPE_HISTORY_DAY.
+ * Stats calculation matches createPomodoroHistoryStats (overview).
+ * @param path Binary log path (POMODORO_LOG)
+ */
+void GetPomodoroHistoryDay(const char* path) {
+  time_t now = time(NULL);
+  struct tm* lt = localtime(&now);
+  int year = lt->tm_year + 1900;
+  int month = lt->tm_mon + 1;
+  int day = lt->tm_mday;
+
+  /* Read all records for today into array */
+  pomodoroLogRecord records[200];
+  int count = 0;
+  FILE* file = fopen(path, "rb");
+  if (!file) {
+    printf("No sessions found for today (%04d-%02d-%02d).\n", year, month, day);
+    return;
+  }
+  pomodoroLogRecord rec;
+  while (fread(&rec, sizeof(rec), 1, file) == 1 && count < 200) {
+    if (rec.session_index == 0) continue;
+    time_t ts = (time_t)rec.session_start_time;
+    if (!histIsSameDay(ts, year, month, day)) continue;
+    records[count++] = rec;
+  }
+  fclose(file);
+  if (count == 0) {
+    printf("No sessions found for today (%04d-%02d-%02d).\n", year, month, day);
+    return;
+  }
+
+  /* Build unique session list (last record per session_index wins) */
+  int uIdx[100], uStatus[100], uCycles[100], uWork[100];
+  time_t uStart[100];
+  int uCount = 0;
+  for (int i = 0; i < count && uCount < 100; i++) {
+    int idx = records[i].session_index;
+    int found = -1;
+    for (int j = 0; j < uCount; j++) {
+      if (uIdx[j] == idx) {
+        found = j;
+        break;
+      }
+    }
+    if (found < 0) {
+      found = uCount++;
+      uIdx[found] = idx;
+    }
+    uStart[found] = (time_t)records[i].session_start_time;
+    uStatus[found] = records[i].status;
+    uCycles[found] = records[i].total_cycles;
+    uWork[found] = records[i].work_time;
+  }
+
+  /* Compute stats from unique sessions */
+  int totalSessions = uCount;
+  int completedSessions = 0;
+  int totalWorkSeconds = 0;
+  for (int i = 0; i < uCount; i++) {
+    if (uStatus[i] == 0) {
+      completedSessions++;
+      totalWorkSeconds += uCycles[i] * uWork[i] * 60;
+    }
+  }
+  int totalWorkMinutes = totalWorkSeconds / 60;
+  int workHours = totalWorkMinutes / 60;
+  int workMins = totalWorkMinutes % 60;
+  int pct = (totalSessions > 0) ? (completedSessions * 100 / totalSessions) : 0;
+
+  char sSessions[64], sFocus[64], sCompleted[64];
+  snprintf(sSessions, sizeof(sSessions), "Sessions: %d", totalSessions);
+  if (workHours > 0)
+    snprintf(sFocus, sizeof(sFocus), "Focus Time: %dh %dm", workHours,
+             workMins);
+  else
+    snprintf(sFocus, sizeof(sFocus), "Focus Time: %d min", totalWorkMinutes);
+  snprintf(sCompleted, sizeof(sCompleted), "Completed: %d%%", pct);
+
+  /* Determine index column width and build table rows */
+  int idxW = 1;
+  for (int i = 0; i < uCount; i++) {
+    int n = snprintf(NULL, 0, "%d", uIdx[i]);
+    if (n > idxW) idxW = n;
+  }
+  char rows[100][128];
+  int maxRow = 0;
+  for (int i = 0; i < uCount; i++) {
+    time_t endT = (time_t)uStart[i];
+    int durMin = 0;
+    if (uStatus[i] == 0) {
+      durMin = uCycles[i] * uWork[i];
+      endT += durMin * 60;
+    }
+    struct tm* stm = localtime(&uStart[i]);
+    struct tm* etm = localtime(&endT);
+    char sts[6], ets[6];
+    strftime(sts, 6, "%H:%M", stm);
+    strftime(ets, 6, "%H:%M", etm);
+    snprintf(rows[i], sizeof(rows[i]), "#%-*d     %s   %s   %d min", idxW,
+             uIdx[i], sts, ets, durMin);
+    int len = (int)strlen(rows[i]);
+    if (len > maxRow) maxRow = len;
+  }
+
+  /* Box width */
+  static const char* weeks[] = {"Sun", "Mon", "Tue", "Wed",
+                                "Thu", "Fri", "Sat"};
+  char title[64];
+  snprintf(title, sizeof(title), "%s %04d-%02d-%02d", weeks[lt->tm_wday], year,
+           month, day);
+  int sl1 = (int)strlen(sSessions);
+  int sl2 = (int)strlen(sFocus);
+  int sl3 = (int)strlen(sCompleted);
+  int statW = sl1 > sl2 ? sl1 : sl2;
+  if (sl3 > statW) statW = sl3;
+  int hdrW = (int)strlen("#      Start   End     Duration");
+  if (hdrW > maxRow) maxRow = hdrW;
+  int innerW = statW > maxRow ? statW : maxRow;
+  {
+    int tl = (int)strlen(title) + 2;
+    if (tl > innerW) innerW = tl;
+  }
+  innerW += 4;
+  int boxW = innerW + 2;
+
+  printf("┌");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
+  printf("┐\n");
+  {
+    int tl = (int)strlen(title);
+    int pad = (innerW - tl) / 2;
+    printf("│%*s%s%*s│\n", pad, "", title, innerW - tl - pad, "");
+  }
+  printf("├");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
+  printf("┤\n");
+  printf("│ %-*s│\n", innerW - 1, sSessions);
+  printf("│ %-*s│\n", innerW - 1, sFocus);
+  printf("│ %-*s│\n", innerW - 1, sCompleted);
+  printf("│%*s│\n", innerW, "");
+  printf("│ %-*s│\n", innerW - 1, "#      Start   End     Duration");
+  for (int i = 0; i < uCount; i++) printf("│ %-*s│\n", innerW - 1, rows[i]);
   printf("└");
   for (int i = 0; i < boxW - 2; i++) printf("─");
   printf("┘\n");

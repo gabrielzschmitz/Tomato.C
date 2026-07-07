@@ -138,6 +138,13 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data);
 void GetPomodoroHistory(const char* path);
 
 /**
+ * Print pomodoro history for the current day.
+ * Displays a detailed session list similar to SLIDE_TYPE_HISTORY_DAY.
+ * @param path File path for the pomodoro log
+ */
+void GetPomodoroHistoryDay(const char* path);
+
+/**
  * ---------------------------------------------------------------------------
  * History
  * ---------------------------------------------------------------------------

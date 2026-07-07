@@ -72,7 +72,7 @@ extensible, terminal-based Pomodoro timer written in C.
 ### 👋 User Interface
 - [X] Runtime preferences system and page
 - [X] Pause emoji turns into play emoji when session paused
-- [ ] Make CLI history more like runtime history
+- [X] Make CLI history more like runtime history
 - [ ] Add help menu
 
 ---
