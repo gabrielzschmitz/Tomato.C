@@ -132,6 +132,7 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data);
 
 /**
  * Print pomodoro history statistics from the log file.
+ * Displays a contribution graph with monthly activity, totals, and streaks.
  * @param path File path for the pomodoro log
  */
 void GetPomodoroHistory(const char* path);

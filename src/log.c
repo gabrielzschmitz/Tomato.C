@@ -63,11 +63,6 @@ typedef struct {
 /* Notes */
 static NoteState charToNoteState(char c);
 /* Pomodoro */
-static void printRow(int w1, int w2, const char* label, const char* value);
-static int strwidth(const char* s);
-static void printLine(int w1, int w2, int is_top);
-static void printLineBottom(int w1, int w2);
-static void formatTime(char* buf, int size, int hours, int minutes);
 static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
                                                        int maxRecent);
 /* Socket */
@@ -703,7 +698,7 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
 
 /**
  * Print pomodoro history statistics from the log file.
- * Displays totals, work/session times, and recent session details.
+ * Displays a contribution graph with monthly activity, totals, and streaks.
  * @param path File path for the pomodoro log
  */
 void GetPomodoroHistory(const char* path) {
@@ -715,182 +710,150 @@ void GetPomodoroHistory(const char* path) {
     return;
   }
 
-  int maxLabelW = 16;
-  int maxValueW = 7;
+  /* Current date */
+  time_t now = time(NULL);
+  struct tm* lt = localtime(&now);
+  int curYear = lt->tm_year + 1900;
+  int curMonth = lt->tm_mon + 1;
+  int curDay = lt->tm_mday;
 
-  if (stats.totalSessions > 0 && maxValueW < 1) maxValueW = 1;
-  if (stats.completedSessions > 0 && maxValueW < 1) maxValueW = 1;
-  char tmp[64];
-  snprintf(tmp, sizeof(tmp), "%d min", stats.totalWorkMinutes);
-  int len = strwidth(tmp);
-  if (len > maxValueW) maxValueW = len;
-  formatTime(tmp, sizeof(tmp), stats.workHours, stats.workMins);
-  len = strwidth(tmp);
-  if (len > maxValueW) maxValueW = len;
-  snprintf(tmp, sizeof(tmp), "%d min", stats.totalSessionMinutes);
-  len = strwidth(tmp);
-  if (len > maxValueW) maxValueW = len;
-  formatTime(tmp, sizeof(tmp), stats.sessionHours, stats.sessionMins);
-  len = strwidth(tmp);
-  if (len > maxValueW) maxValueW = len;
+  /* Compute 5-month window ending with current month */
+  int firstYear = curYear, firstMonth = curMonth - 4;
+  while (firstMonth < 1) { firstMonth += 12; firstYear--; }
 
-  if (stats.numRecent > 0) {
-    char tmpbuf[64];
-    for (int i = 0; i < stats.numRecent; i++) {
-      recentSessionInfo* rs = &stats.recentSessions[i];
-      int len = snprintf(tmpbuf, sizeof(tmpbuf), "#%d", rs->sessionIndex);
-      if (rs->status == 0)
-        len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len, " %d/%d done 99m",
-                        rs->cycle, rs->totalCycles);
-      else
-        len += snprintf(tmpbuf + len, sizeof(tmpbuf) - len,
-                        " %d/%d cycle 99m left", rs->cycle, rs->totalCycles);
-      if (len > maxLabelW) maxLabelW = len;
-    }
+  /* Graph layout arrays */
+  int monthWeeks[5], monthStartWeek[5], monthDays[5], monthStartDow[5];
+  int dailyCounts[5][31];
+  int totalWeeks = 0;
+
+  int y = firstYear, m = firstMonth;
+  for (int i = 0; i < 5; i++) {
+    monthDays[i] = HistDaysInMonth(y, m);
+    monthStartDow[i] = HistDayOfWeek(y, m, 1);
+    monthWeeks[i] = (monthStartDow[i] + monthDays[i] + 6) / 7;
+    monthStartWeek[i] = totalWeeks;
+    totalWeeks += monthWeeks[i];
+    HistDailyCounts(path, y, m, dailyCounts[i]);
+    if (++m > 12) { m = 1; y++; }
   }
 
-  int W1 = maxLabelW;
-  int W2 = maxValueW;
-  char buf[64];
+  /* Streaks for today */
+  int currentStreak = 0, longestStreak = 0;
+  HistStreak(path, curYear, curMonth, curDay, &currentStreak, &longestStreak);
 
-  printLine(W1, W2, 1);
-  printRow(W1, W2, "POMODORO HISTORY", "");
-  printLine(W1, W2, 0);
+  /* Layout dimensions */
+  int cellW = 3;
+  int monthGap = 3;
+  int gapBefore[5] = {0};
+  for (int i = 1; i < 5; i++)
+    gapBefore[i] = gapBefore[i-1] + monthGap;
+  int gridW = totalWeeks * cellW + gapBefore[4];
+  int innerW = 4 + gridW;
+  int boxW = innerW + 2;
 
-  snprintf(buf, sizeof(buf), "%d", stats.totalSessions);
-  printRow(W1, W2, "Total sessions", buf);
+  static const char* dowNames[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+  static const char* monNames[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-  snprintf(buf, sizeof(buf), "%d", stats.completedSessions);
-  printRow(W1, W2, "Completed sessions", buf);
+  /* Top border */
+  printf("┌");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
+  printf("┐\n");
 
-  snprintf(buf, sizeof(buf), "%d min", stats.totalWorkMinutes);
-  printRow(W1, W2, "Total work time", buf);
+  /* Title */
+  {
+    int tl = (int)strlen("Pomodoro History");
+    int pad = (innerW - tl) / 2;
+    printf("│%*sPomodoro History%*s│\n", pad, "", innerW - tl - pad, "");
+  }
 
-  formatTime(buf, sizeof(buf), stats.workHours, stats.workMins);
-  printRow(W1, W2, "", buf);
+  /* Blank separator */
+  printf("│%*s│\n", innerW, "");
 
-  snprintf(buf, sizeof(buf), "%d min", stats.totalSessionMinutes);
-  printRow(W1, W2, "Total session time", buf);
-
-  formatTime(buf, sizeof(buf), stats.sessionHours, stats.sessionMins);
-  printRow(W1, W2, "", buf);
-
-  if (stats.numRecent > 0) {
-    printLine(W1, W2, 0);
-    snprintf(buf, sizeof(buf), "Last %d session%s", stats.numRecent,
-             stats.numRecent > 1 ? "s" : "");
-    printRow(W1, W2, buf, "");
-    for (int i = 0; i < stats.numRecent; i++) {
-      recentSessionInfo* rs = &stats.recentSessions[i];
-      int mins = rs->totalElapsed / 60;
-      if (rs->status == 0) {
-        snprintf(buf, sizeof(buf), "#%d %d/%d done %dm", rs->sessionIndex,
-                 rs->cycle, rs->totalCycles, rs->sessionMins);
-      } else {
-        int remaining = 0;
-        if (rs->step == WORK_TIME) {
-          int currentWorkElapsed = rs->totalElapsed % (rs->workTime * 60);
-          remaining += (rs->workTime * 60) - currentWorkElapsed;
-          for (int c = rs->cycle; c < rs->totalCycles; c++)
-            remaining += rs->shortPause * 60;
-          if (rs->totalCycles > 1) remaining += rs->longPause * 60;
-          for (int c = rs->cycle + 1; c <= rs->totalCycles; c++)
-            remaining += rs->workTime * 60;
-        } else if (rs->step == SHORT_PAUSE) {
-          int currentPauseElapsed = rs->totalElapsed % (rs->shortPause * 60);
-          remaining += (rs->shortPause * 60) - currentPauseElapsed;
-          for (int c = rs->cycle + 1; c <= rs->totalCycles; c++)
-            remaining += rs->workTime * 60;
-          for (int c = rs->cycle + 1; c < rs->totalCycles; c++)
-            remaining += rs->shortPause * 60;
-          if (rs->totalCycles > 1) remaining += rs->longPause * 60;
-        } else {
-          int currentPauseElapsed = rs->totalElapsed % (rs->longPause * 60);
-          remaining += (rs->longPause * 60) - currentPauseElapsed;
-        }
-        if (remaining > 0) {
-          int remMins = remaining / 60;
-          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm left",
-                   rs->sessionIndex, rs->cycle, rs->totalCycles, remMins);
-        } else
-          snprintf(buf, sizeof(buf), "#%d %d/%d cycle %dm", rs->sessionIndex,
-                   rs->cycle, rs->totalCycles, mins);
+  /* Month headers row */
+  {
+    char row[4096];
+    memset(row, ' ', innerW);
+    int em = firstMonth;
+    for (int i = 0; i < 5; i++) {
+      if (monthWeeks[i] >= 2) {
+        const char* name = monNames[em - 1];
+        int nl = (int)strlen(name);
+        int bw = monthWeeks[i] * cellW;
+        int p = 4 + monthStartWeek[i] * cellW + gapBefore[i] + (bw - nl) / 2;
+        if (p >= 0 && p + nl <= innerW)
+          memcpy(row + p, name, nl);
       }
-      printRow(W1, W2, buf, "");
+      if (++em > 12) em = 1;
     }
+    row[innerW] = '\0';
+    printf("│%s│\n", row);
   }
 
-  printLineBottom(W1, W2);
-}
-
-/**
- * Compute the display width of a UTF-8 string.
- * Multi-byte continuation bytes (0x80-0xBF) are skipped.
- * @param s Input string
- * @return Display column width
- */
-static int strwidth(const char* s) {
-  int w = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 128 || c >= 192) w++;
-    s++;
+  /* Grid rows: 7 days of week */
+  for (int dow = 0; dow < 7; dow++) {
+    printf("│ %s ", dowNames[dow]);
+    for (int wc = 0; wc < totalWeeks; wc++) {
+      int found = 0;
+      for (int mi = 0; mi < 5; mi++) {
+        if (wc >= monthStartWeek[mi] && wc < monthStartWeek[mi] + monthWeeks[mi]) {
+          int dn = (wc - monthStartWeek[mi]) * 7 + dow - monthStartDow[mi] + 1;
+          if (dn >= 1 && dn <= monthDays[mi]) {
+            int level = HistLevelForCount(dailyCounts[mi][dn - 1]);
+            printf("%s ", HISTORY_ICONS[level]);
+          } else {
+            printf("   ");
+          }
+          found = 1;
+          break;
+        }
+      }
+      if (!found) printf("   ");
+      for (int mi = 0; mi < 4; mi++) {
+        if (wc + 1 == monthStartWeek[mi] + monthWeeks[mi]) {
+          for (int g = 0; g < monthGap; g++) putchar(' ');
+          break;
+        }
+      }
+    }
+    printf("│\n");
   }
-  return w;
-}
 
-/**
- * Print a horizontal table line with box-drawing characters.
- * @param w1     Width of the first column
- * @param w2     Width of the second column
- * @param is_top Non-zero for top border (┌┬┐), zero for middle border (├┼┤)
- */
-static void printLine(int w1, int w2, int is_top) {
-  const char* tl = is_top ? "┌" : "├";
-  const char* tr = is_top ? "┐" : "┤";
-  const char* ml = is_top ? "┬" : "┼";
-  const char* mr = "┤";
-  const char* hz = "─";
+  /* Blank separator */
+  printf("│%*s│\n", innerW, "");
 
-  printf("%s", tl);
-  for (int i = 0; i < w1 + 2; i++) printf("%s", hz);
-  printf("%s", ml);
-  for (int i = 0; i < w2 + 2; i++) printf("%s", hz);
-  printf("%s\n", tr);
-}
+  /* Summary and streak lines with column-aligned layout */
+  {
+    char c1s[64], c2s[64], c3s[64];
+    char c1c[64], c2c[64];
 
-/**
- * Print the bottom border of a table with box-drawing characters.
- * @param w1 Width of the first column
- * @param w2 Width of the second column
- */
-static void printLineBottom(int w1, int w2) {
+    snprintf(c1s, sizeof(c1s), "Total sessions: %d", stats.totalSessions);
+    snprintf(c2s, sizeof(c2s), "Completed: %d", stats.completedSessions);
+    if (stats.workHours > 0)
+      snprintf(c3s, sizeof(c3s), "Work: %dh %dm", stats.workHours, stats.workMins);
+    else
+      snprintf(c3s, sizeof(c3s), "Work: %d min", stats.totalWorkMinutes);
+
+    snprintf(c1c, sizeof(c1c), "Current streak: %dd", currentStreak);
+    snprintf(c2c, sizeof(c2c), "Longest streak: %dd", longestStreak);
+
+    int l1a = (int)strlen(c1s), l1b = (int)strlen(c1c);
+    int l2a = (int)strlen(c2s), l2b = (int)strlen(c2c);
+    int cw1 = (l1a > l1b ? l1a : l1b) + 3;
+    int cw2 = (l2a > l2b ? l2a : l2b) + 3;
+
+    char line[512];
+    snprintf(line, sizeof(line), "%-*s%-*s%s", cw1, c1s, cw2, c2s, c3s);
+    printf("│ %-*s│\n", innerW - 1, line);
+
+    snprintf(line, sizeof(line), "%-*s%-*s", cw1, c1c, cw2, c2c);
+    printf("│ %-*s│\n", innerW - 1, line);
+  }
+
+  /* Bottom border */
   printf("└");
-  for (int i = 0; i < w1 + 2; i++) printf("─");
-  printf("┴");
-  for (int i = 0; i < w2 + 2; i++) printf("─");
+  for (int i = 0; i < boxW - 2; i++) printf("─");
   printf("┘\n");
-}
-
-/**
- * Print a table row with two columns enclosed in box-drawing characters.
- * @param w1    Width of the first column
- * @param w2    Width of the second column
- * @param label Left-column content
- * @param value Right-column content
- */
-static void printRow(int w1, int w2, const char* label, const char* value) {
-  int label_w = strwidth(label);
-  int value_w = strwidth(value);
-  printf("│ %s%*s │ %s%*s │\n", label, w1 - label_w, "", value, w2 - value_w,
-         "");
-}
-
-static void formatTime(char* buf, int size, int hours, int minutes) {
-  if (hours > 0)
-    snprintf(buf, size, "%dh %2dm", hours, minutes);
-  else
-    snprintf(buf, size, "%d min", minutes);
 }
 
 /**
