@@ -90,6 +90,7 @@ void SetError(AppData* app, const char* context, ErrorType type) {
  */
 void ClearErrors(void) {
   error_count = 0;
+  app_frozen = false;
   memset(error_stack, 0, sizeof(error_stack));
 }
 
