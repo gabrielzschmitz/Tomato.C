@@ -97,6 +97,10 @@ struct AppData {
 
   PrefsState prefs; /**< Preferences data & sub-dialog state */
 
+  struct FloatingDialog* saved_popup; /**< Saved popup for help-menu restore */
+  int help_scroll_row;    /**< Scroll offset for help content rows */
+  int help_context_scene; /**< Scene bitmask for context-aware help */
+
   int mouse_x;      /**< Last mouse x coordinate */
   int mouse_y;      /**< Last mouse y coordinate */
   int mouse_bstate; /**< Last mouse button state */

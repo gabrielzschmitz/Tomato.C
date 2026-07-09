@@ -349,6 +349,28 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       }
       return;
     }
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_HELP) {
+      FloatingDialog* d = app->popup_dialog;
+      if (!d->slides || !d->slides[0]) return;
+      SlideDef* def = d->slides[0];
+      if (event->bstate & REPORT_MOUSE_POSITION) def->update(app, def);
+      if (event->bstate & BUTTON4_PRESSED)
+        HelpScrollUp(app);
+      else if (event->bstate & BUTTON5_PRESSED)
+        HelpScrollDown(app);
+      if (is_click) {
+        for (int i = 0; i < app->click_region_count; i++) {
+          ClickRegion* r = &app->click_regions[i];
+          if (r->type != REGION_SLIDE_NAV) continue;
+          if (event->x >= r->pos.x && event->x < r->pos.x + r->size.width &&
+              event->y >= r->pos.y && event->y < r->pos.y + r->size.height) {
+            if (r->action) r->action(app);
+            break;
+          }
+        }
+      }
+      return;
+    }
     if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
         app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
       FloatingDialog* d = app->popup_dialog;
@@ -663,6 +685,12 @@ ErrorType HandleVisualMode(AppData* app, int key) {
 bool HandlePopupInput(AppData* app, int key) {
   if (app->popup_dialog == NULL) return 0;
 
+  /* Universal help key — always opens help regardless of keybindings */
+  if (key == '?' || key == KEY_F(1)) {
+    OpenHelp(app);
+    return true;
+  }
+
   /* White noise dialog — dispatch via configurable key bindings */
   if (app->popup_dialog->slide_type == SLIDE_TYPE_NOISE) {
     size_t numKeyFunctions = g_config.num_keys;
@@ -793,6 +821,29 @@ bool HandlePopupInput(AppData* app, int key) {
       }
       return true; /* consume all keys while a history popup is active */
     }
+  }
+
+  /* Help dialog — dispatch via configurable key bindings */
+  if (app->popup_dialog->slide_type == SLIDE_TYPE_HELP) {
+    size_t nk = g_config.num_keys;
+    /* Pass 1 — SCENE_HELP-specific only (not bare ALL_SCENES) */
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & SCENE_HELP) &&
+          keys[i].scene_types != ALL_SCENES) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    /* Pass 2 — ALL_SCENES fallback */
+    for (size_t i = 0; i < nk; i++) {
+      if (keys[i].key == key && (keys[i].modes & DEFAULT) &&
+          (keys[i].scene_types & ALL_SCENES)) {
+        keys[i].action(app);
+        return true;
+      }
+    }
+    return true; /* consume all keys while help is active */
   }
 
   /* When popup is active, only use keys bound to ALL_SCENES to avoid
@@ -1583,9 +1634,16 @@ void ExecuteMenuAction(AppData* app) {
  * @param app Pointer to the application data
  */
 void ClosePopup(AppData* app) {
-  if (app->popup_dialog != NULL) FreeFloatingDialog(app->popup_dialog);
-
-  app->popup_dialog = NULL;
+  if (app->popup_dialog != NULL) {
+    if (app->popup_dialog->slide_type == SLIDE_TYPE_HELP) {
+      FreeFloatingDialog(app->popup_dialog);
+      app->popup_dialog = app->saved_popup;
+      app->saved_popup = NULL;
+    } else {
+      FreeFloatingDialog(app->popup_dialog);
+      app->popup_dialog = NULL;
+    }
+  }
   app->user_input = -1;
   app->last_input = -1;
 }
@@ -2503,6 +2561,54 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
 void OpenPreferencesMenu(AppData* app) {
   if (app->popup_dialog) return;
   app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+void OpenHelp(AppData* app) {
+  if (app->popup_dialog && app->popup_dialog->slide_type == SLIDE_TYPE_HELP)
+    return;
+  int scene;
+  if (app->popup_dialog) {
+    switch (app->popup_dialog->slide_type) {
+      case SLIDE_TYPE_PREFERENCES:
+      case SLIDE_TYPE_PREFS_STEPPER:
+      case SLIDE_TYPE_PREFS_SELECT:
+        scene = SCENE_PREFERENCES; break;
+      case SLIDE_TYPE_NOISE:
+        scene = SCENE_NOISE; break;
+      case SLIDE_TYPE_CONTINUE:
+        scene = SCENE_CONTINUE; break;
+      case SLIDE_TYPE_HISTORY_OVERVIEW:
+        scene = SCENE_HISTORY_OVERVIEW; break;
+      case SLIDE_TYPE_HISTORY_DAY:
+        scene = SCENE_HISTORY_DAY; break;
+      case SLIDE_TYPE_HISTORY_STATS:
+        scene = SCENE_HISTORY_STATS; break;
+      default:
+        scene = 1 << app->screen->panels[app->screen->current_panel].scene_history->present;
+    }
+  } else {
+    scene = 1 << app->screen->panels[app->screen->current_panel].scene_history->present;
+  }
+  app->saved_popup = app->popup_dialog;
+  app->help_context_scene = scene;
+  app->help_scroll_row = 0;
+  app->popup_dialog = CreateHelpDialog(app);
+}
+
+void OpenHelpMenu(AppData* app) {
+  if (app->popup_dialog) return;
+  app->saved_popup = NULL;
+  app->help_context_scene = ALL_SCENES;
+  app->help_scroll_row = 0;
+  app->popup_dialog = CreateHelpDialog(app);
+}
+
+void HelpScrollUp(AppData* app) {
+  if (app->help_scroll_row > 0) app->help_scroll_row--;
+}
+
+void HelpScrollDown(AppData* app) {
+  app->help_scroll_row++;
 }
 
 /**

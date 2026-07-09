@@ -100,8 +100,10 @@ struct InputState {
 struct KeyFunction {
   int key;                      /**< The key code */
   void (*action)(AppData* app); /**< Function to execute when key's pressed */
-  int modes;       /**< Bitmask of input modes where this key is active */
-  int scene_types; /**< Bitmask of scene types where this key is active */
+  int modes;         /**< Bitmask of input modes where this key is active */
+  int scene_types;   /**< Bitmask of scene types where this key is active */
+  const char* group; /**< Help section name for grouping, e.g. "General" */
+  const char* desc;  /**< Human-readable description for help display */
 };
 
 /**
@@ -729,6 +731,32 @@ void HistoryScrollDown(AppData* app);
  * @param app Application state
  */
 void OpenPreferencesMenu(AppData* app);
+
+/**
+ * Open the help popup filtered by the current context scene.
+ * Saves the active popup (if any) before opening help, and restores it on close.
+ * @param app Application state
+ */
+void OpenHelp(AppData* app);
+
+/**
+ * Open the help popup showing ALL keybindings (full reference).
+ * Called from the main menu "help menu" entry.
+ * @param app Application state
+ */
+void OpenHelpMenu(AppData* app);
+
+/**
+ * Scroll the help content up (reveal earlier sections).
+ * @param app Application state
+ */
+void HelpScrollUp(AppData* app);
+
+/**
+ * Scroll the help content down (reveal later sections).
+ * @param app Application state
+ */
+void HelpScrollDown(AppData* app);
 
 /**
  * Select the previous setting in the preferences dialog.

@@ -47,7 +47,6 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Add and remove subtasks (max depth 1)
 - [X] Move notes up and down
 - [X] Undo and redo edits
-- [ ] Add a page system
 
 ### 🛠️ User Preferences
 - [X] Save/load current session state
@@ -60,6 +59,10 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Welcome screen
 - [X] Continue screen
 - [X] ESC/q close current existing popup instead of closing app.
+- [X] Runtime preferences system and page
+- [X] Pause emoji turns into play emoji when session paused
+- [X] Make CLI history more like runtime history
+- [X] Add help menu
 
 ### 🧩 Extra Features
 - [X] White noise playback for focus sessions
@@ -69,29 +72,22 @@ extensible, terminal-based Pomodoro timer written in C.
 
 ## 🚧 In Progress
 
-### 👋 User Interface
-- [X] Runtime preferences system and page
-- [X] Pause emoji turns into play emoji when session paused
-- [X] Make CLI history more like runtime history
-- [ ] Add help menu
-
----
-
-## 🗓️ Planned
-
----
-
-## 🧪 Testing
-
+### 🧪 Testing
 - [ ] Unit tests for all core modules
 - [ ] Integration testing
-- [ ] User testing and feedback collection
 
 ---
 
-## 📚 Documentation
-
+### 📚 Documentation
 - [X] Inline documentation for all modules
 - [X] Documentation to HTML pages
 - [ ] Updated README with install, usage, and config details
 - [ ] Changelog for version tracking
+
+## 🗓️ Planned
+
+### 📝 Simple note taking with vim-motions
+- [ ] Add a page system
+
+### 🧪 Testing
+- [ ] User testing and feedback collection

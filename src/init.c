@@ -63,6 +63,9 @@ ErrorType InitApp(AppData* app) {
   app->screen->panels[1].mode = DEFAULT;
   app->is_paused = false;
   app->popup_dialog = NULL;
+  app->saved_popup = NULL;
+  app->help_scroll_row = 0;
+  app->help_context_scene = 0;
 
   app->notes = CreateNotesData();
   if (app->notes == NULL) return MALLOC_ERROR;
@@ -237,7 +240,7 @@ static ErrorType initMenus(AppData* app) {
   const int n_mainmenu = 5;
   MenuItem main_menu_items[5] = {{"start", StartPomodoro},
                                  {"preferences", OpenPreferencesMenu},
-                                 {"help menu", NULL},
+                                  {"help menu", OpenHelpMenu},
                                  {"history", OpenHistoryPopup},
                                  {"leave", ForcefullyQuitApp}};
 

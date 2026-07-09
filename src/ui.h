@@ -97,6 +97,7 @@ typedef enum {
   SLIDE_TYPE_PREFERENCES,      /**< Preferences dialog */
   SLIDE_TYPE_PREFS_STEPPER,    /**< Preferences stepper sub-dialog */
   SLIDE_TYPE_PREFS_SELECT,     /**< Preferences option-select sub-dialog */
+  SLIDE_TYPE_HELP,             /**< Help menu displaying keybindings */
 } SlideType;
 
 /**
@@ -776,5 +777,19 @@ void PrefsPreviewDesktop(AppData* app);
  * @param app Application state
  */
 void PrefsPreviewSound(AppData* app);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Help
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Open the help popup showing grouped keybindings.
+ * Content is filtered by app->help_context_scene (ALL_SCENES = full help).
+ * @param app Application state
+ * @return Pointer to the created dialog, or NULL on failure
+ */
+FloatingDialog* CreateHelpDialog(AppData* app);
 
 #endif /* UI_H_ */

@@ -307,7 +307,8 @@ static void renderDialogPopups(AppData* app) {
            app->popup_dialog->slide_type == SLIDE_TYPE_HISTORY_STATS ||
            app->popup_dialog->slide_type == SLIDE_TYPE_PREFERENCES ||
            app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_STEPPER ||
-           app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_SELECT) {
+           app->popup_dialog->slide_type == SLIDE_TYPE_PREFS_SELECT ||
+           app->popup_dialog->slide_type == SLIDE_TYPE_HELP) {
     int stride = app->popup_dialog->slideCount / 3;
     int icon_type = GetConfigIconType();
     int idx = icon_type * stride + app->popup_dialog->currentSlide;

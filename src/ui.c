@@ -48,7 +48,6 @@ static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
 static void historyOverviewRender(AppData* app, SlideDef* def);
 static void historyOverviewUpdate(AppData* app, SlideDef* def);
 static int computeMonthWeeks(int year, int month, int startDow);
-
 /* Preferences */
 static void setPrefInt(AppData* app, int idx, int val);
 static int selectablePrefCount(AppData* app);
@@ -57,7 +56,22 @@ static void prefsSlideUpdate(AppData* app, SlideDef* def);
 static void prefsStepperRender(AppData* app, SlideDef* def);
 static void prefsSelectRender(AppData* app, SlideDef* def);
 static void prefsSelectUpdate(AppData* app, SlideDef* def);
-
+/* Help */
+/** Help dialog content row - one keybinding entry or section anchor */
+typedef struct {
+  const char* group;        /**< Section name */
+  const char* desc;         /**< Human-readable description */
+  void (*action)(AppData*); /**< Action function pointer */
+  int modes;                /**< Mode mask (NORMAL/INSERT/VISUAL) */
+  char key_str[96];         /**< Display name(s) of bound key(s) */
+} helpRow;
+static bool resolveHelpGroup(const KeyFunction* kf, const char** out_grp,
+                             const char** out_dsc);
+static int renderModeLabel(int y, int x, int modes);
+static const char* keyDisplayName(int key);
+static int totalHelpContentRows(helpRow* rows, int count);
+static void helpSlideRender(AppData* app, SlideDef* def);
+static void helpSlideUpdate(AppData* app, SlideDef* def);
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
 static void freePanel(Panel* panel);
@@ -1988,7 +2002,7 @@ done_text:
  * data->selected and dialog->hovered_button on match.
  *
  * @param app Pointer to the application data
- * @param def Slide definition (unused — state lives in app->noise_data)
+ * @param def Slide definition (unused - state lives in app->noise_data)
  */
 static void noiseSlideUpdate(AppData* app, SlideDef* def) {
   (void)def;
@@ -2466,7 +2480,7 @@ static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
 
 /**
  * Build a single history slide with custom render/update callbacks.
- * The slide is not token-based — the render function draws directly.
+ * The slide is not token-based - the render function draws directly.
  * @param size Slide dimensions
  * @param render Custom render callback
  * @param update Custom update callback (may be NULL)
@@ -2569,7 +2583,7 @@ void CreateHistoryOverviewDialog(AppData* app) {
   /* Resolve cursor → date */
   HistoryResolveCursor(app);
 
-  /* Dialog dimensions — width adapts to grid size */
+  /* Dialog dimensions - width adapts to grid size */
   int dayLabelW = 3;
   int dlgW = 2 + dayLabelW + 1 + totalWeeks * 3 + 1;
   if (dlgW < 63) dlgW = 63;
@@ -2947,10 +2961,10 @@ static int computeMonthWeeks(int year, int month, int startDow) {
  * of month boundaries.
  * @param firstYear First visible year
  * @param firstMonth First visible month (1-12)
- * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] — weeks per month
- * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] — starting week column per month
- * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] — days per month
- * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] — starting day-of-week per month
+ * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] - weeks per month
+ * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] - starting week column per month
+ * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] - days per month
+ * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] - starting day-of-week per month
  * @return Total week columns across all 5 months
  */
 static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
@@ -2983,8 +2997,8 @@ static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
  * @param monthStartWeek Starting week column per month
  * @param monthDays Days-per-month array
  * @param monthStartDow Starting day-of-week per month
- * @param outYear Output — resolved year
- * @param outMonth Output — resolved month
+ * @param outYear Output - resolved year
+ * @param outMonth Output - resolved month
  * @return Day of month (1-31), or 0 if out of range
  */
 static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
@@ -3051,7 +3065,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
   /* Title */
   mvprintw(y + 1, x + (w - 7) / 2, "HISTORY");
 
-  /* Month headers (y+3) — only show months that have data */
+  /* Month headers (y+3) - only show months that have data */
   int yMonths = y + 3;
   int iconType = GetConfigIconType();
   int gridStartX = x + 2; /* after border + space */
@@ -3253,7 +3267,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
     }
   }
 
-  /* Navigation hints — key (15/bold) + description (07/normal), clickable */
+  /* Navigation hints - key (15/bold) + description (07/normal), clickable */
   {
     int hintY = y + d->size.height - 2;
     static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
@@ -3294,7 +3308,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
 }
 
 /**
- * Mouse update for the overview — tracks hover on grid cells
+ * Mouse update for the overview - tracks hover on grid cells
  * and nav hint segments.
  * @param app Application state
  * @param def Slide definition
@@ -3601,7 +3615,7 @@ void ClosePrefsSelect(AppData* app) {
 }
 
 /**
- * Preview callback for "Desktop Notifications" — sends a test notification.
+ * Preview callback for "Desktop Notifications" - sends a test notification.
  * @param app Application state
  */
 void PrefsPreviewDesktop(AppData* app) {
@@ -3612,7 +3626,7 @@ void PrefsPreviewDesktop(AppData* app) {
 }
 
 /**
- * Preview callback for "Sound" toggle and "Sound Volume" stepper —
+ * Preview callback for "Sound" toggle and "Sound Volume" stepper -
  * plays the default notification sound at the configured volume.
  * @param app Application state
  */
@@ -3729,7 +3743,7 @@ static void prefsSlideRender(AppData* app, SlideDef* def) {
   for (int i = 0; i < app->prefs.count && i < 64; i++) {
     content_row[i] = total_cr;
     if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
-      total_cr += 2;  /* blank line + header */
+      total_cr += 2; /* blank line + header */
     } else {
       total_cr++;
     }
@@ -3822,7 +3836,8 @@ static void prefsSlideRender(AppData* app, SlideDef* def) {
     SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
     mvprintw(y + h - 4, x + 2 + row_avail - 7, "\u25bc More");
     RegisterClickRegion(app, x + 2 + row_avail - 7, y + h - 4, 7, 1,
-                        REGION_SLIDE_NAV, (MenuAction)PrefsScrollDown, -1, 0, 0);
+                        REGION_SLIDE_NAV, (MenuAction)PrefsScrollDown, -1, 0,
+                        0);
   }
 
   /* Evenly spaced sections across the full width */
@@ -4255,4 +4270,430 @@ static void prefsSelectRender(AppData* app, SlideDef* def) {
   if (on_esc) attroff(A_REVERSE);
   RegisterClickRegion(app, s3, fy, w3, 1, REGION_SLIDE_NAV,
                       (MenuAction)ClosePrefsSelect, -1, 0, 0);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Help
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Create the help popup dialog.
+ * Content is filtered by app->help_context_scene (ALL_SCENES = full mode).
+ * @param app Application state
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreateHelpDialog(AppData* app) {
+  (void)app;
+  Dimensions size = {.width = 60, .height = 25};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem items[] = {{"Close", ClosePopup}};
+  Menu menu = {.items = items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 1};
+  FloatingDialog* dialog =
+    CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (dialog) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(dialog);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = helpSlideRender;
+    def->update = helpSlideUpdate;
+    def->slide_type = SLIDE_TYPE_HELP;
+    def->hovered = 0;
+    slides[0] = def;
+    dialog->slides = slides;
+    dialog->slideCount = 1;
+    dialog->currentSlide = 0;
+    dialog->slide_type = SLIDE_TYPE_HELP;
+    dialog->hovered_button = 0;
+  }
+  return dialog;
+}
+
+/**
+ * Resolve group and description for a KeyFunction.
+ * Uses the annotation if set; otherwise falls back to the scene mask.
+ * @param kf KeyFunction to resolve
+ * @param out_grp Receives the section group string
+ * @param out_dsc Receives the description string
+ * @return true if the key should be included, false to skip (SCENE_HELP or unknown)
+ */
+static bool resolveHelpGroup(const KeyFunction* kf, const char** out_grp,
+                             const char** out_dsc) {
+  const char* grp = kf->group;
+  const char* dsc = kf->desc;
+  if (!grp) {
+    if (kf->scene_types == ALL_SCENES)
+      grp = "General";
+    else if (kf->scene_types & SCENE_NOTES)
+      grp = "Notes";
+    else if (kf->scene_types & SCENE_PREFERENCES)
+      grp = "Preferences";
+    else if (kf->scene_types & SCENE_NOISE)
+      grp = "Noise";
+    else if (kf->scene_types & SCENE_CONTINUE)
+      grp = "Continue";
+    else if (kf->scene_types & SCENE_MAIN_MENU)
+      grp = "Main Menu";
+    else if (kf->scene_types & SCENE_HELP)
+      return false;
+    else if (kf->scene_types &
+             (SCENE_HISTORY_OVERVIEW | SCENE_HISTORY_DAY | SCENE_HISTORY_STATS))
+      grp = "History";
+    else if (kf->scene_types & (SCENE_PREFS_STEPPER | SCENE_PREFS_SELECT))
+      grp = "Preferences";
+    else if (kf->scene_types & POMODORO_SCENES)
+      grp = "Pomodoro";
+    else
+      return false;
+  }
+  if (!dsc) dsc = "";
+  *out_grp = grp;
+  *out_dsc = dsc;
+  return true;
+}
+
+/**
+ * Render a mode label for a keybinding entry at (y, x).
+ * NORMAL → [N] in blue, INSERT → [I] in green, VISUAL → [V] in yellow.
+ * @param y Row position
+ * @param x Column position
+ * @param modes Mode bitmask (NORMAL/INSERT/VISUAL/DEFAULT)
+ * @return Display width consumed (0 for DEFAULT, 4 otherwise)
+ */
+static int renderModeLabel(int y, int x, int modes) {
+  if (modes == DEFAULT) return 0;
+  if (modes & NORMAL) {
+    SetColor(COLOR_BLUE, NO_COLOR, A_BOLD);
+    mvprintw(y, x, "[N]");
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    mvprintw(y, x + 3, " ");
+    return 4;
+  }
+  if (modes & INSERT) {
+    SetColor(COLOR_GREEN, NO_COLOR, A_BOLD);
+    mvprintw(y, x, "[I]");
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    mvprintw(y, x + 3, " ");
+    return 4;
+  }
+  if (modes & VISUAL) {
+    SetColor(COLOR_YELLOW, NO_COLOR, A_BOLD);
+    mvprintw(y, x, "[V]");
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    mvprintw(y, x + 3, " ");
+    return 4;
+  }
+  return 0;
+}
+
+/**
+ * Convert an ncurses key code to a human-readable display string.
+ * @param key The ncurses key code
+ * @return A static string representing the key name
+ */
+static const char* keyDisplayName(int key) {
+  static char buf[32];
+  switch (key) {
+    case KEY_UP:
+      return "\xe2\x86\x91"; /* ↑ */
+    case KEY_DOWN:
+      return "\xe2\x86\x93"; /* ↓ */
+    case KEY_LEFT:
+      return "\xe2\x86\x90"; /* ← */
+    case KEY_RIGHT:
+      return "\xe2\x86\x92"; /* → */
+    case KEY_ENTER:
+      return "Enter";
+    case KEY_BACKSPACE:
+      return "Backspace";
+    case KEY_HOME:
+      return "Home";
+    case KEY_END:
+      return "End";
+    case KEY_PPAGE:
+      return "PgUp";
+    case KEY_NPAGE:
+      return "PgDn";
+    case KEY_DC:
+      return "Del";
+    case ESC:
+      return "Esc";
+    case ENTER:
+      return "Enter";
+    case BACKSPACE:
+      return "Backspace";
+    case ' ':
+      return "Space";
+    case CTRLC:
+      return "Ctrl+C";
+    case CTRLD:
+      return "Ctrl+D";
+    case CTRLH:
+      return "Ctrl+H";
+    case CTRLP:
+      return "Ctrl+P";
+    case CTRLR:
+      return "Ctrl+R";
+    case CTRLS:
+      return "Ctrl+S";
+    case CTRLX:
+      return "Ctrl+X";
+    case CTRLF:
+      return "Ctrl+F";
+    case CTRLW:
+      return "Ctrl+W";
+    case CTRLT:
+      return "Ctrl+T";
+    default:
+      if (key >= KEY_F(0) && key <= KEY_F(12)) {
+        snprintf(buf, sizeof(buf), "F%d", key - KEY_F(0));
+        return buf;
+      }
+      if (key >= 32 && key <= 126) {
+        buf[0] = (char)key;
+        buf[1] = '\0';
+        return buf;
+      }
+      return "?";
+  }
+}
+
+/**
+ * Count total content rows (section headers + entries) for help dialog.
+ * @param app AppData (unused, kept for consistency with slide render interface)
+ * @param rows Array of help dialog rows
+ * @param count Number of rows in the array
+ * @return Total row count including section header rows
+ */
+static int totalHelpContentRows(helpRow* rows, int count) {
+  int total = 0;
+  const char* last_group = NULL;
+  for (int i = 0; i < count; i++) {
+    if (!last_group || strcmp(rows[i].group, last_group) != 0) {
+      total++; /* section header */
+      last_group = rows[i].group;
+    }
+    total++; /* entry */
+  }
+  return total;
+}
+
+/**
+ * Render the help dialog content - section headers, keybind rows,
+ * scroll indicators, and close hint.
+ * @param app AppData with help state (scroll position, context scene)
+ * @param def Slide definition (size, position)
+ */
+static void helpSlideRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+  int w = def->size.width;
+  int h = def->size.height;
+  int content_x = x + 2;
+  int content_w = w - 4;
+  int row_avail = h - 6;
+  int title_y = y + 1;
+
+  /* Clear with proper foreground color */
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  /* Border + Title */
+  RenderSlideBox(x, y, w, h);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  const char* title = (app->help_context_scene == ALL_SCENES)
+                        ? "Help - All Keybindings"
+                        : "Help - Context";
+
+  int tw = displayWidth(title);
+  int tx = x + (w - tw) / 2;
+  if (tx < x + 2) tx = x + 2;
+  mvprintw(title_y, tx, "%s", title);
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+
+  /* Determine effective scene mask */
+  int context_scene = app->help_context_scene;
+
+  /* Build display rows from keys[] */
+  helpRow rows[200];
+  int row_count = 0;
+
+  for (size_t ki = 0; ki < g_config.num_keys && row_count < 200; ki++) {
+    const KeyFunction* kf = &keys[ki];
+    if (kf->key == -1) continue;
+
+    /* Determine group/desc via helper */
+    const char* grp;
+    const char* dsc;
+    if (!resolveHelpGroup(kf, &grp, &dsc)) continue;
+
+    /* Filter: full mode shows everything, context mode checks scene overlap */
+    if (context_scene != ALL_SCENES && !(kf->scene_types & context_scene))
+      continue;
+
+    /* Deduplicate by (group, action, modes) */
+    int found = -1;
+    for (int ri = 0; ri < row_count; ri++) {
+      if (rows[ri].action == kf->action && rows[ri].modes == kf->modes &&
+          strcmp(rows[ri].group, grp) == 0) {
+        found = ri;
+        break;
+      }
+    }
+
+    const char* kn = keyDisplayName(kf->key);
+
+    if (found >= 0) {
+      /* Append key name - avoid duplicate */
+      if (!strstr(rows[found].key_str, kn)) {
+        size_t cur = strlen(rows[found].key_str);
+        size_t rem = sizeof(rows[found].key_str) - cur;
+        if (rem > 2) {
+          if (cur > 0) {
+            strncat(rows[found].key_str, "/", rem - 1);
+            cur += 1;
+            rem -= 1;
+          }
+          strncat(rows[found].key_str, kn, rem - 1);
+        }
+      }
+    } else {
+      rows[row_count].group = grp;
+      rows[row_count].desc = dsc;
+      rows[row_count].action = kf->action;
+      rows[row_count].modes = kf->modes;
+      rows[row_count].key_str[0] = '\0';
+      size_t cur = 0, rem = sizeof(rows[row_count].key_str);
+      strncat(rows[row_count].key_str, kn, rem - 1);
+      row_count++;
+    }
+  }
+
+  /* Compute total content rows */
+  int total_rows = totalHelpContentRows(rows, row_count);
+
+  /* Clamp scroll_row: max such that last content row sits at bottom */
+  int sr = app->help_scroll_row;
+  if (sr < 0) sr = 0;
+  if (total_rows <= row_avail) {
+    sr = 0;
+  } else {
+    bool sd = (sr + row_avail < total_rows);
+    int fit = row_avail - (sd ? 1 : 0);
+    int max_sr = total_rows - fit;
+    if (max_sr < 0) max_sr = 0;
+    if (sr > max_sr) sr = max_sr;
+  }
+  app->help_scroll_row = sr;
+
+  bool show_up = (sr > 0);
+  bool show_down = (sr + row_avail < total_rows);
+  int fit = row_avail - (show_down ? 1 : 0);
+  int end_row = sr + fit;
+  if (end_row > total_rows) end_row = total_rows;
+
+  /* Render rows with scrolling */
+  int render_row = 0;
+  int content_y = y + 3;
+  const char* cur_group = NULL;
+
+  for (int gi = 0; gi < row_count && render_row < end_row; gi++) {
+    bool is_header = (!cur_group || strcmp(rows[gi].group, cur_group) != 0);
+    if (is_header) {
+      cur_group = rows[gi].group;
+      if (render_row >= sr) {
+        int ry = content_y + (render_row - sr);
+        if (ry < y + h - 2) {
+          SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+          mvprintw(ry, content_x, "%s", cur_group);
+          SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+        }
+      }
+      render_row++;
+    }
+    if (render_row >= sr && render_row < end_row) {
+      int ry = content_y + (render_row - sr);
+      if (ry < y + h - 2) {
+        int mode_x = content_x + 2;
+        int mlw = renderModeLabel(ry, mode_x, rows[gi].modes);
+        int desc_max =
+          content_w - 2 - mlw - 2 - (int)displayWidth(rows[gi].key_str) - 2;
+        if (desc_max < 10) desc_max = 10;
+        int desc_x = mode_x + mlw;
+
+        char desc_buf[64];
+        int desc_len = (int)strlen(rows[gi].desc);
+        if (desc_len > desc_max - 1) desc_len = desc_max - 1;
+        memcpy(desc_buf, rows[gi].desc, (size_t)desc_len);
+        desc_buf[desc_len] = '\0';
+        mvprintw(ry, desc_x, "%s", desc_buf);
+
+        /* Keys right-aligned */
+        int keys_w = displayWidth(rows[gi].key_str);
+        int keys_x = x + w - 2 - keys_w;
+        if (keys_x < desc_x + desc_max + 1) keys_x = desc_x + desc_max + 1;
+        SetColor(COLOR_CYAN, NO_COLOR, A_NORMAL);
+        mvprintw(ry, keys_x, "%s", rows[gi].key_str);
+        SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      }
+    }
+    render_row++;
+  }
+
+  /* Up / Down indicators */
+  int ind_right = x + w - 2;
+  if (show_up) {
+    int iy = y + 3;
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    mvprintw(iy, ind_right - 6, "\xe2\x96\xb2 More"); /* ▲ More */
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    RegisterClickRegion(app, ind_right - 6, iy, 7, 1, REGION_SLIDE_NAV,
+                        (MenuAction)HelpScrollUp, -1, 0, 0);
+  }
+  if (show_down) {
+    int iy = y + h - 4;
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    mvprintw(iy, ind_right - 6, "\xe2\x96\xbc More"); /* ▼ More */
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    RegisterClickRegion(app, ind_right - 6, iy, 7, 1, REGION_SLIDE_NAV,
+                        (MenuAction)HelpScrollDown, -1, 0, 0);
+  }
+
+  /* Footer with close hint */
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  mvprintw(y + h - 2, content_x, "q/Esc");
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(y + h - 2, content_x + displayWidth("q/Esc"), " Close");
+}
+
+/**
+ * Update hook for the help dialog - currently a no-op.
+ * @param app AppData (unused)
+ * @param def Slide definition (unused)
+ */
+static void helpSlideUpdate(AppData* app, SlideDef* def) {
+  (void)app;
+  (void)def;
 }
