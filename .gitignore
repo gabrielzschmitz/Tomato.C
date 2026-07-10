@@ -9,3 +9,9 @@ compile_commands.json
 .cache/
 **/result
 docs/output/
+tests/unit/test_*
+!tests/unit/test_*.c
+!tests/unit/test_*.sh
+tests/integration/test_*
+!tests/integration/test_*.c
+!tests/integration/test_*.sh
