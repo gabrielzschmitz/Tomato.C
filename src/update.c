@@ -134,6 +134,7 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
       app->pomodoro_data.step_start_time = time(NULL);
+      if (!AUTOSTART_PAUSE) app->is_paused = true;
       Notification notification = {
         .title = "Long Pause Break",
         .description = "You have some time to chill",
@@ -148,6 +149,7 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
       app->pomodoro_data.current_step_time = 0;
       app->pomodoro_data.step_start_time = time(NULL);
+      if (!AUTOSTART_PAUSE) app->is_paused = true;
       Notification notification = {
         .title = "Pause Break",
         .description = "You have some time to chill",
@@ -188,6 +190,7 @@ void UpdateShortPause(AppData* app) {
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     app->pomodoro_data.current_step_time = 0;
     app->pomodoro_data.step_start_time = time(NULL);
+    if (!AUTOSTART_WORK) app->is_paused = true;
     Notification notification = {
       .title = "Work!",
       .description = "You need to focus",
