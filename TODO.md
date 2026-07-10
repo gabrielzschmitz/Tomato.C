@@ -73,8 +73,9 @@ extensible, terminal-based Pomodoro timer written in C.
 ## 🚧 In Progress
 
 ### 🧪 Testing
-- [ ] Unit tests for all core modules
-- [ ] Integration testing
+- [X] Unit tests for all core modules
+- [X] Integration testing
+- [X] E2E testing
 
 ---
 
