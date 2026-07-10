@@ -34,6 +34,10 @@ static bool skip_auto_save = false;
 ErrorType UpdateApp(AppData* app) {
   ErrorType status = NO_ERROR;
 
+  /* Sync status bar position from config (allows runtime changes) */
+  if (app->status_bar)
+    app->status_bar->position = STATUS_BAR_POSITION ? TOP : BOTTOM;
+
   UpdateScreen(app->screen, HasErrors());
 
   Panel* current_panel = &app->screen->panels[app->screen->current_panel];

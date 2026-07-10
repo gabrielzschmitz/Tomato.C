@@ -101,8 +101,9 @@ Screen* CreateScreen(void) {
 
   getmaxyx(stdscr, screen->size.height, screen->size.width);
   screen->current_panel = 0;
+  int top_bar_offset = STATUS_BAR_POSITION ? 1 : 0;
   int panels_width = screen->size.width / MAX_PANELS;
-  int panels_height = screen->size.height;
+  int panels_height = screen->size.height - top_bar_offset;
   int remainder_width = screen->size.width % MAX_PANELS;
   for (int i = 0; i < MAX_PANELS; i++) {
     Dimensions panel_dimensions;
@@ -112,7 +113,7 @@ Screen* CreateScreen(void) {
     Vector2D panel_position;
     panel_position.x =
       (panels_width * i) + (i < remainder_width ? i : remainder_width);
-    panel_position.y = 0;
+    panel_position.y = top_bar_offset;
 
     screen->panels[i] = createPanel(panel_dimensions, panel_position);
   }
@@ -140,9 +141,11 @@ void FreeScreen(Screen* screen) {
 void UpdateScreen(Screen* screen, bool has_error_line) {
   getmaxyx(stdscr, screen->size.height, screen->size.width);
 
+  int top_bar_offset = STATUS_BAR_POSITION ? 1 : 0;
   int panels_width = screen->size.width / MAX_PANELS;
   int panels_height =
-    has_error_line ? screen->size.height - 1 : screen->size.height;
+    has_error_line ? screen->size.height - 1 - top_bar_offset
+                   : screen->size.height - top_bar_offset;
   int remainder_width = screen->size.width % MAX_PANELS;
 
   /* Check if the screen can display all panels */
@@ -156,7 +159,7 @@ void UpdateScreen(Screen* screen, bool has_error_line) {
       Vector2D panel_position;
       panel_position.x =
         (panels_width * i) + (i < remainder_width ? i : remainder_width);
-      panel_position.y = 0;
+      panel_position.y = top_bar_offset;
 
       screen->panels[i].visible = true;
       updatePanel(&screen->panels[i], panel_dimensions, panel_position);
@@ -173,7 +176,7 @@ void UpdateScreen(Screen* screen, bool has_error_line) {
 
       Vector2D panel_position;
       panel_position.x = 0;
-      panel_position.y = 0;
+      panel_position.y = top_bar_offset;
 
       /* Update the current panel and make it visible */
       screen->panels[current_panel].visible = true;
