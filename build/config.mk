@@ -1,4 +1,22 @@
-# Directories
+#/**
+# * @file build/config.mk
+# * @brief Shared compiler and linker configuration for the Tomato.C build.
+# *
+# * Sets up include paths, library flags, compiler warnings, dependency
+# * tracking, security hardening, and platform-specific options
+# * (macOS vs Linux).  Included by build/Makefile.
+# *
+# * Overridable variables:
+# *   PREFIX  — installation prefix (default /usr/local)
+# *   DEBUG   — set to 1 to add -DDEBUG_FLAG and extra -g
+# */
+
+#/**
+# * ---------------------------------------------------------------------------
+# * Directories
+# * ---------------------------------------------------------------------------
+# */
+
 SRCDIR = ../src
 PREFIX = /usr/local
 APPPREFIX = $(PREFIX)/share/applications
@@ -6,7 +24,12 @@ DATAPREFIX = .local/share/tomato
 INCLUDES = -I$(PREFIX)/include
 LIBDIR = -L$(PREFIX)/lib
 
-# Combine flags
+#/**
+# * ---------------------------------------------------------------------------
+# * Combined flags
+# * ---------------------------------------------------------------------------
+# */
+
 CPPFLAGS += $(INCLUDES) $(DEPFLAGS)
 LDFLAGS += $(LIBDIR)
 ifdef __APPLE__
@@ -15,10 +38,20 @@ else
 LDLIBS = $(shell pkg-config --libs ncursesw libnotify) -lpthread -lm
 endif
 
-# Dependency flags
+#/**
+# * ---------------------------------------------------------------------------
+# * Dependency tracking
+# * ---------------------------------------------------------------------------
+# */
+
 DEPFLAGS = -MD
 
-# Compiler and flags
+#/**
+# * ---------------------------------------------------------------------------
+# * Compiler and flags
+# * ---------------------------------------------------------------------------
+# */
+
 CC = gcc
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
@@ -29,14 +62,24 @@ else
 CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
 endif
 
-# Debug flag
+#/**
+# * ---------------------------------------------------------------------------
+# * Debug flag
+# * ---------------------------------------------------------------------------
+# */
+
 DEBUG :Wall?= 0
 ifeq ($(DEBUG), 1)
     DFLAGS += -DDEBUG_FLAG
     CFLAGS += -g
 endif
 
-# Security hardening
+#/**
+# * ---------------------------------------------------------------------------
+# * Security hardening
+# * ---------------------------------------------------------------------------
+# */
+
 HARDEN_CFLAGS  = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE
 HARDEN_LDFLAGS = -pie -Wl,-z,relro,-z,now -z noexecstack
 
