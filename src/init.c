@@ -70,7 +70,10 @@ ErrorType InitApp(AppData* app) {
   app->notes = CreateNotesData();
   if (app->notes == NULL) return MALLOC_ERROR;
 
-  if (NOTEPAD_LOG) LoadNotes(NOTES_LOG, app->notes);
+  if (NOTEPAD_LOG) {
+    LoadNotes(NOTES_LOG, app->notes);
+    CompactPages(app->notes);
+  }
 
   /* Add some example notes */
   if (DEBUG && app->notes->count == 0) {
@@ -297,8 +300,8 @@ static ErrorType initAnimations(AppData* app) {
   const char* animation_files[MAX_ANIMATIONS] = {
     "./sprites/mainmenu.asc",   "./sprites/worktime.asc",
     "./sprites/shortpause.asc", "./sprites/longpause.asc",
-    "./sprites/notes.asc",      "./sprites/help.asc",
-    "./sprites/continue.asc"};
+    "./sprites/notes.asc",      "./sprites/notes_transition.asc",
+    "./sprites/help.asc",       "./sprites/continue.asc"};
 
   for (int i = 0; i < MAX_ANIMATIONS; ++i) {
     app->animations[i] = DeserializeSprites(animation_files[i]);
@@ -306,7 +309,7 @@ static ErrorType initAnimations(AppData* app) {
   }
   app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
 
-  const int dont_loop[] = {NOTES, HELP, CONTINUE};
+  const int dont_loop[] = {NOTES, NOTES_TRANSITION, HELP, CONTINUE};
   size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
   SetRollfilmLoop(app, app->animations, dont_loop, list_size, false);
 

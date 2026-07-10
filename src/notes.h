@@ -28,6 +28,7 @@ struct NoteItem {
     text; /**< Text content stored as gap buffer for efficient editing */
   NoteState state; /**< Current state: undone, done, or plain */
   int id;          /**< Unique identifier for this note */
+  int page_id;     /**< Page this note belongs to (0-indexed) */
   int parent_id;   /**< ID of parent note (-1 for root-level notes) */
   int depth; /**< Nesting depth level (0 for root, increments for children) */
 };
@@ -46,11 +47,17 @@ typedef struct {
   int render_width;     /**< Width available for rendering notes */
   bool is_move_mode;    /**< Whether move mode is currently active */
   History* history;     /**< History manager for undo/redo */
-  int last_affected_id; /**< ID of last affected note */
-  int saved_cursor;     /**< Cursor position at time of history save */
-  int drag_note_id;     /**< Note ID being dragged (-1 = none) */
-  int drag_start_y;     /**< Y position where drag started */
-  bool drag_moved;      /**< true if actual movement happened during drag */
+  int last_affected_id;   /**< ID of last affected note */
+  int last_affected_page; /**< Page of last affected note */
+  int saved_cursor;       /**< Cursor position at time of history save */
+  int current_page;       /**< Currently viewed page (0-indexed) */
+  int page_count;         /**< Total number of pages */
+  int page_capacity;      /**< Allocated capacity for pages */
+  bool transitioning;     /**< True while page transition animation plays */
+  int transition_target;  /**< Page to navigate to after transition */
+  int drag_note_id;       /**< Note ID being dragged (-1 = none) */
+  int drag_start_y;       /**< Y position where drag started */
+  bool drag_moved;        /**< true if actual movement happened during drag */
 } NotesData;
 
 /**
@@ -118,6 +125,13 @@ void UpdateNote(NotesData* notes, int note_id, const char* text,
  * @param notes Pointer to the NotesData
  */
 void DeleteNote(NotesData* notes);
+
+/**
+ * Renumber pages so there are no gaps in page_id values.
+ * Updates page_count and current_page accordingly.
+ * @param notes Pointer to the NotesData
+ */
+void CompactPages(NotesData* notes);
 
 /**
  * Toggle the selected note between done and undone states.

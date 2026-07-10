@@ -336,7 +336,7 @@ static const char* SEPARATOR =
 #define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
 /** Bitmask of every scene type. */
 #define ALL_SCENES                                                \
-  (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_HELP | \
+  (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_NOTES_TRANSITION | SCENE_HELP | \
    SCENE_CONTINUE | SCENE_PREFERENCES)
 
 /** Shorthand for g_config.key_bindings. */

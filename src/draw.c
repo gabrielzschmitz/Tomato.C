@@ -3,6 +3,7 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "anim.h"
 #include "config.h"
@@ -23,6 +24,8 @@ static void renderPomodoroScene(AppData* app, Rollfilm* animation,
                                 SceneType scene, Dimensions size,
                                 Vector2D position);
 static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation);
+static void renderNotesPageIndicator(AppData* app, Panel* panel,
+                                     Rollfilm* animation);
 static void renderDialogPopups(AppData* app);
 static void renderAnimationDebug(Panel* panel, Rollfilm* animation,
                                  Vector2D offset);
@@ -186,12 +189,28 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
       renderPomodoroScene(app, animation, scene, size, position);
       break;
     case NOTES:
-      if (ANIMATIONS) animation = app->animations[NOTES];
-      renderNotesScene(app, panel, animation);
       if (ANIMATIONS) {
-        if (DEBUG) renderAnimationDebug(panel, animation, (Vector2D){0, 0});
-        RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+        if (app->notes && app->notes->transitioning) {
+          animation = app->animations[NOTES_TRANSITION];
+          if (animation) {
+            if (DEBUG) renderAnimationDebug(panel, animation, (Vector2D){0, 0});
+            RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+            renderNotesPageIndicator(app, panel, animation);
+          }
+        } else {
+          animation = app->animations[NOTES];
+          renderNotesScene(app, panel, animation);
+          if (animation) {
+            if (DEBUG) renderAnimationDebug(panel, animation, (Vector2D){0, 0});
+            RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+            renderNotesPageIndicator(app, panel, animation);
+          }
+        }
+      } else {
+        renderNotesPageIndicator(app, panel, NULL);
       }
+      break;
+    case NOTES_TRANSITION:
       break;
     case HELP:
     case CONTINUE:
@@ -274,6 +293,71 @@ static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation) {
   if (DEBUG)
     RenderNotesHistoryDebug(app->notes, panel->position.x + panel->size.width,
                             panel->position.y);
+}
+
+/**
+ * Render page indicator below the notes animation.
+ * Shows current page and total pages, e.g. "< 1/3 >".
+ * Left/right arrows are clickable with hover highlight.
+ * @param app Pointer to the application data
+ * @param panel Pointer to the panel
+ * @param animation Pointer to the animation (may be NULL)
+ */
+static void renderNotesPageIndicator(AppData* app, Panel* panel,
+                                     Rollfilm* animation) {
+  if (!app->notes) return;
+
+  int indicator_y;
+  int panel_center_x = panel->position.x + panel->size.width / 2;
+
+  if (animation) {
+    int panel_center_y = panel->position.y + panel->size.height / 2;
+    int frame_y = panel_center_y - animation->frame_height / 2;
+    indicator_y = frame_y + animation->frame_height;
+  } else {
+    indicator_y = panel->position.y + panel->size.height - 2;
+  }
+
+  int num = app->notes->current_page + 1;
+  int total = app->notes->page_count;
+
+  char page_str[16];
+  snprintf(page_str, sizeof(page_str), " %d/%d ", num, total);
+  int page_str_len = (int)strlen(page_str);
+
+  int left_x = panel_center_x - page_str_len / 2 - 2;
+  int right_x = panel_center_x + page_str_len / 2 + 1;
+
+  bool hover_left = (app->mouse_y == indicator_y &&
+                     app->mouse_x >= left_x && app->mouse_x < left_x + 1);
+  bool hover_right = (app->mouse_y == indicator_y &&
+                      app->mouse_x >= right_x && app->mouse_x < right_x + 1);
+
+  /* Render left arrow with hover effect */
+  if (hover_left)
+    SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+  else
+    SetColor(COLOR_WHITE, NO_COLOR, A_DIM);
+  mvaddch(indicator_y, left_x, '<');
+
+  /* Render page number */
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+  mvprintw(indicator_y, panel_center_x - page_str_len / 2, "%s", page_str);
+
+  /* Render right arrow with hover effect */
+  if (hover_right)
+    SetColor(COLOR_BLACK, COLOR_WHITE, A_NORMAL);
+  else
+    SetColor(COLOR_WHITE, NO_COLOR, A_DIM);
+  mvaddch(indicator_y, right_x, '>');
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+
+  /* Register click regions */
+  RegisterClickRegion(app, left_x, indicator_y, 1, 1, REGION_DIRECT,
+                      NotesPrevPage, -1, -1, -1);
+  RegisterClickRegion(app, right_x, indicator_y, 1, 1, REGION_DIRECT,
+                      NotesNextPage, -1, -1, -1);
 }
 
 /**

@@ -47,6 +47,7 @@ typedef enum {
   SHORT_PAUSE,      /**< Short break timer scene */
   LONG_PAUSE,       /**< Long break timer scene */
   NOTES,            /**< Notes/text editor scene */
+  NOTES_TRANSITION, /**< Notes page transition animation scene */
   HELP,             /**< Help screen scene */
   CONTINUE,         /**< Continue/pause scene */
   NOISE,            /**< White noise control dialog scene */
@@ -64,6 +65,7 @@ typedef enum {
 #define SCENE_SHORT_PAUSE (1 << SHORT_PAUSE)
 #define SCENE_LONG_PAUSE (1 << LONG_PAUSE)
 #define SCENE_NOTES (1 << NOTES)
+#define SCENE_NOTES_TRANSITION (1 << NOTES_TRANSITION)
 #define SCENE_HELP (1 << HELP)
 #define SCENE_CONTINUE (1 << CONTINUE)
 #define SCENE_NOISE (1 << NOISE)
@@ -646,6 +648,18 @@ void PromoteNoteWrapper(AppData* app);
  * @param app Pointer to the application data
  */
 void DemoteNoteWrapper(AppData* app);
+
+/**
+ * Navigate to the next page of notes.
+ * @param app Pointer to the application data
+ */
+void NotesNextPage(AppData* app);
+
+/**
+ * Navigate to the previous page of notes.
+ * @param app Pointer to the application data
+ */
+void NotesPrevPage(AppData* app);
 
 /**
  * Quit notes scene and return to previous scene.

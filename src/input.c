@@ -1153,9 +1153,24 @@ void InputCommit(AppData* app) {
     app->notes->last_affected_id = app->notes->current_id;
     UpdateNote(app->notes, app->notes->current_id, input->buffer, state);
   } else if (input->insert_after_id >= 0) {
-    app->notes->last_affected_id = -1;
-    AddNoteAfter(app, app->notes, input->insert_after_id, input->buffer, state);
-    app->notes->last_affected_id = app->notes->current_id;
+    bool valid = false;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == input->insert_after_id &&
+          app->notes->items[i]->page_id == app->notes->current_page) {
+        valid = true;
+        break;
+      }
+    }
+    if (!valid) {
+      input->insert_after_id = -1;
+      app->notes->last_affected_id = -1;
+      AddNote(app, app->notes, input->buffer, state);
+      app->notes->last_affected_id = app->notes->current_id;
+    } else {
+      app->notes->last_affected_id = -1;
+      AddNoteAfter(app, app->notes, input->insert_after_id, input->buffer, state);
+      app->notes->last_affected_id = app->notes->current_id;
+    }
   } else if (input->pending_parent_id >= 0) {
     app->notes->last_affected_id = input->pending_parent_id;
     AddChildNote(app, app->notes, input->pending_parent_id, input->buffer,
@@ -1868,6 +1883,7 @@ void ToggleTaskAtNotes(AppData* app) {
  */
 void DeleteNoteAtNotes(AppData* app) {
   if (app->popup_dialog != NULL) return;
+  if (app->notes->transitioning) return;
   DeleteNote(app->notes);
 }
 
@@ -1882,6 +1898,17 @@ void AddNewTask(AppData* app) {
     return;
 
   int insert_after = app->notes->current_id;
+  if (insert_after >= 0) {
+    bool valid = false;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == insert_after &&
+          app->notes->items[i]->page_id == app->notes->current_page) {
+        valid = true;
+        break;
+      }
+    }
+    if (!valid) insert_after = -1;
+  }
   app->notes->current_id = -1;
 
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -1907,6 +1934,17 @@ void AddNewNote(AppData* app) {
     return;
 
   int insert_after = app->notes->current_id;
+  if (insert_after >= 0) {
+    bool valid = false;
+    for (int i = 0; i < app->notes->count; i++) {
+      if (app->notes->items[i]->id == insert_after &&
+          app->notes->items[i]->page_id == app->notes->current_page) {
+        valid = true;
+        break;
+      }
+    }
+    if (!valid) insert_after = -1;
+  }
   app->notes->current_id = -1;
 
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -2051,6 +2089,7 @@ void UndoNotes(AppData* app) {
     HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, true);
   }
 
+  int prev_page = app->notes->current_page;
   NotesData* current = CloneNotesData(app->notes);
   void* prev = HistoryPop(app->notes->history, true);
   HistoryPush(app->notes->history, current, FreeClonedNotesData, true);
@@ -2058,6 +2097,14 @@ void UndoNotes(AppData* app) {
 
   /* Force stay in DEFAULT mode, not Move Mode */
   app->notes->is_move_mode = false;
+
+  /* If undo changed the page, start a transition */
+  if (prev_page != app->notes->current_page && !app->notes->transitioning) {
+    app->notes->transitioning = true;
+    app->notes->transition_target = app->notes->current_page;
+    app->animations[NOTES_TRANSITION]->current_frame = 0;
+    app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+  }
 
   /* Restore input buffer and cursor to match restored note */
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -2122,6 +2169,7 @@ void RedoNotes(AppData* app) {
     HistoryPush(app->notes->history, snapshot, FreeClonedNotesData, false);
   }
 
+  int prev_page = app->notes->current_page;
   NotesData* current = CloneNotesData(app->notes);
   void* next = HistoryPop(app->notes->history, false);
   HistoryPush(app->notes->history, current, FreeClonedNotesData, false);
@@ -2129,6 +2177,14 @@ void RedoNotes(AppData* app) {
 
   /* Force stay in DEFAULT mode, not Move Mode */
   app->notes->is_move_mode = false;
+
+  /* If redo changed the page, start a transition */
+  if (prev_page != app->notes->current_page && !app->notes->transitioning) {
+    app->notes->transitioning = true;
+    app->notes->transition_target = app->notes->current_page;
+    app->animations[NOTES_TRANSITION]->current_frame = 0;
+    app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+  }
 
   /* Restore input buffer and cursor to match restored note */
   InputState* input = app->screen->panels[app->screen->current_panel].input;
@@ -2245,6 +2301,77 @@ void DemoteNoteWrapper(AppData* app) {
   if (!app || !app->notes) return;
   if (app->popup_dialog) return;
   if (app->notes->is_move_mode) DemoteNote(app->notes);
+}
+
+/**
+ * Check if the given page has any notes.
+ * @param notes Pointer to NotesData
+ * @param page Page index to check
+ * @return true if the page contains at least one note
+ */
+static bool pageHasNotes(NotesData* notes, int page) {
+  for (int i = 0; i < notes->count; i++) {
+    if (notes->items[i]->page_id == page) return true;
+  }
+  return false;
+}
+
+/**
+ * Navigate to the previous page of notes.
+ * Delegates to PromoteNoteWrapper in move mode.
+ * @param app Pointer to the application data
+ */
+void NotesPrevPage(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode) {
+    PromoteNoteWrapper(app);
+    return;
+  }
+  if (app->notes->transitioning) return;
+  if (app->notes->current_page <= 0) return;
+
+  app->notes->transitioning = true;
+  app->notes->transition_target = app->notes->current_page - 1;
+  app->animations[NOTES_TRANSITION]->current_frame = 0;
+  app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+}
+
+/**
+ * Navigate to the next page of notes.
+ * Delegates to DemoteNoteWrapper in move mode.
+ * Caps to one blank page — only allows going beyond existing pages
+ * if the current last page has content.
+ * @param app Pointer to the application data
+ */
+void NotesNextPage(AppData* app) {
+  if (!app || !app->notes) return;
+  if (app->popup_dialog) return;
+  if (app->notes->is_move_mode) {
+    DemoteNoteWrapper(app);
+    return;
+  }
+  if (app->notes->transitioning) return;
+
+  int target = app->notes->current_page + 1;
+
+  /* If navigating beyond existing pages, allow one blank page ahead */
+  if (target >= app->notes->page_count) {
+    /* Only create blank page if the last existing page has notes */
+    if (pageHasNotes(app->notes, app->notes->page_count - 1)) {
+      app->notes->page_count++;
+      if (app->notes->page_count > app->notes->page_capacity) {
+        app->notes->page_capacity *= 2;
+      }
+    } else {
+      return;
+    }
+  }
+
+  app->notes->transitioning = true;
+  app->notes->transition_target = target;
+  app->animations[NOTES_TRANSITION]->current_frame = 0;
+  app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
 }
 
 /**

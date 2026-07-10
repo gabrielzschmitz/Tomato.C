@@ -53,6 +53,12 @@ NotesData* CreateNotesData(void) {
   notes->is_move_mode = false;
   notes->history = CreateHistory();
   notes->last_affected_id = -1;
+  notes->last_affected_page = 0;
+  notes->current_page = 0;
+  notes->page_count = 1;
+  notes->page_capacity = 8;
+  notes->transitioning = false;
+  notes->transition_target = 0;
   notes->drag_note_id = -1;
   notes->drag_start_y = 0;
   notes->drag_moved = false;
@@ -111,6 +117,7 @@ void AddNote(AppData* app, NotesData* notes, const char* text,
   GapBufferSetText(item->text, text);
   item->state = state;
   item->id = getNextID(notes);
+  item->page_id = notes->current_page;
   item->parent_id = -1;
   item->depth = 0;
 
@@ -161,6 +168,7 @@ void AddChildNote(AppData* app, NotesData* notes, int parent_id,
   GapBufferSetText(item->text, text);
   item->state = state;
   item->id = getNextID(notes);
+  item->page_id = notes->current_page;
   item->parent_id = parent_id;
   item->depth = parent->depth + 1;
 
@@ -233,6 +241,7 @@ void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
   GapBufferSetText(item->text, text);
   item->state = state;
   item->id = getNextID(notes);
+  item->page_id = notes->current_page;
   item->parent_id = after_note->parent_id;
   item->depth = after_note->depth;
 
@@ -277,16 +286,63 @@ void UpdateNote(NotesData* notes, int note_id, const char* text,
 }
 
 /**
+ * Renumber pages so there are no gaps in page_id values.
+ * Updates page_count and current_page accordingly.
+ * @param notes Pointer to the NotesData
+ */
+void CompactPages(NotesData* notes) {
+  if (!notes) return;
+  if (notes->count == 0) {
+    notes->current_page = 0;
+    notes->page_count = 1;
+    return;
+  }
+
+  int max_page = 0;
+  for (int i = 0; i < notes->count; i++) {
+    if (notes->items[i]->page_id > max_page)
+      max_page = notes->items[i]->page_id;
+  }
+
+  int* page_map = (int*)malloc(sizeof(int) * (size_t)(max_page + 1));
+  if (!page_map) return;
+  for (int i = 0; i <= max_page; i++) page_map[i] = -1;
+  for (int i = 0; i < notes->count; i++)
+    page_map[notes->items[i]->page_id] = 0;
+
+  int new_id = 0;
+  for (int i = 0; i <= max_page; i++) {
+    if (page_map[i] == 0) {
+      page_map[i] = new_id;
+      new_id++;
+    }
+  }
+
+  for (int i = 0; i < notes->count; i++)
+    notes->items[i]->page_id = page_map[notes->items[i]->page_id];
+
+  notes->page_count = new_id > 0 ? new_id : 1;
+  if (notes->current_page >= notes->page_count)
+    notes->current_page = notes->page_count - 1;
+
+  free(page_map);
+}
+
+/**
  * Delete the currently selected note.
+ * Only deletes if the note is on the current page.
  * @param notes Pointer to the NotesData
  */
 void DeleteNote(NotesData* notes) {
   if (!notes || notes->current_id < 0) return;
 
-  SaveNotesToHistory(notes, -1);
-
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) return;
+
+  /* Only allow deleting notes on the current page */
+  if (notes->items[idx]->page_id != notes->current_page) return;
+
+  SaveNotesToHistory(notes, -1);
 
   int deleted_lines = GetNoteLines(notes->items[idx], notes->render_width);
   GapBufferFree(notes->items[idx]->text);
@@ -303,6 +359,8 @@ void DeleteNote(NotesData* notes) {
     notes->current_id = notes->items[notes->count - 1]->id;
   else
     notes->current_id = notes->items[idx]->id;
+
+  CompactPages(notes);
 }
 
 /**
@@ -335,11 +393,21 @@ void NoteUp(NotesData* notes) {
 
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) {
-    notes->current_id = notes->items[0]->id;
+    for (int i = notes->count - 1; i >= 0; i--) {
+      if (notes->items[i]->page_id == notes->current_page) {
+        notes->current_id = notes->items[i]->id;
+        return;
+      }
+    }
     return;
   }
 
-  if (idx > 0) notes->current_id = notes->items[idx - 1]->id;
+  for (int i = idx - 1; i >= 0; i--) {
+    if (notes->items[i]->page_id == notes->current_page) {
+      notes->current_id = notes->items[i]->id;
+      return;
+    }
+  }
 }
 
 /**
@@ -351,11 +419,21 @@ void NoteDown(NotesData* notes) {
 
   int idx = getIndexByID(notes, notes->current_id);
   if (idx < 0) {
-    notes->current_id = notes->items[0]->id;
+    for (int i = 0; i < notes->count; i++) {
+      if (notes->items[i]->page_id == notes->current_page) {
+        notes->current_id = notes->items[i]->id;
+        return;
+      }
+    }
     return;
   }
 
-  if (idx < notes->count - 1) notes->current_id = notes->items[idx + 1]->id;
+  for (int i = idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->page_id == notes->current_page) {
+      notes->current_id = notes->items[i]->id;
+      return;
+    }
+  }
 }
 
 /**
@@ -643,7 +721,13 @@ NotesData* CloneNotesData(const NotesData* src) {
   dst->is_move_mode = src->is_move_mode;
   dst->history = NULL;
   dst->last_affected_id = src->last_affected_id;
+  dst->last_affected_page = src->last_affected_page;
   dst->saved_cursor = src->saved_cursor;
+  dst->current_page = src->current_page;
+  dst->page_count = src->page_count;
+  dst->page_capacity = src->page_capacity;
+  dst->transitioning = src->transitioning;
+  dst->transition_target = src->transition_target;
   dst->drag_note_id = src->drag_note_id;
   dst->drag_start_y = src->drag_start_y;
   dst->drag_moved = src->drag_moved;
@@ -673,6 +757,7 @@ NotesData* CloneNotesData(const NotesData* src) {
     }
     dstItem->state = srcItem->state;
     dstItem->id = srcItem->id;
+    dstItem->page_id = srcItem->page_id;
     dstItem->parent_id = srcItem->parent_id;
     dstItem->depth = srcItem->depth;
     dst->items[i] = dstItem;
@@ -690,6 +775,7 @@ void SaveNotesToHistory(NotesData* notes, int cursor) {
   if (!notes || !notes->history) return;
   NotesData* snapshot = CloneNotesData(notes);
   snapshot->last_affected_id = notes->current_id;
+  snapshot->last_affected_page = notes->current_page;
   snapshot->saved_cursor = cursor;
   HistoryPush(notes->history, snapshot, FreeClonedNotesData, false);
 }
@@ -717,6 +803,12 @@ void RestoreNotesData(NotesData* notes, void* data) {
   notes->total_lines = snapshot->total_lines;
   notes->render_width = snapshot->render_width;
   notes->is_move_mode = snapshot->is_move_mode;
+  notes->current_page = snapshot->current_page;
+  notes->page_count = snapshot->page_count;
+  notes->page_capacity = snapshot->page_capacity;
+  notes->transitioning = snapshot->transitioning;
+  notes->transition_target = snapshot->transition_target;
+  notes->last_affected_page = snapshot->last_affected_page;
 
   /* Reallocate and deep copy items */
   NoteItem** new_items =
@@ -745,6 +837,7 @@ void RestoreNotesData(NotesData* notes, void* data) {
     }
     dstItem->state = srcItem->state;
     dstItem->id = srcItem->id;
+    dstItem->page_id = srcItem->page_id;
     dstItem->parent_id = srcItem->parent_id;
     dstItem->depth = srcItem->depth;
     new_items[i] = dstItem;
@@ -797,6 +890,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
   }
 
   for (int i = 0; i < notes->count; i++) {
+    if (notes->items[i]->page_id != notes->current_page) continue;
     bool is_selected = (notes->items[i]->id == notes->current_id);
     int depth = notes->items[i]->depth;
     int indent = depth * 2;
@@ -836,10 +930,22 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
   } else if (pending_depth > 0 && (!input || input->len == 0))
     notes->total_lines += 1;
 
+  if (!is_editing && input && mode == INSERT) {
+    const char* prefix = input->is_task ? "[ ] " : " - ";
+    int prefix_len = (int)strlen(prefix);
+    int item_wrap_width = max_width - prefix_len;
+    if (item_wrap_width <= 0) item_wrap_width = 1;
+    if (input->len > 0)
+      notes->total_lines += GetNoteLinesFromText(input->buffer, item_wrap_width);
+    else
+      notes->total_lines += 1;
+  }
+
   int render_width = notes->render_width;
   int render_y = start_y;
 
   for (int i = 0; i < notes->count && render_y < end_y; i++) {
+    if (notes->items[i]->page_id != notes->current_page) continue;
     bool is_selected = (notes->items[i]->id == notes->current_id);
     int depth = notes->items[i]->depth;
     int indent = depth * 2;

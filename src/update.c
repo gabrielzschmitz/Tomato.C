@@ -56,6 +56,7 @@ ErrorType UpdateApp(AppData* app) {
         UpdateLongPause(app);
         break;
       case NOTES:
+      case NOTES_TRANSITION:
         UpdateNotes(app);
         break;
       case HELP:
@@ -235,11 +236,59 @@ void UpdateLongPause(AppData* app) {
 
 /**
  * Update NOTES scene - note selection and editing state.
+ * Handles both normal notes display and page transition animation.
  * @param app Pointer to the application data
  */
 void UpdateNotes(AppData* app) {
-  /* Notepad Animation */
-  if (ANIMATIONS && !app->is_paused) {
+  if (!ANIMATIONS || app->is_paused) return;
+
+  if (app->notes && app->notes->transitioning) {
+    Rollfilm* transition = app->animations[NOTES_TRANSITION];
+    if (transition == NULL) {
+      SetError(app, "UpdateNotes", ANIMATION_EQUAL_NULL);
+      return;
+    }
+    transition->update(transition);
+
+    /* Check if transition completed (reached last frame) */
+    if (transition->current_frame >= transition->frame_count - 1) {
+      int old_page = app->notes->current_page;
+      int old_id = app->notes->current_id;
+
+      app->notes->current_page = app->notes->transition_target;
+      app->notes->transitioning = false;
+
+      /* Reset NOTES animation to last frame */
+      app->animations[NOTES]->current_frame =
+        app->animations[NOTES]->frame_count - 1;
+      app->animations[NOTES]->delta_frame_ms = 0;
+
+      /* Calculate index of previously selected note within old page */
+      int old_idx = 0;
+      if (old_id >= 0) {
+        for (int i = 0; i < app->notes->count; i++) {
+          if (app->notes->items[i]->page_id == old_page) {
+            if (app->notes->items[i]->id == old_id) break;
+            old_idx++;
+          }
+        }
+      }
+
+      /* Select note at same index on new page, or last if not enough items */
+      app->notes->current_id = -1;
+      int new_idx = 0;
+      int last_id = -1;
+      for (int i = 0; i < app->notes->count; i++) {
+        if (app->notes->items[i]->page_id == app->notes->current_page) {
+          last_id = app->notes->items[i]->id;
+          if (new_idx == old_idx)
+            app->notes->current_id = app->notes->items[i]->id;
+          new_idx++;
+        }
+      }
+      if (app->notes->current_id < 0) app->notes->current_id = last_id;
+    }
+  } else {
     Rollfilm* animation = app->animations[NOTES];
     if (animation == NULL)
       SetError(app, "UpdateNotes", ANIMATION_EQUAL_NULL);

@@ -47,6 +47,7 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Add and remove subtasks (max depth 1)
 - [X] Move notes up and down
 - [X] Undo and redo edits
+- [X] Add a page system
 
 ### 🛠️ User Preferences
 - [X] Save/load current session state
@@ -68,10 +69,6 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] White noise playback for focus sessions
 - [X] Work history log (git-style commits)
 
----
-
-## 🚧 In Progress
-
 ### 🧪 Testing
 - [X] Unit tests for all core modules
 - [X] Integration testing
@@ -79,16 +76,21 @@ extensible, terminal-based Pomodoro timer written in C.
 
 ---
 
+## 🚧 In Progress
+
+### 🛠️ User Preferences
+- [ ] Refactor the configuration system to prioritize user-defined settings
+  over hardcoded defaults, particularly for keybindings.
+
 ### 📚 Documentation
 - [X] Inline documentation for all modules
 - [X] Documentation to HTML pages
 - [ ] Updated README with install, usage, and config details
 - [ ] Changelog for version tracking
 
-## 🗓️ Planned
+---
 
-### 📝 Simple note taking with vim-motions
-- [ ] Add a page system
+## 🗓️ Planned
 
 ### 🧪 Testing
 - [ ] User testing and feedback collection

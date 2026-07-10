@@ -489,6 +489,7 @@ void SceneModule(AppData* app, StatusBarModule* module, Panel* panel) {
       content = (char*)"LONG PAUSE";
       break;
     case NOTES:
+    case NOTES_TRANSITION:
       icon = (char*)NOTES_ICONS[icon_type];
       color = COLOR_YELLOW;
       content = (char*)"NOTES";
@@ -649,6 +650,7 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
       } else {
         line = 0;
         for (int i = 0; i < app->notes->count; i++) {
+          if (app->notes->items[i]->page_id != app->notes->current_page) continue;
           const char* prefix;
           switch (app->notes->items[i]->state) {
             case NOTE_DONE:
