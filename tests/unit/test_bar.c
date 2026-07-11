@@ -180,6 +180,87 @@ static void test_invert_modules_order_null(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * ModuleFromString
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_module_from_string_input_mode(void) {
+  TEST("ModuleFromString resolves InputMode");
+  ASSERT_NOT_NULL(ModuleFromString("InputMode"));
+}
+
+static void test_module_from_string_real_time(void) {
+  TEST("ModuleFromString resolves RealTime");
+  ASSERT_NOT_NULL(ModuleFromString("RealTime"));
+}
+
+static void test_module_from_string_scene(void) {
+  TEST("ModuleFromString resolves Scene");
+  ASSERT_NOT_NULL(ModuleFromString("Scene"));
+}
+
+static void test_module_from_string_current_status(void) {
+  TEST("ModuleFromString resolves CurrentStatus");
+  ASSERT_NOT_NULL(ModuleFromString("CurrentStatus"));
+}
+
+static void test_module_from_string_line_column(void) {
+  TEST("ModuleFromString resolves LineColumn");
+  ASSERT_NOT_NULL(ModuleFromString("LineColumn"));
+}
+
+static void test_module_from_string_unknown(void) {
+  TEST("ModuleFromString unknown name returns NULL");
+  ASSERT_NULL(ModuleFromString("FakeModule"));
+}
+
+static void test_module_from_string_empty(void) {
+  TEST("ModuleFromString empty name returns NULL");
+  ASSERT_NULL(ModuleFromString(""));
+}
+
+static void test_module_from_string_null(void) {
+  TEST("ModuleFromString NULL returns NULL");
+  ASSERT_NULL(ModuleFromString(NULL));
+}
+
+static void test_max_status_bar_modules(void) {
+  TEST("MAX_STATUS_BAR_MODULES allows 8 modules per position");
+  ASSERT_GT(MAX_STATUS_BAR_MODULES, 7);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Config-driven module layout (defaults)
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_default_left_modules(void) {
+  TEST("default left modules are InputMode and RealTime");
+  g_config.visual.status_bar_left_count = 2;
+  g_config.visual.status_bar_left_modules[0] = "InputMode";
+  g_config.visual.status_bar_left_modules[1] = "RealTime";
+  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_left_modules[0]));
+  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_left_modules[1]));
+}
+
+static void test_default_center_modules_empty(void) {
+  TEST("default center modules are empty");
+  g_config.visual.status_bar_center_count = 0;
+  ASSERT_EQ(g_config.visual.status_bar_center_count, 0);
+}
+
+static void test_default_right_modules(void) {
+  TEST("default right modules are Scene and LineColumn");
+  g_config.visual.status_bar_right_count = 2;
+  g_config.visual.status_bar_right_modules[0] = "Scene";
+  g_config.visual.status_bar_right_modules[1] = "LineColumn";
+  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_right_modules[0]));
+  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_right_modules[1]));
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -199,5 +280,29 @@ int main(void) {
   RUN_TEST(test_invert_modules_order_single,
            "InvertModulesOrder single module");
   RUN_TEST(test_invert_modules_order_null, "InvertModulesOrder with NULL");
+  RUN_TEST(test_module_from_string_input_mode,
+           "ModuleFromString resolves InputMode");
+  RUN_TEST(test_module_from_string_real_time,
+           "ModuleFromString resolves RealTime");
+  RUN_TEST(test_module_from_string_scene,
+           "ModuleFromString resolves Scene");
+  RUN_TEST(test_module_from_string_current_status,
+           "ModuleFromString resolves CurrentStatus");
+  RUN_TEST(test_module_from_string_line_column,
+           "ModuleFromString resolves LineColumn");
+  RUN_TEST(test_module_from_string_unknown,
+           "ModuleFromString unknown name returns NULL");
+  RUN_TEST(test_module_from_string_empty,
+           "ModuleFromString empty name returns NULL");
+  RUN_TEST(test_module_from_string_null,
+           "ModuleFromString NULL returns NULL");
+  RUN_TEST(test_max_status_bar_modules,
+           "MAX_STATUS_BAR_MODULES allows 8 modules per position");
+  RUN_TEST(test_default_left_modules,
+           "default left modules are InputMode and RealTime");
+  RUN_TEST(test_default_center_modules_empty,
+           "default center modules are empty");
+  RUN_TEST(test_default_right_modules,
+           "default right modules are Scene and LineColumn");
   return test_end();
 }

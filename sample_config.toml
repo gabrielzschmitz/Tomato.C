@@ -63,6 +63,13 @@ unfocused_panel_color = 7           # 0-7 (BLACK–WHITE)
 focused_panel_color  = 1            # 0-7
 clock_24h            = 0            # 0/1 — use 24-hour clock
 
+[visual.status_bar.modules]
+# Available modules: InputMode, RealTime, Scene, CurrentStatus, LineColumn
+# If unset, defaults to:  left = [InputMode, RealTime], right = [Scene, LineColumn]
+left   = ["InputMode", "RealTime"]
+center = []
+right  = ["Scene", "LineColumn"]
+
 # Notification Settings -------------------------------------------------------
 # Requires libnotify on Linux.
 [notifications]

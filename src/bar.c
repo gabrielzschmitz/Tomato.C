@@ -352,6 +352,26 @@ StatusBarModule* InvertModulesOrder(StatusBarModule* module) {
  */
 
 /**
+ * Map a module name string to its ModuleUpdate function pointer.
+ * @param name The module name (e.g. "InputMode", "RealTime")
+ * @return The corresponding ModuleUpdate, or NULL if unknown
+ */
+ModuleUpdate ModuleFromString(const char* name) {
+  if (!name) return NULL;
+  static const struct {
+    const char* name;
+    ModuleUpdate func;
+  } map[] = {
+    {"InputMode", InputModeModule},   {"RealTime", RealTimeModule},
+    {"Scene", SceneModule},           {"CurrentStatus", CurrentStatusModule},
+    {"LineColumn", LineColumnModule},
+  };
+  for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++)
+    if (strcmp(name, map[i].name) == 0) return map[i].func;
+  return NULL;
+}
+
+/**
  * Input mode module update function.
  * Displays the current input mode (NORMAL, INSERT, VISUAL) in the status bar.
  * @param app Pointer to the application data
@@ -650,7 +670,8 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
       } else {
         line = 0;
         for (int i = 0; i < app->notes->count; i++) {
-          if (app->notes->items[i]->page_id != app->notes->current_page) continue;
+          if (app->notes->items[i]->page_id != app->notes->current_page)
+            continue;
           const char* prefix;
           switch (app->notes->items[i]->state) {
             case NOTE_DONE:

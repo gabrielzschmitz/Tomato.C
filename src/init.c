@@ -243,7 +243,7 @@ static ErrorType initMenus(AppData* app) {
   const int n_mainmenu = 5;
   MenuItem main_menu_items[5] = {{"start", StartPomodoro},
                                  {"preferences", OpenPreferencesMenu},
-                                  {"help menu", OpenHelpMenu},
+                                 {"help menu", OpenHelpMenu},
                                  {"history", OpenHistoryPopup},
                                  {"leave", ForcefullyQuitApp}};
 
@@ -269,7 +269,12 @@ static ErrorType initMenus(AppData* app) {
 }
 
 /**
- * Initialize the status bar with modules for different information.
+ * Initialize the status bar with modules from config.
+ * Reads module name arrays from g_config.visual.status_bar_* and
+ * resolves each name to a ModuleUpdate function.  Unknown names are
+ * silently skipped, so user typos in the TOML config degrade gracefully.
+ * If the user did not set [visual.status_bar.modules] in TOML the
+ * built-in defaults (set in setDefaults()) are used.
  * @param app Pointer to the application data
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
@@ -280,10 +285,20 @@ static ErrorType initStatusBar(AppData* app) {
   app->status_bar = CreateStatusBar(position);
   if (app->status_bar == NULL) return MALLOC_ERROR;
 
-  AddStatusBarModule(app->status_bar, LEFT, InputModeModule);
-  AddStatusBarModule(app->status_bar, LEFT, RealTimeModule);
-  AddStatusBarModule(app->status_bar, RIGHT, SceneModule);
-  AddStatusBarModule(app->status_bar, RIGHT, LineColumnModule);
+  for (int i = 0; i < STATUS_BAR_LEFT_COUNT; i++) {
+    ModuleUpdate func = ModuleFromString(STATUS_BAR_LEFT_MODULES[i]);
+    if (func) AddStatusBarModule(app->status_bar, LEFT, func);
+  }
+
+  for (int i = 0; i < STATUS_BAR_CENTER_COUNT; i++) {
+    ModuleUpdate func = ModuleFromString(STATUS_BAR_CENTER_MODULES[i]);
+    if (func) AddStatusBarModule(app->status_bar, CENTER, func);
+  }
+
+  for (int i = 0; i < STATUS_BAR_RIGHT_COUNT; i++) {
+    ModuleUpdate func = ModuleFromString(STATUS_BAR_RIGHT_MODULES[i]);
+    if (func) AddStatusBarModule(app->status_bar, RIGHT, func);
+  }
 
   app->status_bar->right_modules =
     InvertModulesOrder(app->status_bar->right_modules);

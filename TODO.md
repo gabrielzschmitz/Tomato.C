@@ -56,6 +56,8 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Add error stack and UI error line
 - [X] Refactor the configuration system to prioritize user-defined settings
   over hardcoded defaults, particularly for keybindings.
+- [X] Add Status Bar modules at user config
+
 
 ### 👋 User Interface
 - [X] Mouse interaction

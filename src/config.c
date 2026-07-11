@@ -815,6 +815,14 @@ static void setDefaults(void) {
   g_config.visual.clock_24h = 1;
   g_config.visual.icons_index = 0;
 
+  g_config.visual.status_bar_left_modules[0] = "InputMode";
+  g_config.visual.status_bar_left_modules[1] = "RealTime";
+  g_config.visual.status_bar_left_count = 2;
+  g_config.visual.status_bar_center_count = 0;
+  g_config.visual.status_bar_right_modules[0] = "Scene";
+  g_config.visual.status_bar_right_modules[1] = "LineColumn";
+  g_config.visual.status_bar_right_count = 2;
+
   g_config.misc.wsl = 0;
   g_config.misc.fps = 120;
   g_config.misc.max_note_depth = 1;
@@ -995,6 +1003,28 @@ static void readIconArray(toml_table_t* root, const char* path,
   if (!arr || toml_array_len(arr) < 3) return;
   int len = toml_array_len(arr);
   if (len > 3) len = 3;
+  for (int i = 0; i < len; i++) {
+    toml_value_t v = toml_array_string(arr, i);
+    if (v.ok) out[i] = v.u.s;
+  }
+}
+
+/**
+ * Read a string array from a TOML table key into out[], up to max elements.
+ * Silently no-ops if the key is absent.
+ * @param tbl  The parent TOML table
+ * @param key  The array key within tbl
+ * @param out  Output array of string pointers (caller does not own memory)
+ * @param count  Set to the number of elements read (0 if absent)
+ * @param max  Maximum elements to read
+ */
+static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
+                                     const char* out[], int* count, int max) {
+  toml_array_t* arr = toml_table_array(tbl, key);
+  if (!arr) { *count = 0; return; }
+  int len = toml_array_len(arr);
+  if (len > max) len = max;
+  *count = len;
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
     if (v.ok) out[i] = v.u.s;
@@ -1280,6 +1310,24 @@ static void loadTomlFile(const char* path) {
           &g_config.visual.unfocused_panel_color);
   readInt(root, "visual.focused_panel_color",
           &g_config.visual.focused_panel_color);
+
+  {
+    toml_table_t* module_tbl = tableAtPath(root, "visual.status_bar.modules");
+    if (module_tbl) {
+      readStringArrayFromTable(module_tbl, "left",
+                               g_config.visual.status_bar_left_modules,
+                               &g_config.visual.status_bar_left_count,
+                               MAX_STATUS_BAR_MODULES);
+      readStringArrayFromTable(module_tbl, "center",
+                               g_config.visual.status_bar_center_modules,
+                               &g_config.visual.status_bar_center_count,
+                               MAX_STATUS_BAR_MODULES);
+      readStringArrayFromTable(module_tbl, "right",
+                               g_config.visual.status_bar_right_modules,
+                               &g_config.visual.status_bar_right_count,
+                               MAX_STATUS_BAR_MODULES);
+    }
+  }
 
   readIconArray(root, "visual.ui.icons.noise.rain",
                 g_config.visual.ui.icons.noise.rain);

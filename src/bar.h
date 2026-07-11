@@ -114,6 +114,13 @@ StatusBarModule* InvertModulesOrder(StatusBarModule* module);
  */
 
 /**
+ * Map a module name string to its ModuleUpdate function pointer.
+ * @param name The module name (e.g. "InputMode", "RealTime")
+ * @return The corresponding ModuleUpdate, or NULL if unknown
+ */
+ModuleUpdate ModuleFromString(const char* name);
+
+/**
  * Input mode module update function.
  * Displays the current input mode (NORMAL, INSERT, VISUAL) in the status bar.
  * @param app Pointer to the application data

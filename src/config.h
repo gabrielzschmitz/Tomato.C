@@ -5,7 +5,10 @@
 
 #include "input.h"
 
-/* ── Config struct hierarchy ── */
+/* Config struct hierarchy -------------------------------------------------- */
+
+/** Maximum number of status bar modules per position (left/center/right). */
+#define MAX_STATUS_BAR_MODULES 10
 
 /**
  * Icons for white-noise tracks.
@@ -94,6 +97,15 @@ typedef struct {
   ConfigUi ui;               /**< icon sets */
   int clock_24h;             /**< 0/1 — use 24-hour clock */
   int icons_index;           /**< 0=nerd-icons, 1=emojis, 2=ascii */
+  const char* status_bar_left_modules
+    [MAX_STATUS_BAR_MODULES]; /**< Module names for left */
+  const char* status_bar_center_modules
+    [MAX_STATUS_BAR_MODULES]; /**< Module names for center */
+  const char* status_bar_right_modules
+    [MAX_STATUS_BAR_MODULES];  /**< Module names for right */
+  int status_bar_left_count;   /**< Number of left modules */
+  int status_bar_center_count; /**< Number of center modules */
+  int status_bar_right_count;  /**< Number of right modules */
 } ConfigVisual;
 
 /**
@@ -181,7 +193,7 @@ void LoadConfig(void);
 /** Sync g_config.visual.icons string from icons_index (0-2). */
 void SyncIconsFromIndex(void);
 
-/* ── Accessor macros ── */
+/* Accessor macros ---------------------------------------------------------- */
 
 /* Visual Settings ---------------------------------------------------------- */
 
@@ -195,6 +207,18 @@ void SyncIconsFromIndex(void);
 #define STATUS_BAR_SPACING (g_config.visual.status_bar_spacing)
 /** 0=bottom, 1=top (default: 0) */
 #define STATUS_BAR_POSITION (g_config.visual.status_bar_position)
+/** Names of left status bar modules (default: InputMode, RealTime) */
+#define STATUS_BAR_LEFT_MODULES (g_config.visual.status_bar_left_modules)
+/** Number of left status bar modules (default: 2) */
+#define STATUS_BAR_LEFT_COUNT (g_config.visual.status_bar_left_count)
+/** Names of center status bar modules (default: empty) */
+#define STATUS_BAR_CENTER_MODULES (g_config.visual.status_bar_center_modules)
+/** Number of center status bar modules (default: 0) */
+#define STATUS_BAR_CENTER_COUNT (g_config.visual.status_bar_center_count)
+/** Names of right status bar modules (default: Scene, LineColumn) */
+#define STATUS_BAR_RIGHT_MODULES (g_config.visual.status_bar_right_modules)
+/** Number of right status bar modules (default: 2) */
+#define STATUS_BAR_RIGHT_COUNT (g_config.visual.status_bar_right_count)
 /** Color of unfocused panels, 0-7 (default: 7) */
 #define UNFOCUSED_PANEL_COLOR (g_config.visual.unfocused_panel_color)
 /** Color of focused panel, 0-7 (default: 1) */
@@ -335,9 +359,9 @@ static const char* SEPARATOR =
 /** Bitmask of all pomodoro timer scenes. */
 #define POMODORO_SCENES (SCENE_WORK_TIME | SCENE_SHORT_PAUSE | SCENE_LONG_PAUSE)
 /** Bitmask of every scene type. */
-#define ALL_SCENES                                                \
-  (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_NOTES_TRANSITION | SCENE_HELP | \
-   SCENE_CONTINUE | SCENE_PREFERENCES)
+#define ALL_SCENES                                                            \
+  (SCENE_MAIN_MENU | POMODORO_SCENES | SCENE_NOTES | SCENE_NOTES_TRANSITION | \
+   SCENE_HELP | SCENE_CONTINUE | SCENE_PREFERENCES)
 
 /** Shorthand for g_config.key_bindings. */
 #define keys (g_config.key_bindings)
