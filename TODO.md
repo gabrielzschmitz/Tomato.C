@@ -54,6 +54,8 @@ extensible, terminal-based Pomodoro timer written in C.
     - [X] Transform logging to be less data consuming (maybe binary)
     - [X] Add more interesting data about sessions to GetPomodoroLog
 - [X] Add error stack and UI error line
+- [X] Refactor the configuration system to prioritize user-defined settings
+  over hardcoded defaults, particularly for keybindings.
 
 ### 👋 User Interface
 - [X] Mouse interaction
@@ -77,10 +79,6 @@ extensible, terminal-based Pomodoro timer written in C.
 ---
 
 ## 🚧 In Progress
-
-### 🛠️ User Preferences
-- [ ] Refactor the configuration system to prioritize user-defined settings
-  over hardcoded defaults, particularly for keybindings.
 
 ### 📚 Documentation
 - [X] Inline documentation for all modules

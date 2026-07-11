@@ -463,6 +463,7 @@ static const struct {
   {"CTRLW", CTRLW},
   {"CTRLH", CTRLH},
   {"SPACE", ' '},
+  {"KEY_F(1)", KEY_F(1)},
 };
 
 /**
@@ -818,7 +819,10 @@ static void setDefaults(void) {
   g_config.misc.fps = 120;
   g_config.misc.max_note_depth = 1;
 
-  g_config.key_bindings = (KeyFunction*)DEFAULT_KEYS;
+  g_config.key_bindings = (KeyFunction*)CALLOC(DEFAULT_KEYS_COUNT,
+                                                 sizeof(KeyFunction));
+  memcpy(g_config.key_bindings, DEFAULT_KEYS,
+         DEFAULT_KEYS_COUNT * sizeof(KeyFunction));
   g_config.num_keys = DEFAULT_KEYS_COUNT;
 }
 
@@ -998,44 +1002,41 @@ static void readIconArray(toml_table_t* root, const char* path,
 }
 
 /**
- * Parse the [keybindings] TOML section and replace g_config.key_bindings.
+ * Parse the [keybindings] TOML section and merge entries into
+ * g_config.key_bindings.
  *
  * The expected structure is:
  *   [keybindings.MODE.SCENE]
- *   key_name = "ActionName"
+ *   ActionName = ["key1", "key2", …]
  *
- * If any bindings are found, the old array is freed and g_config.key_bindings
- * is replaced with a dynamically-allocated copy of the TOML entries.
+ * ActionName is looked up in action_map[], each element in the array is a
+ * key name resolved via keycode_map[].  For every (key, action, mode, scene)
+ * tuple the function searches g_config.key_bindings for a matching entry
+ * (same key + modes + scene_types).  If found, its action is **overridden**
+ * with the TOML value.  If no match exists, a new entry is appended.
+ *
+ * This merge is additive: TOML files only change or extend the existing
+ * binding set — they do not replace it wholesale.
+ *
  * @param root Top-level TOML table
  */
 static void readKeybindings(toml_table_t* root) {
   toml_table_t* kb = toml_table_table(root, "keybindings");
   if (!kb) return;
 
-  /* First pass: count total entries */
-  int total = 0;
-  for (int m = 0; m < toml_table_len(kb); m++) {
-    int klen;
-    const char* mode_name = toml_table_key(kb, m, &klen);
-    if (!mode_name) continue;
-    toml_table_t* mode_tbl = toml_table_table(kb, mode_name);
-    if (!mode_tbl) continue;
-    for (int s = 0; s < toml_table_len(mode_tbl); s++) {
-      int klen2;
-      const char* sc_name = toml_table_key(mode_tbl, s, &klen2);
-      if (!sc_name) continue;
-      toml_table_t* sc_tbl = toml_table_table(mode_tbl, sc_name);
-      if (!sc_tbl) continue;
-      total += toml_table_len(sc_tbl);
-    }
-  }
-  if (total == 0) return;
+  /* ── Phase 1: collect TOML entries into a temporary list ── */
 
-  /* Allocate new array */
-  KeyFunction* custom =
-    (KeyFunction*)CALLOC((size_t)total, sizeof(KeyFunction));
-  if (!custom) return;
-  int idx = 0;
+  /* Upper bound: one entry per (mode × scene) key.  Use a dynamic list. */
+  typedef struct {
+    int key;
+    void (*action)(AppData*);
+    int modes;
+    int scene_types;
+  } TomlEntry;
+
+  TomlEntry* tmp = NULL;
+  size_t tmp_cap = 0;
+  size_t tmp_count = 0;
 
   for (int m = 0; m < toml_table_len(kb); m++) {
     int klen;
@@ -1055,30 +1056,197 @@ static void readKeybindings(toml_table_t* root) {
       int scene = sceneFromString(sc_name);
       if (!scene) continue;
 
-      for (int k = 0; k < toml_table_len(sc_tbl); k++) {
+      for (int a = 0; a < toml_table_len(sc_tbl); a++) {
         int klen3;
-        const char* key_name = toml_table_key(sc_tbl, k, &klen3);
-        if (!key_name) continue;
-        toml_value_t v = toml_table_string(sc_tbl, key_name);
-        if (!v.ok) continue;
+        const char* action_name = toml_table_key(sc_tbl, a, &klen3);
+        if (!action_name) continue;
 
-        custom[idx].key = keycodeFromString(key_name);
-        custom[idx].action = actionFromString(v.u.s);
-        custom[idx].modes = mode;
-        custom[idx].scene_types = scene;
-        idx++;
+        void (*action)(AppData*) = actionFromString(action_name);
+        if (!action) continue;
+
+        toml_array_t* arr = toml_table_array(sc_tbl, action_name);
+        if (!arr) continue;
+        int arr_len = toml_array_len(arr);
+        if (arr_len == 0) continue;
+
+        for (int ki = 0; ki < arr_len; ki++) {
+          toml_value_t elem = toml_array_string(arr, ki);
+          if (!elem.ok) continue;
+          int key = keycodeFromString(elem.u.s);
+          if (key == 0) continue;
+
+          if (tmp_count >= tmp_cap) {
+            size_t new_cap = tmp_cap ? tmp_cap * 2 : 64;
+            TomlEntry* p = (TomlEntry*)realloc(tmp, new_cap * sizeof(TomlEntry));
+            if (!p) goto cleanup;
+            tmp = p;
+            tmp_cap = new_cap;
+          }
+
+          tmp[tmp_count].key = key;
+          tmp[tmp_count].action = action;
+          tmp[tmp_count].modes = mode;
+          tmp[tmp_count].scene_types = scene;
+          tmp_count++;
+        }
       }
     }
   }
 
-  if (idx > 0) {
-    if (g_config.key_bindings != (KeyFunction*)keys)
-      free(g_config.key_bindings);
-    g_config.key_bindings = custom;
-    g_config.num_keys = (size_t)idx;
-  } else {
-    free(custom);
+  if (tmp_count == 0) goto cleanup;
+
+  /* ── Phase 2: build action groups from the TOML entries ──
+   *
+   * Each group maps an (action, modes, scene_types) triple to the set of
+   * keys the user specified for it in the TOML.  A group's key set is the
+   * authoritative list: any default entry whose (modes, scene, action)
+   * matches a group but whose key is NOT in the group's set is implicitly
+   * unbound (removed).                                              */
+
+  typedef struct {
+    void (*action)(AppData*);
+    int modes;
+    int scene_types;
+    int* key_list;
+    size_t key_count;
+  } ActionGroup;
+
+  ActionGroup* groups = NULL;
+  size_t n_groups = 0;
+
+  for (size_t i = 0; i < tmp_count; i++) {
+    int g = -1;
+    for (size_t k = 0; k < n_groups; k++) {
+      if (groups[k].action == tmp[i].action &&
+          groups[k].modes == tmp[i].modes &&
+          groups[k].scene_types == tmp[i].scene_types) {
+        g = (int)k;
+        break;
+      }
+    }
+    if (g < 0) {
+      ActionGroup* p = (ActionGroup*)realloc(
+          groups, (n_groups + 1) * sizeof(ActionGroup));
+      if (!p) { free(groups); goto cleanup; }
+      groups = p;
+      groups[n_groups].action = tmp[i].action;
+      groups[n_groups].modes   = tmp[i].modes;
+      groups[n_groups].scene_types = tmp[i].scene_types;
+      groups[n_groups].key_list    = NULL;
+      groups[n_groups].key_count = 0;
+      g = (int)n_groups;
+      n_groups++;
+    }
+    /* deduplicate keys within each group */
+    int already = 0;
+    for (size_t k = 0; k < groups[g].key_count && !already; k++)
+      if (groups[g].key_list[k] == tmp[i].key) already = 1;
+    if (already) continue;
+    int* kp = (int*)realloc(groups[g].key_list,
+                            (groups[g].key_count + 1) * sizeof(int));
+    if (!kp) { free(groups); goto cleanup; }
+    groups[g].key_list = kp;
+    groups[g].key_list[groups[g].key_count++] = tmp[i].key;
   }
+
+  /* ── Phase 3: build the merged array ──
+   *
+   *  1. Copy old entries that are NOT covered by any TOML group (i.e. the
+   *     user didn't mention that action+mode+scene at all).
+   *  2. For each group, copy (or create) entries for every key in the
+   *     group's key set.  Old entries whose (modes, scene, action) matches
+   *     a group but whose key is NOT in the group's set are dropped.   */
+
+  size_t old_count = g_config.num_keys;
+
+  /* Pre-compute which old entries are covered by a group */
+  int* covered = (int*)CALLOC(old_count, sizeof(int));
+  if (!covered) { free(groups); goto cleanup; }
+
+  for (size_t g = 0; g < n_groups; g++) {
+    for (size_t j = 0; j < old_count; j++) {
+      if (g_config.key_bindings[j].modes == groups[g].modes &&
+          g_config.key_bindings[j].scene_types == groups[g].scene_types &&
+          g_config.key_bindings[j].action == groups[g].action) {
+        covered[j] = 1;
+      }
+    }
+  }
+
+  /* Count uncovered + total key slots */
+  size_t baseline = 0;
+  size_t keys_total = 0;
+  for (size_t j = 0; j < old_count; j++) if (!covered[j]) baseline++;
+  for (size_t g = 0; g < n_groups; g++) keys_total += groups[g].key_count;
+
+  size_t new_total = baseline + keys_total;
+  KeyFunction* merged =
+    (KeyFunction*)CALLOC(new_total, sizeof(KeyFunction));
+  if (!merged) { free(covered); free(groups); goto cleanup; }
+
+  size_t write = 0;
+
+  /* Copy uncovered old entries */
+  for (size_t j = 0; j < old_count; j++) {
+    if (!covered[j]) {
+      merged[write++] = g_config.key_bindings[j];
+    }
+  }
+
+  /* For each group, write all keys (match old entry if it exists) */
+  for (size_t g = 0; g < n_groups; g++) {
+    for (size_t k = 0; k < groups[g].key_count; k++) {
+      int key = groups[g].key_list[k];
+      int found = 0;
+      /* Prefer matching old entry with same action */
+      for (size_t j = 0; j < old_count && !found; j++) {
+        if (covered[j] &&
+            g_config.key_bindings[j].key == key &&
+            g_config.key_bindings[j].modes == groups[g].modes &&
+            g_config.key_bindings[j].scene_types == groups[g].scene_types &&
+            g_config.key_bindings[j].action == groups[g].action) {
+          merged[write] = g_config.key_bindings[j];
+          merged[write].action = groups[g].action;
+          found = 1;
+        }
+      }
+      /* Fall back to old entry with same key+modes+scene (action change) */
+      if (!found) {
+        for (size_t j = 0; j < old_count && !found; j++) {
+          if (covered[j] &&
+              g_config.key_bindings[j].key == key &&
+              g_config.key_bindings[j].modes == groups[g].modes &&
+              g_config.key_bindings[j].scene_types == groups[g].scene_types) {
+            merged[write] = g_config.key_bindings[j];
+            merged[write].action = groups[g].action;
+            found = 1;
+          }
+        }
+      }
+      if (!found) {
+        merged[write].key         = key;
+        merged[write].action      = groups[g].action;
+        merged[write].modes       = groups[g].modes;
+        merged[write].scene_types = groups[g].scene_types;
+        merged[write].group       = NULL;
+        merged[write].desc        = NULL;
+      }
+      write++;
+    }
+  }
+
+  /* ── Phase 4: swap ── */
+
+  free(covered);
+  free(g_config.key_bindings);
+  g_config.key_bindings = merged;
+  g_config.num_keys = new_total;
+
+  for (size_t g = 0; g < n_groups; g++) free(groups[g].key_list);
+  free(groups);
+
+cleanup:
+  free(tmp);
 }
 
 /**

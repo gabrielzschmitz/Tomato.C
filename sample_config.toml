@@ -61,7 +61,7 @@ status_bar_spacing   = 1            # spaces between status bar modules
 status_bar_position  = 0            # 0 = bottom, 1 = top
 unfocused_panel_color = 7           # 0-7 (BLACK–WHITE)
 focused_panel_color  = 1            # 0-7
-clock_24h           = 0           # 0/1 — use 24-hour clock
+clock_24h            = 0            # 0/1 — use 24-hour clock
 
 # Notification Settings -------------------------------------------------------
 # Requires libnotify on Linux.
@@ -114,216 +114,175 @@ resume_from_unfinished_session  = true  # 0/1 — get resume from unfinished
 # Keybindings -----------------------------------------------------------------
 # Format:
 #   [keybindings.MODE.SCENE]
-#   key_name = "ActionName"
+#   ActionName = ["key1", "key2", …]
+#
+# The action name (as listed in action_map in config.c) is the key, and the
+# value is an array of key-name strings that trigger it.
+#
+# Key names: single printable character, or a named constant:
+#   KEY_LEFT  KEY_RIGHT  KEY_UP     KEY_DOWN
+#   KEY_ENTER KEY_BACKSPACE  BACKSPACE
+#   ENTER     ESC       CTRLR     CTRLW
+#   CTRLH     SPACE     CTRLC
 #
 # MODE:  DEFAULT | NORMAL | INSERT | VISUAL
 # SCENE: SCENE_MAIN_MENU | SCENE_WORK_TIME | SCENE_SHORT_PAUSE
 #        | SCENE_LONG_PAUSE | SCENE_NOTES | SCENE_HELP
 #        | SCENE_CONTINUE | SCENE_NOISE | SCENE_HISTORY_OVERVIEW
 #        | SCENE_HISTORY_DAY | SCENE_HISTORY_STATS
-#        | SCENE_PREFERENCES
+#        | SCENE_PREFERENCES | SCENE_PREFS_STEPPER | SCENE_PREFS_SELECT
 #        | ALL_SCENES | POMODORO_SCENES
 #
-# Key names: single printable character, or named constant:
-#   KEY_LEFT  KEY_RIGHT  KEY_UP    KEY_DOWN
-#   KEY_ENTER KEY_BACKSPACE  BACKSPACE
-#   ENTER     ESC       CTRLR     CTRLW
-#   CTRLH     SPACE
+# ── How merging works ──
+# The built-in defaults always load first.  Each TOML file (system and then
+# user) is **merged** into the current binding set:
 #
-# Action names: see action_map in config.c (e.g. InputCursorLeft, QuitApp, …)
-# NORMAL mode — NOTES scene (editing keys when Panel.input != NULL)
-[NORMAL.SCENE_NOTES]
-h       = "InputCursorLeft"
-l       = "InputCursorRight"
-KEY_LEFT  = "InputCursorLeft"
-KEY_RIGHT = "InputCursorRight"
-x       = "InputDeleteChar"
-ESC     = "InputESC"
-CTRLC   = "InputESC"
-ENTER   = "InputCommit"
-KEY_ENTER = "InputCommit"
-i       = "SwitchToInsertMode"
-a       = "SwitchToInsertModeAppend"
-v       = "SwitchToVisualMode"
-u       = "UndoNotes"
-CTRLR   = "RedoNotes"
+#   • If a TOML entry matches an existing (key, mode, scene) tuple, its
+#     action is **overridden**.
+#   • If no match exists, a new binding is **appended**.
+#
+# This means you only need to list the bindings you want to change or add.
+# Everything you don't mention stays at its default value.
+
+# DEFAULT mode — ALL_SCENES (general / cross-cutting keys)
+[keybindings.DEFAULT.ALL_SCENES]
+ChangeSelectedItemLeft  = ["KEY_UP", "k", "KEY_LEFT", "h"]
+ChangeSelectedItemRight = ["KEY_DOWN", "j", "KEY_RIGHT", "l"]
+ExecuteMenuAction       = ["ENTER", "KEY_ENTER"]
+NextPanel               = ["SPACE"]
+QuitApp                 = ["q", "ESC", "CTRLC"]
+OpenNoiseMenu           = ["CTRLW", "w"]
+OpenHistoryPopup        = ["CTRLH"]
+GoPrevSlide             = ["KEY_LEFT", "h"]
+GoNextSlide             = ["KEY_RIGHT", "l"]
+ClosePopup              = ["ENTER", "KEY_ENTER", "q", "ESC", "CTRLC"]
+SelectPrevButton        = ["KEY_LEFT", "h"]
+SelectNextButton        = ["KEY_RIGHT", "l"]
+ExecuteButtonAction     = ["ENTER", "KEY_ENTER"]
+OpenHelp                = ["?", "KEY_F(1)"]
+
+# NORMAL mode — NOTES scene (vim-like editing keys)
+[keybindings.NORMAL.SCENE_NOTES]
+InputCursorLeft       = ["h", "KEY_LEFT"]
+InputCursorRight      = ["l", "KEY_RIGHT"]
+InputDeleteChar       = ["x"]
+InputESC              = ["ESC", "CTRLC"]
+InputCommit           = ["ENTER", "KEY_ENTER"]
+SwitchToInsertMode    = ["i"]
+SwitchToInsertModeAppend = ["a"]
+SwitchToVisualMode    = ["v"]
+UndoNotes             = ["u"]
+RedoNotes             = ["CTRLR"]
 
 # INSERT mode — NOTES scene
-[INSERT.SCENE_NOTES]
-KEY_LEFT      = "InputCursorLeft"
-KEY_RIGHT     = "InputCursorRight"
-KEY_BACKSPACE = "InputBackspace"
-BACKSPACE     = "InputBackspace"
-ENTER         = "InputCommit"
-KEY_ENTER     = "InputCommit"
-ESC           = "InputESC"
-CTRLC         = "InputESC"
-v             = "SwitchToVisualMode"
+[keybindings.INSERT.SCENE_NOTES]
+InputCursorLeft       = ["KEY_LEFT"]
+InputCursorRight      = ["KEY_RIGHT"]
+InputBackspace        = ["KEY_BACKSPACE", "BACKSPACE"]
+InputCommit           = ["ENTER", "KEY_ENTER"]
+InputESC              = ["ESC", "CTRLC"]
+SwitchToVisualMode    = ["v"]
 
 # VISUAL mode — NOTES scene
-[VISUAL.SCENE_NOTES]
-h       = "InputCursorLeft"
-l       = "InputCursorRight"
-KEY_LEFT  = "InputCursorLeft"
-KEY_RIGHT = "InputCursorRight"
-x       = "InputVisualDelete"
-ENTER   = "InputCommit"
-KEY_ENTER = "InputCommit"
-ESC     = "InputESC"
-CTRLC   = "InputESC"
-a       = "InputSwitchToInsertFromVisual"
-i       = "SwitchToInsertMode"
+[keybindings.VISUAL.SCENE_NOTES]
+InputCursorLeft          = ["h", "KEY_LEFT"]
+InputCursorRight         = ["l", "KEY_RIGHT"]
+InputVisualDelete        = ["x"]
+InputCommit              = ["ENTER", "KEY_ENTER"]
+InputESC                 = ["ESC", "CTRLC"]
+InputSwitchToInsertFromVisual = ["a"]
+SwitchToInsertMode       = ["i"]
 
-# DEFAULT mode — scene-specific keys
-[DEFAULT.SCENE_NOTES]
-V         = "ToggleMoveMode"
-j         = "MoveNoteDownWrapper"
-k         = "MoveNoteUpWrapper"
-KEY_DOWN  = "MoveNoteDownWrapper"
-KEY_UP    = "MoveNoteUpWrapper"
-h         = "PromoteNoteWrapper"
-KEY_LEFT  = "PromoteNoteWrapper"
-l         = "DemoteNoteWrapper"
-KEY_RIGHT = "DemoteNoteWrapper"
-d         = "DeleteNoteAtNotes"
-t         = "AddNewTask"
-n         = "AddNewNote"
-T         = "AddSubtask"
-N         = "AddSubnote"
-e         = "EditCurrentNote"
-ENTER     = "ExitMoveMode"
-ENTER     = "ToggleTaskAtNotes"
-u         = "UndoNotes"
-CTRLR     = "RedoNotes"
-ESC       = "QuitAppNotes"
-CTRLC     = "QuitAppNotes"
-q         = "QuitAppNotes"
+# DEFAULT mode — NOTES scene (note/ task management)
+[keybindings.DEFAULT.SCENE_NOTES]
+ToggleMoveMode        = ["V"]
+MoveNoteDownWrapper   = ["j", "KEY_DOWN"]
+MoveNoteUpWrapper     = ["k", "KEY_UP"]
+PromoteNoteWrapper    = ["h", "KEY_LEFT"]
+DemoteNoteWrapper     = ["l", "KEY_RIGHT"]
+DeleteNoteAtNotes     = ["d"]
+AddNewTask            = ["t"]
+AddNewNote            = ["n"]
+AddSubtask            = ["T"]
+AddSubnote            = ["N"]
+EditCurrentNote       = ["e"]
+ExitMoveMode          = ["ENTER"]
+ToggleTaskAtNotes     = ["ENTER"]
+UndoNotes             = ["u"]
+RedoNotes             = ["CTRLR"]
+QuitAppNotes          = ["ESC", "CTRLC", "q"]
 
-[DEFAULT.SCENE_MAIN_MENU]
-KEY_DOWN  = "SelectNextItem"
-KEY_UP    = "SelectPreviousItem"
-KEY_RIGHT = "SelectNextItem"
-KEY_LEFT  = "SelectPreviousItem"
-j         = "SelectNextItem"
-k         = "SelectPreviousItem"
-l         = "SelectNextItem"
-h         = "SelectPreviousItem"
-ENTER     = "ExecuteMenuAction"
+# DEFAULT mode — Main Menu
+[keybindings.DEFAULT.SCENE_MAIN_MENU]
+SelectNextItem        = ["KEY_DOWN", "KEY_RIGHT", "j", "l"]
+SelectPreviousItem    = ["KEY_UP", "KEY_LEFT", "k", "h"]
+ExecuteMenuAction     = ["ENTER"]
 
-# DEFAULT mode — ALL_SCENES (general keys)
-#
-# NOTE: TOML requires unique keys per table. The C default_keys array
-# defines multiple bindings for the same key+scene (e.g. `q` = QuitApp AND
-# ClosePopup).  Only the *first* binding per key is shown here; to add back
-# a duplicate, remove or comment out the earlier entry.
-[DEFAULT.ALL_SCENES]
-KEY_UP    = "ChangeSelectedItemLeft"
-k         = "ChangeSelectedItemLeft"
-KEY_LEFT  = "ChangeSelectedItemLeft"
-h         = "ChangeSelectedItemLeft"
-KEY_DOWN  = "ChangeSelectedItemRight"
-j         = "ChangeSelectedItemRight"
-KEY_RIGHT = "ChangeSelectedItemRight"
-l         = "ChangeSelectedItemRight"
-ENTER     = "ExecuteMenuAction"
-KEY_ENTER = "ExecuteMenuAction"
-SPACE     = "NextPanel"
-s         = "SkipPomodoroStep"
-p         = "TogglePause"
-CTRLR     = "OpenResetMenu"
-q         = "QuitApp"
-ESC       = "QuitApp"
-CTRLC     = "QuitApp"
-CTRLW     = "OpenNoiseMenu"
-w         = "OpenNoiseMenu"
-CTRLH     = "OpenHistoryPopup"
+# DEFAULT mode — POMODORO_SCENES (timer-scoped overrides)
+[keybindings.DEFAULT.POMODORO_SCENES]
+SkipPomodoroStep      = ["s"]
+TogglePause           = ["p"]
+OpenResetMenu         = ["CTRLR"]
 
-# DEFAULT mode — POMODORO_SCENES (timer-related keys)
-[DEFAULT.POMODORO_SCENES]
-s     = "SkipPomodoroStep"
-p     = "TogglePause"
-CTRLR = "OpenResetMenu"
+# DEFAULT mode — White-Noise dialog
+[keybindings.DEFAULT.SCENE_NOISE]
+NoiseClose            = ["q", "ESC", "CTRLC"]
+NoiseSelectPrev       = ["k", "KEY_UP"]
+NoiseSelectNext       = ["j", "KEY_DOWN"]
+NoiseTogglePlay       = ["SPACE"]
+NoiseVolumeUp         = ["l", "KEY_RIGHT", "+", "="]
+NoiseVolumeDown       = ["h", "KEY_LEFT", "-", "_"]
+NoiseResetAll         = ["r", "R"]
 
-# Noise dialog
-[DEFAULT.SCENE_NOISE]
-q           = "NoiseClose"
-ESC         = "NoiseClose"
-CTRLC       = "NoiseClose"
-k           = "NoiseSelectPrev"
-KEY_UP      = "NoiseSelectPrev"
-j           = "NoiseSelectNext"
-KEY_DOWN    = "NoiseSelectNext"
-SPACE       = "NoiseTogglePlay"
-l           = "NoiseVolumeUp"
-KEY_RIGHT   = "NoiseVolumeUp"
-"+"         = "NoiseVolumeUp"
-"="         = "NoiseVolumeUp"
-h           = "NoiseVolumeDown"
-KEY_LEFT    = "NoiseVolumeDown"
-"-"         = "NoiseVolumeDown"
-"_"         = "NoiseVolumeDown"
-r           = "NoiseResetAll"
-R           = "NoiseResetAll"
+# DEFAULT mode — Continue dialog
+[keybindings.DEFAULT.SCENE_CONTINUE]
+SelectNextButton      = ["l", "KEY_RIGHT"]
+SelectPrevButton      = ["h", "KEY_LEFT"]
+ExecuteButtonAction   = ["ENTER", "KEY_ENTER"]
+ClosePopup            = ["q", "ESC", "CTRLC"]
 
-# Continue dialog
-[DEFAULT.SCENE_CONTINUE]
-l           = "SelectNextButton"
-h           = "SelectPrevButton"
-KEY_RIGHT   = "SelectNextButton"
-KEY_LEFT    = "SelectPrevButton"
-ENTER       = "ExecuteButtonAction"
-KEY_ENTER   = "ExecuteButtonAction"
-q           = "ClosePopup"
-ESC         = "ClosePopup"
-CTRLC       = "ClosePopup"
+# DEFAULT mode — History Overview
+[keybindings.DEFAULT.SCENE_HISTORY_OVERVIEW]
+HistoryCursorLeft     = ["h", "KEY_LEFT"]
+HistoryCursorRight    = ["l", "KEY_RIGHT"]
+HistoryCursorDown     = ["j", "KEY_DOWN"]
+HistoryCursorUp       = ["k", "KEY_UP"]
+HistoryOpenDayDetail  = ["ENTER", "KEY_ENTER"]
+ClosePopup            = ["q", "ESC", "CTRLC"]
 
-# History Overview
-[DEFAULT.SCENE_HISTORY_OVERVIEW]
-l           = "HistoryCursorRight"
-h           = "HistoryCursorLeft"
-j           = "HistoryCursorDown"
-k           = "HistoryCursorUp"
-KEY_LEFT    = "HistoryCursorLeft"
-KEY_RIGHT   = "HistoryCursorRight"
-KEY_DOWN    = "HistoryCursorDown"
-KEY_UP      = "HistoryCursorUp"
-ENTER       = "HistoryOpenDayDetail"
-KEY_ENTER   = "HistoryOpenDayDetail"
-q           = "ClosePopup"
-ESC         = "ClosePopup"
-CTRLC       = "ClosePopup"
+# DEFAULT mode — History Day Detail
+[keybindings.DEFAULT.SCENE_HISTORY_DAY]
+HistoryScrollDown     = ["j", "KEY_DOWN"]
+HistoryScrollUp       = ["k", "KEY_UP"]
+HistoryCloseToOverview = ["ENTER", "KEY_ENTER", "ESC", "CTRLC", "q"]
 
-# History Day Detail
-[DEFAULT.SCENE_HISTORY_DAY]
-j           = "HistoryScrollDown"
-k           = "HistoryScrollUp"
-KEY_DOWN    = "HistoryScrollDown"
-KEY_UP      = "HistoryScrollUp"
-ENTER       = "HistoryCloseToOverview"
-KEY_ENTER   = "HistoryCloseToOverview"
-ESC         = "HistoryCloseToOverview"
-CTRLC       = "HistoryCloseToOverview"
-q           = "HistoryCloseToOverview"
+# DEFAULT mode — History Statistics
+[keybindings.DEFAULT.SCENE_HISTORY_STATS]
+HistoryCloseToOverview = ["ESC", "CTRLC", "q"]
 
-# Preferences dialog
-[DEFAULT.SCENE_PREFERENCES]
-KEY_UP    = "PrefsSelectPrev"
-k         = "PrefsSelectPrev"
-KEY_DOWN  = "PrefsSelectNext"
-j         = "PrefsSelectNext"
-KEY_LEFT  = "PrefsValueDown"
-h         = "PrefsValueDown"
-KEY_RIGHT = "PrefsValueUp"
-l         = "PrefsValueUp"
-SPACE     = "PrefsToggle"
-ENTER     = "PrefsEdit"
-KEY_ENTER = "PrefsEdit"
-q         = "PrefsBack"
-ESC       = "PrefsBack"
-CTRLC     = "PrefsBack"
+# DEFAULT mode — Preferences dialog
+[keybindings.DEFAULT.SCENE_PREFERENCES]
+PrefsSelectPrev       = ["KEY_UP", "k"]
+PrefsSelectNext       = ["KEY_DOWN", "j"]
+PrefsScrollUp         = ["u"]
+PrefsScrollDown       = ["d"]
+PrefsValueDown        = ["KEY_LEFT", "h"]
+PrefsValueUp          = ["KEY_RIGHT", "l"]
+PrefsToggle           = ["SPACE"]
+PrefsEdit             = ["ENTER", "KEY_ENTER"]
+PrefsBack             = ["q", "ESC", "CTRLC"]
 
-# History Statistics
-[DEFAULT.SCENE_HISTORY_STATS]
-q           = "HistoryCloseToOverview"
-ESC         = "HistoryCloseToOverview"
-CTRLC       = "HistoryCloseToOverview"
+# DEFAULT mode — Preferences stepper sub-dialog
+[keybindings.DEFAULT.SCENE_PREFS_STEPPER]
+StepperDecrement      = ["h", "KEY_LEFT"]
+StepperIncrement      = ["l", "KEY_RIGHT"]
+PrefsPreview          = ["p"]
+StepperClose          = ["ENTER", "KEY_ENTER", "q", "ESC", "CTRLC"]
+
+# DEFAULT mode — Preferences select sub-dialog
+[keybindings.DEFAULT.SCENE_PREFS_SELECT]
+SelectPrevOption      = ["k", "KEY_UP"]
+SelectNextOption      = ["j", "KEY_DOWN"]
+PrefsPreview          = ["p"]
+SelectApply           = ["ENTER", "KEY_ENTER"]
+SelectCancel          = ["q", "ESC", "CTRLC"]
