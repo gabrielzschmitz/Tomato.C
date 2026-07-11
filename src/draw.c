@@ -69,8 +69,7 @@ bool ValidateAndRenderScreenSize(AppData* app) {
   if (app->screen->size.width < app->screen->min_panel_size.width ||
       app->screen->size.height < app->screen->min_panel_size.height) {
     app->block_input = true;
-    RenderScreenSizeError(app->screen,
-                          &app->screen->panels[app->screen->current_panel]);
+    RenderScreenSizeError(app->screen);
     refresh();
     return false;
   }
@@ -124,8 +123,14 @@ static void renderPanel(AppData* app, Border border) {
 
     int indices[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
     int largest_index = RollfilmLargest(app->animations, indices, 3);
-    if (largest_index == -1) { SetError(app, "renderPanel", UPDATE_ERROR); return; }
-    if (app->animations[largest_index] == NULL) { SetError(app, "renderPanel", NULL_POINTER_ERROR); return; }
+    if (largest_index == -1) {
+      SetError(app, "renderPanel", UPDATE_ERROR);
+      return;
+    }
+    if (app->animations[largest_index] == NULL) {
+      SetError(app, "renderPanel", NULL_POINTER_ERROR);
+      return;
+    }
     Dimensions size = {.width = app->animations[largest_index]->frame_width,
                        .height = app->animations[largest_index]->frame_height};
     Vector2D position = {.x = current_panel->position.x +
@@ -329,10 +334,10 @@ static void renderNotesPageIndicator(AppData* app, Panel* panel,
   int left_x = panel_center_x - page_str_len / 2 - 2;
   int right_x = panel_center_x + page_str_len / 2 + 1;
 
-  bool hover_left = (app->mouse_y == indicator_y &&
-                     app->mouse_x >= left_x && app->mouse_x < left_x + 1);
-  bool hover_right = (app->mouse_y == indicator_y &&
-                      app->mouse_x >= right_x && app->mouse_x < right_x + 1);
+  bool hover_left = (app->mouse_y == indicator_y && app->mouse_x >= left_x &&
+                     app->mouse_x < left_x + 1);
+  bool hover_right = (app->mouse_y == indicator_y && app->mouse_x >= right_x &&
+                      app->mouse_x < right_x + 1);
 
   /* Render left arrow with hover effect */
   if (hover_left)

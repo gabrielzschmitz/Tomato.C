@@ -105,7 +105,10 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
   int seconds = remaining_seconds % 60;
 
   char* time_string = (char*)malloc(16);
-  if (!time_string) { LogError("FormatRemainingTime", MALLOC_ERROR); return NULL; }
+  if (!time_string) {
+    LogError("FormatRemainingTime", MALLOC_ERROR);
+    return NULL;
+  }
 
   snprintf(time_string, 16, "%02d:%02d", minutes, seconds);
   return time_string;
@@ -287,10 +290,10 @@ void ResetInput(AppData* app) {
  */
 
 /**
- * Get the widest and tallest animation from loaded animations.
- * Used to calculate panel sizing.
+ * Get the minimum terminal size needed to display all UI elements.
+ * Accounts for the largest sprite, page indicator, status bar, and error line.
  * @param app Pointer to the application data
- * @return Dimensions struct with max width and height
+ * @return Dimensions struct with min required width and height
  */
 Dimensions GetWidestAndTallestAnimation(AppData* app) {
   int widest = 0;
@@ -303,6 +306,9 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
     if (app->animations[i]->frame_height > tallest)
       tallest = app->animations[i]->frame_height;
   }
+
+  /* Add overhead for page indicator line, status bar, and error line */
+  tallest += UI_OVERHEAD_LINES;
 
   return (Dimensions){widest, tallest};
 }
@@ -353,10 +359,16 @@ int EnsureDir(const char* dir) {
   for (size_t i = start; i < len; i++) {
     if (tmp[i] == '/') {
       tmp[i] = '\0';
-      if (mkdir(tmp, 0755) == -1 && errno != EEXIST) { LogError("EnsureDir", FILE_ERROR); return -1; }
+      if (mkdir(tmp, 0755) == -1 && errno != EEXIST) {
+        LogError("EnsureDir", FILE_ERROR);
+        return -1;
+      }
       tmp[i] = '/';
     }
   }
-  if (mkdir(tmp, 0755) == -1 && errno != EEXIST) { LogError("EnsureDir", FILE_ERROR); return -1; }
+  if (mkdir(tmp, 0755) == -1 && errno != EEXIST) {
+    LogError("EnsureDir", FILE_ERROR);
+    return -1;
+  }
   return 0;
 }

@@ -340,7 +340,7 @@ void RenderAnimationAtPanelCenter(Panel* panel, Rollfilm* animation,
  * @param screen Pointer to the screen
  * @param panel Pointer to a panel to use for dimensions
  */
-void RenderScreenSizeError(Screen* screen, Panel* panel);
+void RenderScreenSizeError(Screen* screen);
 
 /* ---------------------------------------------------------------------------
  * History

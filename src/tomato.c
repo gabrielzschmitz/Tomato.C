@@ -71,10 +71,10 @@ int main(int argc, char* argv[]) {
 
   if (DEBUG) {
     /* TEST ERROR LINE - uncomment to test */
-    // TestErrorLine(&app, "Test INFO message", ERROR_LEVEL_INFO, true);
-    // TestErrorLine(&app, "Test WARNING message", ERROR_LEVEL_WARNING, true);
-    // TestErrorLine(&app, "Test ERROR message", ERROR_LEVEL_ERROR, true);
-    // TestErrorLine(&app, "Test DEBUG message", ERROR_LEVEL_DEBUG, true);
+    TestErrorLine(&app, "Test INFO message", ERROR_LEVEL_INFO, true);
+    TestErrorLine(&app, "Test WARNING message", ERROR_LEVEL_WARNING, true);
+    TestErrorLine(&app, "Test ERROR message", ERROR_LEVEL_ERROR, true);
+    TestErrorLine(&app, "Test DEBUG message", ERROR_LEVEL_DEBUG, true);
     // TestErrorLine(&app, "Test CRITICAL message", ERROR_LEVEL_CRITICAL, true);
   }
 
@@ -95,7 +95,8 @@ int main(int argc, char* argv[]) {
   if (waitpid(pid, NULL, 0) < 0)
     SetError(&app, "Waiting for timer log process", END_APP_ERROR);
 
-  if (EndScreen() != NO_ERROR) SetError(&app, "Ending app screen", END_SCREEN_ERROR);
+  if (EndScreen() != NO_ERROR)
+    SetError(&app, "Ending app screen", END_SCREEN_ERROR);
   if (EndApp(&app) != NO_ERROR) SetError(&app, "Ending app", END_APP_ERROR);
 
   printf("Goodbye!\n");

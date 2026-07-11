@@ -9,6 +9,12 @@ typedef struct AppData AppData;
 #define NO_COLOR -1 /* Defining a blank color type */
 
 /**
+ * Minimum terminal lines needed beyond the largest sprite:
+ * page indicator (1) + status bar (1) + error line (1) + panel borders (2)
+ */
+#define UI_OVERHEAD_LINES 5
+
+/**
  * Enum for different types of icons used in the UI.
  * Determines which icon set to use (Nerd Fonts, emojis, or ASCII).
  */

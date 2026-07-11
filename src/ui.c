@@ -97,7 +97,10 @@ static void renderFloatingDialogBorder(FloatingDialog* dialog);
  */
 Screen* CreateScreen(void) {
   Screen* screen = (Screen*)malloc(sizeof(Screen));
-  if (screen == NULL) { LogError("CreateScreen", MALLOC_ERROR); return NULL; }
+  if (screen == NULL) {
+    LogError("CreateScreen", MALLOC_ERROR);
+    return NULL;
+  }
 
   getmaxyx(stdscr, screen->size.height, screen->size.width);
   screen->current_panel = 0;
@@ -143,9 +146,8 @@ void UpdateScreen(Screen* screen, bool has_error_line) {
 
   int top_bar_offset = STATUS_BAR_POSITION ? 1 : 0;
   int panels_width = screen->size.width / MAX_PANELS;
-  int panels_height =
-    has_error_line ? screen->size.height - 1 - top_bar_offset
-                   : screen->size.height - top_bar_offset;
+  int panels_height = has_error_line ? screen->size.height - 1 - top_bar_offset
+                                     : screen->size.height - top_bar_offset;
   int remainder_width = screen->size.width % MAX_PANELS;
 
   /* Check if the screen can display all panels */
@@ -243,12 +245,15 @@ void RenderAnimationAtPanelCenter(Panel* panel, Rollfilm* animation,
  * @param screen Pointer to the screen
  * @param panel Pointer to a panel to use for dimensions
  */
-void RenderScreenSizeError(Screen* screen, Panel* panel) {
+void RenderScreenSizeError(Screen* screen) {
   char* content;
   int required_length;
+  int cx = screen->size.width / 2;
+  int cy = screen->size.height / 2;
 
   SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
-  renderAtPanelCenter(panel, "TERMINAL SIZE TOO SMALL!", (Vector2D){0, -2});
+  mvprintw(cy - 2, cx - (int)strlen("TERMINAL SIZE TOO SMALL!") / 2,
+           "TERMINAL SIZE TOO SMALL!");
 
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   required_length = snprintf(NULL, 0, "Width = %2d Height = %2d",
@@ -258,12 +263,13 @@ void RenderScreenSizeError(Screen* screen, Panel* panel) {
   if (content != NULL) {
     snprintf(content, required_length, "Width = %2d Height = %2d",
              screen->size.width, screen->size.height);
-    renderAtPanelCenter(panel, content, (Vector2D){0, -1});
+    mvprintw(cy - 1, cx - (int)strlen(content) / 2, "%s", content);
     free(content);
   }
 
   SetColor(COLOR_BLACK, COLOR_WHITE, A_BOLD);
-  renderAtPanelCenter(panel, "SIZE NEEDED IN CURRENT CONFIG", (Vector2D){0, 0});
+  mvprintw(cy, cx - (int)strlen("SIZE NEEDED IN CURRENT CONFIG") / 2,
+           "SIZE NEEDED IN CURRENT CONFIG");
 
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
   required_length =
@@ -274,7 +280,7 @@ void RenderScreenSizeError(Screen* screen, Panel* panel) {
   if (content != NULL) {
     snprintf(content, required_length, "Width = %2d Height = %2d",
              screen->min_panel_size.width, screen->min_panel_size.height);
-    renderAtPanelCenter(panel, content, (Vector2D){0, 1});
+    mvprintw(cy + 1, cx - (int)strlen(content) / 2, "%s", content);
     free(content);
   }
 }
@@ -481,7 +487,10 @@ Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
                  int unfocused_color, const char* select_style_left,
                  const char* select_style_right) {
   Menu* menu = malloc(sizeof(struct Menu));
-  if (menu == NULL) { LogError("CreateMenu", MALLOC_ERROR); return NULL; }
+  if (menu == NULL) {
+    LogError("CreateMenu", MALLOC_ERROR);
+    return NULL;
+  }
 
   menu->items = malloc(num_items * sizeof(MenuItem));
   if (menu->items == NULL) {
@@ -669,7 +678,10 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
                                      Border border, Menu menu,
                                      const char* message) {
   FloatingDialog* dialog = (FloatingDialog*)malloc(sizeof(FloatingDialog));
-  if (!dialog) { LogError("CreateFloatingDialog", MALLOC_ERROR); return NULL; }
+  if (!dialog) {
+    LogError("CreateFloatingDialog", MALLOC_ERROR);
+    return NULL;
+  }
 
   dialog->size = size;
   dialog->position = position;
