@@ -1181,11 +1181,10 @@ static void readKeybindings(toml_table_t* root) {
 
   /* ── Phase 3: build the merged array ──
    *
-   *  1. Copy old entries that are NOT covered by any TOML group (i.e. the
-   *     user didn't mention that action+mode+scene at all).
-   *  2. For each group, copy (or create) entries for every key in the
-   *     group's key set.  Old entries whose (modes, scene, action) matches
-   *     a group but whose key is NOT in the group's set are dropped.   */
+   * Preserve original entry ordering: for each group, insert its entries at
+   * the position of the first old entry it covers.  Groups that cover no old
+   * entries are appended at the end.  Old entries not covered by any group
+   * are copied as-is.                                         */
 
   size_t old_count = g_config.num_keys;
 
@@ -1203,6 +1202,22 @@ static void readKeybindings(toml_table_t* root) {
     }
   }
 
+  /* Determine insert position for each group = first old entry it covers */
+  size_t* group_pos = (size_t*)CALLOC(n_groups, sizeof(size_t));
+  if (!group_pos) { free(covered); free(groups); goto cleanup; }
+  for (size_t g = 0; g < n_groups; g++) {
+    group_pos[g] = old_count; /* default: append at end */
+    for (size_t j = 0; j < old_count; j++) {
+      if (covered[j] &&
+          g_config.key_bindings[j].modes == groups[g].modes &&
+          g_config.key_bindings[j].scene_types == groups[g].scene_types &&
+          g_config.key_bindings[j].action == groups[g].action) {
+        group_pos[g] = j;
+        break;
+      }
+    }
+  }
+
   /* Count uncovered + total key slots */
   size_t baseline = 0;
   size_t keys_total = 0;
@@ -1212,45 +1227,73 @@ static void readKeybindings(toml_table_t* root) {
   size_t new_total = baseline + keys_total;
   KeyFunction* merged =
     (KeyFunction*)CALLOC(new_total, sizeof(KeyFunction));
-  if (!merged) { free(covered); free(groups); goto cleanup; }
+  if (!merged) { free(group_pos); free(covered); free(groups); goto cleanup; }
 
   size_t write = 0;
 
-  /* Copy uncovered old entries */
+  /* Single pass through old entries: insert groups at their position */
   for (size_t j = 0; j < old_count; j++) {
+    /* Insert any groups whose first covered entry is at this position */
+    for (size_t g = 0; g < n_groups; g++) {
+      if (group_pos[g] != j) continue;
+      for (size_t k = 0; k < groups[g].key_count; k++) {
+        int key = groups[g].key_list[k];
+        int found = 0;
+        /* Prefer matching old entry with same action */
+        for (size_t m = 0; m < old_count && !found; m++) {
+          if (covered[m] &&
+              g_config.key_bindings[m].key == key &&
+              g_config.key_bindings[m].modes == groups[g].modes &&
+              g_config.key_bindings[m].scene_types == groups[g].scene_types &&
+              g_config.key_bindings[m].action == groups[g].action) {
+            merged[write] = g_config.key_bindings[m];
+            merged[write].action = groups[g].action;
+            found = 1;
+          }
+        }
+        /* Fall back to old entry with same key+modes+scene (action change) */
+        if (!found) {
+          for (size_t m = 0; m < old_count && !found; m++) {
+            if (covered[m] &&
+                g_config.key_bindings[m].key == key &&
+                g_config.key_bindings[m].modes == groups[g].modes &&
+                g_config.key_bindings[m].scene_types == groups[g].scene_types) {
+              merged[write] = g_config.key_bindings[m];
+              merged[write].action = groups[g].action;
+              found = 1;
+            }
+          }
+        }
+        if (!found) {
+          merged[write].key         = key;
+          merged[write].action      = groups[g].action;
+          merged[write].modes       = groups[g].modes;
+          merged[write].scene_types = groups[g].scene_types;
+          merged[write].group       = NULL;
+          merged[write].desc        = NULL;
+        }
+        write++;
+      }
+    }
+    /* Copy uncovered entry */
     if (!covered[j]) {
       merged[write++] = g_config.key_bindings[j];
     }
   }
 
-  /* For each group, write all keys (match old entry if it exists) */
+  /* Append remaining groups (no matching old entry found) */
   for (size_t g = 0; g < n_groups; g++) {
+    if (group_pos[g] != old_count) continue;
     for (size_t k = 0; k < groups[g].key_count; k++) {
       int key = groups[g].key_list[k];
       int found = 0;
-      /* Prefer matching old entry with same action */
-      for (size_t j = 0; j < old_count && !found; j++) {
-        if (covered[j] &&
-            g_config.key_bindings[j].key == key &&
-            g_config.key_bindings[j].modes == groups[g].modes &&
-            g_config.key_bindings[j].scene_types == groups[g].scene_types &&
-            g_config.key_bindings[j].action == groups[g].action) {
-          merged[write] = g_config.key_bindings[j];
+      for (size_t m = 0; m < old_count && !found; m++) {
+        if (g_config.key_bindings[m].key == key &&
+            g_config.key_bindings[m].modes == groups[g].modes &&
+            g_config.key_bindings[m].scene_types == groups[g].scene_types) {
+          merged[write] = g_config.key_bindings[m];
           merged[write].action = groups[g].action;
           found = 1;
-        }
-      }
-      /* Fall back to old entry with same key+modes+scene (action change) */
-      if (!found) {
-        for (size_t j = 0; j < old_count && !found; j++) {
-          if (covered[j] &&
-              g_config.key_bindings[j].key == key &&
-              g_config.key_bindings[j].modes == groups[g].modes &&
-              g_config.key_bindings[j].scene_types == groups[g].scene_types) {
-            merged[write] = g_config.key_bindings[j];
-            merged[write].action = groups[g].action;
-            found = 1;
-          }
         }
       }
       if (!found) {
@@ -1264,6 +1307,8 @@ static void readKeybindings(toml_table_t* root) {
       write++;
     }
   }
+
+  free(group_pos);
 
   /* ── Phase 4: swap ── */
 
