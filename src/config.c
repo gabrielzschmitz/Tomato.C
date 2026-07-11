@@ -1314,18 +1314,21 @@ static void loadTomlFile(const char* path) {
   {
     toml_table_t* module_tbl = tableAtPath(root, "visual.status_bar.modules");
     if (module_tbl) {
-      readStringArrayFromTable(module_tbl, "left",
-                               g_config.visual.status_bar_left_modules,
-                               &g_config.visual.status_bar_left_count,
-                               MAX_STATUS_BAR_MODULES);
-      readStringArrayFromTable(module_tbl, "center",
-                               g_config.visual.status_bar_center_modules,
-                               &g_config.visual.status_bar_center_count,
-                               MAX_STATUS_BAR_MODULES);
-      readStringArrayFromTable(module_tbl, "right",
-                               g_config.visual.status_bar_right_modules,
-                               &g_config.visual.status_bar_right_count,
-                               MAX_STATUS_BAR_MODULES);
+      if (toml_table_array(module_tbl, "left"))
+        readStringArrayFromTable(module_tbl, "left",
+                                 g_config.visual.status_bar_left_modules,
+                                 &g_config.visual.status_bar_left_count,
+                                 MAX_STATUS_BAR_MODULES);
+      if (toml_table_array(module_tbl, "center"))
+        readStringArrayFromTable(module_tbl, "center",
+                                 g_config.visual.status_bar_center_modules,
+                                 &g_config.visual.status_bar_center_count,
+                                 MAX_STATUS_BAR_MODULES);
+      if (toml_table_array(module_tbl, "right"))
+        readStringArrayFromTable(module_tbl, "right",
+                                 g_config.visual.status_bar_right_modules,
+                                 &g_config.visual.status_bar_right_count,
+                                 MAX_STATUS_BAR_MODULES);
     }
   }
 
