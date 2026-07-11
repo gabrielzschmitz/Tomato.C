@@ -838,3 +838,29 @@ static void updateAnimation(Rollfilm* rollfilm) {
       (rollfilm->current_frame + 1) % rollfilm->frame_count;
   }
 }
+
+/**
+ * Seek the rollfilm to a specific frame by index.
+ * Properly resets the frames pointer, current_frame index, and frame timer
+ * so no frame is skipped on the next update.
+ * @param rollfilm Pointer to the rollfilm
+ * @param frame_index Target frame index (0 <= frame_index < frame_count)
+ */
+void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index) {
+  if (!rollfilm || rollfilm->frame_count <= 0) return;
+  if (frame_index < 0 || frame_index >= rollfilm->frame_count) return;
+  if (frame_index == rollfilm->current_frame) {
+    rollfilm->delta_frame_ms = GetCurrentTimeMS();
+    return;
+  }
+
+  /* Walk the circular linked list to the target frame */
+  int steps = (frame_index - rollfilm->current_frame + rollfilm->frame_count) %
+              rollfilm->frame_count;
+  for (int i = 0; i < steps; i++) {
+    if (rollfilm->frames) rollfilm->frames = rollfilm->frames->next;
+  }
+
+  rollfilm->current_frame = frame_index;
+  rollfilm->delta_frame_ms = GetCurrentTimeMS();
+}

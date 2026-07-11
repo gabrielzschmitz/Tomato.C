@@ -3,6 +3,7 @@
 #include <ncurses.h>
 #include <stdlib.h>
 
+#include "anim.h"
 #include "bar.h"
 #include "config.h"
 #include "log.h"
@@ -266,9 +267,8 @@ void UpdateNotes(AppData* app) {
       app->notes->transitioning = false;
 
       /* Reset NOTES animation to last frame */
-      app->animations[NOTES]->current_frame =
-        app->animations[NOTES]->frame_count - 1;
-      app->animations[NOTES]->delta_frame_ms = 0;
+      RollfilmSeekFrame(app->animations[NOTES],
+                         app->animations[NOTES]->frame_count - 1);
 
       /* Calculate index of previously selected note within old page */
       int old_idx = 0;

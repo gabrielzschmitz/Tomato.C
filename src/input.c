@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "anim.h"
 #include "audio.h"
 #include "config.h"
 #include "draw.h"
@@ -2102,8 +2103,7 @@ void UndoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    app->animations[NOTES_TRANSITION]->current_frame = 0;
-    app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
   }
 
   /* Restore input buffer and cursor to match restored note */
@@ -2182,8 +2182,7 @@ void RedoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    app->animations[NOTES_TRANSITION]->current_frame = 0;
-    app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
   }
 
   /* Restore input buffer and cursor to match restored note */
@@ -2333,8 +2332,7 @@ void NotesPrevPage(AppData* app) {
 
   app->notes->transitioning = true;
   app->notes->transition_target = app->notes->current_page - 1;
-  app->animations[NOTES_TRANSITION]->current_frame = 0;
-  app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+  RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
 }
 
 /**
@@ -2370,8 +2368,7 @@ void NotesNextPage(AppData* app) {
 
   app->notes->transitioning = true;
   app->notes->transition_target = target;
-  app->animations[NOTES_TRANSITION]->current_frame = 0;
-  app->animations[NOTES_TRANSITION]->delta_frame_ms = 0;
+  RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
 }
 
 /**

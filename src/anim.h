@@ -140,4 +140,13 @@ bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
  */
 bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
 
+/**
+ * Seek the rollfilm to a specific frame by index.
+ * Properly updates both the frames pointer and current_frame index,
+ * and resets the frame timer so the next update doesn't skip frames.
+ * @param rollfilm Pointer to the rollfilm
+ * @param frame_index Target frame index (0 <= frame_index < frame_count)
+ */
+void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index);
+
 #endif /* ANIM_H */
