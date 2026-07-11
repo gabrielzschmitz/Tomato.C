@@ -432,6 +432,8 @@ static void updateTimerLog(AppData* app, const int* steps,
     if (time_string != NULL) {
       SetTimerLog(TIMER_FILE, time_string);
       free(time_string);
+    } else {
+      SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
     }
   }
 }

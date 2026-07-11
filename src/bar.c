@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "notes.h"
+#include "error.h"
 #include "tomato.h"
 
 /* PRIVATE BAR FUNCTIONS */
@@ -35,7 +36,10 @@ static void updateStatusBarModule(AppData* app, StatusBarModule* module,
  */
 StatusBar* CreateStatusBar(StatusBarPosition position) {
   StatusBar* bar = (StatusBar*)malloc(sizeof(StatusBar));
-  if (bar == NULL) return NULL;
+  if (bar == NULL) {
+    LogError("CreateStatusBar", MALLOC_ERROR);
+    return NULL;
+  }
 
   bar->position = position;
   bar->left_modules = NULL;
@@ -65,9 +69,10 @@ void FreeStatusBar(StatusBar* bar) {
  * @param position Position for the new module
  * @param update Function pointer for the module update logic
  */
-void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
-                        ModuleUpdate update) {
-  if (status_bar == NULL) return;
+ErrorType AddStatusBarModule(StatusBar* status_bar,
+                             StatusBarModulePosition position,
+                             ModuleUpdate update) {
+  if (status_bar == NULL) return NULL_POINTER_ERROR;
 
   char* default_content = (char*)"default_content";
   int default_fg_color = COLOR_WHITE;
@@ -75,7 +80,10 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
 
   StatusBarModule* new_widget = createStatusBarModule(
     position, default_content, default_fg_color, default_bg_color, update);
-  if (new_widget == NULL) return;
+  if (new_widget == NULL) {
+    LogError("AddStatusBarModule", MALLOC_ERROR);
+    return MALLOC_ERROR;
+  }
 
   StatusBarModule** modules_root;
   switch (position) {
@@ -89,7 +97,7 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
       modules_root = &status_bar->center_modules;
       break;
     default:
-      return;
+      return INVALID_ARGUMENT_ERROR;
   }
 
   if (*modules_root == NULL) {
@@ -103,6 +111,8 @@ void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
     new_widget->id++;
     current->next = new_widget;
   }
+
+  return NO_ERROR;
 }
 
 /**
@@ -120,7 +130,7 @@ static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
                                               ModuleUpdate update) {
   StatusBarModule* new_widget =
     (StatusBarModule*)malloc(sizeof(StatusBarModule));
-  if (new_widget == NULL) return NULL;
+  if (new_widget == NULL) { LogError("createStatusBarModule", MALLOC_ERROR); return NULL; }
 
   new_widget->fg_color = fg_color;
   new_widget->bg_color = bg_color;
@@ -134,6 +144,7 @@ static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
     new_widget->content_length = clen;
     new_widget->content = (char*)malloc(clen + 1);
     if (new_widget->content == NULL) {
+      LogError("createStatusBarModule", MALLOC_ERROR);
       free(new_widget);
       return NULL;
     }

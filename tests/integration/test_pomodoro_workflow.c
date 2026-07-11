@@ -11,8 +11,15 @@
 #include <string.h>
 
 #include "config.h"
+#include "error.h"
 #include "test_helpers.h"
 #include "util.h"
+
+/* Stub — util.c may call LogError on allocation failures */
+void LogError(const char* context, ErrorType type) {
+  (void)context;
+  (void)type;
+}
 
 Config g_config;
 

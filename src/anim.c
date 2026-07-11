@@ -66,7 +66,7 @@ static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
  */
 Rollfilm* CreateRollfilm(int N, int M) {
   Rollfilm* film = (Rollfilm*)malloc(sizeof(Rollfilm));
-  if (film == NULL) return NULL;
+  if (film == NULL) { LogError("CreateRollfilm", MALLOC_ERROR); return NULL; }
 
   film->delta_frame_ms = GetCurrentTimeMS();
   film->current_frame = 0;
@@ -117,7 +117,7 @@ void FreeRollfilm(Rollfilm* rollfilm) {
  */
 static struct Frame* createFrame(void) {
   struct Frame* newFrame = (struct Frame*)malloc(sizeof(struct Frame));
-  if (newFrame == NULL) return NULL;
+  if (newFrame == NULL) { LogError("createFrame", MALLOC_ERROR); return NULL; }
   newFrame->next = NULL;
   newFrame->rows = NULL;
   newFrame->width = 0;
@@ -136,7 +136,7 @@ static struct Frame* createFrame(void) {
 static void linkNewFrame(struct Frame** current_frame,
                          struct FrameRow* head_row, int frame_id) {
   struct Frame* new_frame = createFrame();
-  if (new_frame == NULL) return;
+  if (new_frame == NULL) { LogError("linkNewFrame", MALLOC_ERROR); return; }
   (*current_frame)->rows = head_row;
   new_frame->id = frame_id;
 
@@ -182,7 +182,7 @@ static void freeFrames(struct Frame* frames) {
  */
 static struct FrameRow* createRow(void) {
   struct FrameRow* newRow = (struct FrameRow*)malloc(sizeof(struct FrameRow));
-  if (newRow == NULL) return NULL;
+  if (newRow == NULL) { LogError("createRow", MALLOC_ERROR); return NULL; }
   newRow->next = NULL;
   newRow->tokens = NULL;
   return newRow;
@@ -209,10 +209,11 @@ static void freeRows(struct FrameRow* rows) {
 static struct FrameToken* createToken(void) {
   struct FrameToken* newToken =
     (struct FrameToken*)malloc(sizeof(struct FrameToken));
-  if (newToken == NULL) return NULL;
+  if (newToken == NULL) { LogError("createToken", MALLOC_ERROR); return NULL; }
   newToken->next = NULL;
   newToken->token = (char*)calloc(MAX_FRAME_WIDTH, sizeof(char));
   if (newToken->token == NULL) {
+    LogError("createToken", MALLOC_ERROR);
     free(newToken);
     return NULL;
   }
@@ -472,6 +473,7 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
   }
   *head_frame = createFrame();
   if (*head_frame == NULL) {
+    LogError("processIconsLine", MALLOC_ERROR);
     FreeRollfilm(*rollfilm);
     fclose(file);
     return -1;
@@ -506,7 +508,7 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
 static int processFrameLine(const char* line, struct FrameRow** current_row,
                             int* line_color, int* line_width) {
   struct FrameToken* line_token = deserializeFrameLine(line, line_color);
-  if (line_token == NULL) return -1;
+  if (line_token == NULL) { LogError("processFrameLine", MALLOC_ERROR); return -1; }
   int current_line_width = 0;
   struct FrameToken* token = line_token;
   while (token != NULL) {
@@ -518,7 +520,7 @@ static int processFrameLine(const char* line, struct FrameRow** current_row,
 
   (*current_row)->tokens = line_token;
   struct FrameRow* new_row = createRow();
-  if (new_row == NULL) return -1;
+  if (new_row == NULL) { LogError("processFrameLine", MALLOC_ERROR); return -1; }
   (*current_row)->next = new_row;
   *current_row = new_row;
   return 0;
@@ -792,7 +794,7 @@ bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
  * @param start_x Starting x coordinate on screen
  */
 static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) return;
+  if (rollfilm == NULL || rollfilm->frames == NULL) { LogError("renderCurrentFrame", NULL_POINTER_ERROR); return; }
 
   struct Frame* current_frame = rollfilm->frames;
   struct FrameRow* current_row = current_frame->rows;
@@ -825,7 +827,7 @@ static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
  * @param rollfilm Pointer to the rollfilm to update
  */
 static void updateAnimation(Rollfilm* rollfilm) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) return;
+  if (rollfilm == NULL || rollfilm->frames == NULL) { LogError("updateAnimation", NULL_POINTER_ERROR); return; }
   if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
     return;
   double current_time = GetCurrentTimeMS();

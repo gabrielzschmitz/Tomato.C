@@ -517,7 +517,11 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
       free(item);
       continue;
     }
-    GapBufferSetText(item->text, text);
+    if (!GapBufferSetText(item->text, text)) {
+      GapBufferFree(item->text);
+      free(item);
+      return MALLOC_ERROR;
+    }
 
     notes->items[notes->count++] = item;
   }

@@ -55,12 +55,15 @@ static struct playbackData {
 ErrorType PlayAudio(const char* audio_path, const float volume,
                     const bool loop) {
   if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
-  if (audio_path == NULL) return NULL_POINTER_ERROR;
+  if (audio_path == NULL) {
+    LogError("PlayAudio", NULL_POINTER_ERROR);
+    return NULL_POINTER_ERROR;
+  }
 
   /* Prepare playback data */
   struct playbackData* data =
     (struct playbackData*)malloc(sizeof(struct playbackData));
-  if (data == NULL) return MALLOC_ERROR;
+  if (data == NULL) { LogError("PlayAudio", MALLOC_ERROR); return MALLOC_ERROR; }
 
   strncpy(data->audio_path, audio_path, sizeof(data->audio_path) - 1);
   data->audio_path[sizeof(data->audio_path) - 1] = '\0';
@@ -99,6 +102,7 @@ static void* playbackThread(void* arg) {
   /* Initialize the engine */
   result = ma_engine_init(NULL, &engine);
   if (result != MA_SUCCESS) {
+    LogError("playbackThread", AUDIO_ENGINE_INIT_ERROR);
     free(data);
     return NULL;
   }
@@ -110,6 +114,7 @@ static void* playbackThread(void* arg) {
   result =
     ma_sound_init_from_file(&engine, data->audio_path, 0, NULL, NULL, &sound);
   if (result != MA_SUCCESS) {
+    LogError("playbackThread", AUDIO_PLAYBACK_ERROR);
     ma_engine_uninit(&engine);
     free(data);
     return NULL;
@@ -121,6 +126,7 @@ static void* playbackThread(void* arg) {
   /* Start playback */
   result = ma_sound_start(&sound);
   if (result != MA_SUCCESS) {
+    LogError("playbackThread", AUDIO_PLAYBACK_ERROR);
     ma_sound_uninit(&sound);
     ma_engine_uninit(&engine);
     free(data);
@@ -217,7 +223,10 @@ ErrorType InitNoiseAudio(void) {
   if (noise_engine_initialized) return NO_ERROR;
 
   ma_result result = ma_engine_init(NULL, &noise_engine);
-  if (result != MA_SUCCESS) return AUDIO_ENGINE_INIT_ERROR;
+  if (result != MA_SUCCESS) {
+    LogError("InitNoiseAudio", AUDIO_ENGINE_INIT_ERROR);
+    return AUDIO_ENGINE_INIT_ERROR;
+  }
 
   noise_engine_initialized = true;
   return NO_ERROR;
@@ -268,13 +277,17 @@ ErrorType NoiseStartTrack(int track_index, const char* sound_path,
 
   ma_result result = ma_sound_init_from_file(&noise_engine, sound_path, 0, NULL,
                                              NULL, &noise_sounds[track_index]);
-  if (result != MA_SUCCESS) return AUDIO_INIT_ERROR;
+  if (result != MA_SUCCESS) {
+    LogError("NoiseStartTrack", AUDIO_PLAYBACK_ERROR);
+    return AUDIO_INIT_ERROR;
+  }
 
   ma_sound_set_looping(&noise_sounds[track_index], true);
   ma_sound_set_volume(&noise_sounds[track_index], volume);
 
   result = ma_sound_start(&noise_sounds[track_index]);
   if (result != MA_SUCCESS) {
+    LogError("NoiseStartTrack", AUDIO_PLAYBACK_ERROR);
     ma_sound_uninit(&noise_sounds[track_index]);
     return AUDIO_START_ERROR;
   }
@@ -290,7 +303,10 @@ ErrorType NoiseStartTrack(int track_index, const char* sound_path,
  */
 void NoiseStopTrack(int track_index) {
   if (!noise_engine_initialized) return;
-  if (track_index < 0 || track_index >= noise_sound_count) return;
+  if (track_index < 0 || track_index >= noise_sound_count) {
+    LogError("NoiseStopTrack", AUDIO_PLAYBACK_ERROR);
+    return;
+  }
 
   if (ma_sound_is_playing(&noise_sounds[track_index])) {
     ma_sound_stop(&noise_sounds[track_index]);
@@ -307,7 +323,10 @@ void NoiseStopTrack(int track_index) {
  */
 void NoiseSetVolume(int track_index, float volume) {
   if (!noise_engine_initialized) return;
-  if (track_index < 0 || track_index >= noise_sound_count) return;
+  if (track_index < 0 || track_index >= noise_sound_count) {
+    LogError("NoiseSetVolume", INVALID_TRACK_INDEX);
+    return;
+  }
 
   if (ma_sound_is_playing(&noise_sounds[track_index]))
     ma_sound_set_volume(&noise_sounds[track_index], volume);

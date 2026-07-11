@@ -287,17 +287,26 @@ static ErrorType initStatusBar(AppData* app) {
 
   for (int i = 0; i < STATUS_BAR_LEFT_COUNT; i++) {
     ModuleUpdate func = ModuleFromString(STATUS_BAR_LEFT_MODULES[i]);
-    if (func) AddStatusBarModule(app->status_bar, LEFT, func);
+    if (func) {
+      ErrorType err = AddStatusBarModule(app->status_bar, LEFT, func);
+      if (err != NO_ERROR) SetError(app, "initStatusBar", err);
+    }
   }
 
   for (int i = 0; i < STATUS_BAR_CENTER_COUNT; i++) {
     ModuleUpdate func = ModuleFromString(STATUS_BAR_CENTER_MODULES[i]);
-    if (func) AddStatusBarModule(app->status_bar, CENTER, func);
+    if (func) {
+      ErrorType err = AddStatusBarModule(app->status_bar, CENTER, func);
+      if (err != NO_ERROR) SetError(app, "initStatusBar", err);
+    }
   }
 
   for (int i = 0; i < STATUS_BAR_RIGHT_COUNT; i++) {
     ModuleUpdate func = ModuleFromString(STATUS_BAR_RIGHT_MODULES[i]);
-    if (func) AddStatusBarModule(app->status_bar, RIGHT, func);
+    if (func) {
+      ErrorType err = AddStatusBarModule(app->status_bar, RIGHT, func);
+      if (err != NO_ERROR) SetError(app, "initStatusBar", err);
+    }
   }
 
   app->status_bar->right_modules =
@@ -378,7 +387,7 @@ static ErrorType initPomodoroData(AppData* app) {
   /* In DEBUG mode, seed the log with fake completed sessions */
   if (DEBUG) {
     ErrorType err = debugSeedHistory();
-    (void)err;
+    if (err != NO_ERROR) SetError(app, "initPomodoroData", err);
   }
 
   /* Discard any stale input before showing popups */

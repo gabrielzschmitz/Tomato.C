@@ -137,14 +137,14 @@ ErrorType HandleInputs(AppData* app) {
         app->mouse_y = button_event.y;
         app->mouse_bstate = button_event.bstate;
         ErrorType merr = HandleMouseEvent(app, &button_event);
-        if (merr != NO_ERROR) status = merr;
+        if (merr != NO_ERROR) { status = merr; SetError(app, "HandleInputs", merr); }
       }
       app->mouse_x = last_event.x;
       app->mouse_y = last_event.y;
       app->mouse_bstate = last_event.bstate;
       if (!has_button) {
         ErrorType merr = HandleMouseEvent(app, &last_event);
-        if (merr != NO_ERROR) status = merr;
+        if (merr != NO_ERROR) { status = merr; SetError(app, "HandleInputs", merr); }
       }
     }
     flushinp();

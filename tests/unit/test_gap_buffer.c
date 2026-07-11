@@ -35,7 +35,7 @@ static void test_free_null(void) {
 static void test_set_text(void) {
   TEST("set text and verify content");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "hello");
+  (void)GapBufferSetText(gb, "hello");
   ASSERT_EQ(GapBufferLength(gb), 5);
   char* s = GapBufferToString(gb);
   ASSERT_STR_EQ(s, "hello");
@@ -46,8 +46,8 @@ static void test_set_text(void) {
 static void test_insert_char(void) {
   TEST("insert char at position");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "helo");
-  GapBufferInsert(gb, 2, 'l');
+  (void)GapBufferSetText(gb, "helo");
+  (void)GapBufferInsert(gb, 2, 'l');
   char* s = GapBufferToString(gb);
   ASSERT_STR_EQ(s, "hello");
   free(s);
@@ -57,7 +57,7 @@ static void test_insert_char(void) {
 static void test_delete_char(void) {
   TEST("delete char at position");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "hello");
+  (void)GapBufferSetText(gb, "hello");
   GapBufferDelete(gb, 1);
   char* s = GapBufferToString(gb);
   ASSERT_STR_EQ(s, "hllo");
@@ -68,7 +68,7 @@ static void test_delete_char(void) {
 static void test_clear(void) {
   TEST("clear gap buffer");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "hello");
+  (void)GapBufferSetText(gb, "hello");
   GapBufferClear(gb);
   ASSERT_EQ(GapBufferLength(gb), 0);
   char* s = GapBufferToString(gb);
@@ -80,7 +80,7 @@ static void test_clear(void) {
 static void test_clone(void) {
   TEST("clone gap buffer");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "clone me");
+  (void)GapBufferSetText(gb, "clone me");
   GapBuffer* clone = GapBufferClone(gb);
   ASSERT_NOT_NULL(clone);
   char* s = GapBufferToString(clone);
@@ -93,7 +93,7 @@ static void test_clone(void) {
 static void test_empty_after_clear(void) {
   TEST("gap buffer is empty after clear");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "something");
+  (void)GapBufferSetText(gb, "something");
   GapBufferClear(gb);
   ASSERT_EQ(GapBufferLength(gb), 0);
   char* s = GapBufferToString(gb);
@@ -105,7 +105,7 @@ static void test_empty_after_clear(void) {
 static void test_set_text_empty(void) {
   TEST("set text to empty string");
   GapBuffer* gb = GapBufferCreate();
-  GapBufferSetText(gb, "");
+  (void)GapBufferSetText(gb, "");
   ASSERT_EQ(GapBufferLength(gb), 0);
   GapBufferFree(gb);
 }
@@ -116,7 +116,7 @@ static void test_large_text(void) {
   char big[2000];
   memset(big, 'x', sizeof(big) - 1);
   big[sizeof(big) - 1] = '\0';
-  GapBufferSetText(gb, big);
+  (void)GapBufferSetText(gb, big);
   ASSERT_EQ(GapBufferLength(gb), 1999);
   GapBufferFree(gb);
 }

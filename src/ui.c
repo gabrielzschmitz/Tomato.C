@@ -97,7 +97,7 @@ static void renderFloatingDialogBorder(FloatingDialog* dialog);
  */
 Screen* CreateScreen(void) {
   Screen* screen = (Screen*)malloc(sizeof(Screen));
-  if (screen == NULL) return NULL;
+  if (screen == NULL) { LogError("CreateScreen", MALLOC_ERROR); return NULL; }
 
   getmaxyx(stdscr, screen->size.height, screen->size.width);
   screen->current_panel = 0;
@@ -481,10 +481,11 @@ Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
                  int unfocused_color, const char* select_style_left,
                  const char* select_style_right) {
   Menu* menu = malloc(sizeof(struct Menu));
-  if (menu == NULL) return NULL;
+  if (menu == NULL) { LogError("CreateMenu", MALLOC_ERROR); return NULL; }
 
   menu->items = malloc(num_items * sizeof(MenuItem));
   if (menu->items == NULL) {
+    LogError("CreateMenu", MALLOC_ERROR);
     free(menu);
     return NULL;
   }
@@ -493,6 +494,7 @@ Menu* CreateMenu(MenuItem items[], int num_items, int focused_color,
     menu->items[i].label = strdup(items[i].label);
     menu->items[i].action = items[i].action;
     if (menu->items[i].label == NULL) {
+      LogError("CreateMenu", MALLOC_ERROR);
       for (int j = 0; j < i; ++j) free((char*)menu->items[j].label);
       free(menu->items);
       free(menu);
@@ -667,7 +669,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
                                      Border border, Menu menu,
                                      const char* message) {
   FloatingDialog* dialog = (FloatingDialog*)malloc(sizeof(FloatingDialog));
-  if (!dialog) return NULL;
+  if (!dialog) { LogError("CreateFloatingDialog", MALLOC_ERROR); return NULL; }
 
   dialog->size = size;
   dialog->position = position;
@@ -681,6 +683,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   dialog->menu.select_style_left = strdup(menu.select_style_left);
   dialog->menu.select_style_right = strdup(menu.select_style_right);
   if (!dialog->menu.select_style_left || !dialog->menu.select_style_right) {
+    LogError("CreateFloatingDialog", MALLOC_ERROR);
     free((char*)dialog->menu.select_style_left);
     free((char*)dialog->menu.select_style_right);
     free(dialog);
@@ -689,6 +692,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
 
   dialog->menu.items = (MenuItem*)malloc(menu.item_count * sizeof(MenuItem));
   if (!dialog->menu.items) {
+    LogError("CreateFloatingDialog", MALLOC_ERROR);
     free((char*)dialog->menu.select_style_left);
     free((char*)dialog->menu.select_style_right);
     free(dialog);
@@ -698,6 +702,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   for (int i = 0; i < menu.item_count; i++) {
     dialog->menu.items[i].label = strdup(menu.items[i].label);
     if (!dialog->menu.items[i].label) {
+      LogError("CreateFloatingDialog", MALLOC_ERROR);
       for (int j = 0; j < i; j++) free((char*)dialog->menu.items[j].label);
       free(dialog->menu.items);
       free((char*)dialog->menu.select_style_left);
@@ -710,6 +715,7 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
 
   dialog->message = strdup(message);
   if (!dialog->message) {
+    LogError("CreateFloatingDialog", MALLOC_ERROR);
     for (int i = 0; i < menu.item_count; i++)
       free((char*)dialog->menu.items[i].label);
     free(dialog->menu.items);
@@ -1055,6 +1061,7 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
     dialog->hovered_button = 0;
     dialog->slides = BuildContinueSlides(app, size);
     if (!dialog->slides) {
+      LogError("CreateContinueDialog", MALLOC_ERROR);
       FreeFloatingDialog(dialog);
       return NULL;
     }
@@ -1086,6 +1093,7 @@ FloatingDialog* CreateNoiseDialog(AppData* app) {
   if (dialog) {
     dialog->slides = BuildNoiseSlides(app, size);
     if (!dialog->slides) {
+      LogError("CreateNoiseDialog", MALLOC_ERROR);
       FreeFloatingDialog(dialog);
       return NULL;
     }

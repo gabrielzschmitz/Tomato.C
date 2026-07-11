@@ -105,7 +105,7 @@ char* FormatRemainingTime(int elapsed_seconds, int total_minutes) {
   int seconds = remaining_seconds % 60;
 
   char* time_string = (char*)malloc(16);
-  if (!time_string) return NULL;
+  if (!time_string) { LogError("FormatRemainingTime", MALLOC_ERROR); return NULL; }
 
   snprintf(time_string, 16, "%02d:%02d", minutes, seconds);
   return time_string;
@@ -353,10 +353,10 @@ int EnsureDir(const char* dir) {
   for (size_t i = start; i < len; i++) {
     if (tmp[i] == '/') {
       tmp[i] = '\0';
-      if (mkdir(tmp, 0755) == -1 && errno != EEXIST) return -1;
+      if (mkdir(tmp, 0755) == -1 && errno != EEXIST) { LogError("EnsureDir", FILE_ERROR); return -1; }
       tmp[i] = '/';
     }
   }
-  if (mkdir(tmp, 0755) == -1 && errno != EEXIST) return -1;
+  if (mkdir(tmp, 0755) == -1 && errno != EEXIST) { LogError("EnsureDir", FILE_ERROR); return -1; }
   return 0;
 }

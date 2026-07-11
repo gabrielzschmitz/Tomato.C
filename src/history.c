@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "error.h"
+
 /* PRIVATE HISTORY FUNCTIONS */
 /* History Operations */
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*));
@@ -20,7 +22,7 @@ static int getStackCount(const HistoryNode* stack);
  */
 History* CreateHistory(void) {
   History* history = (History*)malloc(sizeof(History));
-  if (!history) return NULL;
+  if (!history) { LogError("CreateHistory", MALLOC_ERROR); return NULL; }
   history->past = NULL;
   history->future = NULL;
   history->present = -1;
@@ -138,6 +140,7 @@ bool HistoryCanRedo(const History* history) {
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*)) {
   HistoryNode* node = (HistoryNode*)malloc(sizeof(HistoryNode));
   if (!node) {
+    LogError("pushStack", MALLOC_ERROR);
     if (free_fn) free_fn(data);
     return;
   }

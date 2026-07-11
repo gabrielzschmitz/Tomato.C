@@ -13,6 +13,8 @@
 #ifndef TEST_KEYBIND_STUBS_H_
 #define TEST_KEYBIND_STUBS_H_
 
+#include "error.h"
+
 typedef struct AppData {
   int dummy;
 } AppData;
@@ -108,6 +110,17 @@ void SwitchToNormalMode(AppData* app) { (void)app; }
 int EnsureDir(const char* dir) {
   (void)dir;
   return 0;
+}
+
+void LogError(const char* context, ErrorType type) {
+  (void)context;
+  (void)type;
+}
+
+void SetError(AppData* app, const char* context, ErrorType type) {
+  (void)app;
+  (void)context;
+  (void)type;
 }
 
 #endif /* TEST_KEYBIND_STUBS_H_ */

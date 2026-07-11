@@ -7,7 +7,7 @@
 
 /* PRIVATE GAP BUFFER FUNCTIONS */
 /* Utility */
-static void ensureCapacity(GapBuffer* gb, size_t needed);
+static bool ensureCapacity(GapBuffer* gb, size_t needed);
 
 /**
  * ---------------------------------------------------------------------------
@@ -21,10 +21,11 @@ static void ensureCapacity(GapBuffer* gb, size_t needed);
  */
 GapBuffer* GapBufferCreate(void) {
   GapBuffer* gb = (GapBuffer*)malloc(sizeof(GapBuffer));
-  if (!gb) return NULL;
+  if (!gb) { LogError("GapBufferCreate", MALLOC_ERROR); return NULL; }
 
   gb->buffer = (char*)malloc(GAP_INITIAL_CAPACITY);
   if (!gb->buffer) {
+    LogError("GapBufferCreate", MALLOC_ERROR);
     free(gb);
     return NULL;
   }
@@ -53,15 +54,16 @@ void GapBufferFree(GapBuffer* gb) {
  * @param gb Pointer to the gap buffer
  * @param text New text to set
  */
-void GapBufferSetText(GapBuffer* gb, const char* text) {
-  if (!gb || !text) return;
+bool GapBufferSetText(GapBuffer* gb, const char* text) {
+  if (!gb || !text) return false;
 
   size_t len = strlen(text);
-  ensureCapacity(gb, len + 1);
+  if (!ensureCapacity(gb, len + 1)) return false;
 
   memcpy(gb->buffer, text, len);
   gb->len = len;
   gb->buffer[len] = '\0';
+  return true;
 }
 
 /**
@@ -71,15 +73,16 @@ void GapBufferSetText(GapBuffer* gb, const char* text) {
  * @param pos Position to insert at
  * @param c Character to insert
  */
-void GapBufferInsert(GapBuffer* gb, size_t pos, char c) {
-  if (!gb) return;
+bool GapBufferInsert(GapBuffer* gb, size_t pos, char c) {
+  if (!gb) return false;
   if (pos > gb->len) pos = gb->len;
 
-  ensureCapacity(gb, gb->len + 2);
+  if (!ensureCapacity(gb, gb->len + 2)) return false;
 
   memmove(gb->buffer + pos + 1, gb->buffer + pos, gb->len - pos + 1);
   gb->buffer[pos] = c;
   gb->len++;
+  return true;
 }
 
 /**
@@ -155,8 +158,8 @@ char* GapBufferToString(const GapBuffer* gb) {
  * @param gb Pointer to the gap buffer
  * @param needed Number of bytes needed
  */
-static void ensureCapacity(GapBuffer* gb, size_t needed) {
-  if (gb->capacity >= needed) return;
+static bool ensureCapacity(GapBuffer* gb, size_t needed) {
+  if (gb->capacity >= needed) return true;
 
   size_t new_cap = gb->capacity * 2;
   while (new_cap < needed) new_cap *= 2;
@@ -165,8 +168,11 @@ static void ensureCapacity(GapBuffer* gb, size_t needed) {
   if (new_buf) {
     gb->buffer = new_buf;
     gb->capacity = new_cap;
-  } else
-    LogError("ensureCapacity", MALLOC_ERROR);
+    return true;
+  }
+
+  LogError("ensureCapacity", MALLOC_ERROR);
+  return false;
 }
 
 /**
@@ -180,6 +186,9 @@ GapBuffer* GapBufferClone(const GapBuffer* gb) {
   GapBuffer* clone = GapBufferCreate();
   if (!clone) return NULL;
 
-  GapBufferSetText(clone, gb->buffer);
+  if (!GapBufferSetText(clone, gb->buffer)) {
+    GapBufferFree(clone);
+    return NULL;
+  }
   return clone;
 }

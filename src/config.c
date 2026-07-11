@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "error.h"
 #include "external/toml-c.h"
 #include "util.h"
 
@@ -1107,8 +1108,8 @@ static void readKeybindings(toml_table_t* root) {
 
           if (tmp_count >= tmp_cap) {
             size_t new_cap = tmp_cap ? tmp_cap * 2 : 64;
-            TomlEntry* p = (TomlEntry*)realloc(tmp, new_cap * sizeof(TomlEntry));
-            if (!p) goto cleanup;
+          TomlEntry* p = (TomlEntry*)realloc(tmp, new_cap * sizeof(TomlEntry));
+          if (!p) { LogError("readKeybindings", MALLOC_ERROR); goto cleanup; }
             tmp = p;
             tmp_cap = new_cap;
           }
@@ -1157,7 +1158,7 @@ static void readKeybindings(toml_table_t* root) {
     if (g < 0) {
       ActionGroup* p = (ActionGroup*)realloc(
           groups, (n_groups + 1) * sizeof(ActionGroup));
-      if (!p) { free(groups); goto cleanup; }
+      if (!p) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
       groups = p;
       groups[n_groups].action = tmp[i].action;
       groups[n_groups].modes   = tmp[i].modes;
@@ -1174,7 +1175,7 @@ static void readKeybindings(toml_table_t* root) {
     if (already) continue;
     int* kp = (int*)realloc(groups[g].key_list,
                             (groups[g].key_count + 1) * sizeof(int));
-    if (!kp) { free(groups); goto cleanup; }
+    if (!kp) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
     groups[g].key_list = kp;
     groups[g].key_list[groups[g].key_count++] = tmp[i].key;
   }
@@ -1190,7 +1191,7 @@ static void readKeybindings(toml_table_t* root) {
 
   /* Pre-compute which old entries are covered by a group */
   int* covered = (int*)CALLOC(old_count, sizeof(int));
-  if (!covered) { free(groups); goto cleanup; }
+  if (!covered) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
 
   for (size_t g = 0; g < n_groups; g++) {
     for (size_t j = 0; j < old_count; j++) {
@@ -1204,7 +1205,7 @@ static void readKeybindings(toml_table_t* root) {
 
   /* Determine insert position for each group = first old entry it covers */
   size_t* group_pos = (size_t*)CALLOC(n_groups, sizeof(size_t));
-  if (!group_pos) { free(covered); free(groups); goto cleanup; }
+  if (!group_pos) { LogError("readKeybindings", MALLOC_ERROR); free(covered); free(groups); goto cleanup; }
   for (size_t g = 0; g < n_groups; g++) {
     group_pos[g] = old_count; /* default: append at end */
     for (size_t j = 0; j < old_count; j++) {
@@ -1227,7 +1228,7 @@ static void readKeybindings(toml_table_t* root) {
   size_t new_total = baseline + keys_total;
   KeyFunction* merged =
     (KeyFunction*)CALLOC(new_total, sizeof(KeyFunction));
-  if (!merged) { free(group_pos); free(covered); free(groups); goto cleanup; }
+  if (!merged) { LogError("readKeybindings", MALLOC_ERROR); free(group_pos); free(covered); free(groups); goto cleanup; }
 
   size_t write = 0;
 
@@ -1330,12 +1331,12 @@ cleanup:
  */
 static void loadTomlFile(const char* path) {
   FILE* f = fopen(path, "r");
-  if (!f) return;
+  if (!f) { LogError("loadTomlFile", FILE_ERROR); return; }
 
   char errbuf[200];
   toml_table_t* root = toml_parse_file(f, errbuf, sizeof(errbuf));
   fclose(f);
-  if (!root) return;
+  if (!root) { LogError("loadTomlFile", FILE_ERROR); return; }
 
   readInt(root, "visual.animations", &g_config.visual.animations);
   readString(root, "visual.icons", &g_config.visual.icons);
@@ -1457,18 +1458,26 @@ static void loadTomlFile(const char* path) {
   readInt(root, "noise.master_volume", &g_config.noise.master_volume);
 
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
-  if (g_config.logging.pomodoro_log)
+  if (g_config.logging.pomodoro_log) {
     g_config.logging.pomodoro_log = strdup(g_config.logging.pomodoro_log);
+    if (!g_config.logging.pomodoro_log) LogError("loadTomlFile", MALLOC_ERROR);
+  }
   readString(root, "logging.notes_log", &g_config.logging.notes_log);
-  if (g_config.logging.notes_log)
+  if (g_config.logging.notes_log) {
     g_config.logging.notes_log = strdup(g_config.logging.notes_log);
+    if (!g_config.logging.notes_log) LogError("loadTomlFile", MALLOC_ERROR);
+  }
   readString(root, "logging.error_log", &g_config.logging.error_log);
-  if (g_config.logging.error_log)
+  if (g_config.logging.error_log) {
     g_config.logging.error_log = strdup(g_config.logging.error_log);
+    if (!g_config.logging.error_log) LogError("loadTomlFile", MALLOC_ERROR);
+  }
   readBool(root, "logging.timer_log", &g_config.logging.timer_log);
   readString(root, "logging.timer_file", &g_config.logging.timer_file);
-  if (g_config.logging.timer_file)
+  if (g_config.logging.timer_file) {
     g_config.logging.timer_file = strdup(g_config.logging.timer_file);
+    if (!g_config.logging.timer_file) LogError("loadTomlFile", MALLOC_ERROR);
+  }
   readBool(root, "logging.work_log", &g_config.logging.work_log);
   readBool(root, "logging.notepad_log", &g_config.logging.notepad_log);
   readBool(root, "logging.timerlog_icons", &g_config.logging.timerlog_icons);

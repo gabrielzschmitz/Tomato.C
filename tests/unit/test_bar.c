@@ -92,7 +92,7 @@ static void test_free_status_bar_null(void) {
 static void test_add_module_left(void) {
   TEST("AddStatusBarModule adds module to left list");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
   ASSERT_NOT_NULL(bar->left_modules);
   ASSERT_EQ(bar->left_modules->position, LEFT);
   ASSERT_EQ(bar->left_modules->id, 0);
@@ -102,7 +102,7 @@ static void test_add_module_left(void) {
 static void test_add_module_center(void) {
   TEST("AddStatusBarModule adds module to center list");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, CENTER, dummy_update);
+  (void)AddStatusBarModule(bar, CENTER, dummy_update);
   ASSERT_NOT_NULL(bar->center_modules);
   FreeStatusBar(bar);
 }
@@ -110,7 +110,7 @@ static void test_add_module_center(void) {
 static void test_add_module_right(void) {
   TEST("AddStatusBarModule adds module to right list");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, RIGHT, dummy_update);
+  (void)AddStatusBarModule(bar, RIGHT, dummy_update);
   ASSERT_NOT_NULL(bar->right_modules);
   FreeStatusBar(bar);
 }
@@ -118,9 +118,9 @@ static void test_add_module_right(void) {
 static void test_add_module_multiple_left(void) {
   TEST("AddStatusBarModule chains multiple modules on same side");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, LEFT, dummy_update);
-  AddStatusBarModule(bar, LEFT, dummy_update);
-  AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
   int count = 0;
   StatusBarModule* m = bar->left_modules;
   while (m) {
@@ -133,7 +133,7 @@ static void test_add_module_multiple_left(void) {
 
 static void test_add_module_null_bar(void) {
   TEST("AddStatusBarModule with NULL bar is safe");
-  AddStatusBarModule(NULL, LEFT, dummy_update);
+  (void)AddStatusBarModule(NULL, LEFT, dummy_update);
 }
 
 /**
@@ -145,9 +145,9 @@ static void test_add_module_null_bar(void) {
 static void test_invert_modules_order(void) {
   TEST("InvertModulesOrder reverses linked list of modules");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, LEFT, dummy_update);
-  AddStatusBarModule(bar, LEFT, dummy_update);
-  AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
   StatusBarModule* reversed = InvertModulesOrder(bar->left_modules);
   ASSERT_NOT_NULL(reversed);
   int ids[3];
@@ -167,7 +167,7 @@ static void test_invert_modules_order(void) {
 static void test_invert_modules_order_single(void) {
   TEST("InvertModulesOrder with single module");
   StatusBar* bar = CreateStatusBar(TOP);
-  AddStatusBarModule(bar, LEFT, dummy_update);
+  (void)AddStatusBarModule(bar, LEFT, dummy_update);
   StatusBarModule* reversed = InvertModulesOrder(bar->left_modules);
   ASSERT_EQ(reversed->id, 0);
   FreeStatusBar(bar);

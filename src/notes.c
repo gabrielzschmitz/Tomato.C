@@ -13,7 +13,7 @@
 
 /* PRIVATE NOTES FUNCTIONS */
 /* Utility */
-static void growItems(AppData* app, NotesData* notes);
+static bool growItems(NotesData* notes);
 static int getNextID(NotesData* notes);
 static NoteItem* findByID(NotesData* notes, int id);
 static int getIndexByID(NotesData* notes, int id);
@@ -36,10 +36,11 @@ static int findRootAncestorIndex(NotesData* notes, int idx);
  */
 NotesData* CreateNotesData(void) {
   NotesData* notes = (NotesData*)malloc(sizeof(NotesData));
-  if (!notes) return NULL;
+  if (!notes) { LogError("CreateNotesData", MALLOC_ERROR); return NULL; }
 
   notes->items = (NoteItem**)malloc(sizeof(NoteItem*) * NOTES_INITIAL_CAPACITY);
   if (!notes->items) {
+    LogError("CreateNotesData", MALLOC_ERROR);
     free(notes);
     return NULL;
   }
@@ -99,7 +100,10 @@ void AddNote(AppData* app, NotesData* notes, const char* text,
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(app, notes);
+  if (notes->count >= notes->capacity && !growItems(notes)) {
+    SetError(app, "AddNote", MALLOC_ERROR);
+    return;
+  }
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
@@ -114,7 +118,12 @@ void AddNote(AppData* app, NotesData* notes, const char* text,
     return;
   }
 
-  GapBufferSetText(item->text, text);
+  if (!GapBufferSetText(item->text, text)) {
+    SetError(app, "AddNote", MALLOC_ERROR);
+    GapBufferFree(item->text);
+    free(item);
+    return;
+  }
   item->state = state;
   item->id = getNextID(notes);
   item->page_id = notes->current_page;
@@ -150,7 +159,10 @@ void AddChildNote(AppData* app, NotesData* notes, int parent_id,
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(app, notes);
+  if (notes->count >= notes->capacity && !growItems(notes)) {
+    SetError(app, "AddChildNote", MALLOC_ERROR);
+    return;
+  }
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
@@ -165,7 +177,12 @@ void AddChildNote(AppData* app, NotesData* notes, int parent_id,
     return;
   }
 
-  GapBufferSetText(item->text, text);
+  if (!GapBufferSetText(item->text, text)) {
+    SetError(app, "AddChildNote", MALLOC_ERROR);
+    GapBufferFree(item->text);
+    free(item);
+    return;
+  }
   item->state = state;
   item->id = getNextID(notes);
   item->page_id = notes->current_page;
@@ -223,7 +240,10 @@ void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
   if (notes->max_lines > 0 &&
       notes->total_lines + new_note_lines > notes->max_lines)
     return;
-  if (notes->count >= notes->capacity) growItems(app, notes);
+  if (notes->count >= notes->capacity && !growItems(notes)) {
+    SetError(app, "AddNoteAfter", MALLOC_ERROR);
+    return;
+  }
 
   NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));
   if (!item) {
@@ -238,7 +258,12 @@ void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
     return;
   }
 
-  GapBufferSetText(item->text, text);
+  if (!GapBufferSetText(item->text, text)) {
+    SetError(app, "AddNoteAfter", MALLOC_ERROR);
+    GapBufferFree(item->text);
+    free(item);
+    return;
+  }
   item->state = state;
   item->id = getNextID(notes);
   item->page_id = notes->current_page;
@@ -280,7 +305,7 @@ void UpdateNote(NotesData* notes, int note_id, const char* text,
       notes->total_lines - old_lines + new_lines > notes->max_lines)
     return;
 
-  GapBufferSetText(note->text, text);
+  if (!GapBufferSetText(note->text, text)) return;
   note->state = state;
   notes->total_lines = notes->total_lines - old_lines + new_lines;
 }
@@ -704,10 +729,11 @@ void FreeClonedNotesData(void* data) {
  */
 NotesData* CloneNotesData(const NotesData* src) {
   NotesData* dst = (NotesData*)malloc(sizeof(NotesData));
-  if (!dst) return NULL;
+  if (!dst) { LogError("CloneNotesData", MALLOC_ERROR); return NULL; }
 
   dst->items = (NoteItem**)malloc(sizeof(NoteItem*) * src->capacity);
   if (!dst->items) {
+    LogError("CloneNotesData", MALLOC_ERROR);
     free(dst);
     return NULL;
   }
@@ -736,6 +762,7 @@ NotesData* CloneNotesData(const NotesData* src) {
     NoteItem* srcItem = src->items[i];
     NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
     if (!dstItem) {
+      LogError("CloneNotesData", MALLOC_ERROR);
       for (int j = 0; j < i; j++) {
         GapBufferFree(dst->items[j]->text);
         free(dst->items[j]);
@@ -746,6 +773,7 @@ NotesData* CloneNotesData(const NotesData* src) {
     }
     dstItem->text = GapBufferClone(srcItem->text);
     if (!dstItem->text) {
+      LogError("CloneNotesData", MALLOC_ERROR);
       free(dstItem);
       for (int j = 0; j < i; j++) {
         GapBufferFree(dst->items[j]->text);
@@ -813,11 +841,12 @@ void RestoreNotesData(NotesData* notes, void* data) {
   /* Reallocate and deep copy items */
   NoteItem** new_items =
     (NoteItem**)malloc(sizeof(NoteItem*) * notes->capacity);
-  if (!new_items) return;
+  if (!new_items) { LogError("RestoreNotesData", MALLOC_ERROR); return; }
   for (int i = 0; i < snapshot->count; i++) {
     NoteItem* srcItem = snapshot->items[i];
     NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
     if (!dstItem) {
+      LogError("RestoreNotesData", MALLOC_ERROR);
       for (int j = 0; j < i; j++) {
         GapBufferFree(new_items[j]->text);
         free(new_items[j]);
@@ -827,6 +856,7 @@ void RestoreNotesData(NotesData* notes, void* data) {
     }
     dstItem->text = GapBufferClone(srcItem->text);
     if (!dstItem->text) {
+      LogError("RestoreNotesData", MALLOC_ERROR);
       free(dstItem);
       for (int j = 0; j < i; j++) {
         GapBufferFree(new_items[j]->text);
@@ -1433,7 +1463,7 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
   int line_count = 0;
   int capacity = 4;
   char** lines = (char**)malloc(sizeof(char*) * capacity);
-  if (!lines) return 0;
+  if (!lines) { LogError("WrapText", MALLOC_ERROR); return 0; }
 
   const char* start = text;
   const char* ptr = text;
@@ -1458,6 +1488,7 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
     if (len == 0) {
       char* line = (char*)malloc(1);
       if (!line) {
+        LogError("WrapText", MALLOC_ERROR);
         for (int i = 0; i < line_count; i++) free(lines[i]);
         free(lines);
         *out_lines = NULL;
@@ -1468,6 +1499,7 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
         capacity *= 2;
         char** new_lines = (char**)realloc(lines, sizeof(char*) * capacity);
         if (!new_lines) {
+          LogError("WrapText", MALLOC_ERROR);
           free(line);
           for (int i = 0; i < line_count; i++) free(lines[i]);
           free(lines);
@@ -1485,6 +1517,7 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
 
     char* line = (char*)malloc(len + 1);
     if (!line) {
+      LogError("WrapText", MALLOC_ERROR);
       for (int i = 0; i < line_count; i++) free(lines[i]);
       free(lines);
       *out_lines = NULL;
@@ -1497,6 +1530,7 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
       capacity *= 2;
       char** new_lines = (char**)realloc(lines, sizeof(char*) * capacity);
       if (!new_lines) {
+        LogError("WrapText", MALLOC_ERROR);
         free(line);
         for (int i = 0; i < line_count; i++) free(lines[i]);
         free(lines);
@@ -1643,16 +1677,14 @@ int GetNoteLinesFromText(const char* text, int render_width) {
  * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
  */
-static void growItems(AppData* app, NotesData* notes) {
+static bool growItems(NotesData* notes) {
   int new_capacity = notes->capacity * 2;
   NoteItem** new_items =
     (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
-  if (new_items) {
-    notes->items = new_items;
-    notes->capacity = new_capacity;
-  } else {
-    SetError(app, "growItems", MALLOC_ERROR);
-  }
+  if (!new_items) return false;
+  notes->items = new_items;
+  notes->capacity = new_capacity;
+  return true;
 }
 
 /**

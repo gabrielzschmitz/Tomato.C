@@ -12,6 +12,13 @@
 #include "history.h"
 #include "test_helpers.h"
 
+/* Stub for LogError — history.c calls it on allocation failures */
+#include "error.h"
+void LogError(const char* context, ErrorType type) {
+  (void)context;
+  (void)type;
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Test helpers

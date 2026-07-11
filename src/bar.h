@@ -1,6 +1,7 @@
 #ifndef BAR_H_
 #define BAR_H_
 
+#include "error.h"
 #include "ui.h"
 
 /* Bar specific structs */
@@ -67,8 +68,9 @@ void FreeStatusBar(StatusBar* bar);
  * @param position Position for the new module
  * @param update Function pointer for the module update logic
  */
-void AddStatusBarModule(StatusBar* status_bar, StatusBarModulePosition position,
-                        ModuleUpdate update);
+ErrorType AddStatusBarModule(StatusBar* status_bar,
+                             StatusBarModulePosition position,
+                             ModuleUpdate update);
 
 /**
  * ---------------------------------------------------------------------------

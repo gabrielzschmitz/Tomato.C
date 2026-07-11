@@ -124,7 +124,8 @@ static void renderPanel(AppData* app, Border border) {
 
     int indices[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
     int largest_index = RollfilmLargest(app->animations, indices, 3);
-    if (largest_index == -1) return;
+    if (largest_index == -1) { SetError(app, "renderPanel", UPDATE_ERROR); return; }
+    if (app->animations[largest_index] == NULL) { SetError(app, "renderPanel", NULL_POINTER_ERROR); return; }
     Dimensions size = {.width = app->animations[largest_index]->frame_width,
                        .height = app->animations[largest_index]->frame_height};
     Vector2D position = {.x = current_panel->position.x +

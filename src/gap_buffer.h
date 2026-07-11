@@ -1,6 +1,7 @@
 #ifndef GAP_BUFFER_H_
 #define GAP_BUFFER_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #define GAP_INITIAL_CAPACITY 64
@@ -40,7 +41,7 @@ void GapBufferFree(GapBuffer* gb);
  * @param gb Pointer to the gap buffer
  * @param text New text to set
  */
-void GapBufferSetText(GapBuffer* gb, const char* text);
+bool GapBufferSetText(GapBuffer* gb, const char* text);
 
 /**
  * Insert a character at the specified position.
@@ -49,7 +50,7 @@ void GapBufferSetText(GapBuffer* gb, const char* text);
  * @param pos Position to insert at
  * @param c Character to insert
  */
-void GapBufferInsert(GapBuffer* gb, size_t pos, char c);
+bool GapBufferInsert(GapBuffer* gb, size_t pos, char c);
 
 /**
  * Delete a character at the specified position.

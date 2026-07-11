@@ -91,12 +91,12 @@ int main(int argc, char* argv[]) {
 
   /* Cleanup */
   if (kill(pid, SIGTERM) != 0)
-    LogError("Killing timer log process", END_APP_ERROR);
+    SetError(&app, "Killing timer log process", END_APP_ERROR);
   if (waitpid(pid, NULL, 0) < 0)
-    LogError("Waiting for timer log process", END_APP_ERROR);
+    SetError(&app, "Waiting for timer log process", END_APP_ERROR);
 
-  if (EndScreen() != NO_ERROR) LogError("Ending app screen", END_SCREEN_ERROR);
-  if (EndApp(&app) != NO_ERROR) LogError("Ending app", END_APP_ERROR);
+  if (EndScreen() != NO_ERROR) SetError(&app, "Ending app screen", END_SCREEN_ERROR);
+  if (EndApp(&app) != NO_ERROR) SetError(&app, "Ending app", END_APP_ERROR);
 
   printf("Goodbye!\n");
 
