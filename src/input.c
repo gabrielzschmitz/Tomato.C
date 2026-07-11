@@ -1169,7 +1169,8 @@ void InputCommit(AppData* app) {
       app->notes->last_affected_id = app->notes->current_id;
     } else {
       app->notes->last_affected_id = -1;
-      AddNoteAfter(app, app->notes, input->insert_after_id, input->buffer, state);
+      AddNoteAfter(app, app->notes, input->insert_after_id, input->buffer,
+                   state);
       app->notes->last_affected_id = app->notes->current_id;
     }
   } else if (input->pending_parent_id >= 0) {
@@ -2103,7 +2104,10 @@ void UndoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
+    int start_frame = (prev_page < app->notes->current_page)
+                        ? 0
+                        : app->animations[NOTES_TRANSITION]->frame_count - 1;
+    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], start_frame);
   }
 
   /* Restore input buffer and cursor to match restored note */
@@ -2182,7 +2186,10 @@ void RedoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
+    int start_frame = (prev_page < app->notes->current_page)
+                        ? 0
+                        : app->animations[NOTES_TRANSITION]->frame_count - 1;
+    RollfilmSeekFrame(app->animations[NOTES_TRANSITION], start_frame);
   }
 
   /* Restore input buffer and cursor to match restored note */
@@ -2332,7 +2339,8 @@ void NotesPrevPage(AppData* app) {
 
   app->notes->transitioning = true;
   app->notes->transition_target = app->notes->current_page - 1;
-  RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
+  RollfilmSeekFrame(app->animations[NOTES_TRANSITION],
+                    app->animations[NOTES_TRANSITION]->frame_count - 1);
 }
 
 /**
@@ -2696,22 +2704,30 @@ void OpenHelp(AppData* app) {
       case SLIDE_TYPE_PREFERENCES:
       case SLIDE_TYPE_PREFS_STEPPER:
       case SLIDE_TYPE_PREFS_SELECT:
-        scene = SCENE_PREFERENCES; break;
+        scene = SCENE_PREFERENCES;
+        break;
       case SLIDE_TYPE_NOISE:
-        scene = SCENE_NOISE; break;
+        scene = SCENE_NOISE;
+        break;
       case SLIDE_TYPE_CONTINUE:
-        scene = SCENE_CONTINUE; break;
+        scene = SCENE_CONTINUE;
+        break;
       case SLIDE_TYPE_HISTORY_OVERVIEW:
-        scene = SCENE_HISTORY_OVERVIEW; break;
+        scene = SCENE_HISTORY_OVERVIEW;
+        break;
       case SLIDE_TYPE_HISTORY_DAY:
-        scene = SCENE_HISTORY_DAY; break;
+        scene = SCENE_HISTORY_DAY;
+        break;
       case SLIDE_TYPE_HISTORY_STATS:
-        scene = SCENE_HISTORY_STATS; break;
+        scene = SCENE_HISTORY_STATS;
+        break;
       default:
-        scene = 1 << app->screen->panels[app->screen->current_panel].scene_history->present;
+        scene = 1 << app->screen->panels[app->screen->current_panel]
+                       .scene_history->present;
     }
   } else {
-    scene = 1 << app->screen->panels[app->screen->current_panel].scene_history->present;
+    scene = 1 << app->screen->panels[app->screen->current_panel]
+                   .scene_history->present;
   }
   app->saved_popup = app->popup_dialog;
   app->help_context_scene = scene;
@@ -2731,9 +2747,7 @@ void HelpScrollUp(AppData* app) {
   if (app->help_scroll_row > 0) app->help_scroll_row--;
 }
 
-void HelpScrollDown(AppData* app) {
-  app->help_scroll_row++;
-}
+void HelpScrollDown(AppData* app) { app->help_scroll_row++; }
 
 /**
  * After a selection change, ensure the selected field is visible by adjusting
@@ -2801,7 +2815,8 @@ void PrefsSelectNext(AppData* app) {
  */
 void PrefsValueDown(AppData* app) {
   if (!app->popup_dialog) return;
-  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  int idx =
+    prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
   if (idx < 0) return;
   PrefField* f = &app->prefs.fields[idx];
   if (f->type == PREF_SELECT) {
@@ -2827,7 +2842,8 @@ void PrefsValueDown(AppData* app) {
  */
 void PrefsValueUp(AppData* app) {
   if (!app->popup_dialog) return;
-  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  int idx =
+    prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
   if (idx < 0) return;
   PrefField* f = &app->prefs.fields[idx];
   if (f->type == PREF_SELECT) {
@@ -2853,7 +2869,8 @@ void PrefsValueUp(AppData* app) {
  */
 void PrefsToggle(AppData* app) {
   if (!app->popup_dialog) return;
-  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  int idx =
+    prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
   if (idx < 0) return;
   PrefField* f = &app->prefs.fields[idx];
   if (f->type == PREF_SELECT) {
@@ -2872,7 +2889,8 @@ void PrefsToggle(AppData* app) {
  */
 void PrefsEdit(AppData* app) {
   if (!app->popup_dialog) return;
-  int idx = prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
+  int idx =
+    prefFieldIndexBySelectOffset(app, app->popup_dialog->hovered_button);
   if (idx < 0) return;
   PrefField* f = &app->prefs.fields[idx];
   if (f->type == PREF_TOGGLE || f->type == PREF_STEPPER_INT ||
@@ -2913,8 +2931,10 @@ static int contentRowForField(AppData* app, int field_idx) {
   int r = 0;
   for (int i = 0; i < field_idx; i++) {
     if (app->prefs.fields[i].type == PREF_SECTION) {
-      if (i > 0) r += 2;
-      else r++;
+      if (i > 0)
+        r += 2;
+      else
+        r++;
     } else {
       r++;
     }

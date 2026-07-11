@@ -142,7 +142,8 @@ void UpdateWorkTime(AppData* app) {
         .audio_path = "./sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
-        SetError(app, "Sending long pause notification", NOTIFICATION_SEND_ERROR);
+        SetError(app, "Sending long pause notification",
+                 NOTIFICATION_SEND_ERROR);
     } else {
       ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
       app->screen->panels[0].menu_index = -1;
@@ -157,7 +158,8 @@ void UpdateWorkTime(AppData* app) {
         .audio_path = "./sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
-        SetError(app, "Sending short pause notification", NOTIFICATION_SEND_ERROR);
+        SetError(app, "Sending short pause notification",
+                 NOTIFICATION_SEND_ERROR);
     }
   }
 }
@@ -256,10 +258,25 @@ void UpdateNotes(AppData* app) {
       SetError(app, "UpdateNotes", ANIMATION_EQUAL_NULL);
       return;
     }
-    transition->update(transition);
 
-    /* Check if transition completed (reached last frame) */
-    if (transition->current_frame >= transition->frame_count - 1) {
+    bool forward = app->notes->transition_target > app->notes->current_page;
+
+    double current_time = GetCurrentTimeMS();
+    double delta_time = current_time - transition->delta_frame_ms;
+
+    if (delta_time >= 1000.0 * transition->frames->seconds_multiplier) {
+      transition->delta_frame_ms = current_time;
+      if (forward) {
+        if (transition->current_frame < transition->frame_count - 1)
+          RollfilmSeekFrame(transition, transition->current_frame + 1);
+      } else {
+        if (transition->current_frame > 0)
+          RollfilmSeekFrame(transition, transition->current_frame - 1);
+      }
+    }
+
+    int end_frame = forward ? transition->frame_count - 1 : 0;
+    if (transition->current_frame == end_frame) {
       int old_page = app->notes->current_page;
       int old_id = app->notes->current_id;
 
@@ -268,7 +285,7 @@ void UpdateNotes(AppData* app) {
 
       /* Reset NOTES animation to last frame */
       RollfilmSeekFrame(app->animations[NOTES],
-                         app->animations[NOTES]->frame_count - 1);
+                        app->animations[NOTES]->frame_count - 1);
 
       /* Calculate index of previously selected note within old page */
       int old_idx = 0;
