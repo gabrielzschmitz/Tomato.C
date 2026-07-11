@@ -157,6 +157,26 @@ setup_paths() {
 # */
 
 #/**
+# * @brief Remove all build artifacts via make clean.
+# */
+clean_artifacts() {
+  echo " ${BOLD}Cleaning build artifacts...${RESET}"
+  echo ""
+  local clean_output
+  clean_output=$(/usr/bin/make -C "$TESTS_DIR" clean 2>&1)
+
+  local clean_exit=$?
+  if [ "$clean_exit" -ne 0 ]; then
+    echo "$clean_output" | sed 's/^/  /'
+    echo "  ${RED}❌${RESET}  Clean failed${RESET}"
+    echo ""
+    exit 1
+  fi
+  echo "  ${GREEN}✅${RESET}  Clean done"
+  echo ""
+}
+
+#/**
 # * @brief Build all test binaries with make.
 # *
 # * Honour COVERAGE, ASAN, and UBSAN flags.  Exits the script if the
@@ -176,14 +196,13 @@ build_tests() {
 
   local build_exit=$?
   if [ "$build_exit" -ne 0 ]; then
-    echo "  ${RED}✖${RESET}  Build failed${RESET}"
+    echo "  ${RED}❌${RESET}  Build failed${RESET}"
     echo "$build_output" | sed 's/^/   /'
     echo ""
     print_summary 0 0 0 0 0 0 0 0 0 0 ""
     exit 1
   fi
-  echo "  ${GREEN}✔${RESET}  Build successful"
-  echo ""
+  echo "  ${GREEN}✅${RESET}  Build successful"
 }
 
 #/**
@@ -304,12 +323,11 @@ print_summary() {
   fi
   echo "  Assertions:         $assertions"
   echo "  Time:               ${total_time}s"
-  echo ""
 
   if [ "$failed" -gt 0 ]; then
     echo "  ${RED}Failed suites:${RESET}"
     for f in $failed_names; do
-      echo "  ${RED}✖${RESET}  $f"
+      echo "  ${RED}❌${RESET}  $f"
     done
     echo ""
   fi
@@ -362,11 +380,11 @@ run_test_binary() {
   local padded_name
   padded_name=$(printf "%-44s" "$name")
   if [ "$result" = "PASS" ]; then
-    echo "  ${GREEN}✔${RESET}  ${BOLD}$padded_name${GREEN}PASS${RESET}  (${pass_count}/$category)"
+    echo "  ${GREEN}✅${RESET}  ${BOLD}$padded_name${GREEN}PASS${RESET}  (${pass_count})"
   elif [ "$result" = "FAIL" ]; then
-    echo "  ${RED}✖${RESET}  ${BOLD}$padded_name${RED}FAIL${RESET}  (${pass_count}/$category)"
+    echo "  ${RED}❌${RESET}  ${BOLD}$padded_name${RED}FAIL${RESET}  (${pass_count})"
   elif [ "$result" = "CRASH" ]; then
-    echo "  ${RED}✖${RESET}  ${BOLD}$padded_name${RED}CRASH${RESET} (exit code $exit_code)"
+    echo "  ${RED}❌${RESET}  ${BOLD}$padded_name${RED}CRASH${RESET} (exit code $exit_code)"
   else
     echo "  ${YELLOW}?${RESET}  $padded_name${YELLOW}UNKNOWN${RESET}"
   fi
@@ -391,9 +409,6 @@ run_test_binary() {
   fi
   TOTAL_ASSERTIONS=$((TOTAL_ASSERTIONS + assert_count))
 
-  if [ "$QUIET" != "1" ] && [ "$VERBOSE" = "1" ]; then
-    echo ""
-  fi
 }
 
 #/**
@@ -413,8 +428,8 @@ run_category() {
   esac
 
   if [ "$QUIET" != "1" ]; then
-    echo " ${BOLD}Running ${label}...${RESET}"
     echo ""
+    echo " ${BOLD}Running ${label}...${RESET}"
   fi
 
   for binary in $binaries; do
@@ -423,8 +438,6 @@ run_category() {
     name=$(basename "$binary" | sed 's/^test_//')
     run_test_binary "$binary" "$name" "$category"
   done
-
-  if [ "$QUIET" != "1" ]; then echo ""; fi
 }
 
 #/**
@@ -448,20 +461,7 @@ main() {
   print_header
 
   if [ "$CLEAN" = "1" ]; then
-    echo " ${BOLD}Cleaning build artifacts...${RESET}"
-    echo ""
-    local clean_output
-    clean_output=$(/usr/bin/make -C "$TESTS_DIR" clean 2>&1)
-
-    local clean_exit=$?
-    if [ "$clean_exit" -ne 0 ]; then
-      echo "$clean_output" | sed 's/^/  /'
-      echo "  ${RED}✖${RESET}  Clean failed${RESET}"
-      echo ""
-      exit 1
-    fi
-    echo "  ${GREEN}✔${RESET}  Clean done"
-    echo ""
+    clean_artifacts
   fi
 
   build_tests
