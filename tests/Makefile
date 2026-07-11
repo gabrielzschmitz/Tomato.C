@@ -37,6 +37,7 @@ UNIT_BINS = \
 	unit/test_gap_buffer \
 	unit/test_history \
 	unit/test_config \
+	unit/test_keybind \
 	unit/test_notes \
 	unit/test_util \
 	unit/test_error \
@@ -80,6 +81,10 @@ unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.
                $(SRCDIR)/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
 
+#/** @brief keybind — includes config.c; stubs all action functions in test file */
+unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
+
 #/** @brief anim — links util.c and error.c */
 unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
@@ -97,7 +102,9 @@ unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
 INTEGRATION_BINS = \
 	integration/test_pomodoro_workflow \
 	integration/test_pomodoro_timer \
-	integration/test_e2e
+	integration/test_e2e \
+	integration/test_keybind_resolution \
+	integration/test_keybind_merge
 
 build-integration: $(INTEGRATION_BINS)
 
@@ -112,6 +119,14 @@ integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/uti
 #/** @brief e2e — links log.c + util.c + gap_buffer.c for end-to-end CLI tests */
 integration/test_e2e: integration/test_e2e.c $(SRCDIR)/log.c $(SRCDIR)/util.c $(SRCDIR)/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief keybind_resolution — includes config.c; stubs all action functions; tests resolution logic */
+integration/test_keybind_resolution: integration/test_keybind_resolution.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief keybind_merge — includes config.c; tests loadTomlFile with temp TOML files */
+integration/test_keybind_merge: integration/test_keybind_merge.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 .PHONY: all build build-unit build-integration clean
 
