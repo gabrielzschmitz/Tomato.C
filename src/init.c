@@ -96,13 +96,13 @@ ErrorType InitApp(AppData* app) {
   InitWhiteNoiseData(&app->noise_data);
   {
     WhiteNoiseTrackDef default_tracks[] = {
-      {"Rain", (const char**)RAIN_ICONS, "./sounds/ambience-rain.mp3",
+      {"Rain", (const char**)RAIN_ICONS, DATADIR "/sounds/ambience-rain.mp3",
        NOISE_MASTER_VOLUME, 14},
-      {"Fire", (const char**)FIRE_ICONS, "./sounds/ambience-fire.mp3",
+      {"Fire", (const char**)FIRE_ICONS, DATADIR "/sounds/ambience-fire.mp3",
        NOISE_MASTER_VOLUME, 13},
-      {"Wind", (const char**)WIND_ICONS, "./sounds/ambience-wind.mp3",
+      {"Wind", (const char**)WIND_ICONS, DATADIR "/sounds/ambience-wind.mp3",
        NOISE_MASTER_VOLUME, 15},
-      {"Thunder", (const char**)THUNDER_ICONS, "./sounds/ambience-thunder.mp3",
+      {"Thunder", (const char**)THUNDER_ICONS, DATADIR "/sounds/ambience-thunder.mp3",
        NOISE_MASTER_VOLUME, 11},
     };
     status = RegisterWhiteNoiseTracks(
@@ -322,10 +322,10 @@ static ErrorType initStatusBar(AppData* app) {
  */
 static ErrorType initAnimations(AppData* app) {
   const char* animation_files[MAX_ANIMATIONS] = {
-    "./sprites/mainmenu.asc",   "./sprites/worktime.asc",
-    "./sprites/shortpause.asc", "./sprites/longpause.asc",
-    "./sprites/notes.asc",      "./sprites/notes_transition.asc",
-    "./sprites/help.asc",       "./sprites/continue.asc"};
+    DATADIR "/sprites/mainmenu.asc",   DATADIR "/sprites/worktime.asc",
+    DATADIR "/sprites/shortpause.asc", DATADIR "/sprites/longpause.asc",
+    DATADIR "/sprites/notes.asc",      DATADIR "/sprites/notes_transition.asc",
+    DATADIR "/sprites/help.asc",       DATADIR "/sprites/continue.asc"};
 
   for (int i = 0; i < MAX_ANIMATIONS; ++i) {
     app->animations[i] = DeserializeSprites(animation_files[i]);

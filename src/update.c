@@ -139,7 +139,7 @@ void UpdateWorkTime(AppData* app) {
       Notification notification = {
         .title = "Long Pause Break",
         .description = "You have some time to chill",
-        .audio_path = "./sounds/pausenotify.mp3",
+        .audio_path = DATADIR "/sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
         SetError(app, "Sending long pause notification",
@@ -155,7 +155,7 @@ void UpdateWorkTime(AppData* app) {
       Notification notification = {
         .title = "Pause Break",
         .description = "You have some time to chill",
-        .audio_path = "./sounds/pausenotify.mp3",
+        .audio_path = DATADIR "/sounds/pausenotify.mp3",
       };
       if (Notify(&notification) != NO_ERROR)
         SetError(app, "Sending short pause notification",
@@ -197,7 +197,7 @@ void UpdateShortPause(AppData* app) {
     Notification notification = {
       .title = "Work!",
       .description = "You need to focus",
-      .audio_path = "./sounds/dfltnotify.mp3",
+      .audio_path = DATADIR "/sounds/dfltnotify.mp3",
     };
     if (Notify(&notification) != NO_ERROR)
       SetError(app, "Sending work notification", NOTIFICATION_SEND_ERROR);
@@ -237,7 +237,7 @@ void UpdateLongPause(AppData* app) {
     Notification notification = {
       .title = "End of Pomodoro Cycle",
       .description = "Feel free to start another!",
-      .audio_path = "./sounds/endnotify.mp3",
+      .audio_path = DATADIR "/sounds/endnotify.mp3",
     };
     if (Notify(&notification) != NO_ERROR)
       SetError(app, "Sending end notification", NOTIFICATION_SEND_ERROR);

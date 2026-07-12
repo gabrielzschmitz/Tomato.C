@@ -71,10 +71,10 @@ int main(int argc, char* argv[]) {
 
   if (DEBUG) {
     /* TEST ERROR LINE - uncomment to test */
-    TestErrorLine(&app, "Test INFO message", ERROR_LEVEL_INFO, true);
-    TestErrorLine(&app, "Test WARNING message", ERROR_LEVEL_WARNING, true);
-    TestErrorLine(&app, "Test ERROR message", ERROR_LEVEL_ERROR, true);
-    TestErrorLine(&app, "Test DEBUG message", ERROR_LEVEL_DEBUG, true);
+    // TestErrorLine(&app, "Test INFO message", ERROR_LEVEL_INFO, true);
+    // TestErrorLine(&app, "Test WARNING message", ERROR_LEVEL_WARNING, true);
+    // TestErrorLine(&app, "Test ERROR message", ERROR_LEVEL_ERROR, true);
+    // TestErrorLine(&app, "Test DEBUG message", ERROR_LEVEL_DEBUG, true);
     // TestErrorLine(&app, "Test CRITICAL message", ERROR_LEVEL_CRITICAL, true);
   }
 

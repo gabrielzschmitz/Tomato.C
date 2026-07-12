@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Tomato.C
+Comment=Terminal-based Pomodoro timer
+Exec=tomato
+Icon=tomato
+Terminal=true
+Categories=Utility;Time;Productivity;
