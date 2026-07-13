@@ -3,6 +3,7 @@
 #include "log.h"
 
 #include <errno.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -164,10 +165,14 @@ ErrorType CreateTimerLog(const char* path) {
             strncpy(last_message, buffer, buffer_size - 1);
             last_message[buffer_size - 1] = '\0';
 
-            /* Broadcast last message */
+            /* Broadcast last message with newline delimiter */
+            size_t msg_len = strlen(last_message);
+            char send_buf[64];
+            memcpy(send_buf, last_message, msg_len);
+            send_buf[msg_len] = '\n';
             for (int j = 0; j <= max_sd; j++) {
               if (FD_ISSET(j, &master_set) && j != server_sock && j != i) {
-                if (send(j, last_message, strlen(last_message), 0) == -1) {
+                if (send(j, send_buf, msg_len + 1, 0) == -1) {
                   if (errno != EINTR && errno != ECONNRESET && errno != EPIPE)
                     LogError("CreateTimerLog", SOCKET_WRITE_ERROR);
                   close(j);
@@ -202,75 +207,180 @@ ErrorType CreateTimerLog(const char* path) {
  * @param loop Whether to continuously poll the socket
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
-ErrorType GetTimerLog(const char* path, bool loop) {
+ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
   const int buffer_size = 32;
   char buffer[buffer_size];
   ssize_t n;
+  bool was_active = false;
 
   /* Create socket */
-  int sock;
-  struct sockaddr_un addr;
-  int retries = 0;
-
   do {
-    sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    int sock;
+    struct sockaddr_un addr;
+    int retries = 0;
+
+    /* Keep trying to connect — in loop mode, retry forever */
+    do {
+      sock = socket(AF_UNIX, SOCK_STREAM, 0);
+      if (sock == -1) {
+        LogError("GetTimerLog", SOCKET_CREATION_ERROR);
+        return SOCKET_CREATION_ERROR;
+      }
+
+      memset(&addr, 0, sizeof(addr));
+      addr.sun_family = AF_UNIX;
+      strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+      if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+
+      close(sock);
+      sock = -1;
+      retries++;
+
+      if (loop)
+        socketRetryDelay();
+      else if (retries < SOCKET_RETRY_COUNT)
+        socketRetryDelay();
+    } while (sock == -1 && (loop || retries < SOCKET_RETRY_COUNT));
+
     if (sock == -1) {
-      LogError("GetTimerLog", SOCKET_CREATION_ERROR);
-      return SOCKET_CREATION_ERROR;
+      LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
+      return SOCKET_CONNECTION_ERROR;
     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+    do {
+      struct pollfd pfd = {.fd = sock, .events = POLLIN};
+      int poll_result = poll(&pfd, 1, 5000);
 
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+      if (poll_result > 0) {
+        /* Drain — save the last recv chunk (newest data), then
+           extract the last complete message from it.  Messages are
+           delimited by \n (appended by the server broadcast). */
+        char chunk[1024] = "";
+        do {
+          n = recv(sock, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
+          if (n > 0) {
+            buffer[n] = '\0';
+            strncpy(chunk, buffer, sizeof(chunk) - 1);
+            chunk[sizeof(chunk) - 1] = '\0';
+          }
+        } while (n > 0);
+
+        if (n == -1 && errno != EAGAIN) {
+          LogError("GetTimerLog", SOCKET_READ_ERROR);
+          break;
+        }
+
+        if (chunk[0] == '\0') {
+          /* No data in drain — wait for the latest log */
+          n = recv(sock, buffer, sizeof(buffer) - 1, 0);
+        } else {
+          /* Find the last complete message in the chunk */
+          char* msg;
+          char* last_nl = strrchr(chunk, '\n');
+          if (last_nl) {
+            msg = last_nl + 1;
+            if (*msg == '\0') {
+              /* Trailing newline — message is before it */
+              if (last_nl > chunk) {
+                char* p = last_nl - 1;
+                while (p >= chunk && *p != '\n') p--;
+                msg = p + 1;
+              } else {
+                msg = chunk;
+              }
+            }
+          } else {
+            msg = chunk;
+          }
+          n = (int)strlen(msg);
+          if (n > (int)sizeof(buffer) - 2) n = (int)sizeof(buffer) - 2;
+          memcpy(buffer, msg, (size_t)n + 1);
+        }
+        if (n > 0) {
+          buffer[n] = '\0';
+
+          /* Parse structured format: "W 22:30" or "P W 22:30" */
+          /* Falls back to printing raw buffer for old-format messages. */
+          {
+            char* nl = strchr(buffer, '\n');
+            if (nl) *nl = '\0';
+
+            bool structured =
+              (buffer[0] == 'W' || buffer[0] == 'S' || buffer[0] == 'L' ||
+               (buffer[0] == 'P' && buffer[1] == ' ' &&
+                (buffer[2] == 'W' || buffer[2] == 'S' || buffer[2] == 'L')));
+
+            if (structured) {
+              bool is_paused = (buffer[0] == 'P' && buffer[1] == ' ');
+              const char* step_start = is_paused ? buffer + 2 : buffer;
+              char step_code = step_start[0];
+              const char* time_part = step_start[2] ? step_start + 2 : "";
+
+              if (icon_type == NO_ICONS) {
+                printf("%s\n", time_part);
+              } else {
+                const char* step_icon;
+                switch (step_code) {
+                  case 'W': step_icon = WORK_ICONS[icon_type]; break;
+                  case 'S': step_icon = SHORT_PAUSE_ICONS[icon_type]; break;
+                  case 'L': step_icon = LONG_PAUSE_ICONS[icon_type]; break;
+                  default:  step_icon = ""; break;
+                }
+                if (is_paused) {
+                  const char* play_icon = PLAY_ICONS[icon_type];
+                  if (play_icon[0] && step_icon[0])
+                    printf("%s %s %s\n", play_icon, step_icon, time_part);
+                  else if (play_icon[0])
+                    printf("%s %s\n", play_icon, time_part);
+                  else if (step_icon[0])
+                    printf("%s %s\n", step_icon, time_part);
+                  else
+                    printf("%s\n", time_part);
+                } else {
+                  if (step_icon[0])
+                    printf("%s %s\n", step_icon, time_part);
+                  else
+                    printf("%s\n", time_part);
+                }
+              }
+            } else {
+              printf("%s\n", buffer);
+            }
+          }
+
+          fflush(stdout);
+          was_active = true;
+        } else if (n == 0) {
+          /* Server closed the connection — print blank line */
+          if (was_active) {
+            printf("\n");
+            fflush(stdout);
+          }
+          break;
+        } else {
+          LogError("GetTimerLog", SOCKET_READ_ERROR);
+          break;
+        }
+      } else if (poll_result == 0) {
+        /* Timeout — no data for 5 seconds */
+        if (was_active) {
+          printf("\n");
+          fflush(stdout);
+          was_active = false;
+        }
+      } else {
+        /* poll error */
+        break;
+      }
+
+      if (!loop) break;
+      sleep(1);
+    } while (loop);
 
     close(sock);
-    sock = -1;
-    retries++;
-    if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
-  } while (retries < SOCKET_RETRY_COUNT);
-
-  if (sock == -1) {
-    LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
-    return SOCKET_CONNECTION_ERROR;
-  }
-
-  do {
-    /* Drain the socket buffer to skip old logs */
-    do {
-      n = recv(sock, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-    } while (n > 0);
-
-    if (n == -1 && errno != EAGAIN) {
-      LogError("GetTimerLog", SOCKET_READ_ERROR);
-      close(sock);
-      return SOCKET_READ_ERROR;
-    }
-
-    /* Wait for the latest log */
-    n = recv(sock, buffer, sizeof(buffer) - 1, 0);
-    if (n > 0) {
-      buffer[n] = '\0';       /* Null-terminate the received message */
-      printf("%s\n", buffer); /* Print the latest log */
-    } else if (n == 0) {
-      /* Server closed the connection */
-      break;
-    } else {
-      LogError("GetTimerLog", SOCKET_READ_ERROR);
-      close(sock);
-      return SOCKET_READ_ERROR;
-    }
-
-    if (!loop) break;
-    sleep(1); /* Wait before checking again */
+    was_active = false;
   } while (loop);
-
-  /* Close the socket */
-  if (close(sock) == -1) {
-    LogError("GetTimerLog", SOCKET_CLOSE_ERROR);
-    return SOCKET_CLOSE_ERROR;
-  }
 
   return NO_ERROR;
 }
@@ -286,7 +396,8 @@ ErrorType SetTimerLog(const char* path, const char* log) {
   static char last_log[32] = "";
 
   /* Skip sending if the log is identical to the last one */
-  if (strcmp(last_log, log) == 0) return NO_ERROR;
+  /* Always send pause updates so the client keeps echoing the paused time. */
+  if (strcmp(last_log, log) == 0 && log[0] != 'P') return NO_ERROR;
 
   int sock;
   struct sockaddr_un addr;
@@ -344,23 +455,20 @@ ErrorType SetTimerLog(const char* path, const char* log) {
  * @return Newly allocated formatted string (caller must free), or NULL on failure
  */
 char* FormatTimerLog(PomodoroData data, bool is_paused) {
-  const char *step_icon = NULL, *pause_icon = NULL;
-  int icon_type = GetConfigIconType();
+  const char* step_code;
   int duration = 0;
-
-  if (is_paused) pause_icon = PLAY_ICONS[icon_type];
 
   switch (data.current_step) {
     case WORK_TIME:
-      step_icon = WORK_ICONS[icon_type];
+      step_code = "W";
       duration = data.work_time;
       break;
     case SHORT_PAUSE:
-      step_icon = SHORT_PAUSE_ICONS[icon_type];
+      step_code = "S";
       duration = data.short_pause_time;
       break;
     case LONG_PAUSE:
-      step_icon = LONG_PAUSE_ICONS[icon_type];
+      step_code = "L";
       duration = data.long_pause_time;
       break;
     default:
@@ -370,19 +478,17 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
   char* remaining_time = FormatRemainingTime(data.current_step_time, duration);
   if (!remaining_time) return NULL;
 
-  size_t buffer_size = (pause_icon ? sizeof(pause_icon) : 0) +
-                       sizeof(step_icon) + strlen(remaining_time) + 1;
+  size_t buffer_size = strlen(remaining_time) + 8;
   char* log_string = (char*)malloc(buffer_size);
   if (!log_string) {
     free(remaining_time);
     return NULL;
   }
 
-  if (pause_icon)
-    snprintf(log_string, buffer_size, "%s %s %s", pause_icon, step_icon,
-             remaining_time);
+  if (is_paused)
+    snprintf(log_string, buffer_size, "P %s %s", step_code, remaining_time);
   else
-    snprintf(log_string, buffer_size, "%s %s", step_icon, remaining_time);
+    snprintf(log_string, buffer_size, "%s %s", step_code, remaining_time);
 
   free(remaining_time);
   return log_string;

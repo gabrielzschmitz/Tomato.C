@@ -22,6 +22,7 @@ typedef enum {
   NERD_ICONS, /**< Icons using Nerd Font symbols */
   EMOJIS,     /**< Icons represented by emojis */
   ASCII,      /**< Icons using ASCII characters */
+  NO_ICONS,   /**< No icons - plain text only */
 } IconType;
 
 /**

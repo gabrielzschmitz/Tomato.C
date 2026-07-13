@@ -25,10 +25,27 @@ static void handleErrorAndExit(const char* context, ErrorType error,
 int main(int argc, char* argv[]) {
   LoadConfig();
 
-  if (argc == 2 && !strcmp("-t", argv[1])) {
-    if (TIMER_LOG == 1) return GetTimerLog(TIMER_FILE, true);
-    printf("enable timer log to use [-t]\n");
-    return 1;
+  if (argc >= 2 && !strcmp("-t", argv[1])) {
+    if (TIMER_LOG != 1) {
+      printf("enable timer log to use [-t]\n");
+      return 1;
+    }
+    IconType icon_type = GetConfigIconType();
+    if (argc == 3) {
+      if (strcmp(argv[2], "nerd-icons") == 0)
+        icon_type = NERD_ICONS;
+      else if (strcmp(argv[2], "emojis") == 0)
+        icon_type = EMOJIS;
+      else if (strcmp(argv[2], "ascii") == 0)
+        icon_type = ASCII;
+      else if (strcmp(argv[2], "no-icons") == 0)
+        icon_type = NO_ICONS;
+      else {
+        printf("usage: tomato [-t] [-t <iconset>] [-h]\n");
+        return 1;
+      }
+    }
+    return GetTimerLog(TIMER_FILE, true, icon_type);
   } else if (argc >= 2 && !strcmp("-h", argv[1])) {
     if (WORK_LOG != 1) {
       printf("enable work log to use [-h]\n");

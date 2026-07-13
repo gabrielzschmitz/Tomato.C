@@ -86,7 +86,7 @@ static void test_t_flag_no_server(void) {
   TEST("tomato -t handles missing timer log server");
   g_config.logging.timer_log = 1;
   g_config.logging.timer_file = "/tmp/tomato_e2e_t_nonexistent.sock";
-  ErrorType err = GetTimerLog(g_config.logging.timer_file, false);
+  ErrorType err = GetTimerLog(g_config.logging.timer_file, false, ASCII);
   ASSERT_EQ((int)err, (int)SOCKET_CONNECTION_ERROR);
 }
 

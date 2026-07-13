@@ -8,45 +8,47 @@ extensible, terminal-based Pomodoro timer written in C.
 ## ✅ Completed
 
 ### 🎞️ Animations
-- [x] ASCII animations with frame timing, color and UNICODE support
-- [x] Animation variants: nerd-icons, emojis, ASCII
-- [x] Animation API: print to position, center, toggle loop
+- [X] ASCII animations with frame timing, color and UNICODE support
+- [X] Animation variants: nerd-icons, emojis, ASCII
+- [X] Animation API: print to position, center, toggle loop
 
 ### 🖼️ UI Library
-- [x] Modular UI library for rendering and layout management
+- [X] Modular UI library for rendering and layout management
 
 ### 📊 Status Bar
-- [x] Modular status bar with left, center (auto-centered), and right zones
-- [x] Each module implemented as an independent function
+- [X] Modular status bar with left, center (auto-centered), and right zones
+- [X] Each module implemented as an independent function
 
 ### 🗃️ Logging
-- [x] Log library for Pomodoro session data
-- [x] Efficient read/write via UNIX sockets
+- [X] Log library for Pomodoro session data
+- [X] Efficient read/write via UNIX sockets
+- [X] Fix `tomato -t` to be fully functional to place on bar
 
 ### 🔊 Audio
-- [x] Audio playback library using `miniaudio.h`
-- [x] Supports volume control and looping
+- [X] Audio playback library using `miniaudio.h`
+- [X] Supports volume control and looping
 
 ### 🔔 Notifications
-- [x] Desktop notification support using `libnotify`
+- [X] Desktop notification support using `libnotify`
 
 ### 🔧 Core Logic
-- [x] Pomodoro loop (work, short/long breaks)
-- [x] Pause, resume, and skip functionality
+- [X] Pomodoro loop (work, short/long breaks)
+- [X] Pause, resume, and skip functionality
 
 ### ⚙️ Configuration
 - [X] Modular config system for durations, break types, and user settings
 - [X] Move configuration from compiled to runtime paradigma
+- [X] Refactor the configuration system to prioritize user-defined settings
+  over hardcoded defaults, particularly for keybindings.
+- [X] Add Status Bar modules at user config
+- [X] Add installation and relative paths where needed
 
 ### 📝 Simple note taking with vim-motions
 - [X] Add and remove tasks
 - [X] Move through tasks
 - [X] Toggle tasks on/off
 - [X] Manage breaklines and large lines
-- [X] Edit tasks
-- [X] Add and remove subtasks (max depth 1)
-- [X] Move notes up and down
-- [X] Undo and redo edits
+- [X] Edit tasks [X] Add and remove subtasks (max depth 1) [X] Move notes up and down [X] Undo and redo edits
 - [X] Add a page system
 
 ### 🛠️ User Preferences
@@ -54,10 +56,6 @@ extensible, terminal-based Pomodoro timer written in C.
     - [X] Transform logging to be less data consuming (maybe binary)
     - [X] Add more interesting data about sessions to GetPomodoroLog
 - [X] Add error stack and UI error line
-- [X] Refactor the configuration system to prioritize user-defined settings
-  over hardcoded defaults, particularly for keybindings.
-- [X] Add Status Bar modules at user config
-
 
 ### 👋 User Interface
 - [X] Mouse interaction

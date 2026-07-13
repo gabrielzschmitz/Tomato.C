@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1331,7 +1332,10 @@ cleanup:
  */
 static void loadTomlFile(const char* path) {
   FILE* f = fopen(path, "r");
-  if (!f) { LogError("loadTomlFile", FILE_ERROR); return; }
+  if (!f) {
+    if (errno != ENOENT) LogError("loadTomlFile", FILE_ERROR);
+    return;
+  }
 
   char errbuf[200];
   toml_table_t* root = toml_parse_file(f, errbuf, sizeof(errbuf));

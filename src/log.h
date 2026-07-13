@@ -6,6 +6,7 @@
 
 #include "error.h"
 #include "tomato.h"
+#include "util.h"
 
 /**
  * Binary log record structure (packed, 28 bytes).
@@ -44,9 +45,10 @@ ErrorType CreateTimerLog(const char* path);
  * Connects to the timer log server and reads current status.
  * @param path File path for the Unix socket
  * @param loop Whether to continuously poll the socket
+ * @param icon_type Icon set to use for display
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
-ErrorType GetTimerLog(const char* path, bool loop);
+ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type);
 
 /**
  * Set a timer log by writing to the socket.
