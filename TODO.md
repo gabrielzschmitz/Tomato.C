@@ -83,7 +83,7 @@ extensible, terminal-based Pomodoro timer written in C.
 ### 📚 Documentation
 - [X] Inline documentation for all modules
 - [X] Documentation to HTML pages
-- [ ] Updated README with install, usage, and config details
+- [X] Updated README with install, usage, and config details
 - [ ] Changelog for version tracking
 
 ---

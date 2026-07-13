@@ -7,9 +7,9 @@
 <a href="https://github.com/gabrielzschmitz/Tomato.C"><img src="https://img.shields.io/github/stars/gabrielzschmitz/Tomato.C?style=social" alt="Give me a Star"></a>
 
 **Tomato.C** is a modular, extensible, terminal-based Pomodoro timer written in
-pure C. Its features dynamic UI, ASCII sprite animations and notifications. The
-application integrates a robust productivity workflow featuring a built-in
-notes system with vim-like motions and comprehensive session history logging.
+pure C. Its features dynamic UI, ASCII sprite animations, desktop
+notifications, built-in notes system with Vim-like motions and comprehensive
+session history logging.
 
 ---
 
@@ -52,6 +52,22 @@ input. To get help with the keybinds press `?`/`F1`
   terminal interface.
   </em>
 </p>
+
+---
+
+## Configuration
+
+Tomato.C uses a _toml_ configuration file. A fully commented example is
+provided as `sample_config.toml`. Copy it to the configuration directory:
+
+```bash
+mkdir -p ~/.config/tomato
+cp sample_config.toml ~/.config/tomato/config.toml
+```
+
+All available options are documented directly in the file, including timer
+durations, status bar modules, notifications, animations, keybindings, and
+other general settings.
 
 ---
 
