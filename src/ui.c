@@ -1172,7 +1172,7 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
 
   /* Calculate centered positions */
   int total_width = strlen(message) + strlen(total_time);
-  int start_x = anim_pos.x + (anim_size.width - total_width) / 2 + 1;
+  int start_x = anim_pos.x + (anim_size.width - total_width) / 2;
   int render_y = anim_pos.y + anim_size.height + 1;
   int start_x_above = start_x + strlen(message) + 1 + strlen(cycle_info);
   int render_y_above = anim_pos.y - 1;
@@ -1186,7 +1186,7 @@ void RenderPomodoroStatus(AppData* app, Dimensions anim_size,
   SetColor(color, NO_COLOR, A_BOLD);
   mvprintw(render_y, start_x, "%s", message);
   SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  mvprintw(render_y, start_x + strlen(message) - 1, "%s", total_time);
+  mvprintw(render_y, start_x + strlen(message), "%s", total_time);
 
   /* Render the current_time centered below message and total_time */
   char* current_time =
