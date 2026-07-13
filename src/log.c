@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -25,7 +26,7 @@
 /* PRIVATE LOG FUNCTIONS */
 /* Retry configuration for socket connections */
 #define SOCKET_RETRY_COUNT 3
-#define SOCKET_RETRY_DELAY_NS 1000000000L /* 1000ms */
+static time_t retry_start = 0;
 
 /**
  * Summary of a single recent pomodoro session for history display.
@@ -61,6 +62,11 @@ typedef struct {
     [MAX_RECENT_SESSIONS]; /**< Array of recent session summaries */
 } pomodoroHistoryStats;
 
+/* Timer */
+static void socketRetryDelay(void);
+static int getRetryDelay(void);
+static void resetRetryDelay(void);
+static void reliableSleep(int seconds);
 /* Notes */
 static NoteState charToNoteState(char c);
 /* Pomodoro */
@@ -68,11 +74,6 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
                                                        int maxRecent);
 static bool histIsSameDay(time_t ts, int year, int month, int day);
 static bool histIsSameMonth(time_t ts, int year, int month);
-/* Socket */
-static void socketRetryDelay(void) {
-  struct timespec ts = {0, SOCKET_RETRY_DELAY_NS};
-  nanosleep(&ts, NULL);
-}
 
 /**
  * ---------------------------------------------------------------------------
@@ -213,13 +214,63 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
   ssize_t n;
   bool was_active = false;
 
-  /* Create socket */
-  do {
-    int sock;
+  /* Non-looping mode: connect with retries, read one message, return */
+  if (!loop) {
+    int sock = -1;
     struct sockaddr_un addr;
     int retries = 0;
 
-    /* Keep trying to connect — in loop mode, retry forever */
+    do {
+      sock = socket(AF_UNIX, SOCK_STREAM, 0);
+      if (sock == -1) {
+        LogError("GetTimerLog", SOCKET_CREATION_ERROR);
+        return SOCKET_CREATION_ERROR;
+      }
+      memset(&addr, 0, sizeof(addr));
+      addr.sun_family = AF_UNIX;
+      strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+      if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+
+      close(sock);
+      sock = -1;
+      retries++;
+      if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
+    } while (sock == -1 && retries < SOCKET_RETRY_COUNT);
+
+    if (sock == -1) {
+      LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
+      return SOCKET_CONNECTION_ERROR;
+    }
+
+    struct pollfd pfd = {.fd = sock, .events = POLLIN};
+    int poll_result;
+    do {
+      poll_result = poll(&pfd, 1, 5000);
+    } while (poll_result < 0 && errno == EINTR);
+
+    if (poll_result > 0) {
+      n = recv(sock, buffer, sizeof(buffer) - 1, 0);
+      if (n > 0) {
+        buffer[n] = '\0';
+        char* nl = strchr(buffer, '\n');
+        if (nl) *nl = '\0';
+        printf("%s\n", buffer);
+        fflush(stdout);
+      }
+    }
+
+    close(sock);
+    return NO_ERROR;
+  }
+
+  /* --- Looping mode --- */
+
+  do {
+    int sock = -1;
+    struct sockaddr_un addr;
+
+    /* Retry loop: keep trying to connect */
     do {
       sock = socket(AF_UNIX, SOCK_STREAM, 0);
       if (sock == -1) {
@@ -235,124 +286,96 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
 
       close(sock);
       sock = -1;
-      retries++;
+      reliableSleep(getRetryDelay());
+    } while (sock == -1);
 
-      if (loop)
-        socketRetryDelay();
-      else if (retries < SOCKET_RETRY_COUNT)
-        socketRetryDelay();
-    } while (sock == -1 && (loop || retries < SOCKET_RETRY_COUNT));
+    if (sock == -1) return SOCKET_CONNECTION_ERROR;
+    resetRetryDelay();
 
-    if (sock == -1) {
-      LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
-      return SOCKET_CONNECTION_ERROR;
-    }
+    /* Message loop: read and display timer updates */
+    int idle_count = 0;
 
     do {
       struct pollfd pfd = {.fd = sock, .events = POLLIN};
-      int poll_result = poll(&pfd, 1, 5000);
+      int poll_result;
+      do {
+        poll_result = poll(&pfd, 1, 1000);
+      } while (poll_result < 0 && errno == EINTR);
 
       if (poll_result > 0) {
-        /* Drain — save the last recv chunk (newest data), then
-           extract the last complete message from it.  Messages are
-           delimited by \n (appended by the server broadcast). */
-        char chunk[1024] = "";
-        do {
-          n = recv(sock, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-          if (n > 0) {
-            buffer[n] = '\0';
-            strncpy(chunk, buffer, sizeof(chunk) - 1);
-            chunk[sizeof(chunk) - 1] = '\0';
-          }
-        } while (n > 0);
-
-        if (n == -1 && errno != EAGAIN) {
-          LogError("GetTimerLog", SOCKET_READ_ERROR);
-          break;
-        }
-
-        if (chunk[0] == '\0') {
-          /* No data in drain — wait for the latest log */
-          n = recv(sock, buffer, sizeof(buffer) - 1, 0);
-        } else {
-          /* Find the last complete message in the chunk */
-          char* msg;
-          char* last_nl = strrchr(chunk, '\n');
-          if (last_nl) {
-            msg = last_nl + 1;
-            if (*msg == '\0') {
-              /* Trailing newline — message is before it */
-              if (last_nl > chunk) {
-                char* p = last_nl - 1;
-                while (p >= chunk && *p != '\n') p--;
-                msg = p + 1;
-              } else {
-                msg = chunk;
-              }
-            }
-          } else {
-            msg = chunk;
-          }
-          n = (int)strlen(msg);
-          if (n > (int)sizeof(buffer) - 2) n = (int)sizeof(buffer) - 2;
-          memcpy(buffer, msg, (size_t)n + 1);
-        }
+        n = recv(sock, buffer, sizeof(buffer) - 1, 0);
         if (n > 0) {
           buffer[n] = '\0';
 
-          /* Parse structured format: "W 22:30" or "P W 22:30" */
-          /* Falls back to printing raw buffer for old-format messages. */
-          {
-            char* nl = strchr(buffer, '\n');
-            if (nl) *nl = '\0';
-
-            bool structured =
-              (buffer[0] == 'W' || buffer[0] == 'S' || buffer[0] == 'L' ||
-               (buffer[0] == 'P' && buffer[1] == ' ' &&
-                (buffer[2] == 'W' || buffer[2] == 'S' || buffer[2] == 'L')));
-
-            if (structured) {
-              bool is_paused = (buffer[0] == 'P' && buffer[1] == ' ');
-              const char* step_start = is_paused ? buffer + 2 : buffer;
-              char step_code = step_start[0];
-              const char* time_part = step_start[2] ? step_start + 2 : "";
-
-              if (icon_type == NO_ICONS) {
-                printf("%s\n", time_part);
-              } else {
-                const char* step_icon;
-                switch (step_code) {
-                  case 'W': step_icon = WORK_ICONS[icon_type]; break;
-                  case 'S': step_icon = SHORT_PAUSE_ICONS[icon_type]; break;
-                  case 'L': step_icon = LONG_PAUSE_ICONS[icon_type]; break;
-                  default:  step_icon = ""; break;
-                }
-                if (is_paused) {
-                  const char* play_icon = PLAY_ICONS[icon_type];
-                  if (play_icon[0] && step_icon[0])
-                    printf("%s %s %s\n", play_icon, step_icon, time_part);
-                  else if (play_icon[0])
-                    printf("%s %s\n", play_icon, time_part);
-                  else if (step_icon[0])
-                    printf("%s %s\n", step_icon, time_part);
-                  else
-                    printf("%s\n", time_part);
-                } else {
-                  if (step_icon[0])
-                    printf("%s %s\n", step_icon, time_part);
-                  else
-                    printf("%s\n", time_part);
-                }
-              }
-            } else {
-              printf("%s\n", buffer);
+          char* msg = buffer;
+          char* last_nl = strrchr(buffer, '\n');
+          if (last_nl) {
+            msg = last_nl + 1;
+            if (*msg == '\0' && last_nl > buffer) {
+              char* p = last_nl - 1;
+              while (p >= buffer && *p != '\n') p--;
+              msg = p + 1;
             }
           }
 
+          char* nl = strchr(msg, '\n');
+          if (nl) *nl = '\0';
+
+          bool structured =
+            (msg[0] == 'W' || msg[0] == 'S' || msg[0] == 'L' ||
+             (msg[0] == 'P' && msg[1] == ' ' &&
+              (msg[2] == 'W' || msg[2] == 'S' || msg[2] == 'L')));
+
+          if (structured) {
+            bool is_paused = (msg[0] == 'P' && msg[1] == ' ');
+            const char* step_start = is_paused ? msg + 2 : msg;
+            char step_code = step_start[0];
+            const char* time_part = step_start[2] ? step_start + 2 : "";
+
+            if (icon_type == NO_ICONS) {
+              printf("%s\n", time_part);
+            } else {
+              const char* step_icon;
+              switch (step_code) {
+                case 'W':
+                  step_icon = WORK_ICONS[icon_type];
+                  break;
+                case 'S':
+                  step_icon = SHORT_PAUSE_ICONS[icon_type];
+                  break;
+                case 'L':
+                  step_icon = LONG_PAUSE_ICONS[icon_type];
+                  break;
+                default:
+                  step_icon = "";
+                  break;
+              }
+              if (is_paused) {
+                const char* play_icon = PLAY_ICONS[icon_type];
+                if (play_icon[0] && step_icon[0])
+                  printf("%s %s %s\n", play_icon, step_icon, time_part);
+                else if (play_icon[0])
+                  printf("%s %s\n", play_icon, time_part);
+                else if (step_icon[0])
+                  printf("%s %s\n", step_icon, time_part);
+                else
+                  printf("%s\n", time_part);
+              } else {
+                if (step_icon[0])
+                  printf("%s %s\n", step_icon, time_part);
+                else
+                  printf("%s\n", time_part);
+              }
+            }
+          } else {
+            printf("%s\n", msg);
+          }
+
           fflush(stdout);
+          poll(NULL, 0, 1);
           was_active = true;
+          idle_count = 0;
         } else if (n == 0) {
-          /* Server closed the connection — print blank line */
           if (was_active) {
             printf("\n");
             fflush(stdout);
@@ -363,24 +386,24 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
           break;
         }
       } else if (poll_result == 0) {
-        /* Timeout — no data for 5 seconds */
         if (was_active) {
-          printf("\n");
-          fflush(stdout);
-          was_active = false;
+          idle_count++;
+          if (idle_count >= 5) {
+            printf("\n");
+            fflush(stdout);
+            was_active = false;
+            idle_count = 0;
+          }
         }
       } else {
-        /* poll error */
         break;
       }
-
-      if (!loop) break;
-      sleep(1);
-    } while (loop);
+    } while (1);
 
     close(sock);
     was_active = false;
-  } while (loop);
+    reliableSleep(getRetryDelay());
+  } while (1);
 
   return NO_ERROR;
 }
@@ -492,6 +515,49 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
 
   free(remaining_time);
   return log_string;
+}
+
+/**
+ * Sleep for 1 second between socket connection retries.
+ * Uses select() which is immune to signal interruption.
+ */
+static void socketRetryDelay(void) {
+  struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
+  while (select(0, NULL, NULL, NULL, &tv) < 0 && errno == EINTR);
+}
+
+/**
+ * Get the current retry delay based on total elapsed retry time.
+ * Provides a simple backoff: 1s -> 5s -> 30s.
+ * @return Delay in seconds (1, 5, or 30)
+ */
+static int getRetryDelay(void) {
+  if (retry_start == 0) retry_start = time(NULL);
+  time_t elapsed = time(NULL) - retry_start;
+  if (elapsed < 5)
+    return 1;
+  else if (elapsed < 60)
+    return 5;
+  else
+    return 30;
+}
+
+/**
+ * Reset the retry delay timer back to its initial state.
+ * The next call to getRetryDelay() will start a fresh backoff cycle.
+ */
+static void resetRetryDelay(void) { retry_start = 0; }
+
+/**
+ * Sleep for a fixed duration, immune to signal interruption.
+ * Uses select() which blocks for the full timeout even when
+ * signals are delivered and handled.
+ * @param seconds Number of seconds to sleep (must be > 0)
+ */
+static void reliableSleep(int seconds) {
+  if (seconds <= 0) return;
+  struct timeval tv = {.tv_sec = seconds, .tv_usec = 0};
+  while (select(0, NULL, NULL, NULL, &tv) < 0 && errno == EINTR);
 }
 
 /**
@@ -1302,7 +1368,7 @@ static bool histIsSameMonth(time_t ts, int year, int month) {
  * @param path   Binary log path (POMODORO_LOG)
  * @param year   Year
  * @param month  Month (1-12)
- * @param counts Output array[31] — count per day (0 for days outside month)
+ * @param counts Output array[31] - count per day (0 for days outside month)
  * @return Days in month (same as length of valid entries in counts)
  */
 int HistDailyCounts(const char* path, int year, int month, int* counts) {
@@ -1382,8 +1448,8 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
  * @param year    Year of streak endpoint
  * @param month   Month of streak endpoint
  * @param day     Day of streak endpoint
- * @param current Output — current streak length
- * @param longest Output — longest streak ever
+ * @param current Output - current streak length
+ * @param longest Output - longest streak ever
  */
 void HistStreak(const char* path, int year, int month, int day, int* current,
                 int* longest) {
