@@ -1,6 +1,6 @@
 # Tomato.C
 
-<img align="right" width="192px" src="./icons/tomato.svg" alt="Tomato.C Logo">
+<img align="right" width="192px" src="./resources/icons/tomato.svg" alt="Tomato.C Logo">
 
 <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="License"></a>
 <a href="https://www.buymeacoffee.com/gabrielzschmitz" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 20px !important;width: 87px;" ></a>
@@ -44,7 +44,7 @@ Pomodoro controls and navigation are handled via keyboard shortcuts and mouse
 input. To get help with the keybinds press `?`/`F1`
 
 <p align="center">
-  <img src="./resources/demo.gif" alt="Tomato.C demonstration" style="border: 3px solid #e06e6e; padding: 0;">
+  <img src="./resources/demo.gif" alt="Tomato.C demonstration" style="width: 484px; border: 3px solid #e06e6e; padding: 0;">
 </p>
 <p align="center">
   <em>
