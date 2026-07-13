@@ -20,7 +20,7 @@
 SRCDIR = ../src
 PREFIX = /usr/local
 APPPREFIX = $(PREFIX)/share/applications
-DATAPREFIX = .
+DATAPREFIX = ./resources
 INCLUDES = -I$(PREFIX)/include
 LIBDIR = -L$(PREFIX)/lib
 

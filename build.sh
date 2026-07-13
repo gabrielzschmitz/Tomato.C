@@ -151,9 +151,9 @@ if [ "$INSTALL" -eq 1 ]; then
   mkdir -p "$DATADIR_INSTALL/sprites" || exit 1
   mkdir -p "$DATADIR_INSTALL/sounds" || exit 1
   mkdir -p "$DATADIR_INSTALL/icons" || exit 1
-  cp sprites/*.asc "$DATADIR_INSTALL/sprites/" || exit 1
-  cp sounds/*.mp3 "$DATADIR_INSTALL/sounds/" || exit 1
-  cp icons/* "$DATADIR_INSTALL/icons/" || exit 1
+  cp resources/sprites/*.asc "$DATADIR_INSTALL/sprites/" || exit 1
+  cp resources/sounds/*.mp3 "$DATADIR_INSTALL/sounds/" || exit 1
+  cp resources/icons/* "$DATADIR_INSTALL/icons/" || exit 1
   chmod 644 "$DATADIR_INSTALL/sprites/"* || exit 1
   chmod 644 "$DATADIR_INSTALL/sounds/"* || exit 1
   chmod 644 "$DATADIR_INSTALL/icons/"* || exit 1
