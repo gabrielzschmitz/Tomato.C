@@ -81,6 +81,16 @@ conventional commit and use the `.clang-format` to format the files!
 ## Documentation
 
 Complete API and developer documentation is generated with **Doxygen**.
+
+<p align="center">
+  <img src="./resources/docs.png" alt="Tomato.C documentation" style="width: 484px; border: 3px solid #e06e6e; padding: 0;">
+</p>
+<p align="center">
+  <em>
+  Doxygen-generated API documentation for Tomato.C.
+  </em>
+</p>
+
 Generate the documentation locally:
 
 ```bash
