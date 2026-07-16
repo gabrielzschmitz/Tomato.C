@@ -1,0 +1,49 @@
+#/**
+# * @file .github/workflows/tests.yaml
+# * @brief CI workflow to build and execute the Tomato.C test suites
+# *        (unit and integration) on both Ubuntu and macOS.
+# *
+# * Runs on every push and pull_request. Requires the same build dependencies
+# * as build-test.yaml — see that file for rationale.
+# *
+# * Jobs:
+# *   ubuntu-tests   — full test suite on ubuntu-latest
+# *   macos-tests    — full test suite on macos-13
+# */
+
+name: Tests
+on:
+  - push
+  - pull_request
+jobs:
+  #/**
+  # * Depends on ncursesw for terminal abstraction and libnotify
+  # * for notification stubs.  The test runner (run_tests.sh)
+  # * automatically finds and executes every test_* binary.
+  # */
+  ubuntu-tests:
+    name: Run tests (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config \
+            libncursesw5-dev libnotify-dev
+      - name: Build and run tests
+        run: ./run_tests.sh
+
+  #/**
+  # * Uses Homebrew's ncurses; no libnotify is needed since macOS
+  # * uses a different notification path (notify-send fallback).
+  # */
+  macos-tests:
+    name: Run tests (macOS)
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ncurses
+      - name: Build and run tests
+        run: ./run_tests.sh

@@ -1,0 +1,50 @@
+#/**
+# * @file .github/workflows/build-test.yaml
+# * @brief CI workflow to verify that Tomato.C compiles successfully on
+# *        Ubuntu and macOS without running the test suites.
+# *
+# * Runs on every push and pull_request. A separate workflow (tests.yaml)
+# * handles the actual test execution.
+# *
+# * Jobs:
+# *   ubuntu-build-test   — build on ubuntu-latest with GCC
+# *   macos-build-test    — build on macos-13 with Clang
+# */
+
+name: Build test
+on:
+  - push
+  - pull_request
+jobs:
+  #/**
+  # * Installs build-essential, pkg-config, ncursesw (wide-char), and
+  # * libnotify (desktop notifications).  No mpv/libmpv is needed
+  # * because audio is handled by the vendored miniaudio library.
+  # */
+  ubuntu-build-test:
+    name: Build project (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config \
+            libncursesw5-dev libnotify-dev
+      - name: Build project
+        run: ./build.sh
+
+  #/**
+  # * Only ncurses is installed via Homebrew — libnotify is not
+  # * available on macOS and pkg-config is not required by the
+  # * Apple-specific code path in config.mk.
+  # */
+  macos-build-test:
+    name: Build project (macOS)
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ncurses
+      - name: Build project
+        run: ./build.sh
