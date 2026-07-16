@@ -15,7 +15,6 @@ static int error_count = 0;
 static bool app_frozen = false;
 
 /* PRIVATE ERROR FUNCTIONS */
-static const char* getErrorMessage(ErrorType error);
 static ErrorLevel getErrorLevel(ErrorType error);
 static const char* getErrorLevelMessage(ErrorLevel level);
 static int getErrorColor(ErrorLevel level);
@@ -28,7 +27,7 @@ static int getErrorTimeout(ErrorLevel level);
  * @param error The error type
  */
 void LogError(const char* context, ErrorType error) {
-  const char* error_message = getErrorMessage(error);
+  const char* error_message = GetErrorMessage(error);
   const char* error_level = getErrorLevelMessage(getErrorLevel(error));
 
   char message[256];
@@ -53,7 +52,7 @@ void LogError(const char* context, ErrorType error) {
  */
 void SetError(AppData* app, const char* context, ErrorType type) {
   ErrorLevel level = getErrorLevel(type);
-  const char* error_message = getErrorMessage(type);
+  const char* error_message = GetErrorMessage(type);
   const char* error_level = getErrorLevelMessage(level);
 
   char message[256];
@@ -263,7 +262,7 @@ void TestErrorLine(AppData* app, const char* message, ErrorLevel level,
  * @param error The error type
  * @return Human-readable string describing the error
  */
-static const char* getErrorMessage(ErrorType error) {
+const char* GetErrorMessage(ErrorType error) {
   switch (error) {
     case NO_ERROR:
       return "No error";

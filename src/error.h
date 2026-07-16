@@ -103,6 +103,13 @@ typedef enum {
 } ErrorType;
 
 /**
+ * Get error message for a given error type.
+ * @param error The error type
+ * @return Human-readable string describing the error
+ */
+const char* GetErrorMessage(ErrorType error);
+
+/**
  * Log an error with context information.
  * Writes to the error log file with timestamp and context.
  * @param context String describing where the error occurred

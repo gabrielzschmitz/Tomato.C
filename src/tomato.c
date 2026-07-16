@@ -139,5 +139,7 @@ static void handleErrorAndExit(const char* context, ErrorType error,
   }
   endwin();
   LogError(context, error);
+  fprintf(stderr, "Tomato.C [ErrorCode %d]: %s\n", error,
+          GetErrorMessage(error));
   exit(error);
 }
