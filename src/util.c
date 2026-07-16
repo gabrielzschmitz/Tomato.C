@@ -332,8 +332,8 @@ FILE* FOpenNoFollow(const char* path, const char* mode) {
     flags |= O_WRONLY | O_APPEND | O_CREAT;
   else if (mode[0] == 'w')
     flags |= O_WRONLY | O_TRUNC | O_CREAT;
-  else
-    return fopen(path, mode); /* read-only: follow is acceptable */
+  else /* "rb", "r" */
+    flags |= O_RDONLY;
 
   int fd = open(path, flags, 0644);
   if (fd == -1) return NULL;

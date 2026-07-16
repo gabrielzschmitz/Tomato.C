@@ -107,7 +107,7 @@ ErrorType CreateTimerLog(const char* path) {
   /* Set up address structure */
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+  snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
   /* Unlink if the path exists */
   if (unlink(path) == -1 && errno != ENOENT) {
@@ -228,7 +228,7 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
       }
       memset(&addr, 0, sizeof(addr));
       addr.sun_family = AF_UNIX;
-      strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+      snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
       if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
 
@@ -280,7 +280,7 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
 
       memset(&addr, 0, sizeof(addr));
       addr.sun_family = AF_UNIX;
-      strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+      snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
       if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
 
@@ -435,7 +435,7 @@ ErrorType SetTimerLog(const char* path, const char* log) {
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
 
     if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
 
@@ -777,7 +777,7 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
 
   pomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, read_file) == 1) {
-    if (record.session_index == index && record.status == 0) continue;
+    if (record.session_index == index && record.status != 0) continue;
     fwrite(&record, sizeof(record), 1, write_file);
   }
 
@@ -1164,7 +1164,9 @@ void GetPomodoroHistoryDay(const char* path) {
   int sl3 = (int)strlen(sCompleted);
   int statW = sl1 > sl2 ? sl1 : sl2;
   if (sl3 > statW) statW = sl3;
-  int hdrW = (int)strlen("#      Start   End     Duration");
+  char header[64];
+  snprintf(header, sizeof(header), "#%-*s     Start   End     Duration", idxW, "");
+  int hdrW = (int)strlen(header);
   if (hdrW > maxRow) maxRow = hdrW;
   int innerW = statW > maxRow ? statW : maxRow;
   {
@@ -1189,7 +1191,7 @@ void GetPomodoroHistoryDay(const char* path) {
   printf("│ %-*s│\n", innerW - 1, sFocus);
   printf("│ %-*s│\n", innerW - 1, sCompleted);
   printf("│%*s│\n", innerW, "");
-  printf("│ %-*s│\n", innerW - 1, "#      Start   End     Duration");
+  printf("│ %-*s│\n", innerW - 1, header);
   for (int i = 0; i < uCount; i++) printf("│ %-*s│\n", innerW - 1, rows[i]);
   printf("└");
   for (int i = 0; i < boxW - 2; i++) printf("─");
@@ -1222,25 +1224,27 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
 
   int totalWorkSeconds = 0;
   int totalSessionSeconds = 0;
-  int lastSession = -1;
+  int completedIdx[1000];
+  int nCompleted = 0;
 
   for (int i = 0; i < count; i++) {
-    if (records[i].session_index > 0 &&
-        records[i].session_index != (unsigned int)lastSession) {
-      stats.totalSessions++;
-      lastSession = records[i].session_index;
-    }
-    if (records[i].status == 0) {
-      stats.completedSessions++;
-      int cycles = records[i].total_cycles;
-      int work = records[i].work_time * 60;
-      int shortP = records[i].short_pause_time * 60;
-      int longP = records[i].long_pause_time * 60;
-      totalSessionSeconds += (cycles * work) + ((cycles - 1) * shortP) + longP;
+    if (records[i].status == 0 && records[i].session_index > 0) {
+      int dup = 0;
+      for (int j = 0; j < nCompleted; j++)
+        if (completedIdx[j] == records[i].session_index) { dup = 1; break; }
+      if (!dup) {
+        completedIdx[nCompleted++] = records[i].session_index;
+        int cycles = records[i].total_cycles;
+        int work = records[i].work_time * 60;
+        int shortP = records[i].short_pause_time * 60;
+        int longP = records[i].long_pause_time * 60;
+        totalSessionSeconds += (cycles * work) + ((cycles - 1) * shortP) + longP;
+      }
     }
     if (records[i].current_step == WORK_TIME && records[i].current_cycle > 0)
       totalWorkSeconds += records[i].current_step_time;
   }
+  stats.completedSessions = nCompleted;
 
   int uniqueSessions = 0;
   int sessionIndices[1000];
@@ -1372,8 +1376,8 @@ static bool histIsSameMonth(time_t ts, int year, int month) {
  * @return Days in month (same as length of valid entries in counts)
  */
 int HistDailyCounts(const char* path, int year, int month, int* counts) {
+  for (int i = 0; i < 31; i++) counts[i] = 0;
   int dim = HistDaysInMonth(year, month);
-  for (int i = 0; i < 31 && i < dim; i++) counts[i] = 0;
 
   FILE* file = fopen(path, "rb");
   if (!file) return dim;

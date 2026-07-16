@@ -392,7 +392,7 @@ static void updatePomodoroLog(AppData* app) {
     last_logged_step = current_step;
     last_logged_minute = current_minute;
   } else if (current_minute != last_logged_minute && current_minute > 0) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, false) != NO_ERROR)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
       SetError(app, "Logging pomodoro minute", TIMER_LOG_ERROR);
     last_logged_minute = current_minute;
   }
