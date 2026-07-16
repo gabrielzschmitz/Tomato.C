@@ -50,6 +50,7 @@ typedef struct {
   const char* pause[3];                 /**< [nerd, emoji, ascii] */
   const char* play[3];                  /**< [nerd, emoji, ascii] */
   const char* skip[3];                  /**< [nerd, emoji, ascii] */
+  const char* back[3];                  /**< [nerd, emoji, ascii] */
   const char* visual_cursor;            /**< single string (not triplet) */
   const char* insert_cursor;            /**< single string (not triplet) */
   const char* border_chars[6];          /**< [tl, tr, bl, br, h, v] */
@@ -292,6 +293,7 @@ void SyncIconsFromIndex(void);
 #define PAUSE_ICONS (g_config.visual.ui.icons.misc.pause)
 #define PLAY_ICONS (g_config.visual.ui.icons.misc.play)
 #define SKIP_ICONS (g_config.visual.ui.icons.misc.skip)
+#define BACK_ICONS (g_config.visual.ui.icons.misc.back)
 #define HISTORY_ICONS (g_config.visual.ui.icons.misc.history)
 /**@}*/
 

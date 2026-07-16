@@ -466,6 +466,13 @@ void SkipPomodoroStep(AppData* app);
 void ForcefullySkipPomodoroStep(AppData* app);
 
 /**
+ * Return to main menu from a pomodoro session.
+ * Saves the session to log and pauses the timer.
+ * @param app Pointer to the application data
+ */
+void ReturnToMainMenu(AppData* app);
+
+/**
  * ---------------------------------------------------------------------------
  * Navigation Actions
  * ---------------------------------------------------------------------------

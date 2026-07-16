@@ -40,6 +40,7 @@ inactive_progress_bar = ["▒", "▒", "▒"]
 pause                = ["󰏤", "⏸️", "P"]
 play                 = ["󰐊", "▶️", "P"]
 skip                 = ["󰒬", "⏭️", "S"]
+back                 = ["", "⏪", "B"]
 visual_cursor        = "█"
 insert_cursor        = "▏"
 border_chars         = ["┏", "┓", "┗", "┛", "━", "┃"]
@@ -272,6 +273,7 @@ ExecuteMenuAction     = ["ENTER"]
 SkipPomodoroStep      = ["s"]
 TogglePause           = ["p"]
 OpenResetMenu         = ["CTRLR"]
+ReturnToMainMenu      = ["m"]
 
 # DEFAULT mode — White-Noise dialog
 [keybindings.DEFAULT.SCENE_NOISE]

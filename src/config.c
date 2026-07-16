@@ -286,6 +286,8 @@ const KeyFunction DEFAULT_KEYS[] = {
    "Toggle pause/resume"},
   {CTRLR, OpenResetMenu, DEFAULT, POMODORO_SCENES, "Pomodoro",
    "Open reset menu"},
+  {'m', ReturnToMainMenu, DEFAULT, POMODORO_SCENES, "Pomodoro",
+   "Return to main menu"},
   {'q', QuitApp, DEFAULT, ALL_SCENES, "General", "Quit application"},
   {ESC, QuitApp, DEFAULT, ALL_SCENES, "General", "Quit application"},
   {CTRLC, QuitApp, DEFAULT, ALL_SCENES, "General", "Quit application"},
@@ -516,6 +518,7 @@ static const struct {
   {"SkipPomodoroStep", SkipPomodoroStep},
   {"TogglePause", TogglePause},
   {"OpenResetMenu", OpenResetMenu},
+  {"ReturnToMainMenu", ReturnToMainMenu},
   {"QuitApp", QuitApp},
   {"GoPrevSlide", GoPrevSlide},
   {"GoNextSlide", GoNextSlide},
@@ -669,11 +672,14 @@ static void setDefaults(void) {
   g_config.notifications.work.description = "You need to focus";
   g_config.notifications.work.audio_path = DATADIR "/sounds/dfltnotify.mp3";
   g_config.notifications.short_pause.title = "Pause Break";
-  g_config.notifications.short_pause.description = "You have some time to chill";
-  g_config.notifications.short_pause.audio_path = DATADIR "/sounds/pausenotify.mp3";
+  g_config.notifications.short_pause.description =
+    "You have some time to chill";
+  g_config.notifications.short_pause.audio_path =
+    DATADIR "/sounds/pausenotify.mp3";
   g_config.notifications.long_pause.title = "Long Pause Break";
   g_config.notifications.long_pause.description = "You have some time to chill";
-  g_config.notifications.long_pause.audio_path = DATADIR "/sounds/pausenotify.mp3";
+  g_config.notifications.long_pause.audio_path =
+    DATADIR "/sounds/pausenotify.mp3";
   g_config.notifications.end_cycle.title = "End of Pomodoro Cycle";
   g_config.notifications.end_cycle.description = "Feel free to start another!";
   g_config.notifications.end_cycle.audio_path = DATADIR "/sounds/endnotify.mp3";
@@ -752,6 +758,9 @@ static void setDefaults(void) {
   g_config.visual.ui.icons.misc.skip[0] = "󰒬";
   g_config.visual.ui.icons.misc.skip[1] = "⏭️";
   g_config.visual.ui.icons.misc.skip[2] = "S";
+  g_config.visual.ui.icons.misc.back[0] = "";
+  g_config.visual.ui.icons.misc.back[1] = "⏪";
+  g_config.visual.ui.icons.misc.back[2] = "B";
   g_config.visual.ui.icons.misc.visual_cursor = "█";
   g_config.visual.ui.icons.misc.insert_cursor = "▏";
   g_config.visual.ui.icons.misc.border_chars[0] = "┏";
@@ -1544,6 +1553,8 @@ static void loadTomlFile(const char* path) {
                 g_config.visual.ui.icons.misc.play);
   readIconArray(root, "visual.ui.icons.misc.skip",
                 g_config.visual.ui.icons.misc.skip);
+  readIconArray(root, "visual.ui.icons.misc.back",
+                g_config.visual.ui.icons.misc.back);
 
   readString(root, "visual.ui.icons.misc.visual_cursor",
              &g_config.visual.ui.icons.misc.visual_cursor);

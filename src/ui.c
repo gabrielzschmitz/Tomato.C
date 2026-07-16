@@ -1208,6 +1208,7 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
   const char* skip_icon = SKIP_ICONS[icon_type];
   const char* pause_icon =
     app->is_paused ? PLAY_ICONS[icon_type] : PAUSE_ICONS[icon_type];
+  const char* back_icon = BACK_ICONS[icon_type];
   int color;
 
   if (step == WORK_TIME)
@@ -1227,13 +1228,33 @@ void RenderPomodoroControls(AppData* app, Vector2D pos) {
   else if (icon_type == ASCII)
     skip_length++;
 
+  int pause_x = pos.x + skip_length;
+  mvprintw(pos.y, pause_x, "%s ", pause_icon);
+  int pause_length = strlen(pause_icon);
+  if (icon_type == NERD_ICONS)
+    pause_length--;
+  else if (icon_type == EMOJIS)
+    pause_length -= 2;
+  else if (icon_type == ASCII)
+    pause_length++;
+
+  int back_x = pause_x + pause_length;
+  SetColor(color, NO_COLOR, A_BOLD);
+  mvprintw(pos.y, back_x, "%s", back_icon);
+  int back_length = strlen(back_icon);
+  if (icon_type == NERD_ICONS)
+    back_length--;
+  else if (icon_type == EMOJIS)
+    back_length -= 2;
+  else if (icon_type == ASCII)
+    back_length++;
+
   RegisterClickRegion(app, pos.x, pos.y, skip_length, 1, REGION_DIRECT,
                       ForcefullySkipPomodoroStep, -1, -1, -1);
-  RegisterClickRegion(app, pos.x + skip_length, pos.y, strlen(pause_icon), 1,
-                      REGION_DIRECT, TogglePause, -1, -1, -1);
-
-  SetColor(color, NO_COLOR, A_BOLD);
-  mvprintw(pos.y, pos.x + skip_length, "%s ", pause_icon);
+  RegisterClickRegion(app, pause_x, pos.y, pause_length, 1, REGION_DIRECT,
+                      TogglePause, -1, -1, -1);
+  RegisterClickRegion(app, back_x, pos.y, back_length, 1, REGION_DIRECT,
+                      ReturnToMainMenu, -1, -1, -1);
 }
 
 /**
