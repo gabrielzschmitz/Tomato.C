@@ -8,6 +8,7 @@
 #include "audio.h"
 #include "bar.h"
 #include "notes.h"
+#include "notify.h"
 #include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
@@ -89,6 +90,11 @@ struct AppData {
   PomodoroData pomodoro_data; /**< Pomodoro timer state */
   WhiteNoiseData noise_data;  /**< White noise playback state */
   NotesData* notes;           /**< Notes/text editor data */
+
+  Notification notification_work;         /**< Work notification */
+  Notification notification_short_pause;  /**< Short pause notification */
+  Notification notification_long_pause;   /**< Long pause notification */
+  Notification notification_end_cycle;    /**< End-of-cycle notification */
 
   ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
   int click_region_count; /**< Number of registered click regions */

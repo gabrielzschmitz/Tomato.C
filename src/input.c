@@ -1365,12 +1365,7 @@ void StartPomodoro(AppData* app) {
     app->pomodoro_data.step_start_time = time(NULL);
   app->pomodoro_data.status = 1;
 
-  Notification notification = {
-    .title = " Work!",
-    .description = "You need to focus",
-    .audio_path = DATADIR "/sounds/dfltnotify.mp3",
-  };
-  if (Notify(&notification) != NO_ERROR)
+  if (Notify(&app->notification_work) != NO_ERROR)
     SetError(app, "Sending start notification", NOTIFICATION_SEND_ERROR);
 }
 

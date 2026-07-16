@@ -27,6 +27,7 @@ extensible, terminal-based Pomodoro timer written in C.
 ### 🔊 Audio
 - [X] Audio playback library using `miniaudio.h`
 - [X] Supports volume control and looping
+- [X] Add notification and white noise configuration on config.
 
 ### 🔔 Notifications
 - [X] Desktop notification support using `libnotify`
@@ -48,7 +49,10 @@ extensible, terminal-based Pomodoro timer written in C.
 - [X] Move through tasks
 - [X] Toggle tasks on/off
 - [X] Manage breaklines and large lines
-- [X] Edit tasks [X] Add and remove subtasks (max depth 1) [X] Move notes up and down [X] Undo and redo edits
+- [X] Edit tasks
+    - [X] Add and remove subtasks (max depth 1)
+    - [X] Move notes up and down
+    - [X] Undo and redo edits
 - [X] Add a page system
 
 ### 🛠️ User Preferences

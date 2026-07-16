@@ -2,6 +2,10 @@
 
 #include "config.h"
 
+#ifndef DATADIR
+#define DATADIR "./resources"
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -661,18 +665,18 @@ static void setDefaults(void) {
   g_config.visual.unfocused_panel_color = 7;
   g_config.visual.focused_panel_color = 1;
 
-  g_config.visual.ui.icons.noise.rain[0] = "󰖖";
-  g_config.visual.ui.icons.noise.rain[1] = "☔";
-  g_config.visual.ui.icons.noise.rain[2] = "R";
-  g_config.visual.ui.icons.noise.fire[0] = "󰈸";
-  g_config.visual.ui.icons.noise.fire[1] = "🔥";
-  g_config.visual.ui.icons.noise.fire[2] = "F";
-  g_config.visual.ui.icons.noise.wind[0] = "󰖝";
-  g_config.visual.ui.icons.noise.wind[1] = "🍃";
-  g_config.visual.ui.icons.noise.wind[2] = "W";
-  g_config.visual.ui.icons.noise.thunder[0] = "󱐋";
-  g_config.visual.ui.icons.noise.thunder[1] = "⚡";
-  g_config.visual.ui.icons.noise.thunder[2] = "T";
+  g_config.notifications.work.title = "Work!";
+  g_config.notifications.work.description = "You need to focus";
+  g_config.notifications.work.audio_path = DATADIR "/sounds/dfltnotify.mp3";
+  g_config.notifications.short_pause.title = "Pause Break";
+  g_config.notifications.short_pause.description = "You have some time to chill";
+  g_config.notifications.short_pause.audio_path = DATADIR "/sounds/pausenotify.mp3";
+  g_config.notifications.long_pause.title = "Long Pause Break";
+  g_config.notifications.long_pause.description = "You have some time to chill";
+  g_config.notifications.long_pause.audio_path = DATADIR "/sounds/pausenotify.mp3";
+  g_config.notifications.end_cycle.title = "End of Pomodoro Cycle";
+  g_config.notifications.end_cycle.description = "Feel free to start another!";
+  g_config.notifications.end_cycle.audio_path = DATADIR "/sounds/endnotify.mp3";
 
   g_config.visual.ui.icons.pomodoro.main_menu[0] = "󰍜";
   g_config.visual.ui.icons.pomodoro.main_menu[1] = "🧾";
@@ -772,6 +776,35 @@ static void setDefaults(void) {
 
   g_config.noise.enabled = 1;
   g_config.noise.master_volume = 50;
+  g_config.noise.track_count = 4;
+  g_config.noise.tracks[0].name = "Rain";
+  g_config.noise.tracks[0].icons[0] = "󰖖";
+  g_config.noise.tracks[0].icons[1] = "☔";
+  g_config.noise.tracks[0].icons[2] = "R";
+  g_config.noise.tracks[0].sound_path = DATADIR "/sounds/ambience-rain.mp3";
+  g_config.noise.tracks[0].default_volume = 50;
+  g_config.noise.tracks[0].sel_color = 14;
+  g_config.noise.tracks[1].name = "Fire";
+  g_config.noise.tracks[1].icons[0] = "󰈸";
+  g_config.noise.tracks[1].icons[1] = "🔥";
+  g_config.noise.tracks[1].icons[2] = "F";
+  g_config.noise.tracks[1].sound_path = DATADIR "/sounds/ambience-fire.mp3";
+  g_config.noise.tracks[1].default_volume = 50;
+  g_config.noise.tracks[1].sel_color = 13;
+  g_config.noise.tracks[2].name = "Wind";
+  g_config.noise.tracks[2].icons[0] = "󰖝";
+  g_config.noise.tracks[2].icons[1] = "🍃";
+  g_config.noise.tracks[2].icons[2] = "W";
+  g_config.noise.tracks[2].sound_path = DATADIR "/sounds/ambience-wind.mp3";
+  g_config.noise.tracks[2].default_volume = 50;
+  g_config.noise.tracks[2].sel_color = 15;
+  g_config.noise.tracks[3].name = "Thunder";
+  g_config.noise.tracks[3].icons[0] = "󱐋";
+  g_config.noise.tracks[3].icons[1] = "⚡";
+  g_config.noise.tracks[3].icons[2] = "T";
+  g_config.noise.tracks[3].sound_path = DATADIR "/sounds/ambience-thunder.mp3";
+  g_config.noise.tracks[3].default_volume = 50;
+  g_config.noise.tracks[3].sel_color = 11;
 
   /* Resolve XDG-compliant paths for log files and socket */
   {
@@ -1354,6 +1387,60 @@ cleanup:
 }
 
 /**
+ * Read a NotificationConfig from a dotted TOML prefix (e.g. "notifications.work").
+ * @param root   Top-level TOML table
+ * @param prefix Dot-separated prefix path
+ * @param cfg    Output NotificationConfig to populate
+ */
+static void readNotificationConfig(toml_table_t* root, const char* prefix,
+                                   NotificationConfig* cfg) {
+  char path[256];
+  snprintf(path, sizeof(path), "%s.title", prefix);
+  readString(root, path, &cfg->title);
+  snprintf(path, sizeof(path), "%s.description", prefix);
+  readString(root, path, &cfg->description);
+  snprintf(path, sizeof(path), "%s.audio_path", prefix);
+  readString(root, path, &cfg->audio_path);
+}
+
+/**
+ * Read white-noise tracks from [[noise.tracks]] TOML array of tables.
+ * Each entry is a table with keys: name, icons, sound_path, default_volume, sel_color.
+ * If present, replaces the default track list entirely.
+ * @param root Top-level TOML table
+ */
+static void readNoiseTracks(toml_table_t* root) {
+  toml_table_t* noise_tbl = toml_table_table(root, "noise");
+  if (!noise_tbl) return;
+  toml_array_t* arr = toml_table_array(noise_tbl, "tracks");
+  if (!arr) return;
+  int len = toml_array_len(arr);
+  if (len <= 0) return;
+  if (len > MAX_NOISE_TRACKS) len = MAX_NOISE_TRACKS;
+  g_config.noise.track_count = len;
+  for (int i = 0; i < len; i++) {
+    toml_table_t* tbl = toml_array_table(arr, i);
+    if (!tbl) continue;
+    toml_value_t v;
+    v = toml_table_string(tbl, "name");
+    if (v.ok) g_config.noise.tracks[i].name = v.u.s;
+    v = toml_table_string(tbl, "sound_path");
+    if (v.ok) g_config.noise.tracks[i].sound_path = v.u.s;
+    v = toml_table_int(tbl, "default_volume");
+    if (v.ok) g_config.noise.tracks[i].default_volume = (int)v.u.i;
+    v = toml_table_int(tbl, "sel_color");
+    if (v.ok) g_config.noise.tracks[i].sel_color = (int)v.u.i;
+    toml_array_t* icons_arr = toml_table_array(tbl, "icons");
+    if (icons_arr && toml_array_len(icons_arr) >= 3) {
+      for (int j = 0; j < 3; j++) {
+        toml_value_t iv = toml_array_string(icons_arr, j);
+        if (iv.ok) g_config.noise.tracks[i].icons[j] = iv.u.s;
+      }
+    }
+  }
+}
+
+/**
  * Parse a single TOML file and overlay its values onto g_config.
  * @param path Absolute path to the .toml file
  */
@@ -1409,14 +1496,6 @@ static void loadTomlFile(const char* path) {
     }
   }
 
-  readIconArray(root, "visual.ui.icons.noise.rain",
-                g_config.visual.ui.icons.noise.rain);
-  readIconArray(root, "visual.ui.icons.noise.fire",
-                g_config.visual.ui.icons.noise.fire);
-  readIconArray(root, "visual.ui.icons.noise.wind",
-                g_config.visual.ui.icons.noise.wind);
-  readIconArray(root, "visual.ui.icons.noise.thunder",
-                g_config.visual.ui.icons.noise.thunder);
   readIconArray(root, "visual.ui.icons.pomodoro.main_menu",
                 g_config.visual.ui.icons.pomodoro.main_menu);
   readIconArray(root, "visual.ui.icons.pomodoro.work",
@@ -1484,9 +1563,18 @@ static void loadTomlFile(const char* path) {
   readBool(root, "notifications.sound", &g_config.notifications.sound);
   readFloat(root, "notifications.sound_volume",
             &g_config.notifications.sound_volume);
+  readNotificationConfig(root, "notifications.work",
+                         &g_config.notifications.work);
+  readNotificationConfig(root, "notifications.short_pause",
+                         &g_config.notifications.short_pause);
+  readNotificationConfig(root, "notifications.long_pause",
+                         &g_config.notifications.long_pause);
+  readNotificationConfig(root, "notifications.end_cycle",
+                         &g_config.notifications.end_cycle);
 
   readBool(root, "noise.enabled", &g_config.noise.enabled);
   readInt(root, "noise.master_volume", &g_config.noise.master_volume);
+  readNoiseTracks(root);
 
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
   if (g_config.logging.pomodoro_log) {

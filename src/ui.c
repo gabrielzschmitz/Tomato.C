@@ -2189,7 +2189,6 @@ void RenderSlideBox(int x, int y, int w, int h) {
  *   \\xNN   – Set absolute column offset (decimal 0-99)
  *   \\n     – Newline (flush buffer, y++, reset colour/align/x)
  *   {W}{S}{P}{N}{M} – Uppercase pomodoro/welcome icon placeholders
- *   {r}{f}{w}{t}    – Lowercase noise track icon placeholders
  *   {m}{p}          – Noise minus/plus volume icon placeholders
  *   \\\\    – Literal backslash
  *
@@ -2347,14 +2346,6 @@ static SlideToken* parseSlideText(const char* text, int icon_type) {
         icon = NOTES_ICONS[icon_type];
       else if (*text == 'M')
         icon = DEFAULT_MODE_ICONS[icon_type];
-      else if (*text == 'r')
-        icon = RAIN_ICONS[icon_type];
-      else if (*text == 'f')
-        icon = FIRE_ICONS[icon_type];
-      else if (*text == 'w')
-        icon = WIND_ICONS[icon_type];
-      else if (*text == 't')
-        icon = THUNDER_ICONS[icon_type];
       else if (*text == 'm')
         icon = MINUS_VOLUME_ICONS[icon_type];
       else if (*text == 'p')

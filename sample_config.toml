@@ -11,12 +11,6 @@
 
 # UI — Icon Sets --------------------------------------------------------------
 # Each icon set is a 3-element array: [nerd, emoji, ascii]
-[visual.ui.icons.noise]
-rain    = ["󰖖", "☔", "R"]
-fire    = ["󰈸", "🔥", "F"]
-wind    = ["󰖝", "🍃", "W"]
-thunder = ["󱐋", "⚡", "T"]
-
 [visual.ui.icons.pomodoro]
 main_menu     = ["󰍜", "🧾", ""]
 work          = ["", "🍅", ""]
@@ -77,6 +71,26 @@ enabled      = true   # 0/1
 sound        = true   # 0/1 — requires miniaudio (included on external)
 sound_volume = 0.5    # 0.0 – 1.0
 
+[notifications.work]
+title       = "Work!"
+description = "You need to focus"
+audio_path  = "./resources/sounds/dfltnotify.mp3"
+
+[notifications.short_pause]
+title       = "Pause Break"
+description = "You have some time to chill"
+audio_path  = "./resources/sounds/pausenotify.mp3"
+
+[notifications.long_pause]
+title       = "Long Pause Break"
+description = "You have some time to chill"
+audio_path  = "./resources/sounds/pausenotify.mp3"
+
+[notifications.end_cycle]
+title       = "End of Pomodoro Cycle"
+description = "Feel free to start another!"
+audio_path  = "./resources/sounds/endnotify.mp3"
+
 # Pomodoro Settings -----------------------------------------------------------
 [pomodoro]
 amount      = 4       # pomodoros per cycle (1-8)
@@ -89,6 +103,34 @@ long_pause  = 30      # minutes (5-60, step 5)
 [noise]
 enabled       = true  # 0/1
 master_volume = 50     # 0-100
+
+[[noise.tracks]]
+name           = "Rain"
+icons          = ["󰖖", "☔", "R"]
+sound_path     = "./resources/sounds/ambience-rain.mp3"
+default_volume = 50
+sel_color      = 14
+
+[[noise.tracks]]
+name           = "Fire"
+icons          = ["󰈸", "🔥", "F"]
+sound_path     = "./resources/sounds/ambience-fire.mp3"
+default_volume = 50
+sel_color      = 13
+
+[[noise.tracks]]
+name           = "Wind"
+icons          = ["󰖝", "🍃", "W"]
+sound_path     = "./resources/sounds/ambience-wind.mp3"
+default_volume = 50
+sel_color      = 15
+
+[[noise.tracks]]
+name           = "Thunder"
+icons          = ["󱐋", "⚡", "T"]
+sound_path     = "./resources/sounds/ambience-thunder.mp3"
+default_volume = 50
+sel_color      = 11
 
 # Logging Settings ------------------------------------------------------------
 # pomodoro_log = $XDG_STATE_HOME/tomato/pomodoro.bin

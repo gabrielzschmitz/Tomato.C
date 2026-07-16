@@ -11,16 +11,6 @@
 #define MAX_STATUS_BAR_MODULES 10
 
 /**
- * Icons for white-noise tracks.
- */
-typedef struct {
-  const char* rain[3];    /**< [nerd, emoji, ascii] */
-  const char* fire[3];    /**< [nerd, emoji, ascii] */
-  const char* wind[3];    /**< [nerd, emoji, ascii] */
-  const char* thunder[3]; /**< [nerd, emoji, ascii] */
-} ConfigNoiseIcons;
-
-/**
  * Icons for pomodoro-stage screens.
  */
 typedef struct {
@@ -70,7 +60,6 @@ typedef struct {
  * All icon sets grouped by category.
  */
 typedef struct {
-  ConfigNoiseIcons noise;
   ConfigPomodoroIcons pomodoro;
   ConfigInputIcons input;
   ConfigMiscIcons misc;
@@ -119,20 +108,49 @@ typedef struct {
 } ConfigPomodoro;
 
 /**
+ * Per-notification-type configuration (title, description, audio path).
+ */
+typedef struct {
+  const char* title;       /**< Notification title */
+  const char* description; /**< Detailed description text */
+  const char* audio_path;  /**< Path to audio file to play (or NULL) */
+} NotificationConfig;
+
+/**
  * Desktop notification settings.
  */
 typedef struct {
-  int enabled;        /**< 0/1 — requires libnotify */
-  int sound;          /**< 0/1 — requires miniaudio (included on external) */
-  float sound_volume; /**< 0.0 – 1.0 */
+  int enabled;            /**< 0/1 — requires libnotify */
+  int sound;              /**< 0/1 — requires miniaudio (included on external) */
+  float sound_volume;     /**< 0.0 – 1.0 */
+  NotificationConfig work;
+  NotificationConfig short_pause;
+  NotificationConfig long_pause;
+  NotificationConfig end_cycle;
 } ConfigNotifications;
+
+/** Maximum number of white-noise tracks. */
+#define MAX_NOISE_TRACKS 16
+
+/**
+ * Per-track white-noise configuration (name, icons, sound path, volume, color).
+ */
+typedef struct {
+  const char* name;         /**< Display name (e.g. "Rain") */
+  const char* icons[3];     /**< [nerd, emoji, ascii] icon set */
+  const char* sound_path;   /**< Path to the audio file */
+  int default_volume;       /**< Default volume 0-100 */
+  int sel_color;            /**< Ncurses color (0-15) when this track is selected */
+} ConfigNoiseTrack;
 
 /**
  * White-noise playback settings.
  */
 typedef struct {
-  int enabled;       /**< 0/1 — requires miniaudio (included on external) */
-  int master_volume; /**< 0-100 */
+  int enabled;              /**< 0/1 — requires miniaudio (included on external) */
+  int master_volume;        /**< 0-100 */
+  int track_count;          /**< Number of configured tracks */
+  ConfigNoiseTrack tracks[MAX_NOISE_TRACKS]; /**< Track definitions */
 } ConfigNoise;
 
 /**
@@ -226,14 +244,6 @@ void SyncIconsFromIndex(void);
 
 /* UI / Icons --------------------------------------------------------------- */
 
-/** @name Noise icons [nerd, emoji, ascii] */
-/**@{*/
-#define RAIN_ICONS (g_config.visual.ui.icons.noise.rain)
-#define FIRE_ICONS (g_config.visual.ui.icons.noise.fire)
-#define WIND_ICONS (g_config.visual.ui.icons.noise.wind)
-#define THUNDER_ICONS (g_config.visual.ui.icons.noise.thunder)
-/**@}*/
-
 /** @name Media-player icons [nerd, emoji, ascii] */
 /**@{*/
 #define PLAYING_ICONS (g_config.visual.ui.icons.misc.playing)
@@ -304,6 +314,14 @@ void SyncIconsFromIndex(void);
 #define NOTIFICATIONS_SOUND (g_config.notifications.sound)
 /** Notification volume 0.0 – 1.0 (default: 0.5). */
 #define NOTIFICATIONS_SOUND_VOLUME (g_config.notifications.sound_volume)
+/** Work notification config (title, description, audio_path). */
+#define NOTIFICATION_WORK (g_config.notifications.work)
+/** Short pause notification config. */
+#define NOTIFICATION_SHORT_PAUSE (g_config.notifications.short_pause)
+/** Long pause notification config. */
+#define NOTIFICATION_LONG_PAUSE (g_config.notifications.long_pause)
+/** End-of-cycle notification config. */
+#define NOTIFICATION_END_CYCLE (g_config.notifications.end_cycle)
 
 /* Noise / White-Noise Settings --------------------------------------------- */
 

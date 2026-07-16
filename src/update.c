@@ -136,12 +136,7 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step_time = 0;
       app->pomodoro_data.step_start_time = time(NULL);
       if (!AUTOSTART_PAUSE) app->is_paused = true;
-      Notification notification = {
-        .title = "Long Pause Break",
-        .description = "You have some time to chill",
-        .audio_path = DATADIR "/sounds/pausenotify.mp3",
-      };
-      if (Notify(&notification) != NO_ERROR)
+      if (Notify(&app->notification_long_pause) != NO_ERROR)
         SetError(app, "Sending long pause notification",
                  NOTIFICATION_SEND_ERROR);
     } else {
@@ -152,12 +147,7 @@ void UpdateWorkTime(AppData* app) {
       app->pomodoro_data.current_step_time = 0;
       app->pomodoro_data.step_start_time = time(NULL);
       if (!AUTOSTART_PAUSE) app->is_paused = true;
-      Notification notification = {
-        .title = "Pause Break",
-        .description = "You have some time to chill",
-        .audio_path = DATADIR "/sounds/pausenotify.mp3",
-      };
-      if (Notify(&notification) != NO_ERROR)
+      if (Notify(&app->notification_short_pause) != NO_ERROR)
         SetError(app, "Sending short pause notification",
                  NOTIFICATION_SEND_ERROR);
     }
@@ -194,12 +184,7 @@ void UpdateShortPause(AppData* app) {
     app->pomodoro_data.current_step_time = 0;
     app->pomodoro_data.step_start_time = time(NULL);
     if (!AUTOSTART_WORK) app->is_paused = true;
-    Notification notification = {
-      .title = "Work!",
-      .description = "You need to focus",
-      .audio_path = DATADIR "/sounds/dfltnotify.mp3",
-    };
-    if (Notify(&notification) != NO_ERROR)
+    if (Notify(&app->notification_work) != NO_ERROR)
       SetError(app, "Sending work notification", NOTIFICATION_SEND_ERROR);
   }
 }
@@ -234,12 +219,7 @@ void UpdateLongPause(AppData* app) {
     app->pomodoro_data.current_step_time = 0;
     app->pomodoro_data.total_elapsed = 0;
     app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-    Notification notification = {
-      .title = "End of Pomodoro Cycle",
-      .description = "Feel free to start another!",
-      .audio_path = DATADIR "/sounds/endnotify.mp3",
-    };
-    if (Notify(&notification) != NO_ERROR)
+    if (Notify(&app->notification_end_cycle) != NO_ERROR)
       SetError(app, "Sending end notification", NOTIFICATION_SEND_ERROR);
   }
 }

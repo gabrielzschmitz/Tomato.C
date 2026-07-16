@@ -2,6 +2,7 @@
 
 #include <ncurses.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -23,6 +24,8 @@ static ErrorType initMenus(AppData* app);
 static ErrorType initStatusBar(AppData* app);
 static ErrorType initAnimations(AppData* app);
 static ErrorType initPomodoroData(AppData* app);
+static ErrorType initWhiteNoise(AppData* app);
+static ErrorType initNotifications(AppData* app);
 static void initPrefsData(PrefsState* state);
 static ErrorType debugSeedHistory(void);
 
@@ -93,23 +96,11 @@ ErrorType InitApp(AppData* app) {
   app->mouse_y = -1;
   app->mouse_bstate = 0;
 
-  InitWhiteNoiseData(&app->noise_data);
-  {
-    WhiteNoiseTrackDef default_tracks[] = {
-      {"Rain", (const char**)RAIN_ICONS, DATADIR "/sounds/ambience-rain.mp3",
-       NOISE_MASTER_VOLUME, 14},
-      {"Fire", (const char**)FIRE_ICONS, DATADIR "/sounds/ambience-fire.mp3",
-       NOISE_MASTER_VOLUME, 13},
-      {"Wind", (const char**)WIND_ICONS, DATADIR "/sounds/ambience-wind.mp3",
-       NOISE_MASTER_VOLUME, 15},
-      {"Thunder", (const char**)THUNDER_ICONS,
-       DATADIR "/sounds/ambience-thunder.mp3", NOISE_MASTER_VOLUME, 11},
-    };
-    status = RegisterWhiteNoiseTracks(
-      &app->noise_data, default_tracks,
-      sizeof(default_tracks) / sizeof(default_tracks[0]));
-    if (status != NO_ERROR) return status;
-  }
+  status = initWhiteNoise(app);
+  if (status != NO_ERROR) return status;
+
+  status = initNotifications(app);
+  if (status != NO_ERROR) return status;
 
   status = initPomodoroData(app);
   if (status != NO_ERROR) return status;
@@ -337,6 +328,82 @@ static ErrorType initAnimations(AppData* app) {
   size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
   SetRollfilmLoop(app, app->animations, dont_loop, list_size, false);
 
+  return NO_ERROR;
+}
+
+/**
+ * Initialize white-noise tracks from config.
+ * Reads g_config.noise.tracks[] and registers them with the audio engine.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or MALLOC_ERROR on failure
+ */
+static ErrorType initWhiteNoise(AppData* app) {
+  InitWhiteNoiseData(&app->noise_data);
+  if (g_config.noise.track_count == 0) return NO_ERROR;
+
+  WhiteNoiseTrackDef* tracks =
+    (WhiteNoiseTrackDef*)calloc(g_config.noise.track_count,
+                                sizeof(WhiteNoiseTrackDef));
+  if (!tracks) return MALLOC_ERROR;
+  for (int i = 0; i < g_config.noise.track_count; i++) {
+    tracks[i].name = g_config.noise.tracks[i].name;
+    tracks[i].icons = g_config.noise.tracks[i].icons;
+    tracks[i].sound_path = g_config.noise.tracks[i].sound_path;
+    tracks[i].default_volume = g_config.noise.tracks[i].default_volume;
+    tracks[i].sel_color = g_config.noise.tracks[i].sel_color;
+  }
+  ErrorType status = RegisterWhiteNoiseTracks(&app->noise_data, tracks,
+                                              g_config.noise.track_count);
+  free(tracks);
+  return status;
+}
+
+/**
+ * Initialize notification data from config.
+ * Copies configured title, description, and audio path for each
+ * notification type into AppData for use at runtime.
+ * Validates that each audio_path points to an existing file.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or FILE_ERROR if an audio file is missing
+ */
+static ErrorType initNotifications(AppData* app) {
+  app->notification_work = (Notification){
+    .title = NOTIFICATION_WORK.title,
+    .description = NOTIFICATION_WORK.description,
+    .audio_path = NOTIFICATION_WORK.audio_path,
+  };
+  app->notification_short_pause = (Notification){
+    .title = NOTIFICATION_SHORT_PAUSE.title,
+    .description = NOTIFICATION_SHORT_PAUSE.description,
+    .audio_path = NOTIFICATION_SHORT_PAUSE.audio_path,
+  };
+  app->notification_long_pause = (Notification){
+    .title = NOTIFICATION_LONG_PAUSE.title,
+    .description = NOTIFICATION_LONG_PAUSE.description,
+    .audio_path = NOTIFICATION_LONG_PAUSE.audio_path,
+  };
+  app->notification_end_cycle = (Notification){
+    .title = NOTIFICATION_END_CYCLE.title,
+    .description = NOTIFICATION_END_CYCLE.description,
+    .audio_path = NOTIFICATION_END_CYCLE.audio_path,
+  };
+
+  const Notification* list[] = {
+    &app->notification_work,
+    &app->notification_short_pause,
+    &app->notification_long_pause,
+    &app->notification_end_cycle,
+  };
+  for (int i = 0; i < 4; i++) {
+    if (list[i]->audio_path) {
+      FILE* f = fopen(list[i]->audio_path, "rb");
+      if (!f) {
+        LogError("initNotifications", FILE_ERROR);
+        return FILE_ERROR;
+      }
+      fclose(f);
+    }
+  }
   return NO_ERROR;
 }
 
