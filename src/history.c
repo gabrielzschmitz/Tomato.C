@@ -22,7 +22,10 @@ static int getStackCount(const HistoryNode* stack);
  */
 History* CreateHistory(void) {
   History* history = (History*)malloc(sizeof(History));
-  if (!history) { LogError("CreateHistory", MALLOC_ERROR); return NULL; }
+  if (!history) {
+    LogError("CreateHistory", MALLOC_ERROR);
+    return NULL;
+  }
   history->past = NULL;
   history->future = NULL;
   history->present = -1;

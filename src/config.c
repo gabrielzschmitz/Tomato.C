@@ -829,8 +829,8 @@ static void setDefaults(void) {
   g_config.misc.fps = 120;
   g_config.misc.max_note_depth = 1;
 
-  g_config.key_bindings = (KeyFunction*)CALLOC(DEFAULT_KEYS_COUNT,
-                                                 sizeof(KeyFunction));
+  g_config.key_bindings =
+    (KeyFunction*)CALLOC(DEFAULT_KEYS_COUNT, sizeof(KeyFunction));
   memcpy(g_config.key_bindings, DEFAULT_KEYS,
          DEFAULT_KEYS_COUNT * sizeof(KeyFunction));
   g_config.num_keys = DEFAULT_KEYS_COUNT;
@@ -1023,7 +1023,10 @@ static void readIconArray(toml_table_t* root, const char* path,
 static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
                                      const char* out[], int* count, int max) {
   toml_array_t* arr = toml_table_array(tbl, key);
-  if (!arr) { *count = 0; return; }
+  if (!arr) {
+    *count = 0;
+    return;
+  }
   int len = toml_array_len(arr);
   if (len > max) len = max;
   *count = len;
@@ -1109,8 +1112,12 @@ static void readKeybindings(toml_table_t* root) {
 
           if (tmp_count >= tmp_cap) {
             size_t new_cap = tmp_cap ? tmp_cap * 2 : 64;
-          TomlEntry* p = (TomlEntry*)realloc(tmp, new_cap * sizeof(TomlEntry));
-          if (!p) { LogError("readKeybindings", MALLOC_ERROR); goto cleanup; }
+            TomlEntry* p =
+              (TomlEntry*)realloc(tmp, new_cap * sizeof(TomlEntry));
+            if (!p) {
+              LogError("readKeybindings", MALLOC_ERROR);
+              goto cleanup;
+            }
             tmp = p;
             tmp_cap = new_cap;
           }
@@ -1157,14 +1164,18 @@ static void readKeybindings(toml_table_t* root) {
       }
     }
     if (g < 0) {
-      ActionGroup* p = (ActionGroup*)realloc(
-          groups, (n_groups + 1) * sizeof(ActionGroup));
-      if (!p) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
+      ActionGroup* p =
+        (ActionGroup*)realloc(groups, (n_groups + 1) * sizeof(ActionGroup));
+      if (!p) {
+        LogError("readKeybindings", MALLOC_ERROR);
+        free(groups);
+        goto cleanup;
+      }
       groups = p;
       groups[n_groups].action = tmp[i].action;
-      groups[n_groups].modes   = tmp[i].modes;
+      groups[n_groups].modes = tmp[i].modes;
       groups[n_groups].scene_types = tmp[i].scene_types;
-      groups[n_groups].key_list    = NULL;
+      groups[n_groups].key_list = NULL;
       groups[n_groups].key_count = 0;
       g = (int)n_groups;
       n_groups++;
@@ -1176,7 +1187,11 @@ static void readKeybindings(toml_table_t* root) {
     if (already) continue;
     int* kp = (int*)realloc(groups[g].key_list,
                             (groups[g].key_count + 1) * sizeof(int));
-    if (!kp) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
+    if (!kp) {
+      LogError("readKeybindings", MALLOC_ERROR);
+      free(groups);
+      goto cleanup;
+    }
     groups[g].key_list = kp;
     groups[g].key_list[groups[g].key_count++] = tmp[i].key;
   }
@@ -1192,7 +1207,11 @@ static void readKeybindings(toml_table_t* root) {
 
   /* Pre-compute which old entries are covered by a group */
   int* covered = (int*)CALLOC(old_count, sizeof(int));
-  if (!covered) { LogError("readKeybindings", MALLOC_ERROR); free(groups); goto cleanup; }
+  if (!covered) {
+    LogError("readKeybindings", MALLOC_ERROR);
+    free(groups);
+    goto cleanup;
+  }
 
   for (size_t g = 0; g < n_groups; g++) {
     for (size_t j = 0; j < old_count; j++) {
@@ -1206,12 +1225,16 @@ static void readKeybindings(toml_table_t* root) {
 
   /* Determine insert position for each group = first old entry it covers */
   size_t* group_pos = (size_t*)CALLOC(n_groups, sizeof(size_t));
-  if (!group_pos) { LogError("readKeybindings", MALLOC_ERROR); free(covered); free(groups); goto cleanup; }
+  if (!group_pos) {
+    LogError("readKeybindings", MALLOC_ERROR);
+    free(covered);
+    free(groups);
+    goto cleanup;
+  }
   for (size_t g = 0; g < n_groups; g++) {
     group_pos[g] = old_count; /* default: append at end */
     for (size_t j = 0; j < old_count; j++) {
-      if (covered[j] &&
-          g_config.key_bindings[j].modes == groups[g].modes &&
+      if (covered[j] && g_config.key_bindings[j].modes == groups[g].modes &&
           g_config.key_bindings[j].scene_types == groups[g].scene_types &&
           g_config.key_bindings[j].action == groups[g].action) {
         group_pos[g] = j;
@@ -1223,13 +1246,19 @@ static void readKeybindings(toml_table_t* root) {
   /* Count uncovered + total key slots */
   size_t baseline = 0;
   size_t keys_total = 0;
-  for (size_t j = 0; j < old_count; j++) if (!covered[j]) baseline++;
+  for (size_t j = 0; j < old_count; j++)
+    if (!covered[j]) baseline++;
   for (size_t g = 0; g < n_groups; g++) keys_total += groups[g].key_count;
 
   size_t new_total = baseline + keys_total;
-  KeyFunction* merged =
-    (KeyFunction*)CALLOC(new_total, sizeof(KeyFunction));
-  if (!merged) { LogError("readKeybindings", MALLOC_ERROR); free(group_pos); free(covered); free(groups); goto cleanup; }
+  KeyFunction* merged = (KeyFunction*)CALLOC(new_total, sizeof(KeyFunction));
+  if (!merged) {
+    LogError("readKeybindings", MALLOC_ERROR);
+    free(group_pos);
+    free(covered);
+    free(groups);
+    goto cleanup;
+  }
 
   size_t write = 0;
 
@@ -1243,8 +1272,7 @@ static void readKeybindings(toml_table_t* root) {
         int found = 0;
         /* Prefer matching old entry with same action */
         for (size_t m = 0; m < old_count && !found; m++) {
-          if (covered[m] &&
-              g_config.key_bindings[m].key == key &&
+          if (covered[m] && g_config.key_bindings[m].key == key &&
               g_config.key_bindings[m].modes == groups[g].modes &&
               g_config.key_bindings[m].scene_types == groups[g].scene_types &&
               g_config.key_bindings[m].action == groups[g].action) {
@@ -1256,8 +1284,7 @@ static void readKeybindings(toml_table_t* root) {
         /* Fall back to old entry with same key+modes+scene (action change) */
         if (!found) {
           for (size_t m = 0; m < old_count && !found; m++) {
-            if (covered[m] &&
-                g_config.key_bindings[m].key == key &&
+            if (covered[m] && g_config.key_bindings[m].key == key &&
                 g_config.key_bindings[m].modes == groups[g].modes &&
                 g_config.key_bindings[m].scene_types == groups[g].scene_types) {
               merged[write] = g_config.key_bindings[m];
@@ -1267,12 +1294,12 @@ static void readKeybindings(toml_table_t* root) {
           }
         }
         if (!found) {
-          merged[write].key         = key;
-          merged[write].action      = groups[g].action;
-          merged[write].modes       = groups[g].modes;
+          merged[write].key = key;
+          merged[write].action = groups[g].action;
+          merged[write].modes = groups[g].modes;
           merged[write].scene_types = groups[g].scene_types;
-          merged[write].group       = NULL;
-          merged[write].desc        = NULL;
+          merged[write].group = NULL;
+          merged[write].desc = NULL;
         }
         write++;
       }
@@ -1299,12 +1326,12 @@ static void readKeybindings(toml_table_t* root) {
         }
       }
       if (!found) {
-        merged[write].key         = key;
-        merged[write].action      = groups[g].action;
-        merged[write].modes       = groups[g].modes;
+        merged[write].key = key;
+        merged[write].action = groups[g].action;
+        merged[write].modes = groups[g].modes;
         merged[write].scene_types = groups[g].scene_types;
-        merged[write].group       = NULL;
-        merged[write].desc        = NULL;
+        merged[write].group = NULL;
+        merged[write].desc = NULL;
       }
       write++;
     }
@@ -1340,7 +1367,10 @@ static void loadTomlFile(const char* path) {
   char errbuf[200];
   toml_table_t* root = toml_parse_file(f, errbuf, sizeof(errbuf));
   fclose(f);
-  if (!root) { LogError("loadTomlFile", FILE_ERROR); return; }
+  if (!root) {
+    LogError("loadTomlFile", FILE_ERROR);
+    return;
+  }
 
   readInt(root, "visual.animations", &g_config.visual.animations);
   readString(root, "visual.icons", &g_config.visual.icons);
@@ -1365,20 +1395,17 @@ static void loadTomlFile(const char* path) {
     toml_table_t* module_tbl = tableAtPath(root, "visual.status_bar.modules");
     if (module_tbl) {
       if (toml_table_array(module_tbl, "left"))
-        readStringArrayFromTable(module_tbl, "left",
-                                 g_config.visual.status_bar_left_modules,
-                                 &g_config.visual.status_bar_left_count,
-                                 MAX_STATUS_BAR_MODULES);
+        readStringArrayFromTable(
+          module_tbl, "left", g_config.visual.status_bar_left_modules,
+          &g_config.visual.status_bar_left_count, MAX_STATUS_BAR_MODULES);
       if (toml_table_array(module_tbl, "center"))
-        readStringArrayFromTable(module_tbl, "center",
-                                 g_config.visual.status_bar_center_modules,
-                                 &g_config.visual.status_bar_center_count,
-                                 MAX_STATUS_BAR_MODULES);
+        readStringArrayFromTable(
+          module_tbl, "center", g_config.visual.status_bar_center_modules,
+          &g_config.visual.status_bar_center_count, MAX_STATUS_BAR_MODULES);
       if (toml_table_array(module_tbl, "right"))
-        readStringArrayFromTable(module_tbl, "right",
-                                 g_config.visual.status_bar_right_modules,
-                                 &g_config.visual.status_bar_right_count,
-                                 MAX_STATUS_BAR_MODULES);
+        readStringArrayFromTable(
+          module_tbl, "right", g_config.visual.status_bar_right_modules,
+          &g_config.visual.status_bar_right_count, MAX_STATUS_BAR_MODULES);
     }
   }
 

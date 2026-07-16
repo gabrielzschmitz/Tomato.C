@@ -47,7 +47,7 @@ typedef struct {
   int render_width;     /**< Width available for rendering notes */
   bool is_move_mode;    /**< Whether move mode is currently active */
   History* history;     /**< History manager for undo/redo */
-  int last_affected_id;   /**< ID of last affected note */
+  int last_affected_id; /**< ID of last affected note */
   int last_affected_page; /**< Page of last affected note */
   int saved_cursor;       /**< Cursor position at time of history save */
   int current_page;       /**< Currently viewed page (0-indexed) */

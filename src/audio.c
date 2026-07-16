@@ -6,7 +6,6 @@
 
 #include "config.h"
 #include "error.h"
-#include "tomato.h"
 
 #ifdef __APPLE__
 #define MA_NO_RUNTIME_LINKING
@@ -14,7 +13,6 @@
 #define MINIAUDIO_IMPLEMENTATION
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include "external/miniaudio.h"
 #pragma GCC diagnostic pop
 
@@ -63,7 +61,10 @@ ErrorType PlayAudio(const char* audio_path, const float volume,
   /* Prepare playback data */
   struct playbackData* data =
     (struct playbackData*)malloc(sizeof(struct playbackData));
-  if (data == NULL) { LogError("PlayAudio", MALLOC_ERROR); return MALLOC_ERROR; }
+  if (data == NULL) {
+    LogError("PlayAudio", MALLOC_ERROR);
+    return MALLOC_ERROR;
+  }
 
   strncpy(data->audio_path, audio_path, sizeof(data->audio_path) - 1);
   data->audio_path[sizeof(data->audio_path) - 1] = '\0';

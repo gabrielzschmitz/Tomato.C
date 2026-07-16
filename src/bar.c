@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "config.h"
-#include "notes.h"
 #include "error.h"
+#include "notes.h"
 #include "tomato.h"
 
 /* PRIVATE BAR FUNCTIONS */
@@ -130,7 +130,10 @@ static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
                                               ModuleUpdate update) {
   StatusBarModule* new_widget =
     (StatusBarModule*)malloc(sizeof(StatusBarModule));
-  if (new_widget == NULL) { LogError("createStatusBarModule", MALLOC_ERROR); return NULL; }
+  if (new_widget == NULL) {
+    LogError("createStatusBarModule", MALLOC_ERROR);
+    return NULL;
+  }
 
   new_widget->fg_color = fg_color;
   new_widget->bg_color = bg_color;

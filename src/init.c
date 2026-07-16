@@ -102,8 +102,8 @@ ErrorType InitApp(AppData* app) {
        NOISE_MASTER_VOLUME, 13},
       {"Wind", (const char**)WIND_ICONS, DATADIR "/sounds/ambience-wind.mp3",
        NOISE_MASTER_VOLUME, 15},
-      {"Thunder", (const char**)THUNDER_ICONS, DATADIR "/sounds/ambience-thunder.mp3",
-       NOISE_MASTER_VOLUME, 11},
+      {"Thunder", (const char**)THUNDER_ICONS,
+       DATADIR "/sounds/ambience-thunder.mp3", NOISE_MASTER_VOLUME, 11},
     };
     status = RegisterWhiteNoiseTracks(
       &app->noise_data, default_tracks,

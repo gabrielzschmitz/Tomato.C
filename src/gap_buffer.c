@@ -21,7 +21,10 @@ static bool ensureCapacity(GapBuffer* gb, size_t needed);
  */
 GapBuffer* GapBufferCreate(void) {
   GapBuffer* gb = (GapBuffer*)malloc(sizeof(GapBuffer));
-  if (!gb) { LogError("GapBufferCreate", MALLOC_ERROR); return NULL; }
+  if (!gb) {
+    LogError("GapBufferCreate", MALLOC_ERROR);
+    return NULL;
+  }
 
   gb->buffer = (char*)malloc(GAP_INITIAL_CAPACITY);
   if (!gb->buffer) {

@@ -36,7 +36,10 @@ static int findRootAncestorIndex(NotesData* notes, int idx);
  */
 NotesData* CreateNotesData(void) {
   NotesData* notes = (NotesData*)malloc(sizeof(NotesData));
-  if (!notes) { LogError("CreateNotesData", MALLOC_ERROR); return NULL; }
+  if (!notes) {
+    LogError("CreateNotesData", MALLOC_ERROR);
+    return NULL;
+  }
 
   notes->items = (NoteItem**)malloc(sizeof(NoteItem*) * NOTES_INITIAL_CAPACITY);
   if (!notes->items) {
@@ -332,8 +335,7 @@ void CompactPages(NotesData* notes) {
   int* page_map = (int*)malloc(sizeof(int) * (size_t)(max_page + 1));
   if (!page_map) return;
   for (int i = 0; i <= max_page; i++) page_map[i] = -1;
-  for (int i = 0; i < notes->count; i++)
-    page_map[notes->items[i]->page_id] = 0;
+  for (int i = 0; i < notes->count; i++) page_map[notes->items[i]->page_id] = 0;
 
   int new_id = 0;
   for (int i = 0; i <= max_page; i++) {
@@ -729,7 +731,10 @@ void FreeClonedNotesData(void* data) {
  */
 NotesData* CloneNotesData(const NotesData* src) {
   NotesData* dst = (NotesData*)malloc(sizeof(NotesData));
-  if (!dst) { LogError("CloneNotesData", MALLOC_ERROR); return NULL; }
+  if (!dst) {
+    LogError("CloneNotesData", MALLOC_ERROR);
+    return NULL;
+  }
 
   dst->items = (NoteItem**)malloc(sizeof(NoteItem*) * src->capacity);
   if (!dst->items) {
@@ -841,7 +846,10 @@ void RestoreNotesData(NotesData* notes, void* data) {
   /* Reallocate and deep copy items */
   NoteItem** new_items =
     (NoteItem**)malloc(sizeof(NoteItem*) * notes->capacity);
-  if (!new_items) { LogError("RestoreNotesData", MALLOC_ERROR); return; }
+  if (!new_items) {
+    LogError("RestoreNotesData", MALLOC_ERROR);
+    return;
+  }
   for (int i = 0; i < snapshot->count; i++) {
     NoteItem* srcItem = snapshot->items[i];
     NoteItem* dstItem = (NoteItem*)malloc(sizeof(NoteItem));
@@ -966,7 +974,8 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
     int item_wrap_width = max_width - prefix_len;
     if (item_wrap_width <= 0) item_wrap_width = 1;
     if (input->len > 0)
-      notes->total_lines += GetNoteLinesFromText(input->buffer, item_wrap_width);
+      notes->total_lines +=
+        GetNoteLinesFromText(input->buffer, item_wrap_width);
     else
       notes->total_lines += 1;
   }
@@ -1018,8 +1027,8 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
                 strncpy(left_part, input->buffer, left_len);
                 left_part[left_len] = '\0';
                 const char* right_part = input->buffer + input->cursor;
-                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix, left_part,
-                         right_part);
+                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix,
+                         left_part, right_part);
                 mvprintw(render_y, start_x + indent, "%s", buffer);
               }
               free(buffer);
@@ -1223,8 +1232,8 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
                 strncpy(left_part, input->buffer, left_len);
                 left_part[left_len] = '\0';
                 const char* right_part = input->buffer + input->cursor;
-                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix, left_part,
-                         right_part);
+                snprintf(buffer, (size_t)(max_width + 1), "%s%s|%s", prefix,
+                         left_part, right_part);
                 mvprintw(render_y, start_x + indent, "%s", buffer);
               }
               free(buffer);
@@ -1463,7 +1472,10 @@ int WrapText(const char* text, int max_width, char*** out_lines) {
   int line_count = 0;
   int capacity = 4;
   char** lines = (char**)malloc(sizeof(char*) * capacity);
-  if (!lines) { LogError("WrapText", MALLOC_ERROR); return 0; }
+  if (!lines) {
+    LogError("WrapText", MALLOC_ERROR);
+    return 0;
+  }
 
   const char* start = text;
   const char* ptr = text;

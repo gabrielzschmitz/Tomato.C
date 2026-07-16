@@ -3655,7 +3655,8 @@ void PrefsPreviewDesktop(AppData* app) {
  */
 void PrefsPreviewSound(AppData* app) {
   (void)app;
-  PlayAudio(DATADIR "/sounds/dfltnotify.mp3", NOTIFICATIONS_SOUND_VOLUME, false);
+  PlayAudio(DATADIR "/sounds/dfltnotify.mp3", NOTIFICATIONS_SOUND_VOLUME,
+            false);
 }
 
 /**
