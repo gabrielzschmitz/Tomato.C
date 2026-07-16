@@ -106,6 +106,7 @@ void HelpScrollDown(AppData* app) { (void)app; }
 void NotesPrevPage(AppData* app) { (void)app; }
 void NotesNextPage(AppData* app) { (void)app; }
 void SwitchToNormalMode(AppData* app) { (void)app; }
+void ReturnToMainMenu(AppData* app) { (void)app; }
 
 int EnsureDir(const char* dir) {
   (void)dir;
