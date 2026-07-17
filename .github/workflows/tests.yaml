@@ -8,7 +8,7 @@
 # *
 # * Jobs:
 # *   ubuntu-tests         — full test suite on ubuntu-latest
-# *   macos-intel-tests    — full test suite on macos-13 (Intel)
+# *   macos-intel-tests    — full test suite on macos-15-intel (Intel)
 # *   macos-arm-tests      — full test suite on macos-latest (ARM)
 # */
 
@@ -42,7 +42,7 @@ jobs:
   # */
   macos-intel-tests:
     name: Run tests (macOS Intel)
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies
