@@ -327,11 +327,11 @@ static void renderNotesPageIndicator(AppData* app, Panel* panel,
   int num = app->notes->current_page + 1;
   int total = app->notes->page_count;
 
-  char page_str[16];
-  snprintf(page_str, sizeof(page_str), " %d/%d ", num, total);
+  char page_str[24];
+  snprintf(page_str, sizeof(page_str), " %02d/%02d ", num, total);
   int page_str_len = (int)strlen(page_str);
 
-  int left_x = panel_center_x - page_str_len / 2 - 2;
+  int left_x = panel_center_x - page_str_len / 2 - 1;
   int right_x = panel_center_x + page_str_len / 2 + 1;
 
   bool hover_left = (app->mouse_y == indicator_y && app->mouse_x >= left_x &&
