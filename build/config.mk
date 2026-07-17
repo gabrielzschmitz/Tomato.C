@@ -34,7 +34,7 @@ CPPFLAGS += $(INCLUDES) $(DEPFLAGS)
 LDFLAGS += $(LIBDIR)
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
-LDLIBS = -lncurses -lpthread -lm
+LDLIBS = -lncurses -lpthread -lm -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
 else
 LDLIBS = $(shell pkg-config --libs ncursesw libnotify) -lpthread -lm
 endif
