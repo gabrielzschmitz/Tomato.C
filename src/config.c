@@ -773,6 +773,21 @@ static void setDefaults(void) {
   g_config.visual.ui.icons.misc.history[1] = "▒▒";
   g_config.visual.ui.icons.misc.history[2] = "▓▓";
   g_config.visual.ui.icons.misc.history[3] = "██";
+  g_config.visual.ui.icons.misc.streak_module[0] = "󰈸";
+  g_config.visual.ui.icons.misc.streak_module[1] = "🔥";
+  g_config.visual.ui.icons.misc.streak_module[2] = "";
+  g_config.visual.ui.icons.misc.date_module[0] = "";
+  g_config.visual.ui.icons.misc.date_module[1] = "📅";
+  g_config.visual.ui.icons.misc.date_module[2] = "";
+  g_config.visual.ui.icons.misc.weekday_module[0] = "";
+  g_config.visual.ui.icons.misc.weekday_module[1] = "📌";
+  g_config.visual.ui.icons.misc.weekday_module[2] = "";
+  g_config.visual.ui.icons.misc.terminal_size_module[0] = "";
+  g_config.visual.ui.icons.misc.terminal_size_module[1] = "📟";
+  g_config.visual.ui.icons.misc.terminal_size_module[2] = "";
+  g_config.visual.ui.icons.misc.icons_module[0] = "";
+  g_config.visual.ui.icons.misc.icons_module[1] = "🎨";
+  g_config.visual.ui.icons.misc.icons_module[2] = "";
 
   g_config.pomodoro.amount = 4;
   g_config.pomodoro.work_time = 25;
@@ -1564,6 +1579,16 @@ static void loadTomlFile(const char* path) {
                 g_config.visual.ui.icons.misc.border_chars);
   readIconArray(root, "visual.ui.icons.misc.history",
                 g_config.visual.ui.icons.misc.history);
+  readIconArray(root, "visual.ui.icons.misc.streak_module",
+                g_config.visual.ui.icons.misc.streak_module);
+  readIconArray(root, "visual.ui.icons.misc.date_module",
+                g_config.visual.ui.icons.misc.date_module);
+  readIconArray(root, "visual.ui.icons.misc.weekday_module",
+                g_config.visual.ui.icons.misc.weekday_module);
+  readIconArray(root, "visual.ui.icons.misc.terminal_size_module",
+                g_config.visual.ui.icons.misc.terminal_size_module);
+  readIconArray(root, "visual.ui.icons.misc.icons_module",
+                g_config.visual.ui.icons.misc.icons_module);
 
   readInt(root, "pomodoro.amount", &g_config.pomodoro.amount);
   readInt(root, "pomodoro.work_time", &g_config.pomodoro.work_time);

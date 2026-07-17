@@ -167,4 +167,49 @@ void CurrentStatusModule(AppData* app, StatusBarModule* module, Panel* panel);
  */
 void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel);
 
+/**
+ * Streak module update function.
+ * Displays the current pomodoro session streak (consecutive days).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void StreakModule(AppData* app, StatusBarModule* module, Panel* panel);
+
+/**
+ * Date module update function.
+ * Displays the current date (YYYY-MM-DD).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void DateModule(AppData* app, StatusBarModule* module, Panel* panel);
+
+/**
+ * Weekday module update function.
+ * Displays the current weekday abbreviation.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void WeekdayModule(AppData* app, StatusBarModule* module, Panel* panel);
+
+/**
+ * Terminal size module update function.
+ * Displays the current terminal dimensions (WIDTHxHEIGHT).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void TerminalSizeModule(AppData* app, StatusBarModule* module, Panel* panel);
+
+/**
+ * Icons module update function.
+ * Displays the currently active icon set name.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void IconsModule(AppData* app, StatusBarModule* module, Panel* panel);
+
 #endif /* BAR_H_ */

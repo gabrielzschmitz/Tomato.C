@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "error.h"
+#include "log.h"
 #include "notes.h"
 #include "tomato.h"
 
@@ -376,9 +377,16 @@ ModuleUpdate ModuleFromString(const char* name) {
     const char* name;
     ModuleUpdate func;
   } map[] = {
-    {"InputMode", InputModeModule},   {"RealTime", RealTimeModule},
-    {"Scene", SceneModule},           {"CurrentStatus", CurrentStatusModule},
+    {"InputMode", InputModeModule},
+    {"RealTime", RealTimeModule},
+    {"Scene", SceneModule},
+    {"CurrentStatus", CurrentStatusModule},
     {"LineColumn", LineColumnModule},
+    {"Streak", StreakModule},
+    {"Date", DateModule},
+    {"Weekday", WeekdayModule},
+    {"TerminalSize", TerminalSizeModule},
+    {"Icons", IconsModule},
   };
   for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++)
     if (strcmp(name, map[i].name) == 0) return map[i].func;
@@ -757,5 +765,197 @@ void LineColumnModule(AppData* app, StatusBarModule* module, Panel* panel) {
       snprintf(module->content, required_length, "%s Ln %d", icon, line);
     }
   }
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/**
+ * Streak module update function.
+ * Displays the current pomodoro session streak (consecutive days).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void StreakModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)app;
+  (void)panel;
+
+  IconType icon_type = GetConfigIconType();
+  const char* icon = STREAK_MODULE_ICONS[icon_type];
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_RED;
+
+  time_t now = time(NULL);
+  struct tm* tm_info = localtime(&now);
+  int year = tm_info->tm_year + 1900;
+  int month = tm_info->tm_mon + 1;
+  int day = tm_info->tm_mday;
+
+  int current_streak = 0;
+  int longest_streak = 0;
+  HistStreak(POMODORO_LOG, year, month, day, &current_streak, &longest_streak);
+  (void)longest_streak;
+
+  char content[32];
+  if (strlen(icon) < 1) {
+    snprintf(content, sizeof(content), "%d Days", current_streak);
+  } else {
+    snprintf(content, sizeof(content), "%s %d Days", icon, current_streak);
+  }
+
+  int required_length = (int)strlen(content) + 1;
+  snprintf(module->content, (size_t)required_length, "%s", content);
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/**
+ * Date module update function.
+ * Displays the current date (YYYY-MM-DD).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void DateModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)app;
+  (void)panel;
+
+  IconType icon_type = GetConfigIconType();
+  const char* icon = DATE_MODULE_ICONS[icon_type];
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_CYAN;
+
+  char date_str[16];
+  time_t now = time(NULL);
+  struct tm* tm_info = localtime(&now);
+  strftime(date_str, sizeof(date_str), "%Y-%m-%d", tm_info);
+
+  char content[32];
+  if (strlen(icon) < 1) {
+    snprintf(content, sizeof(content), "%s", date_str);
+  } else {
+    snprintf(content, sizeof(content), "%s %s", icon, date_str);
+  }
+
+  int required_length = (int)strlen(content) + 1;
+  snprintf(module->content, (size_t)required_length, "%s", content);
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/**
+ * Weekday module update function.
+ * Displays the current weekday abbreviation.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void WeekdayModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)app;
+  (void)panel;
+
+  IconType icon_type = GetConfigIconType();
+  const char* icon = WEEKDAY_MODULE_ICONS[icon_type];
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_BLUE;
+
+  char wday_str[8];
+  time_t now = time(NULL);
+  struct tm* tm_info = localtime(&now);
+  strftime(wday_str, sizeof(wday_str), "%a", tm_info);
+
+  char content[24];
+  if (strlen(icon) < 1) {
+    snprintf(content, sizeof(content), "%s", wday_str);
+  } else {
+    snprintf(content, sizeof(content), "%s %s", icon, wday_str);
+  }
+
+  int required_length = (int)strlen(content) + 1;
+  snprintf(module->content, (size_t)required_length, "%s", content);
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/**
+ * Terminal size module update function.
+ * Displays the current terminal dimensions (WIDTHxHEIGHT).
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void TerminalSizeModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)panel;
+
+  IconType icon_type = GetConfigIconType();
+  const char* icon = TERMINAL_SIZE_MODULE_ICONS[icon_type];
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_GREEN;
+
+  int w = app->screen->size.width;
+  int h = app->screen->size.height;
+
+  char content[24];
+  if (strlen(icon) < 1) {
+    snprintf(content, sizeof(content), "%d×%d", w, h);
+  } else {
+    snprintf(content, sizeof(content), "%s %d×%d", icon, w, h);
+  }
+
+  int required_length = (int)strlen(content) + 1;
+  snprintf(module->content, (size_t)required_length, "%s", content);
+  module->content_length = UTF16CharCount(module->content);
+}
+
+/**
+ * Icons module update function.
+ * Displays the currently active icon set name.
+ * @param app Pointer to the application data
+ * @param module Pointer to the module to update
+ * @param panel Pointer to the current panel
+ */
+void IconsModule(AppData* app, StatusBarModule* module, Panel* panel) {
+  if (module == NULL || panel == NULL) return;
+  (void)app;
+  (void)panel;
+
+  IconType icon_type = GetConfigIconType();
+  const char* icon = ICONS_MODULE_ICONS[icon_type];
+
+  module->fg_color = COLOR_BLACK;
+  module->bg_color = COLOR_YELLOW;
+
+  const char* label;
+  switch (icon_type) {
+    case NERD_ICONS:
+      label = "[Nerd]";
+      break;
+    case EMOJIS:
+      label = "[Emojis]";
+      break;
+    case ASCII:
+      label = "[ASCII]";
+      break;
+    case NO_ICONS:
+      label = "[ASCII]";
+      break;
+    default:
+      label = "[Nerd]";
+      break;
+  }
+
+  char content[24];
+  if (strlen(icon) < 1) {
+    snprintf(content, sizeof(content), "%s", label);
+  } else {
+    snprintf(content, sizeof(content), "%s %s", icon, label);
+  }
+
+  int required_length = (int)strlen(content) + 1;
+  snprintf(module->content, (size_t)required_length, "%s", content);
   module->content_length = UTF16CharCount(module->content);
 }

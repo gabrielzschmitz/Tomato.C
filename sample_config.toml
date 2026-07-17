@@ -45,6 +45,11 @@ visual_cursor        = "█"
 insert_cursor        = "▏"
 border_chars         = ["┏", "┓", "┗", "┛", "━", "┃"]
 history              = ["░░", "▒▒", "▓▓", "██"]
+streak_module        = ["󰈸", "🔥", ""]
+date_module          = ["", "📅", ""]
+weekday_module       = ["", "📌", ""]
+terminal_size_module = ["", "📟", ""]
+icons_module         = ["", "🎨", ""]
 
 # Visual Settings -------------------------------------------------------------
 [visual]
@@ -59,7 +64,8 @@ focused_panel_color  = 1            # 0-7
 clock_24h            = 0            # 0/1 — use 24-hour clock
 
 [visual.status_bar.modules]
-# Available modules: InputMode, RealTime, Scene, CurrentStatus, LineColumn
+# Available modules: InputMode, RealTime, Scene, CurrentStatus, LineColumn,
+#                    Streak, Date, Weekday, TerminalSize, Icons
 # If unset, defaults to:  left = [InputMode, RealTime], right = [Scene, LineColumn]
 left   = ["InputMode", "RealTime"]
 center = []

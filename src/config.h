@@ -55,6 +55,11 @@ typedef struct {
   const char* insert_cursor;            /**< single string (not triplet) */
   const char* border_chars[6];          /**< [tl, tr, bl, br, h, v] */
   const char* history[4];               /**< levels: 0=none, 1, 2, 3+ */
+  const char* streak_module[3];         /**< [nerd, emoji, ascii] */
+  const char* date_module[3];           /**< [nerd, emoji, ascii] */
+  const char* weekday_module[3];        /**< [nerd, emoji, ascii] */
+  const char* terminal_size_module[3];  /**< [nerd, emoji, ascii] */
+  const char* icons_module[3];          /**< [nerd, emoji, ascii] */
 } ConfigMiscIcons;
 
 /**
@@ -121,9 +126,9 @@ typedef struct {
  * Desktop notification settings.
  */
 typedef struct {
-  int enabled;            /**< 0/1 — requires libnotify */
-  int sound;              /**< 0/1 — requires miniaudio (included on external) */
-  float sound_volume;     /**< 0.0 – 1.0 */
+  int enabled;        /**< 0/1 — requires libnotify */
+  int sound;          /**< 0/1 — requires miniaudio (included on external) */
+  float sound_volume; /**< 0.0 – 1.0 */
   NotificationConfig work;
   NotificationConfig short_pause;
   NotificationConfig long_pause;
@@ -137,20 +142,20 @@ typedef struct {
  * Per-track white-noise configuration (name, icons, sound path, volume, color).
  */
 typedef struct {
-  const char* name;         /**< Display name (e.g. "Rain") */
-  const char* icons[3];     /**< [nerd, emoji, ascii] icon set */
-  const char* sound_path;   /**< Path to the audio file */
-  int default_volume;       /**< Default volume 0-100 */
-  int sel_color;            /**< Ncurses color (0-15) when this track is selected */
+  const char* name;       /**< Display name (e.g. "Rain") */
+  const char* icons[3];   /**< [nerd, emoji, ascii] icon set */
+  const char* sound_path; /**< Path to the audio file */
+  int default_volume;     /**< Default volume 0-100 */
+  int sel_color; /**< Ncurses color (0-15) when this track is selected */
 } ConfigNoiseTrack;
 
 /**
  * White-noise playback settings.
  */
 typedef struct {
-  int enabled;              /**< 0/1 — requires miniaudio (included on external) */
-  int master_volume;        /**< 0-100 */
-  int track_count;          /**< Number of configured tracks */
+  int enabled;       /**< 0/1 — requires miniaudio (included on external) */
+  int master_volume; /**< 0-100 */
+  int track_count;   /**< Number of configured tracks */
   ConfigNoiseTrack tracks[MAX_NOISE_TRACKS]; /**< Track definitions */
 } ConfigNoise;
 
@@ -295,6 +300,12 @@ void SyncIconsFromIndex(void);
 #define SKIP_ICONS (g_config.visual.ui.icons.misc.skip)
 #define BACK_ICONS (g_config.visual.ui.icons.misc.back)
 #define HISTORY_ICONS (g_config.visual.ui.icons.misc.history)
+#define STREAK_MODULE_ICONS (g_config.visual.ui.icons.misc.streak_module)
+#define DATE_MODULE_ICONS (g_config.visual.ui.icons.misc.date_module)
+#define WEEKDAY_MODULE_ICONS (g_config.visual.ui.icons.misc.weekday_module)
+#define TERMINAL_SIZE_MODULE_ICONS \
+  (g_config.visual.ui.icons.misc.terminal_size_module)
+#define ICONS_MODULE_ICONS (g_config.visual.ui.icons.misc.icons_module)
 /**@}*/
 
 /* Pomodoro Settings -------------------------------------------------------- */
