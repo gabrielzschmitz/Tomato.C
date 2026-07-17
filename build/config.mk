@@ -82,7 +82,9 @@ endif
 # */
 
 HARDEN_CFLAGS  = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE
+ifneq ($(UNAME), Darwin)
 HARDEN_LDFLAGS = -pie -Wl,-z,relro,-z,now -z noexecstack
+endif
 
 CFLAGS  += $(HARDEN_CFLAGS)
 LDFLAGS += $(HARDEN_LDFLAGS)
