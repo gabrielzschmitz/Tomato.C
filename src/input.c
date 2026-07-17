@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* macOS ncurses does not define BUTTON4/5_PRESSED (mouse wheel buttons). */
+#ifndef BUTTON4_PRESSED
+#define BUTTON4_PRESSED 0000010L
+#endif
+#ifndef BUTTON5_PRESSED
+#define BUTTON5_PRESSED 0000020L
+#endif
+
 #include "anim.h"
 #include "audio.h"
 #include "config.h"
