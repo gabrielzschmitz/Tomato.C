@@ -433,6 +433,7 @@ void ClearClickRegions(AppData* app);
  * @param action Action function (for REGION_DIRECT)
  * @param menu_index Menu index (for REGION_MENU_ITEM)
  * @param item_index Item index within menu
+ * @param note_id Note ID (for REGION_MENU_ITEM / REGION_NOTES)
  */
 void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
                          RegionType type, MenuAction action, int menu_index,

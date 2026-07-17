@@ -3171,6 +3171,7 @@ void SelectNextOption(AppData* app) {
  * Convert a selectable offset to a preference field index.
  * Walks through app->prefs.fields and skips PREF_SECTION entries.
  * Selectable offset: 0 for first non-section preference, 1 for second, etc.
+ * @param app Application state
  * @param sel_off Selectable offset (0-based after skipping sections)
  * @return Preference field index, or -1 if out of range
  */
