@@ -1627,35 +1627,35 @@ static void loadTomlFile(const char* path) {
 
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
   if (g_config.logging.pomodoro_log) {
-    free((char*)g_config.logging.pomodoro_log);
-    char* expanded = expandDatadir(g_config.logging.pomodoro_log);
-    g_config.logging.pomodoro_log =
-      expanded ? expanded : strdup(g_config.logging.pomodoro_log);
+    const char* old = g_config.logging.pomodoro_log;
+    char* expanded = expandDatadir(old);
+    g_config.logging.pomodoro_log = expanded ? expanded : strdup(old);
+    free((char*)old);
     if (!g_config.logging.pomodoro_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readString(root, "logging.notes_log", &g_config.logging.notes_log);
   if (g_config.logging.notes_log) {
-    free((char*)g_config.logging.notes_log);
-    char* expanded = expandDatadir(g_config.logging.notes_log);
-    g_config.logging.notes_log =
-      expanded ? expanded : strdup(g_config.logging.notes_log);
+    const char* old = g_config.logging.notes_log;
+    char* expanded = expandDatadir(old);
+    g_config.logging.notes_log = expanded ? expanded : strdup(old);
+    free((char*)old);
     if (!g_config.logging.notes_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readString(root, "logging.error_log", &g_config.logging.error_log);
   if (g_config.logging.error_log) {
-    free((char*)g_config.logging.error_log);
-    char* expanded = expandDatadir(g_config.logging.error_log);
-    g_config.logging.error_log =
-      expanded ? expanded : strdup(g_config.logging.error_log);
+    const char* old = g_config.logging.error_log;
+    char* expanded = expandDatadir(old);
+    g_config.logging.error_log = expanded ? expanded : strdup(old);
+    free((char*)old);
     if (!g_config.logging.error_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readBool(root, "logging.timer_log", &g_config.logging.timer_log);
   readString(root, "logging.timer_file", &g_config.logging.timer_file);
   if (g_config.logging.timer_file) {
-    free((char*)g_config.logging.timer_file);
-    char* expanded = expandDatadir(g_config.logging.timer_file);
-    g_config.logging.timer_file =
-      expanded ? expanded : strdup(g_config.logging.timer_file);
+    const char* old = g_config.logging.timer_file;
+    char* expanded = expandDatadir(old);
+    g_config.logging.timer_file = expanded ? expanded : strdup(old);
+    free((char*)old);
     if (!g_config.logging.timer_file) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readBool(root, "logging.work_log", &g_config.logging.work_log);
