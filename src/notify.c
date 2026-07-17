@@ -1,7 +1,9 @@
 #include "notify.h"
 
-#include <libnotify/notify.h>
 #include <stdio.h>
+#ifndef __APPLE__
+#include <libnotify/notify.h>
+#endif
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
