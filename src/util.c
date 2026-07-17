@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ncurses.h>
+
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -145,14 +147,12 @@ bool CheckConfigIconType(void) {
  * @return IconType value based on config
  */
 IconType GetConfigIconType(void) {
-  IconType type = ASCII;
-  if (strcmp(ICONS, "nerd-icons") == 0)
-    type = NERD_ICONS;
-  else if (strcmp(ICONS, "emojis") == 0)
-    type = EMOJIS;
-  else if (strcmp(ICONS, "ascii") == 0)
-    type = ASCII;
-  return type;
+  switch (g_config.visual.icons_index) {
+    case 0: return NERD_ICONS;
+    case 1: return EMOJIS;
+    case 2: return ASCII;
+    default: return ASCII;
+  }
 }
 
 /**
