@@ -21,6 +21,10 @@
 /* toml-c.h poisons strdup — restore the system declaration for our use */
 #undef strdup
 
+/* PRIVATE CONFIG FUNCTIONS */
+/* Config */
+static char* expandDatadir(const char* input);
+
 /** Path to the system-wide TOML configuration file. */
 const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config.toml";
 /**
@@ -1425,6 +1429,12 @@ static void readNotificationConfig(toml_table_t* root, const char* prefix,
   readString(root, path, &cfg->description);
   snprintf(path, sizeof(path), "%s.audio_path", prefix);
   readString(root, path, &cfg->audio_path);
+  if (cfg->audio_path) {
+    char* expanded = expandDatadir(cfg->audio_path);
+    if (expanded) {
+      cfg->audio_path = expanded;
+    }
+  }
 }
 
 /**
@@ -1449,7 +1459,10 @@ static void readNoiseTracks(toml_table_t* root) {
     v = toml_table_string(tbl, "name");
     if (v.ok) g_config.noise.tracks[i].name = v.u.s;
     v = toml_table_string(tbl, "sound_path");
-    if (v.ok) g_config.noise.tracks[i].sound_path = v.u.s;
+    if (v.ok) {
+      char* expanded = expandDatadir(v.u.s);
+      g_config.noise.tracks[i].sound_path = expanded ? expanded : strdup(v.u.s);
+    }
     v = toml_table_int(tbl, "default_volume");
     if (v.ok) g_config.noise.tracks[i].default_volume = (int)v.u.i;
     v = toml_table_int(tbl, "sel_color");
@@ -1615,26 +1628,34 @@ static void loadTomlFile(const char* path) {
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
   if (g_config.logging.pomodoro_log) {
     free((char*)g_config.logging.pomodoro_log);
-    g_config.logging.pomodoro_log = strdup(g_config.logging.pomodoro_log);
+    char* expanded = expandDatadir(g_config.logging.pomodoro_log);
+    g_config.logging.pomodoro_log =
+      expanded ? expanded : strdup(g_config.logging.pomodoro_log);
     if (!g_config.logging.pomodoro_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readString(root, "logging.notes_log", &g_config.logging.notes_log);
   if (g_config.logging.notes_log) {
     free((char*)g_config.logging.notes_log);
-    g_config.logging.notes_log = strdup(g_config.logging.notes_log);
+    char* expanded = expandDatadir(g_config.logging.notes_log);
+    g_config.logging.notes_log =
+      expanded ? expanded : strdup(g_config.logging.notes_log);
     if (!g_config.logging.notes_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readString(root, "logging.error_log", &g_config.logging.error_log);
   if (g_config.logging.error_log) {
     free((char*)g_config.logging.error_log);
-    g_config.logging.error_log = strdup(g_config.logging.error_log);
+    char* expanded = expandDatadir(g_config.logging.error_log);
+    g_config.logging.error_log =
+      expanded ? expanded : strdup(g_config.logging.error_log);
     if (!g_config.logging.error_log) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readBool(root, "logging.timer_log", &g_config.logging.timer_log);
   readString(root, "logging.timer_file", &g_config.logging.timer_file);
   if (g_config.logging.timer_file) {
     free((char*)g_config.logging.timer_file);
-    g_config.logging.timer_file = strdup(g_config.logging.timer_file);
+    char* expanded = expandDatadir(g_config.logging.timer_file);
+    g_config.logging.timer_file =
+      expanded ? expanded : strdup(g_config.logging.timer_file);
     if (!g_config.logging.timer_file) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readBool(root, "logging.work_log", &g_config.logging.work_log);
@@ -1685,4 +1706,33 @@ void LoadConfig(void) {
     return;
   }
   loadTomlFile(path);
+}
+
+/**
+ * Expand $DATADIR tokens in a config-file path to the compile-time
+ * DATADIR value (e.g. "/usr/local/share/tomato").
+ *
+ * When the token is absent the input is simply strdup'd so callers can
+ * always free the result.  Returns NULL only on allocation failure.
+ *
+ * @param input  Path string that may contain "$DATADIR".
+ * @return A malloc'd copy with $DATADIR expanded, or NULL on ENOMEM.
+ */
+static char* expandDatadir(const char* input) {
+  if (!input) return NULL;
+  const char* marker = "$DATADIR";
+  size_t mlen = strlen(marker);
+  const char* pos = strstr(input, marker);
+  if (!pos) return strdup(input);
+
+  size_t prefix_len = pos - input;
+  const char* datadir = DATADIR;
+  size_t dlen = strlen(datadir);
+  size_t suffix_len = strlen(pos + mlen);
+  char* result = malloc(prefix_len + dlen + suffix_len + 1);
+  if (!result) return NULL;
+  memcpy(result, input, prefix_len);
+  memcpy(result + prefix_len, datadir, dlen);
+  memcpy(result + prefix_len + dlen, pos + mlen, suffix_len + 1);
+  return result;
 }
