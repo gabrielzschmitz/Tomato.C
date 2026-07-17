@@ -7,8 +7,9 @@
 # * as build-test.yaml — see that file for rationale.
 # *
 # * Jobs:
-# *   ubuntu-tests   — full test suite on ubuntu-latest
-# *   macos-tests    — full test suite on macos-13
+# *   ubuntu-tests         — full test suite on ubuntu-latest
+# *   macos-intel-tests    — full test suite on macos-13 (Intel)
+# *   macos-arm-tests      — full test suite on macos-latest (ARM)
 # */
 
 name: Tests
@@ -35,12 +36,27 @@ jobs:
         run: ./run_tests.sh
 
   #/**
+  # * Build and run all tests on macOS (Intel x86_64).
   # * Uses Homebrew's ncurses; no libnotify is needed since macOS
   # * uses a different notification path (notify-send fallback).
   # */
-  macos-tests:
-    name: Run tests (macOS)
+  macos-intel-tests:
+    name: Run tests (macOS Intel)
     runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ncurses
+      - name: Build and run tests
+        run: ./run_tests.sh
+
+  #/**
+  # * Build and run all tests on macOS (Apple Silicon ARM64).
+  # * Same dependencies as the Intel runner.
+  # */
+  macos-arm-tests:
+    name: Run tests (macOS ARM)
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies

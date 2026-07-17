@@ -7,8 +7,9 @@
 # * handles the actual test execution.
 # *
 # * Jobs:
-# *   ubuntu-build-test   — build on ubuntu-latest with GCC
-# *   macos-build-test    — build on macos-13 with Clang
+# *   ubuntu-build-test       — build on ubuntu-latest with GCC
+# *   macos-intel-build-test  — build on macos-13 (Intel) with Clang
+# *   macos-arm-build-test    — build on macos-latest (ARM) with Clang
 # */
 
 name: Build test
@@ -35,13 +36,28 @@ jobs:
         run: ./build.sh
 
   #/**
+  # * Build on macOS (Intel x86_64).
   # * Only ncurses is installed via Homebrew — libnotify is not
   # * available on macOS and pkg-config is not required by the
   # * Apple-specific code path in config.mk.
   # */
-  macos-build-test:
-    name: Build project (macOS)
+  macos-intel-build-test:
+    name: Build project (macOS Intel)
     runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install ncurses
+      - name: Build project
+        run: ./build.sh
+
+  #/**
+  # * Build on macOS (Apple Silicon ARM64).
+  # * Same dependencies as the Intel build — ncurses via Homebrew.
+  # */
+  macos-arm-build-test:
+    name: Build project (macOS ARM)
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies
