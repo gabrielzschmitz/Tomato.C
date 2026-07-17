@@ -54,32 +54,32 @@ build-unit: $(UNIT_BINS)
 
 #/** @brief gap_buffer — stubs LogError in the test file */
 unit/test_gap_buffer: unit/test_gap_buffer.c $(SRCDIR)/gap_buffer.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
 
 #/** @brief history — standalone, no ncurses */
 unit/test_history: unit/test_history.c $(SRCDIR)/history.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
 
 #/** @brief config — header-only macros (config.h), no .c linking needed */
 unit/test_config: unit/test_config.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief notes — #includes notes.c; links gap_buffer, history */
 unit/test_notes: unit/test_notes.c $(SRCDIR)/gap_buffer.c $(SRCDIR)/history.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief util — SetColor calls ncurses attrset */
 unit/test_util: unit/test_util.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief error — links error.c + util.c; stubs RenderCriticalQuitConfirmation */
 unit/test_error: unit/test_error.c $(SRCDIR)/error.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief log — links log.c + deps; stubs remaining deps in test file */
 unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.c \
                $(SRCDIR)/gap_buffer.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief keybind — includes config.c; stubs all action functions in test file */
 unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
@@ -87,11 +87,11 @@ unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) he
 
 #/** @brief anim — links util.c and error.c */
 unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief bar — structural tests; stubs notes.c functions */
 unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/**
 # * ---------------------------------------------------------------------------
@@ -110,15 +110,15 @@ build-integration: $(INTEGRATION_BINS)
 
 #/** @brief pomodoro_workflow — links util.c for IsStepEnded / FormatRemainingTime */
 integration/test_pomodoro_workflow: integration/test_pomodoro_workflow.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief pomodoro_timer — same deps as pomodoro_workflow */
 integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief e2e — links log.c + util.c + gap_buffer.c for end-to-end CLI tests */
 integration/test_e2e: integration/test_e2e.c $(SRCDIR)/log.c $(SRCDIR)/util.c $(SRCDIR)/gap_buffer.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $^ $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief keybind_resolution — includes config.c; stubs all action functions; tests resolution logic */
 integration/test_keybind_resolution: integration/test_keybind_resolution.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h

@@ -32,7 +32,8 @@ LIBDIR = -L$(PREFIX)/lib
 
 CPPFLAGS += $(INCLUDES) $(DEPFLAGS)
 LDFLAGS += $(LIBDIR)
-ifdef __APPLE__
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
 LDLIBS = -lncurses -lpthread -lm
 else
 LDLIBS = $(shell pkg-config --libs ncursesw libnotify) -lpthread -lm
@@ -56,7 +57,7 @@ CC = gcc
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
-ifdef __APPLE__
+ifeq ($(UNAME), Darwin)
 CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS)
 else
 CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
