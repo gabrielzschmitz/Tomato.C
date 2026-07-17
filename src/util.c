@@ -14,6 +14,11 @@
 #include <time.h>
 #include <unistd.h>
 
+/* O_NOFOLLOW is not exposed by all macOS SDK configurations. */
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0x0100
+#endif
+
 #include "config.h"
 #include "error.h"
 #include "tomato.h"
