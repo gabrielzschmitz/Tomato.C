@@ -35,6 +35,11 @@ void LogError(const char* context, ErrorType error) {
   (void)context;
   (void)error;
 }
+void HistStreak(const char* path, int year, int month, int day,
+                int* current, int* longest) {
+  (void)path; (void)year; (void)month; (void)day;
+  *current = 0; *longest = 0;
+}
 void RenderCriticalQuitConfirmation(AppData* app) { (void)app; }
 int GetNoteLines(int start_line, int max_lines, int* cursor_line) {
   (void)start_line;

@@ -176,26 +176,26 @@ static void test_check_config_icon_type(void) {
  */
 
 static void test_get_config_icon_type_nerd(void) {
-  TEST("GetConfigIconType returns NERD_ICONS for nerd-icons");
-  g_config.visual.icons = "nerd-icons";
+  TEST("GetConfigIconType returns NERD_ICONS for index 0");
+  g_config.visual.icons_index = 0;
   ASSERT_EQ(GetConfigIconType(), NERD_ICONS);
 }
 
 static void test_get_config_icon_type_emoji(void) {
-  TEST("GetConfigIconType returns EMOJIS for emojis");
-  g_config.visual.icons = "emojis";
+  TEST("GetConfigIconType returns EMOJIS for index 1");
+  g_config.visual.icons_index = 1;
   ASSERT_EQ(GetConfigIconType(), EMOJIS);
 }
 
 static void test_get_config_icon_type_ascii(void) {
-  TEST("GetConfigIconType returns ASCII for ascii");
-  g_config.visual.icons = "ascii";
+  TEST("GetConfigIconType returns ASCII for index 2");
+  g_config.visual.icons_index = 2;
   ASSERT_EQ(GetConfigIconType(), ASCII);
 }
 
 static void test_get_config_icon_type_unknown(void) {
-  TEST("GetConfigIconType returns ASCII for unknown");
-  g_config.visual.icons = "unknown";
+  TEST("GetConfigIconType returns ASCII for unknown index");
+  g_config.visual.icons_index = 99;
   ASSERT_EQ(GetConfigIconType(), ASCII);
 }
 
