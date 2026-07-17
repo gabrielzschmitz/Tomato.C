@@ -11,11 +11,16 @@
 #define MA_NO_RUNTIME_LINKING
 #endif
 #define MINIAUDIO_IMPLEMENTATION
+/* The 'keys' macro in config.h conflicts with parameter names in Apple's
+ * CoreFoundation headers (included transitively by miniaudio on macOS).
+ * Undefine it here and restore it after the include. */
+#undef keys
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include "external/miniaudio.h"
 #pragma GCC diagnostic pop
+#define keys (g_config.key_bindings)
 
 /* PRIVATE AUDIO FUNCTIONS */
 /* Audio Playback */
