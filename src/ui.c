@@ -15,6 +15,14 @@
 #include "tomato.h"
 #include "util.h"
 
+/* macOS ncurses does not define BUTTON4/5_PRESSED (mouse wheel buttons). */
+#ifndef BUTTON4_PRESSED
+#define BUTTON4_PRESSED 0000010L
+#endif
+#ifndef BUTTON5_PRESSED
+#define BUTTON5_PRESSED 0000020L
+#endif
+
 /* PRIVATE UI FUNCTIONS */
 /* Slides */
 static int strDisplayWidth(const char* s);
