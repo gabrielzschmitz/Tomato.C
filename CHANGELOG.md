@@ -7,6 +7,32 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-07-17
+
+### Fixed
+
+- **Config paths broken when running outside the project directory** —
+  Notification `audio_path` and noise `sound_path` values read from TOML
+  config files were stored as dangling pointers after `toml_free()`
+  invalidated the parser's string table, causing `InitApp()` to read freed
+  memory and fail with `ErrorCode 8`.  Fixed by `strdup`'ing (via
+  `expandDatadir`) every path read from TOML before the parser is freed.
+
+### Added
+
+- **`$DATADIR` token expansion for configuration paths** — TOML config
+  values for `audio_path`, `sound_path`, and logging file paths now
+  support the `$DATADIR` token, which is expanded at load time to the
+  compile-time `DATADIR` path (e.g. `/usr/local/share/tomato`).  This
+  makes configuration files portable regardless of installation prefix
+  or working directory.
+
+### Changed
+
+- **`sample_config.toml`** — All hardcoded `audio_path` and `sound_path`
+  values replaced with `$DATADIR/sounds/...` tokens, preventing path
+  breakage when the sample config is used as a user config.
+
 ## [1.0.0] - 2026-07-17
 
 ### Added
