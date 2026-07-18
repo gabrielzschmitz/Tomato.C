@@ -7,6 +7,28 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-18
+
+### Added
+
+- **Default static frame support** — Optional `/Df` suffix on sprite header
+  lines selects a static frame for non-animated rendering. All `.asc` files
+  updated with appropriate default frames per scene.
+
+- **Multi-format icon switching** — All three icon types (nerd-icons, emojis,
+  ascii) are parsed at init into a 2D array
+  `icon_animations[MAX_ICON_TYPES][MAX_ANIMATIONS]`, with `app->animations` as
+  a pointer to the active set. Icon changes in the preferences menu now take
+  effect immediately via LEFT/RIGHT/SPACE, not just after closing the sub-dialog.
+
+### Fixed
+
+- **Notes scene not rendering when `!ANIMATIONS`** — `renderNotesScene` was
+  skipped in the non-animated branch; notes page indicator is now rendered with
+  an animation reference.
+- **Page transitions stuck when `!ANIMATIONS`** — `UpdateNotes` early-returned
+  before completing page transitions, leaving `transitioning` permanently set.
+
 ## [1.0.1] - 2026-07-17
 
 ### Fixed
