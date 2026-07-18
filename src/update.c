@@ -230,7 +230,15 @@ void UpdateLongPause(AppData* app) {
  * @param app Pointer to the application data
  */
 void UpdateNotes(AppData* app) {
-  if (!ANIMATIONS || app->is_paused) return;
+  if (app->is_paused) return;
+
+  if (!ANIMATIONS) {
+    if (app->notes && app->notes->transitioning) {
+      app->notes->current_page = app->notes->transition_target;
+      app->notes->transitioning = false;
+    }
+    return;
+  }
 
   if (app->notes && app->notes->transitioning) {
     Rollfilm* transition = app->animations[NOTES_TRANSITION];

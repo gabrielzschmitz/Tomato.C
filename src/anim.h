@@ -56,6 +56,7 @@ struct Rollfilm {
   int frame_count;        /**< Total number of frames in the rollfilm */
   int frame_height;       /**< Height of each frame in lines */
   int frame_width;        /**< Width of the widest frame */
+  int default_frame;      /**< Default frame index for static (non-animated) display */
   AnimationUpdate update; /**< Function pointer for custom update logic */
   AnimationRender render; /**< Function pointer for custom render logic */
 };

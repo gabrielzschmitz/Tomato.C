@@ -176,6 +176,12 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
         animation = app->animations[MAIN_MENU];
         if (DEBUG) renderAnimationDebug(panel, animation, (Vector2D){0, 0});
         RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+      } else {
+        animation = app->animations[MAIN_MENU];
+        if (animation) {
+          RollfilmSeekFrame(animation, animation->default_frame);
+          RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+        }
       }
       if (DEBUG)
         PrintMenuAtCenter(app, panel, app->menus[0],
@@ -191,6 +197,12 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
         animation = app->animations[scene];
         if (DEBUG) renderAnimationDebug(panel, animation, (Vector2D){0, 0});
         RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+      } else {
+        animation = app->animations[scene];
+        if (animation) {
+          RollfilmSeekFrame(animation, animation->default_frame);
+          RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+        }
       }
       renderPomodoroScene(app, animation, scene, size, position);
       break;
@@ -213,7 +225,13 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
           }
         }
       } else {
-        renderNotesPageIndicator(app, panel, NULL);
+        animation = app->animations[NOTES];
+        renderNotesScene(app, panel, animation);
+        if (animation) {
+          RollfilmSeekFrame(animation, animation->default_frame);
+          RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
+        }
+        renderNotesPageIndicator(app, panel, animation);
       }
       break;
     case NOTES_TRANSITION:

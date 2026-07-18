@@ -34,6 +34,7 @@ static void test_create_rollfilm(void) {
   ASSERT_EQ(rf->frame_count, 3);
   ASSERT_EQ(rf->frame_height, 5);
   ASSERT_EQ(rf->current_frame, 0);
+  ASSERT_EQ(rf->default_frame, 0);
   ASSERT_TRUE(rf->loop);
   FreeRollfilm(rf);
 }
@@ -157,7 +158,7 @@ static void test_deserialize_sprites(void) {
   g_config.visual.icons = "nerd-icons";
   g_config.visual.icons_index = 0;
   const char* sprite_data =
-    "nerd-icons/2c/2h\n"
+    "nerd-icons/2c/2h/1f\n"
     "0.5s\n"
     "abc\n"
     "def\n"
@@ -176,6 +177,34 @@ static void test_deserialize_sprites(void) {
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->frame_count, 2);
   ASSERT_EQ(rf->frame_height, 2);
+  ASSERT_EQ(rf->default_frame, 1);
+  FreeRollfilm(rf);
+  fclose(tmp);
+}
+
+static void test_deserialize_sprites_default_frame_default(void) {
+  TEST("DeserializeSprites defaults default_frame to 0 when not set");
+  g_config.visual.icons = "nerd-icons";
+  g_config.visual.icons_index = 0;
+  const char* sprite_data =
+    "nerd-icons/2c/2h\n"
+    "0.5s\n"
+    "abc\n"
+    "def\n"
+    "1.0s\n"
+    "ghi\n"
+    "jkl\n"
+    "--------------------------------------------------------------------------"
+    "-\n";
+  FILE* tmp = tmpfile();
+  ASSERT_NOT_NULL(tmp);
+  fwrite(sprite_data, 1, strlen(sprite_data), tmp);
+  rewind(tmp);
+  char tmp_path[64];
+  snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
+  Rollfilm* rf = DeserializeSprites(tmp_path);
+  ASSERT_NOT_NULL(rf);
+  ASSERT_EQ(rf->default_frame, 0);
   FreeRollfilm(rf);
   fclose(tmp);
 }
@@ -352,6 +381,135 @@ static void test_first_last_blank_null(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * RollfilmSeekFrame
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_rollfilm_seek_frame(void) {
+  TEST("RollfilmSeekFrame seeks to correct frame");
+  Rollfilm* rf = (Rollfilm*)malloc(sizeof(Rollfilm));
+  rf->loop = true;
+  rf->delta_frame_ms = 0;
+  rf->current_frame = 0;
+  rf->frame_count = 3;
+  rf->frame_height = 1;
+  rf->frame_width = 0;
+  rf->default_frame = 0;
+  rf->update = NULL;
+  rf->render = NULL;
+
+  struct Frame* f0 = make_test_frame(0, 3);
+  struct Frame* f1 = make_test_frame(1, 3);
+  struct Frame* f2 = make_test_frame(2, 3);
+  f0->next = f1;
+  f1->next = f2;
+  f2->next = f0;
+  rf->frames = f0;
+
+  RollfilmSeekFrame(rf, 2);
+  ASSERT_EQ(rf->current_frame, 2);
+  ASSERT_EQ(rf->frames->id, 2);
+
+  RollfilmSeekFrame(rf, 0);
+  ASSERT_EQ(rf->current_frame, 0);
+  ASSERT_EQ(rf->frames->id, 0);
+
+  free_test_rollfilm(rf);
+}
+
+static void test_rollfilm_seek_frame_out_of_bounds(void) {
+  TEST("RollfilmSeekFrame out-of-bounds is safe");
+  Rollfilm* rf = (Rollfilm*)malloc(sizeof(Rollfilm));
+  rf->loop = true;
+  rf->delta_frame_ms = 0;
+  rf->current_frame = 0;
+  rf->frame_count = 2;
+  rf->frame_height = 1;
+  rf->frame_width = 0;
+  rf->default_frame = 0;
+  rf->update = NULL;
+  rf->render = NULL;
+
+  struct Frame* f0 = make_test_frame(0, 3);
+  struct Frame* f1 = make_test_frame(1, 3);
+  f0->next = f1;
+  f1->next = f0;
+  rf->frames = f0;
+
+  RollfilmSeekFrame(rf, -1);
+  ASSERT_EQ(rf->current_frame, 0);
+
+  RollfilmSeekFrame(rf, 99);
+  ASSERT_EQ(rf->current_frame, 0);
+
+  RollfilmSeekFrame(NULL, 0);
+
+  free_test_rollfilm(rf);
+}
+
+static void test_rollfilm_seek_frame_self_frame(void) {
+  TEST("RollfilmSeekFrame to current frame resets timer");
+  Rollfilm* rf = (Rollfilm*)malloc(sizeof(Rollfilm));
+  rf->loop = true;
+  rf->delta_frame_ms = 0;
+  rf->current_frame = 1;
+  rf->frame_count = 2;
+  rf->frame_height = 1;
+  rf->frame_width = 0;
+  rf->default_frame = 0;
+  rf->update = NULL;
+  rf->render = NULL;
+
+  struct Frame* f0 = make_test_frame(0, 3);
+  struct Frame* f1 = make_test_frame(1, 3);
+  f0->next = f1;
+  f1->next = f0;
+  rf->frames = f0;
+
+  double before = rf->delta_frame_ms;
+  RollfilmSeekFrame(rf, 1);
+  ASSERT_EQ(rf->current_frame, 1);
+  ASSERT_NE(rf->delta_frame_ms, before);
+
+  free_test_rollfilm(rf);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Deserialize — explicit /Nf suffix
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_deserialize_sprites_default_frame_explicit(void) {
+  TEST("DeserializeSprites parses explicit /0f default_frame");
+  g_config.visual.icons = "nerd-icons";
+  g_config.visual.icons_index = 0;
+  const char* sprite_data =
+    "nerd-icons/2c/2h/0f\n"
+    "0.5s\n"
+    "abc\n"
+    "def\n"
+    "1.0s\n"
+    "ghi\n"
+    "jkl\n"
+    "--------------------------------------------------------------------------"
+    "-\n";
+  FILE* tmp = tmpfile();
+  ASSERT_NOT_NULL(tmp);
+  fwrite(sprite_data, 1, strlen(sprite_data), tmp);
+  rewind(tmp);
+  char tmp_path[64];
+  snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
+  Rollfilm* rf = DeserializeSprites(tmp_path);
+  ASSERT_NOT_NULL(rf);
+  ASSERT_EQ(rf->default_frame, 0);
+  ASSERT_EQ(rf->frame_count, 2);
+  FreeRollfilm(rf);
+  fclose(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -374,6 +532,8 @@ int main(void) {
   RUN_TEST(test_rollfilm_largest_null_entry,
            "RollfilmLargest skips NULL entries");
   RUN_TEST(test_deserialize_sprites, "DeserializeSprites parses sprite file");
+  RUN_TEST(test_deserialize_sprites_default_frame_default,
+           "DeserializeSprites defaults default_frame to 0");
   RUN_TEST(test_deserialize_sprites_nonexistent,
            "DeserializeSprites returns NULL for missing file");
   RUN_TEST(test_first_blank, "RollfilmFirstBlank finds first blank token");
@@ -381,5 +541,13 @@ int main(void) {
   RUN_TEST(test_first_blank_no_blank, "RollfilmFirstBlank false when no blank");
   RUN_TEST(test_first_last_blank_null,
            "RollfilmFirstBlank/LastBlank returns false on NULL");
+  RUN_TEST(test_rollfilm_seek_frame,
+           "RollfilmSeekFrame seeks to correct frame");
+  RUN_TEST(test_rollfilm_seek_frame_out_of_bounds,
+           "RollfilmSeekFrame out-of-bounds is safe");
+  RUN_TEST(test_rollfilm_seek_frame_self_frame,
+           "RollfilmSeekFrame to current frame resets timer");
+  RUN_TEST(test_deserialize_sprites_default_frame_explicit,
+           "DeserializeSprites parses explicit /0f default_frame");
   return test_end();
 }

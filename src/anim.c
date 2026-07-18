@@ -40,7 +40,7 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
 static int processFrameLine(const char* line, struct FrameRow** current_row,
                             int* line_color, int* line_width);
 static int parseFrameSize(const char* line, int* frame_count,
-                          int* frame_height);
+                          int* frame_height, int* default_frame);
 static int parseFrameTime(const char* line, double* frame_time);
 static bool isIconsLine(const char* line);
 static bool isSeparatorLine(const char* line);
@@ -76,6 +76,7 @@ Rollfilm* CreateRollfilm(int N, int M) {
   film->frame_count = N;
   film->frame_height = M;
   film->frame_width = 0;
+  film->default_frame = 0;
   film->loop = true;
   film->frames = NULL;
   film->render = renderCurrentFrame;
@@ -475,9 +476,9 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
                             struct FrameRow** head_row,
                             struct FrameRow** current_row,
                             int* current_frame_id, FILE* file) {
-  int frame_count, frame_height;
+  int frame_count, frame_height, default_frame;
   *read = 1;
-  if (parseFrameSize(line, &frame_count, &frame_height) != 0) {
+  if (parseFrameSize(line, &frame_count, &frame_height, &default_frame) != 0) {
     fclose(file);
     return -1;
   }
@@ -486,6 +487,7 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
     fclose(file);
     return -1;
   }
+  (*rollfilm)->default_frame = default_frame;
   *head_frame = createFrame();
   if (*head_frame == NULL) {
     LogError("processIconsLine", MALLOC_ERROR);
@@ -548,17 +550,24 @@ static int processFrameLine(const char* line, struct FrameRow** current_row,
 }
 
 /**
- * Parse the frame height and count from a line.
- * Format: "SIZE: NxM" where N is count and M is height.
+ * Parse the frame size from a line in the sprite file.
+ * Format: "<iconset>/<N>c/<M>h[/<D>f]" where N is frame count, M is height,
+ * and D (optional) is the default frame index for static display.
  * @param line Line to parse
  * @param frame_count Output: number of frames
  * @param frame_height Output: height of each frame
+ * @param default_frame Output: default frame index (0 if not specified)
  * @return 0 on success, non-zero on error
  */
 static int parseFrameSize(const char* line, int* frame_count,
-                          int* frame_height) {
-  return sscanf(line, "%*[^/]/%dc/%dh", frame_count, frame_height) != 2 ? -1
-                                                                        : 0;
+                          int* frame_height, int* default_frame) {
+  int result = sscanf(line, "%*[^/]/%dc/%dh/%df", frame_count, frame_height,
+                      default_frame);
+  if (result == 2) {
+    *default_frame = 0;
+    return 0;
+  }
+  return result == 3 ? 0 : -1;
 }
 
 /**
