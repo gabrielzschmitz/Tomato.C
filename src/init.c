@@ -114,10 +114,11 @@ ErrorType InitApp(AppData* app) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 ErrorType EndApp(AppData* app) {
-  for (int i = 0; i < MAX_ANIMATIONS; i++) {
-    FreeRollfilm(app->animations[i]);
-    app->animations[i] = NULL;
-  }
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; i++) {
+      FreeRollfilm(app->icon_animations[t][i]);
+      app->icon_animations[t][i] = NULL;
+    }
   for (int i = 0; i < MAX_MENUS; i++) {
     FreeMenu(app->menus[i]);
     app->menus[i] = NULL;
@@ -318,15 +319,20 @@ static ErrorType initAnimations(AppData* app) {
     DATADIR "/sprites/notes.asc",      DATADIR "/sprites/notes_transition.asc",
     DATADIR "/sprites/help.asc",       DATADIR "/sprites/continue.asc"};
 
-  for (int i = 0; i < MAX_ANIMATIONS; ++i) {
-    app->animations[i] = DeserializeSprites(animation_files[i]);
-    if (app->animations[i] == NULL) return ANIMATION_DESERIALIZATION_ERROR;
-  }
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; ++i) {
+      app->icon_animations[t][i] = DeserializeSprites(animation_files[i], t);
+      if (app->icon_animations[t][i] == NULL)
+        return ANIMATION_DESERIALIZATION_ERROR;
+    }
+
+  app->animations = app->icon_animations[GetConfigIconType()];
   app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
 
   const int dont_loop[] = {NOTES, NOTES_TRANSITION, HELP, CONTINUE};
   size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
-  SetRollfilmLoop(app, app->animations, dont_loop, list_size, false);
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    SetRollfilmLoop(app, app->icon_animations[t], dont_loop, list_size, false);
 
   return NO_ERROR;
 }

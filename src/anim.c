@@ -24,6 +24,7 @@ static void freeRows(struct FrameRow* rows);
 static struct FrameToken* createToken(void);
 static void freeToken(struct FrameToken* token);
 static void freeTokens(struct FrameToken* tokens);
+static const char* ICON_NAMES[] = {"nerd-icons", "emojis", "ascii"};
 /* Rollfilm Deserialization */
 static struct FrameToken* deserializeFrameLine(const char* src, int* color);
 static Rollfilm* cleanupAndReturn(FILE* file, Rollfilm* rollfilm,
@@ -35,14 +36,14 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
                             struct Frame** current_frame,
                             struct FrameRow** head_row,
                             struct FrameRow** current_row,
-                            int* current_frame_id, FILE* file);
+                            int* current_frame_id, FILE* file, int icon_type);
 /* Parsing Helpers */
 static int processFrameLine(const char* line, struct FrameRow** current_row,
                             int* line_color, int* line_width);
-static int parseFrameSize(const char* line, int* frame_count,
-                          int* frame_height, int* default_frame);
+static int parseFrameSize(const char* line, int* frame_count, int* frame_height,
+                          int* default_frame);
 static int parseFrameTime(const char* line, double* frame_time);
-static bool isIconsLine(const char* line);
+static bool isIconsLine(const char* line, int icon_type);
 static bool isSeparatorLine(const char* line);
 static int handleUnicode(const char* src, char** dest);
 static int handleColor(const char* src, int* dest);
@@ -274,7 +275,7 @@ static void freeTokens(struct FrameToken* tokens) {
  * @param filename Path to the sprite file
  * @return Pointer to the created Rollfilm, or NULL on failure
  */
-Rollfilm* DeserializeSprites(const char* filename) {
+Rollfilm* DeserializeSprites(const char* filename, int icon_type) {
   FILE* file = fopen(filename, "r");
   if (file == NULL) return NULL;
 
@@ -294,10 +295,10 @@ Rollfilm* DeserializeSprites(const char* filename) {
   while (fgets(line, sizeof(line), file) != NULL) {
     if (isSeparatorLine(line) && read) {
       break;
-    } else if (isIconsLine(line)) {
+    } else if (isIconsLine(line, icon_type)) {
       if (processIconsLine(line, &read, &rollfilm, &head_frame, &current_frame,
-                           &head_row, &current_row, &current_frame_id,
-                           file) != 0)
+                           &head_row, &current_row, &current_frame_id, file,
+                           icon_type) != 0)
         return NULL;
 
     } else if (read) {
@@ -475,7 +476,8 @@ static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,
                             struct Frame** current_frame,
                             struct FrameRow** head_row,
                             struct FrameRow** current_row,
-                            int* current_frame_id, FILE* file) {
+                            int* current_frame_id, FILE* file, int icon_type) {
+  (void)icon_type;
   int frame_count, frame_height, default_frame;
   *read = 1;
   if (parseFrameSize(line, &frame_count, &frame_height, &default_frame) != 0) {
@@ -559,8 +561,8 @@ static int processFrameLine(const char* line, struct FrameRow** current_row,
  * @param default_frame Output: default frame index (0 if not specified)
  * @return 0 on success, non-zero on error
  */
-static int parseFrameSize(const char* line, int* frame_count,
-                          int* frame_height, int* default_frame) {
+static int parseFrameSize(const char* line, int* frame_count, int* frame_height,
+                          int* default_frame) {
   int result = sscanf(line, "%*[^/]/%dc/%dh/%df", frame_count, frame_height,
                       default_frame);
   if (result == 2) {
@@ -584,10 +586,12 @@ static int parseFrameTime(const char* line, double* frame_time) {
 /**
  * Check if a line contains icon data (not a separator or metadata).
  * @param line Line to check
+ * @param icon_type Icon type index (0=nerd-icons, 1=emojis, 2=ascii)
  * @return true if icons, false if not
  */
-static bool isIconsLine(const char* line) {
-  return strstr(line, ICONS) != NULL;
+static bool isIconsLine(const char* line, int icon_type) {
+  if (icon_type < 0 || icon_type >= MAX_ICON_TYPES) return false;
+  return strstr(line, ICON_NAMES[icon_type]) != NULL;
 }
 
 /**

@@ -173,7 +173,7 @@ static void test_deserialize_sprites(void) {
   rewind(tmp);
   char tmp_path[64];
   snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
-  Rollfilm* rf = DeserializeSprites(tmp_path);
+  Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->frame_count, 2);
   ASSERT_EQ(rf->frame_height, 2);
@@ -202,7 +202,7 @@ static void test_deserialize_sprites_default_frame_default(void) {
   rewind(tmp);
   char tmp_path[64];
   snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
-  Rollfilm* rf = DeserializeSprites(tmp_path);
+  Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->default_frame, 0);
   FreeRollfilm(rf);
@@ -212,7 +212,7 @@ static void test_deserialize_sprites_default_frame_default(void) {
 static void test_deserialize_sprites_nonexistent(void) {
   TEST("DeserializeSprites returns NULL for missing file");
   g_config.visual.icons = "nerd-icons";
-  Rollfilm* rf = DeserializeSprites("/tmp/nonexistent_sprite_42.sprite");
+  Rollfilm* rf = DeserializeSprites("/tmp/nonexistent_sprite_42.sprite", 0);
   ASSERT_NULL(rf);
 }
 
@@ -500,7 +500,7 @@ static void test_deserialize_sprites_default_frame_explicit(void) {
   rewind(tmp);
   char tmp_path[64];
   snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
-  Rollfilm* rf = DeserializeSprites(tmp_path);
+  Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->default_frame, 0);
   ASSERT_EQ(rf->frame_count, 2);

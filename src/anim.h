@@ -102,9 +102,10 @@ void FreeRollfilm(Rollfilm* rollfilm);
  * Deserialize sprites from a file into a Rollfilm structure.
  * Parses sprite file format with frame size, timing, and color codes.
  * @param filename Path to the sprite file
+ * @param icon_type Icon type index (0=nerd-icons, 1=emojis, 2=ascii)
  * @return Pointer to the created Rollfilm, or NULL on failure
  */
-Rollfilm* DeserializeSprites(const char* filename);
+Rollfilm* DeserializeSprites(const char* filename, int icon_type);
 
 /**
  * ---------------------------------------------------------------------------

@@ -2866,6 +2866,11 @@ void PrefsValueDown(AppData* app) {
     int val = *f->int_value - 1;
     if (val < 0) val = f->option_count - 1;
     *f->int_value = val;
+    if (f->int_value == &g_config.visual.icons_index) {
+      SyncIconsFromIndex();
+      app->animations = app->icon_animations[GetConfigIconType()];
+      app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+    }
     return;
   }
   int val = (f->type == PREF_STEPPER_FLOAT)
@@ -2893,6 +2898,11 @@ void PrefsValueUp(AppData* app) {
     int val = *f->int_value + 1;
     if (val >= f->option_count) val = 0;
     *f->int_value = val;
+    if (f->int_value == &g_config.visual.icons_index) {
+      SyncIconsFromIndex();
+      app->animations = app->icon_animations[GetConfigIconType()];
+      app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+    }
     return;
   }
   int val = (f->type == PREF_STEPPER_FLOAT)
@@ -2920,6 +2930,11 @@ void PrefsToggle(AppData* app) {
     int val = *f->int_value + 1;
     if (val >= f->option_count) val = 0;
     *f->int_value = val;
+    if (f->int_value == &g_config.visual.icons_index) {
+      SyncIconsFromIndex();
+      app->animations = app->icon_animations[GetConfigIconType()];
+      app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+    }
     return;
   }
   if (f->type != PREF_TOGGLE) return;

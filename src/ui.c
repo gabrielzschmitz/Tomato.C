@@ -3654,6 +3654,8 @@ void ClosePrefsEdit(AppData* app) {
 void ClosePrefsSelect(AppData* app) {
   app->prefs.select_index = -1;
   SyncIconsFromIndex();
+  app->animations = app->icon_animations[GetConfigIconType()];
+  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
   FreeFloatingDialog(app->popup_dialog);
   app->popup_dialog = CreatePreferencesDialog(app);
 }

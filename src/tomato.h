@@ -13,6 +13,7 @@
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 #define MAX_ANIMATIONS 8
+#define MAX_ICON_TYPES 3
 #define MAX_MENUS 2
 #define MAX_INPUT_MODES 3
 #define MAX_RECENT_SESSIONS 3
@@ -83,7 +84,8 @@ struct AppData {
   bool frozen;      /**< True if app is frozen due to critical error */
 
   struct Rollfilm*
-    animations[MAX_ANIMATIONS]; /**< Loaded animations for scenes */
+    icon_animations[MAX_ICON_TYPES][MAX_ANIMATIONS]; /**< Loaded animations for all icon types */
+  struct Rollfilm** animations; /**< Pointer to active icon type's animations */
   bool is_paused;               /**< Whether the timer is paused */
   bool running; /**< Whether the app is running (false = exit) */
 
