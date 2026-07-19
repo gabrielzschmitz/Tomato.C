@@ -272,7 +272,8 @@ static void freeTokens(struct FrameToken* tokens) {
 /**
  * Deserialize sprites from a file into a Rollfilm structure.
  * Parses sprite file format with frame size, timing, and color codes.
- * @param filename Path to the sprite file
+ * @param filename  Path to the sprite file
+ * @param icon_type Icon type identifier
  * @return Pointer to the created Rollfilm, or NULL on failure
  */
 Rollfilm* DeserializeSprites(const char* filename, int icon_type) {
@@ -460,15 +461,16 @@ static Rollfilm* cleanupAndReturn(FILE* file, Rollfilm* rollfilm,
 
 /**
  * Process a line containing icons in the sprite file.
- * @param line Line of text to parse
- * @param read Pointer to track bytes read
- * @param rollfilm Pointer to the rollfilm pointer
- * @param head_frame Pointer to the head frame pointer
- * @param current_frame Pointer to the current frame pointer
- * @param head_row Pointer to the head row pointer
- * @param current_row Pointer to the current row pointer
- * @param current_frame_id Pointer to current frame ID
- * @param file File handle for reading
+ * @param line              Line of text to parse
+ * @param read              Pointer to track bytes read
+ * @param rollfilm          Pointer to the rollfilm pointer
+ * @param head_frame        Pointer to the head frame pointer
+ * @param current_frame     Pointer to the current frame pointer
+ * @param head_row          Pointer to the head row pointer
+ * @param current_row       Pointer to the current row pointer
+ * @param current_frame_id  Pointer to current frame ID
+ * @param file              File handle for reading
+ * @param icon_type         Icon type identifier
  * @return 0 on success, non-zero on error
  */
 static int processIconsLine(const char* line, int* read, Rollfilm** rollfilm,

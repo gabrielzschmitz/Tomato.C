@@ -187,9 +187,10 @@ int HistDailyCounts(const char* path, int year, int month, int* counts);
  * @param day       Day (1-31)
  * @param indices   Output array of session indices
  * @param startTimes Output array of unix timestamps
- * @param durations Output array of durations in seconds
- * @param statuses  Output array (0=completed, 1=uncompleted)
- * @param maxCount  Capacity of output arrays
+ * @param endTimes   Output array of unix timestamps
+ * @param durations  Output array of durations in seconds
+ * @param statuses   Output array (0=completed, 1=uncompleted)
+ * @param maxCount   Capacity of output arrays
  * @return Number of sessions found (capped at maxCount)
  */
 int HistSessionsForDay(const char* path, int year, int month, int day,
