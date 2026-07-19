@@ -2674,11 +2674,12 @@ void CreateHistoryDayDialog(AppData* app) {
 
   int indices[100];
   time_t startTimes[100];
+  time_t endTimes[100];
   int durations[100];
   int statuses[100];
   int scount =
     HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
-                       indices, startTimes, durations, statuses, 100);
+                       indices, startTimes, endTimes, durations, statuses, 100);
 
   if (h->dayScroll < 0) h->dayScroll = 0;
   int maxVisible = 10;
@@ -2730,14 +2731,15 @@ void CreateHistoryDayDialog(AppData* app) {
   int startRow = h->dayScroll;
   int endRow = startRow + visible;
   for (int i = startRow; i < endRow && i < scount; i++) {
-    time_t endT = startTimes[i] + durations[i];
-    struct tm* stm = localtime(&startTimes[i]);
-    struct tm* etm = localtime(&endT);
+    time_t endT = endTimes[i];
+    struct tm stm_buf, etm_buf;
+    struct tm* stm = localtime_r(&startTimes[i], &stm_buf);
+    struct tm* etm = localtime_r(&endT, &etm_buf);
     char sts[6], ets[6];
     strftime(sts, 6, "%H:%M", stm);
     strftime(ets, 6, "%H:%M", etm);
     n = snprintf(tp, remaining, "\\aL\\c07\\x01#%-3d\\x07%s\\x17%s\\x27%dm\\n",
-                 indices[i], sts, ets, durations[i] / 60);
+                 i + 1, sts, ets, durations[i] / 60);
     tp += n;
     remaining = (int)(sizeof(text) - (tp - text));
   }
@@ -2825,18 +2827,33 @@ void CreateHistoryStatsDialog(AppData* app) {
   int levelCounts[4] = {0};
 
   /* Read log and aggregate */
+  pomodoroLogRecord allRecs[2000];
+  int nRecs = 0;
   FILE* file = fopen(POMODORO_LOG, "rb");
   if (file) {
-    pomodoroLogRecord rec;
-    while (fread(&rec, sizeof(rec), 1, file) == 1) {
-      if (rec.session_index == 0) continue;
-      time_t ts = (time_t)rec.session_start_time;
+    while (fread(&allRecs[nRecs], sizeof(allRecs[nRecs]), 1, file) == 1) {
+      if (allRecs[nRecs].session_index == 0) continue;
+      nRecs++;
+      if (nRecs >= 2000) break;
+    }
+    fclose(file);
+  }
+
+  /* Deduplicate sessions (keep last record per session_index) and compute focus */
+  {
+    int seenIdx[2000];
+    int seenCycles[2000], seenWork[2000], seenShort[2000], seenLong[2000];
+    int seenStatus[2000];
+    int nSeen = 0;
+
+    for (int i = 0; i < nRecs; i++) {
+      pomodoroLogRecord* rec = &allRecs[i];
+      time_t ts = (time_t)rec->session_start_time;
       struct tm* rtm = localtime(&ts);
       if (!rtm) continue;
       int y = rtm->tm_year + 1900;
       int m = rtm->tm_mon + 1;
 
-      /* Check if within last year: =end year-1 to end year */
       bool inRange = false;
       if (y == endYear || (y == endYear - 1 && m > endMonth) ||
           (y == endYear && m <= endMonth)) {
@@ -2844,12 +2861,32 @@ void CreateHistoryStatsDialog(AppData* app) {
       }
       if (!inRange && endYear > 0) continue;
 
-      totalSessions++;
-      totalFocusMins += rec.current_step_time / 60;
       dayCounts[rtm->tm_wday]++;
       monthCounts[m - 1]++;
+
+      int found = -1;
+      for (int j = 0; j < nSeen; j++) {
+        if (seenIdx[j] == rec->session_index) { found = j; break; }
+      }
+      if (found < 0) {
+        found = nSeen++;
+        seenIdx[found] = rec->session_index;
+      }
+      seenCycles[found] = rec->total_cycles;
+      seenWork[found] = rec->work_time;
+      seenShort[found] = rec->short_pause_time;
+      seenLong[found] = rec->long_pause_time;
+      seenStatus[found] = rec->status;
     }
-    fclose(file);
+
+    for (int i = 0; i < nSeen; i++) {
+      totalSessions++;
+      if (seenStatus[i] == 0) {
+        totalFocusMins += (seenCycles[i] * seenWork[i] * 60 +
+          (seenCycles[i] - 1) * seenShort[i] * 60 +
+          seenLong[i] * 60) / 60;
+      }
+    }
   }
 
   for (int i = 0; i < 7; i++) {
@@ -2886,7 +2923,7 @@ void CreateHistoryStatsDialog(AppData* app) {
         int drs[50];
         int stsArr[50];
         int count =
-          HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, drs, stsArr, 50);
+          HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, NULL, drs, stsArr, 50);
         int level = HistLevelForCount(count);
         levelCounts[level]++;
       }
@@ -3286,7 +3323,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
       int sStatuses[100];
       int scount =
         HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
-                           sIndices, sTimes, sDurations, sStatuses, 100);
+                           sIndices, sTimes, NULL, sDurations, sStatuses, 100);
 
       static const char* dows[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
                                    "Thursday", "Friday", "Saturday"};

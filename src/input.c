@@ -2607,7 +2607,7 @@ void HistoryScrollDown(AppData* app) {
   time_t times[100];
   int dur[100], st[100];
   int total = HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth,
-                                 h->selDay, indices, times, dur, st, 100);
+                                 h->selDay, indices, times, NULL, dur, st, 100);
   if (h->dayScroll < total - 1) h->dayScroll++;
 }
 

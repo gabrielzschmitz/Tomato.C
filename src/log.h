@@ -193,8 +193,8 @@ int HistDailyCounts(const char* path, int year, int month, int* counts);
  * @return Number of sessions found (capped at maxCount)
  */
 int HistSessionsForDay(const char* path, int year, int month, int day,
-                       int* indices, time_t* startTimes, int* durations,
-                       int* statuses, int maxCount);
+                       int* indices, time_t* startTimes, time_t* endTimes,
+                       int* durations, int* statuses, int maxCount);
 
 /**
  * Computes current and longest streak ending at the given date.

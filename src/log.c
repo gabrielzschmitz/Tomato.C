@@ -1083,7 +1083,8 @@ void GetPomodoroHistoryDay(const char* path) {
 
   /* Build unique session list (last record per session_index wins) */
   int uIdx[100], uStatus[100], uCycles[100], uWork[100];
-  time_t uStart[100];
+  int uShort[100], uLong[100];
+  time_t uStart[100], uEnd[100];
   int uCount = 0;
   for (int i = 0; i < count && uCount < 100; i++) {
     int idx = records[i].session_index;
@@ -1097,11 +1098,14 @@ void GetPomodoroHistoryDay(const char* path) {
     if (found < 0) {
       found = uCount++;
       uIdx[found] = idx;
+      uStart[found] = (time_t)records[i].session_start_time;
     }
-    uStart[found] = (time_t)records[i].session_start_time;
     uStatus[found] = records[i].status;
     uCycles[found] = records[i].total_cycles;
     uWork[found] = records[i].work_time;
+    uShort[found] = records[i].short_pause_time;
+    uLong[found] = records[i].long_pause_time;
+    uEnd[found] = (time_t)(records[i].session_start_time + records[i].total_elapsed);
   }
 
   /* Compute stats from unique sessions */
@@ -1111,7 +1115,9 @@ void GetPomodoroHistoryDay(const char* path) {
   for (int i = 0; i < uCount; i++) {
     if (uStatus[i] == 0) {
       completedSessions++;
-      totalWorkSeconds += uCycles[i] * uWork[i] * 60;
+      totalWorkSeconds += (uCycles[i] * uWork[i] * 60) +
+                          ((uCycles[i] - 1) * uShort[i] * 60) +
+                          (uLong[i] * 60);
     }
   }
   int totalWorkMinutes = totalWorkSeconds / 60;
@@ -1129,27 +1135,28 @@ void GetPomodoroHistoryDay(const char* path) {
   snprintf(sCompleted, sizeof(sCompleted), "Completed: %d%%", pct);
 
   /* Determine index column width and build table rows */
-  int idxW = 1;
-  for (int i = 0; i < uCount; i++) {
-    int n = snprintf(NULL, 0, "%d", uIdx[i]);
-    if (n > idxW) idxW = n;
-  }
+  int idxW = snprintf(NULL, 0, "%d", uCount);
   char rows[100][128];
   int maxRow = 0;
   for (int i = 0; i < uCount; i++) {
-    time_t endT = (time_t)uStart[i];
-    int durMin = 0;
+    int durSec;
     if (uStatus[i] == 0) {
-      durMin = uCycles[i] * uWork[i];
-      endT += durMin * 60;
+      durSec = (uCycles[i] * uWork[i] * 60) +
+               ((uCycles[i] - 1) * uShort[i] * 60) +
+               (uLong[i] * 60);
+    } else {
+      durSec = 0;
     }
-    struct tm* stm = localtime(&uStart[i]);
-    struct tm* etm = localtime(&endT);
+    time_t endT = uEnd[i];
+    int durMin = durSec / 60;
+    struct tm stm_buf, etm_buf;
+    struct tm* stm = localtime_r(&uStart[i], &stm_buf);
+    struct tm* etm = localtime_r(&endT, &etm_buf);
     char sts[6], ets[6];
     strftime(sts, 6, "%H:%M", stm);
     strftime(ets, 6, "%H:%M", etm);
     snprintf(rows[i], sizeof(rows[i]), "#%-*d     %s   %s   %d min", idxW,
-             uIdx[i], sts, ets, durMin);
+             i + 1, sts, ets, durMin);
     int len = (int)strlen(rows[i]);
     if (len > maxRow) maxRow = len;
   }
@@ -1239,11 +1246,11 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
         int work = records[i].work_time * 60;
         int shortP = records[i].short_pause_time * 60;
         int longP = records[i].long_pause_time * 60;
-        totalSessionSeconds += (cycles * work) + ((cycles - 1) * shortP) + longP;
+        int totalSec = (cycles * work) + ((cycles - 1) * shortP) + longP;
+        totalSessionSeconds += totalSec;
+        totalWorkSeconds += totalSec;
       }
     }
-    if (records[i].current_step == WORK_TIME && records[i].current_cycle > 0)
-      totalWorkSeconds += records[i].current_step_time;
   }
   stats.completedSessions = nCompleted;
 
@@ -1263,6 +1270,7 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
     }
   }
 
+  stats.totalSessions = uniqueSessions;
   stats.numRecent = uniqueSessions > maxRecent ? maxRecent : uniqueSessions;
   int startIdx = uniqueSessions > maxRecent ? uniqueSessions - maxRecent : 0;
 
@@ -1410,14 +1418,16 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
  * @return Number of sessions found (capped at maxCount)
  */
 int HistSessionsForDay(const char* path, int year, int month, int day,
-                       int* indices, time_t* startTimes, int* durations,
-                       int* statuses, int maxCount) {
+                       int* indices, time_t* startTimes, time_t* endTimes,
+                       int* durations, int* statuses, int maxCount) {
   int count = 0;
 
   FILE* file = fopen(path, "rb");
   if (!file) return 0;
 
   pomodoroLogRecord record;
+  /* Store fields needed for formula per session */
+  int lastCycles[100], lastWork[100], lastShort[100], lastLong[100];
   while (fread(&record, sizeof(record), 1, file) == 1) {
     if (record.session_index == 0) continue;
     time_t ts = (time_t)record.session_start_time;
@@ -1425,23 +1435,45 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
     if (count >= maxCount) break;
 
     /* Each unique session_index is one session */
-    /* Check if we already have this session index */
-    int dup = 0;
+    /* Keep the LAST record per session_index */
+    int dup = -1;
     for (int i = 0; i < count; i++) {
       if (indices[i] == record.session_index) {
-        dup = 1;
+        dup = i;
         break;
       }
     }
-    if (dup) continue;
-
-    indices[count] = record.session_index;
-    startTimes[count] = ts;
-    durations[count] = (int)record.current_step_time;
-    statuses[count] = record.status;
-    count++;
+    if (dup >= 0) {
+      statuses[dup] = record.status;
+      lastCycles[dup] = record.total_cycles;
+      lastWork[dup] = record.work_time;
+      lastShort[dup] = record.short_pause_time;
+      lastLong[dup] = record.long_pause_time;
+    } else {
+      indices[count] = record.session_index;
+      startTimes[count] = ts;
+      statuses[count] = record.status;
+      lastCycles[count] = record.total_cycles;
+      lastWork[count] = record.work_time;
+      lastShort[count] = record.short_pause_time;
+      lastLong[count] = record.long_pause_time;
+      durations[count] = 0;
+      count++;
+    }
+    if (endTimes)
+      endTimes[dup >= 0 ? dup : count - 1] =
+        (time_t)(record.session_start_time + record.total_elapsed);
   }
   fclose(file);
+
+  /* Compute durations from formula */
+  for (int i = 0; i < count; i++) {
+    if (statuses[i] == 0) {
+      durations[i] = (lastCycles[i] * lastWork[i] * 60) +
+                     ((lastCycles[i] - 1) * lastShort[i] * 60) +
+                     (lastLong[i] * 60);
+    }
+  }
   return count;
 }
 
