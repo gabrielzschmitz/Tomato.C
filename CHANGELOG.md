@@ -7,6 +7,44 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-07-19
+
+### Fixed
+
+- **Session duration now includes short and long breaks** — `HistSessionsForDay`
+  and `GetPomodoroHistoryDay` compute duration via the pomodoro formula
+  (`cycles × work + (cycles−1) × short + long`) instead of using
+  `current_step_time` or `total_elapsed`, giving accurate planned session
+  length.
+- **History overview (`-h`) work time now equals full session time** —
+  `createPomodoroHistoryStats` counts total session duration (work + pauses)
+  instead of work-only, matching the per-day display.
+- **TUI history statistics dialog no longer overcounts sessions and focus
+  time** — `CreateHistoryStatsDialog` deduplicates by `session_index` and uses
+  the formula for focus time instead of summing `current_step_time / 60` across
+  every per-minute record (which inflated counts by 145× per session).
+- **Day history dialog end time now reflects real recorded end** —
+  `HistSessionsForDay` returns end times via
+  `session_start_time + total_elapsed` (the actual wall-clock end), not
+  `start_time + formula_duration`, so skipped sessions display the correct
+  end time.
+- **`localtime_r` replaces non-reentrant `localtime`** in history display
+  functions to avoid shared-data races.
+
+### Changed
+
+- **`HistSessionsForDay` signature** — New `time_t* endTimes` parameter for
+  returning real session end times; callers may pass `NULL`.
+- **Row numbering in history dialogs** — Sessions are now numbered sequentially
+  per day (1, 2, 3…) instead of showing the global `session_index`.
+
+### Added
+
+- **Comprehensive unit tests for `HistSessionsForDay`** — 8 new tests covering
+  skipped sessions (endTime == startTime), multi-record deduplication,
+  formula-based duration, end-time from `total_elapsed`, uncompleted sessions
+  (duration 0), same-day multiple sessions, and day filtering.
+
 ## [1.0.2] - 2026-07-18
 
 ### Added
