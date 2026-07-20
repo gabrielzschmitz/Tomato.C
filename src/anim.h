@@ -51,12 +51,13 @@ struct Frame {
 struct Rollfilm {
   struct Frame* frames; /**< Pointer to the circular linked list of frames */
   bool loop;            /**< true to loop the animation, false to stop at end */
-  double delta_frame_ms;  /**< Elapsed time in milliseconds since last frame */
-  int current_frame;      /**< Index of the currently displayed frame */
-  int frame_count;        /**< Total number of frames in the rollfilm */
-  int frame_height;       /**< Height of each frame in lines */
-  int frame_width;        /**< Width of the widest frame */
-  int default_frame;      /**< Default frame index for static (non-animated) display */
+  double delta_frame_ms; /**< Elapsed time in milliseconds since last frame */
+  int current_frame;     /**< Index of the currently displayed frame */
+  int frame_count;       /**< Total number of frames in the rollfilm */
+  int frame_height;      /**< Height of each frame in lines */
+  int frame_width;       /**< Width of the widest frame */
+  int
+    default_frame; /**< Default frame index for static (non-animated) display */
   AnimationUpdate update; /**< Function pointer for custom update logic */
   AnimationRender render; /**< Function pointer for custom render logic */
 };

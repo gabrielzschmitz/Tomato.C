@@ -83,8 +83,9 @@ struct AppData {
   bool block_input; /**< True to ignore user input temporarily */
   bool frozen;      /**< True if app is frozen due to critical error */
 
-  struct Rollfilm*
-    icon_animations[MAX_ICON_TYPES][MAX_ANIMATIONS]; /**< Loaded animations for all icon types */
+  struct Rollfilm* icon_animations
+    [MAX_ICON_TYPES]
+    [MAX_ANIMATIONS];           /**< Loaded animations for all icon types */
   struct Rollfilm** animations; /**< Pointer to active icon type's animations */
   bool is_paused;               /**< Whether the timer is paused */
   bool running; /**< Whether the app is running (false = exit) */
@@ -93,10 +94,10 @@ struct AppData {
   WhiteNoiseData noise_data;  /**< White noise playback state */
   NotesData* notes;           /**< Notes/text editor data */
 
-  Notification notification_work;         /**< Work notification */
-  Notification notification_short_pause;  /**< Short pause notification */
-  Notification notification_long_pause;   /**< Long pause notification */
-  Notification notification_end_cycle;    /**< End-of-cycle notification */
+  Notification notification_work;        /**< Work notification */
+  Notification notification_short_pause; /**< Short pause notification */
+  Notification notification_long_pause;  /**< Long pause notification */
+  Notification notification_end_cycle;   /**< End-of-cycle notification */
 
   ClickRegion click_regions[MAX_CLICK_REGIONS]; /**< Mouse click regions */
   int click_region_count; /**< Number of registered click regions */

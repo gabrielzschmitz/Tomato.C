@@ -1359,11 +1359,10 @@ void StartPomodoro(AppData* app) {
       MAIN_MENU)
     return;
 
-  bool has_active_session =
-    app->pomodoro_data.session_index > 0 &&
-    (app->pomodoro_data.current_step == WORK_TIME ||
-     app->pomodoro_data.current_step == SHORT_PAUSE ||
-     app->pomodoro_data.current_step == LONG_PAUSE);
+  bool has_active_session = app->pomodoro_data.session_index > 0 &&
+                            (app->pomodoro_data.current_step == WORK_TIME ||
+                             app->pomodoro_data.current_step == SHORT_PAUSE ||
+                             app->pomodoro_data.current_step == LONG_PAUSE);
 
   if (has_active_session) {
     ExecuteHistory(app->screen->panels[0].scene_history,

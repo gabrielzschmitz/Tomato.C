@@ -3,8 +3,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ncurses.h>
-
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +13,8 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "config.h"
 
 /* O_NOFOLLOW is not exposed by all macOS SDK configurations. */
 #ifndef O_NOFOLLOW
@@ -148,10 +148,14 @@ bool CheckConfigIconType(void) {
  */
 IconType GetConfigIconType(void) {
   switch (g_config.visual.icons_index) {
-    case 0: return NERD_ICONS;
-    case 1: return EMOJIS;
-    case 2: return ASCII;
-    default: return ASCII;
+    case 0:
+      return NERD_ICONS;
+    case 1:
+      return EMOJIS;
+    case 2:
+      return ASCII;
+    default:
+      return ASCII;
   }
 }
 

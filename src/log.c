@@ -1105,7 +1105,8 @@ void GetPomodoroHistoryDay(const char* path) {
     uWork[found] = records[i].work_time;
     uShort[found] = records[i].short_pause_time;
     uLong[found] = records[i].long_pause_time;
-    uEnd[found] = (time_t)(records[i].session_start_time + records[i].total_elapsed);
+    uEnd[found] =
+      (time_t)(records[i].session_start_time + records[i].total_elapsed);
   }
 
   /* Compute stats from unique sessions */
@@ -1116,8 +1117,7 @@ void GetPomodoroHistoryDay(const char* path) {
     if (uStatus[i] == 0) {
       completedSessions++;
       totalWorkSeconds += (uCycles[i] * uWork[i] * 60) +
-                          ((uCycles[i] - 1) * uShort[i] * 60) +
-                          (uLong[i] * 60);
+                          ((uCycles[i] - 1) * uShort[i] * 60) + (uLong[i] * 60);
     }
   }
   int totalWorkMinutes = totalWorkSeconds / 60;
@@ -1142,8 +1142,7 @@ void GetPomodoroHistoryDay(const char* path) {
     int durSec;
     if (uStatus[i] == 0) {
       durSec = (uCycles[i] * uWork[i] * 60) +
-               ((uCycles[i] - 1) * uShort[i] * 60) +
-               (uLong[i] * 60);
+               ((uCycles[i] - 1) * uShort[i] * 60) + (uLong[i] * 60);
     } else {
       durSec = 0;
     }
@@ -1173,7 +1172,8 @@ void GetPomodoroHistoryDay(const char* path) {
   int statW = sl1 > sl2 ? sl1 : sl2;
   if (sl3 > statW) statW = sl3;
   char header[64];
-  snprintf(header, sizeof(header), "#%-*s     Start   End     Duration", idxW, "");
+  snprintf(header, sizeof(header), "#%-*s     Start   End     Duration", idxW,
+           "");
   int hdrW = (int)strlen(header);
   if (hdrW > maxRow) maxRow = hdrW;
   int innerW = statW > maxRow ? statW : maxRow;
@@ -1239,7 +1239,10 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
     if (records[i].status == 0 && records[i].session_index > 0) {
       int dup = 0;
       for (int j = 0; j < nCompleted; j++)
-        if (completedIdx[j] == records[i].session_index) { dup = 1; break; }
+        if (completedIdx[j] == records[i].session_index) {
+          dup = 1;
+          break;
+        }
       if (!dup) {
         completedIdx[nCompleted++] = records[i].session_index;
         int cycles = records[i].total_cycles;

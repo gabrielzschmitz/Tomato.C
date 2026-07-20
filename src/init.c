@@ -347,9 +347,8 @@ static ErrorType initWhiteNoise(AppData* app) {
   InitWhiteNoiseData(&app->noise_data);
   if (g_config.noise.track_count == 0) return NO_ERROR;
 
-  WhiteNoiseTrackDef* tracks =
-    (WhiteNoiseTrackDef*)calloc(g_config.noise.track_count,
-                                sizeof(WhiteNoiseTrackDef));
+  WhiteNoiseTrackDef* tracks = (WhiteNoiseTrackDef*)calloc(
+    g_config.noise.track_count, sizeof(WhiteNoiseTrackDef));
   if (!tracks) return MALLOC_ERROR;
   for (int i = 0; i < g_config.noise.track_count; i++) {
     tracks[i].name = g_config.noise.tracks[i].name;

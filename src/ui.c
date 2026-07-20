@@ -2866,7 +2866,10 @@ void CreateHistoryStatsDialog(AppData* app) {
 
       int found = -1;
       for (int j = 0; j < nSeen; j++) {
-        if (seenIdx[j] == rec->session_index) { found = j; break; }
+        if (seenIdx[j] == rec->session_index) {
+          found = j;
+          break;
+        }
       }
       if (found < 0) {
         found = nSeen++;
@@ -2882,9 +2885,10 @@ void CreateHistoryStatsDialog(AppData* app) {
     for (int i = 0; i < nSeen; i++) {
       totalSessions++;
       if (seenStatus[i] == 0) {
-        totalFocusMins += (seenCycles[i] * seenWork[i] * 60 +
-          (seenCycles[i] - 1) * seenShort[i] * 60 +
-          seenLong[i] * 60) / 60;
+        totalFocusMins +=
+          (seenCycles[i] * seenWork[i] * 60 +
+           (seenCycles[i] - 1) * seenShort[i] * 60 + seenLong[i] * 60) /
+          60;
       }
     }
   }
@@ -2922,8 +2926,8 @@ void CreateHistoryStatsDialog(AppData* app) {
         time_t sts[50];
         int drs[50];
         int stsArr[50];
-        int count =
-          HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, NULL, drs, stsArr, 50);
+        int count = HistSessionsForDay(POMODORO_LOG, y, m, d, ids, sts, NULL,
+                                       drs, stsArr, 50);
         int level = HistLevelForCount(count);
         levelCounts[level]++;
       }
