@@ -216,8 +216,8 @@ build_tests() {
 # */
 list_tests() {
   local unit_bins int_bins b
-  unit_bins=$(find "$TESTS_DIR/unit" -maxdepth 1 -type f -executable -name 'test_*' 2>/dev/null | sort)
-  int_bins=$(find "$TESTS_DIR/integration" -maxdepth 1 -type f -executable -name 'test_*' 2>/dev/null | sort)
+  unit_bins=$(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 -name 'test_*' 2>/dev/null | sort)
+  int_bins=$(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 -name 'test_*' 2>/dev/null | sort)
   echo " ${BOLD}Discovered test suites:${RESET}"
   echo ""
   for b in $unit_bins; do
@@ -241,10 +241,10 @@ discover_tests() {
   local run_unit=$1 run_int=$2
   local result=""
   if [ "$run_unit" = "1" ]; then
-    result="$result $(find "$TESTS_DIR/unit" -maxdepth 1 -type f -executable 2>/dev/null | sort)"
+    result="$result $(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 2>/dev/null | sort)"
   fi
   if [ "$run_int" = "1" ]; then
-    result="$result $(find "$TESTS_DIR/integration" -maxdepth 1 -type f -executable 2>/dev/null | sort)"
+    result="$result $(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 2>/dev/null | sort)"
   fi
 
   if [ -n "$FILTER" ]; then
