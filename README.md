@@ -38,6 +38,22 @@ cd Tomato.C
 ```
 </details>
 
+<details>
+<summary>Uninstall</summary>
+
+From local repo:
+
+```bash
+sudo ./install.sh --uninstall
+```
+
+Via curl:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/install.sh | bash -s -- --uninstall
+```
+</details>
+
 ---
 
 ## Usage

@@ -1,18 +1,21 @@
 #!/bin/sh
 #/**
 # * @file install.sh
-# * @brief Tomato.C Installer.
+# * @brief Tomato.C Installer / Uninstaller.
 # *
 # * Detects the operating system, installs build dependencies, compiles
 # * the binary with the correct data path, and installs it system-wide.
+# * Also supports removing installed files via --uninstall.
 # * Supports Debian/Ubuntu, Fedora/RHEL, Arch/CachyOS, Alpine, openSUSE,
 # * and macOS (Homebrew).
 # *
 # * Usage: ./install.sh [--prefix=<dir>] [--destdir=<dir>]
+# *        ./install.sh --uninstall [--prefix=<dir>] [--destdir=<dir>]
 # *
 # * Options:
 # *   --prefix=<dir>   Installation prefix (default: /usr/local)
 # *   --destdir=<dir>  Staging directory for packaged installs
+# *   --uninstall      Remove installed files (binary, data, desktop entry)
 # *   --help|-h        Show this help
 # *
 # * Exit codes: 0 = success, nonzero = failure
@@ -28,6 +31,7 @@ set -u
 
 PREFIX="/usr/local"
 DESTDIR=""
+UNINSTALL=0
 OS_ID=""; OS_NAME=""; PKG_MANAGER=""
 
 #/**
@@ -69,9 +73,11 @@ usage() {
   echo "${BOLD}Tomato.C Installer${RESET}"
   echo ""
   echo "Usage: $0 [--prefix=<dir>] [--destdir=<dir>]"
+  echo "       $0 --uninstall [--prefix=<dir>] [--destdir=<dir>]"
   echo ""
   echo "  --prefix=<dir>   Installation prefix (default: /usr/local)"
   echo "  --destdir=<dir>  Staging directory for packaged installs"
+  echo "  --uninstall      Remove installed files (binary, data, desktop entry)"
   echo "  --help|-h        Show this help"
   echo ""
   exit 0
@@ -89,6 +95,9 @@ parse_args() {
         ;;
       --destdir=*)
         DESTDIR="${1#*=}"
+        ;;
+      --uninstall)
+        UNINSTALL=1
         ;;
       --help|-h)
         usage
@@ -320,15 +329,51 @@ install_files() {
 
 #/**
 # * ---------------------------------------------------------------------------
+# * Uninstall
+# * ---------------------------------------------------------------------------
+# */
+
+#/**
+# * @brief Remove installed files from the system prefix.
+# *
+# * Deletes the binary, the entire share/tomato data directory,
+# * and the desktop entry (Linux only).  The user config at
+# * ~/.config/tomato is kept.
+# */
+uninstall_files() {
+  local install_dir="${DESTDIR}${PREFIX}"
+
+  echo " ${CYAN}[UNINSTALL]${RESET} Removing from ${BOLD}${install_dir}${RESET}..."
+
+  sudo rm -f "${install_dir}/bin/tomato"
+  echo "   ${GREEN}[OK]${RESET}  Removed ${install_dir}/bin/tomato"
+
+  sudo rm -rf "${install_dir}/share/tomato"
+  echo "   ${GREEN}[OK]${RESET}  Removed ${install_dir}/share/tomato"
+
+  if [ "$(uname -s)" = "Linux" ]; then
+    sudo rm -f "${install_dir}/share/applications/tomato.desktop"
+    echo "   ${GREEN}[OK]${RESET}  Removed ${install_dir}/share/applications/tomato.desktop"
+  fi
+
+  echo ""
+  echo " ${GREEN}${BOLD}Uninstall complete.${RESET}"
+  echo " User config at ~/.config/tomato was kept."
+}
+
+#/**
+# * ---------------------------------------------------------------------------
 # * Main
 # * ---------------------------------------------------------------------------
 # */
 
 #/**
-# * @brief Orchestrate the full install workflow.
+# * @brief Orchestrate the full install or uninstall workflow.
 # *
-# * Initialises colours, parses arguments, detects the OS, installs
-# * build dependencies, compiles the project, then installs system-wide.
+# * When --uninstall is given, only removes installed files.
+# * Otherwise, initialises colours, parses arguments, detects the OS,
+# * installs build dependencies, compiles the project, then installs
+# * system-wide.
 # *
 # * @param $@  Arguments forwarded from the shell.
 # */
@@ -347,6 +392,12 @@ main() {
 
   init_colors
   parse_args "$@"
+
+  if [ "$UNINSTALL" -eq 1 ]; then
+    uninstall_files
+    exit 0
+  fi
+
   detect_os
   install_dependencies
   build_project
