@@ -13,35 +13,37 @@ session history logging.
 
 ---
 
-## Quick Start
+## Installation
 
-### 1. Clone the repository
+Choose the installation method that best fits your needs. **Homebrew** is
+recommended for macOS, the **install script** is the quickest option for
+Linux and macOS, and **building from source** is ideal if you want to
+customize or contribute to the project.
+
+<details>
+<summary>Quick install script</summary>
+
+```bash
+curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/install.sh | bash
+```
+</details>
+
+<details>
+<summary>Build from source</summary>
 
 ```bash
 git clone https://github.com/gabrielzschmitz/Tomato.C.git
 cd Tomato.C
-```
-
-### 2. Build and run
-
-```bash
 ./build.sh
-./tomato
 ```
-
-### 3. Install and run
-
-```bash
-sudo ./build.sh --install
-tomato
-```
+</details>
 
 ---
 
 ## Usage
 
 Pomodoro controls and navigation are handled via keyboard shortcuts and mouse
-input. To get help with the keybinds press `?`/`F1`
+input. To get help with the keybinds press `?`/`F1` at anytime!
 
 <p align="center">
   <img src="./resources/demo.gif" alt="Tomato.C demonstration" style="width: 484px; border: 3px solid #e06e6e; padding: 0;">
@@ -57,24 +59,13 @@ input. To get help with the keybinds press `?`/`F1`
 
 ## Configuration
 
-Tomato.C uses a _toml_ configuration file. A fully commented example is
-provided as `sample_config.toml`. Copy it to the configuration directory:
-
-```bash
-mkdir -p ~/.config/tomato
-cp sample_config.toml ~/.config/tomato/config.toml
-```
+Tomato.C uses a _toml_ configuration file. When installed via `install.sh`, a
+fully commented sample config is automatically created at
+`~/.config/tomato/config.toml`.
 
 All available options are documented directly in the file, including timer
 durations, status bar modules, notifications, animations, keybindings, and
 other general settings.
-
----
-
-## Contribute
-
-Feel free to contribute to the project, the requirement is to follow
-conventional commit and use the `.clang-format` to format the files!
 
 ---
 
@@ -98,6 +89,15 @@ cd docs
 ./generate.sh
 $BROWSER output/html/index.html
 ```
+
+---
+
+## Contribute
+
+Feel free to contribute to the project, the requirements are to follow
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0), follow
+[DOXYGEN](https://www.doxygen.nl/index.html) style of documenting code and use
+`.clang-format` to format the files.
 
 ---
 

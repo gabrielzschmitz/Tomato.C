@@ -12,7 +12,7 @@
 # *   macos-arm-build-test    — build on macos-latest (ARM) with Clang
 # */
 
-name: Build test
+name: Build
 on:
   - push
   - pull_request

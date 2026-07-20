@@ -73,6 +73,7 @@ init_colors() {
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
+      MAGENTA=$(tput setaf 5)
       CYAN=$(tput setaf 6)
       BOLD=$(tput bold)
       RESET=$(tput sgr0)
@@ -161,18 +162,17 @@ setup_paths() {
 # */
 clean_artifacts() {
   echo " ${BOLD}Cleaning build artifacts...${RESET}"
-  echo ""
   local clean_output
   clean_output=$(/usr/bin/make -C "$TESTS_DIR" clean 2>&1)
 
   local clean_exit=$?
   if [ "$clean_exit" -ne 0 ]; then
     echo "$clean_output" | sed 's/^/  /'
-    echo "  ${RED}❌${RESET}  Clean failed${RESET}"
+    echo "  ${RED}[ERR]${RESET}  Clean failed${RESET}"
     echo ""
     exit 1
   fi
-  echo "  ${GREEN}✅${RESET}  Clean done"
+  echo "  ${GREEN}[OK]${RESET}  Clean done"
   echo ""
 }
 
@@ -189,20 +189,19 @@ build_tests() {
   [ "$UBSAN" = "1" ] && build_flags="$build_flags UBSAN=1"
 
   echo " ${BOLD}Building tests...${RESET}"
-  echo ""
 
   local build_output
   build_output=$(/usr/bin/make -B -C "$TESTS_DIR" build $build_flags 2>&1)
 
   local build_exit=$?
   if [ "$build_exit" -ne 0 ]; then
-    echo "  ${RED}❌${RESET}  Build failed${RESET}"
+    echo "  ${RED}[ERR]${RESET}  Build failed${RESET}"
     echo "$build_output" | sed 's/^/   /'
     echo ""
     print_summary 0 0 0 0 0 0 0 0 0 0 ""
     exit 1
   fi
-  echo "  ${GREEN}✅${RESET}  Build successful"
+  echo "  ${GREEN}[OK]${RESET}  Build successful"
 }
 
 #/**
@@ -271,9 +270,9 @@ discover_tests() {
 # * @brief Print the top-level header banner.
 # */
 print_header() {
-  echo "${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
   echo "${BOLD}  Tomato.C Test Suite${RESET}"
-  echo "${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
   echo ""
 }
 
@@ -304,9 +303,9 @@ print_summary() {
   local skipped=$((unit_skip + int_skip))
 
   echo ""
-  echo "${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
   echo " ${BOLD}Summary${RESET}"
-  echo "${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
   echo ""
   echo "  Unit suites:        $unit_total"
   echo "  Integration suites: $int_total"
@@ -327,7 +326,7 @@ print_summary() {
   if [ "$failed" -gt 0 ]; then
     echo "  ${RED}Failed suites:${RESET}"
     for f in $failed_names; do
-      echo "  ${RED}❌${RESET}  $f"
+      echo "  ${RED}[ERR]${RESET}  $f"
     done
     echo ""
   fi
@@ -380,11 +379,11 @@ run_test_binary() {
   local padded_name
   padded_name=$(printf "%-44s" "$name")
   if [ "$result" = "PASS" ]; then
-    echo "  ${GREEN}✅${RESET}  ${BOLD}$padded_name${GREEN}PASS${RESET}  (${pass_count})"
+    echo "  ${GREEN}[OK]${RESET}  ${BOLD}$padded_name${GREEN}PASS${RESET}  (${pass_count})"
   elif [ "$result" = "FAIL" ]; then
-    echo "  ${RED}❌${RESET}  ${BOLD}$padded_name${RED}FAIL${RESET}  (${pass_count})"
+    echo "  ${RED}[ERR]${RESET}  ${BOLD}$padded_name${RED}FAIL${RESET}  (${pass_count})"
   elif [ "$result" = "CRASH" ]; then
-    echo "  ${RED}❌${RESET}  ${BOLD}$padded_name${RED}CRASH${RESET} (exit code $exit_code)"
+    echo "  ${RED}[ERR]${RESET}  ${BOLD}$padded_name${RED}CRASH${RESET} (exit code $exit_code)"
   else
     echo "  ${YELLOW}?${RESET}  $padded_name${YELLOW}UNKNOWN${RESET}"
   fi

@@ -1,172 +1,226 @@
 #!/bin/sh
+#/**
+# * @file build.sh
+# * @brief Tomato.C Build Script.
+# *
+# * Compiles the Tomato.C Pomodoro timer from source using GNU Make.
+# * Optionally generates compile_commands.json via bear for LSP support.
+# *
+# * Usage: ./build.sh [--debug] [--no-move] [--verbose] [--output-dir=<dir>]
+# *
+# * Options:
+# *   --debug              Enable debug mode (DEBUG=1)
+# *   --no-move            Keep the binary inside build/
+# *   --verbose            Verbose make output
+# *   --output-dir=<dir>   Custom output directory for the binary
+# *   --help|-h            Show this help
+# *
+# * Environment:
+# *   DATAPREFIX           Override embedded data directory path (set by install.sh)
+# *
+# * Exit codes: 0 = success, nonzero = failure
+# */
 
-# Function to display usage instructions
-usage() {
-  echo "Usage: $0 [--debug] [--no-move] [--verbose] [--output-dir=<dir>]"
-  echo "            [--install] [--prefix=<dir>] [--destdir=<dir>]"
-  echo "  --debug: Enable debug mode (set DEBUG=1)"
-  echo "  --no-move: Skip moving the 'tomato' executable to the project root"
-  echo "  --verbose: Enable verbose output during the build"
-  echo "  --output-dir=<dir>: Specify a custom directory for build output"
-  echo "  --install: Build and install the binary and data files"
-  echo "  --prefix=<dir>: Installation prefix (default: /usr/local)"
-  echo "  --destdir=<dir>: Staging directory for packaged installs"
-  exit 1
-}
+set -u
 
-# Check if the number of arguments is greater than 9
-if [ $# -gt 9 ]; then
-  usage
-fi
+#/**
+# * ---------------------------------------------------------------------------
+# * Global state
+# * ---------------------------------------------------------------------------
+# */
 
-# Default values
 DEBUG=0
 NO_MOVE=0
 VERBOSE=""
 OUTPUT_DIR="."
-INSTALL=0
-PREFIX="/usr/local"
-DESTDIR=""
 
-# Parse arguments
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --debug)
-      DEBUG=1
-      ;;
-    --no-move)
-      NO_MOVE=1
-      ;;
-    --verbose)
-      VERBOSE=1
-      ;;
-    --output-dir=*)
-      OUTPUT_DIR="${1#*=}"
-      ;;
-    --install)
-      INSTALL=1
-      ;;
-    --prefix=*)
-      PREFIX="${1#*=}"
-      ;;
-    --destdir=*)
-      DESTDIR="${1#*=}"
-      ;;
-    *)
-      usage
-      ;;
-  esac
-  shift
-done
+#/**
+# * ---------------------------------------------------------------------------
+# * Color support
+# * ---------------------------------------------------------------------------
+# */
 
-# Determine the make target and enter build directory
-MAKE_TARGET="clean-all"
-cd build
-
-# Check if bear is installed
-if command -v bear >/dev/null 2>&1; then
-  BEAR_INSTALLED=1
-else
-  BEAR_INSTALLED=0
-fi
-
-# Override DATAPREFIX for install builds so the compiled binary
-# embeds the absolute data directory path.
-if [ "$INSTALL" -eq 1 ]; then
-  DATAPREFIX_OVERRIDE="DATAPREFIX=${DESTDIR}${PREFIX}/share/tomato"
-else
-  DATAPREFIX_OVERRIDE=""
-fi
-
-# Run the make command with the appropriate DATAPREFIX, DEBUG, VERBOSE, and TARGET values
-if [ "$DEBUG" -eq 1 ]; then
-  if [ "$BEAR_INSTALLED" -eq 1 ]; then
-    if [ -n "$VERBOSE" ]; then
-      bear -- make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET V=1
-    else
-      bear -- make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET
-    fi
-    if [ -f "compile_commands.json" ]; then
-      mv compile_commands.json ..
-    fi
-  else
-    echo "Bear not installed. Proceeding without it."
-    if [ -n "$VERBOSE" ]; then
-      make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET V=1
-    else
-      make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET
+#/**
+# * @brief Initialise ANSI colour variables if output is a TTY and
+# *        NO_COLOR is not set.
+# */
+init_colors() {
+  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; RESET=''
+  if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
+    if command -v tput >/dev/null 2>&1 && tput colors 2>/dev/null | grep -q '[0-9]'; then
+      RED=$(tput setaf 1)
+      GREEN=$(tput setaf 2)
+      YELLOW=$(tput setaf 3)
+      MAGENTA=$(tput setaf 5)
+      CYAN=$(tput setaf 6)
+      BOLD=$(tput bold)
+      RESET=$(tput sgr0)
     fi
   fi
-else
-  if [ -n "$VERBOSE" ]; then
-    make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET V=1
-  else
-    make $DATAPREFIX_OVERRIDE DEBUG=$DEBUG $MAKE_TARGET
-  fi
-fi
+}
 
-# Move the executable to the specified directory if no-move is not set
-if [ $NO_MOVE -eq 0 ]; then
-  if [ "$OUTPUT_DIR" = "." ]; then
-    mv tomato ..
-  else
-    mv tomato "$OUTPUT_DIR"
-  fi
-fi
+#/**
+# * ---------------------------------------------------------------------------
+# * Argument parsing
+# * ---------------------------------------------------------------------------
+# */
 
-# Navigate back to the project root
-cd ..
+#/**
+# * @brief Print usage information and exit.
+# */
+usage() {
+  echo ""
+  echo "${BOLD}Tomato.C Build Script${RESET}"
+  echo ""
+  echo "Usage: $0 [--debug] [--no-move] [--verbose] [--output-dir=<dir>]"
+  echo ""
+  echo "  --debug              Enable debug mode (DEBUG=1)"
+  echo "  --no-move            Keep the binary inside build/"
+  echo "  --verbose            Verbose make output"
+  echo "  --output-dir=<dir>   Custom output directory for the binary"
+  echo "  --help|-h            Show this help"
+  echo ""
+  echo "Environment:"
+  echo "  DATAPREFIX           Override embedded data directory path"
+  echo ""
+  exit 0
+}
 
-# ---------------------------------------------------------------------------
-# Install step
-# ---------------------------------------------------------------------------
-if [ "$INSTALL" -eq 1 ]; then
-  # Locate the built binary
-  if [ "$NO_MOVE" -eq 1 ]; then
-    TOMATO_SRC="build/tomato"
-  elif [ "$OUTPUT_DIR" = "." ]; then
-    TOMATO_SRC="tomato"
-  else
-    TOMATO_SRC="$OUTPUT_DIR/tomato"
-  fi
+#/**
+# * @brief Parse command-line arguments into global variables.
+# * @param $@  Arguments from the command line.
+# */
+parse_args() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --debug)
+        DEBUG=1
+        ;;
+      --no-move)
+        NO_MOVE=1
+        ;;
+      --verbose)
+        VERBOSE=1
+        ;;
+      --output-dir=*)
+        OUTPUT_DIR="${1#*=}"
+        ;;
+      --help|-h)
+        usage
+        ;;
+      *)
+        echo "${RED} Unknown option: $1${RESET}" >&2
+        echo " Try $0 --help for available options." >&2
+        exit 1
+        ;;
+    esac
+    shift
+  done
 
-  INSTALL_DIR="${DESTDIR}${PREFIX}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
+  echo " ${BOLD}Tomato.C Build${RESET}"
+  echo "${MAGENTA}═══════════════════════════════════════════════════════════════${RESET}"
+  echo ""
+  echo " ${BOLD}Configuration:${RESET}"
+  echo "   Debug     : ${DEBUG}"
+  echo "   No-move   : ${NO_MOVE}"
+  echo "   Verbose   : ${VERBOSE:-0}"
+  echo "   Output-dir: ${OUTPUT_DIR}"
+  echo "   DATAPREFIX: ${DATAPREFIX:-"(default: ./resources)"}"
+  echo ""
+}
 
-  # Check write permission before attempting installation
-  if ! mkdir -p "${INSTALL_DIR}" 2>/dev/null; then
-    echo "Error: Permission denied. Cannot write to ${INSTALL_DIR}." >&2
-    echo "Try: sudo ${0} --install" >&2
+#/**
+# * ---------------------------------------------------------------------------
+# * Build
+# * ---------------------------------------------------------------------------
+# */
+
+#/**
+# * @brief Compile the project with GNU Make.
+# *
+# * Changes into build/, invokes make with the selected flags, and
+# * optionally generates compile_commands.json when bear is available.
+# * Moves the resulting binary to the project root (or OUTPUT_DIR)
+# * unless --no-move was requested.
+# */
+build() {
+  local make_target="clean-all"
+
+  echo " ${CYAN}[MAKE]${RESET} Entering build directory..."
+
+  if ! cd build; then
+    echo " ${RED}[ERR]${RESET}  build/ directory not found" >&2
     exit 1
   fi
 
-  echo "Installing to ${INSTALL_DIR}..."
-
-  # Binary
-  mkdir -p "${INSTALL_DIR}/bin" || exit 1
-  cp "$TOMATO_SRC" "${INSTALL_DIR}/bin/tomato" || exit 1
-  chmod 755 "${INSTALL_DIR}/bin/tomato" || exit 1
-
-  # Data files
-  DATADIR_INSTALL="${INSTALL_DIR}/share/tomato"
-  mkdir -p "$DATADIR_INSTALL/sprites" || exit 1
-  mkdir -p "$DATADIR_INSTALL/sounds" || exit 1
-  mkdir -p "$DATADIR_INSTALL/icons" || exit 1
-  cp resources/sprites/*.asc "$DATADIR_INSTALL/sprites/" || exit 1
-  cp resources/sounds/*.mp3 "$DATADIR_INSTALL/sounds/" || exit 1
-  cp resources/icons/* "$DATADIR_INSTALL/icons/" || exit 1
-  chmod 644 "$DATADIR_INSTALL/sprites/"* || exit 1
-  chmod 644 "$DATADIR_INSTALL/sounds/"* || exit 1
-  chmod 644 "$DATADIR_INSTALL/icons/"* || exit 1
-
-  # Desktop file (Linux only)
-  if [ "$(uname -s)" = "Linux" ]; then
-    mkdir -p "${INSTALL_DIR}/share/applications" || exit 1
-    cp tomato.desktop "${INSTALL_DIR}/share/applications/tomato.desktop" || exit 1
-    sed -i "s|Icon=.*|Icon=${INSTALL_DIR}/share/tomato/icons/tomato.svg|" \
-      "${INSTALL_DIR}/share/applications/tomato.desktop" || exit 1
-    chmod 644 "${INSTALL_DIR}/share/applications/tomato.desktop" || exit 1
-    echo "Desktop entry installed to ${INSTALL_DIR}/share/applications/tomato.desktop"
+  # Detect bear
+  local bear_prefix=""
+  if command -v bear >/dev/null 2>&1; then
+    bear_prefix="bear --"
+    echo " ${GREEN}[OK]${RESET}  bear detected — compile_commands.json will be generated"
   fi
 
-  echo "Installation complete."
-fi
+  # Build command
+  local make_cmd="$bear_prefix make"
+  [ "$DEBUG" -eq 1 ] && make_cmd="$make_cmd DEBUG=$DEBUG"
+  [ -n "$VERBOSE" ] && make_cmd="$make_cmd V=1"
+  [ -n "${DATAPREFIX:-}" ] && make_cmd="$make_cmd DATAPREFIX=$DATAPREFIX"
+
+  echo " ${CYAN}[MAKE]${RESET} Running: ${BOLD}$make_cmd $make_target${RESET}"
+  echo ""
+
+  if [ -n "$bear_prefix" ]; then
+    $make_cmd $make_target
+    if [ -f "compile_commands.json" ]; then
+      mv compile_commands.json ..
+      echo " ${GREEN}[OK]${RESET}  compile_commands.json moved to project root"
+    fi
+  else
+    $make_cmd $make_target
+  fi
+
+  local build_exit=$?
+  if [ "$build_exit" -ne 0 ]; then
+    echo ""
+    echo " ${RED}[ERR]${RESET}  Build failed (exit code $build_exit)" >&2
+    cd ..
+    exit 1
+  fi
+
+  # Move the executable
+  if [ "$NO_MOVE" -eq 0 ]; then
+    if [ "$OUTPUT_DIR" = "." ]; then
+      mv tomato ..
+      echo " ${GREEN}[OK]${RESET}  Binary moved to project root"
+    else
+      mv tomato "$OUTPUT_DIR"
+      echo " ${GREEN}[OK]${RESET}  Binary moved to ${OUTPUT_DIR}"
+    fi
+  else
+    echo " ${YELLOW}[WARN]${RESET}  Binary left in build/ (--no-move)"
+  fi
+
+  cd ..
+
+  echo ""
+  echo " ${GREEN}${BOLD}Build complete.${RESET}  Run ${BOLD}./tomato${RESET} to start."
+}
+
+#/**
+# * ---------------------------------------------------------------------------
+# * Main
+# * ---------------------------------------------------------------------------
+# */
+
+#/**
+# * @brief Main entry point.
+# * @param $@  Command-line arguments forwarded from the shell.
+# */
+main() {
+  init_colors
+  parse_args "$@"
+  build
+}
+
+main "$@"
