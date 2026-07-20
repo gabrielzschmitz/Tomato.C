@@ -295,7 +295,7 @@ print_header() {
 print_summary() {
   local unit_total=$1 unit_pass=$2 unit_fail=$3 unit_skip=$4
   local int_total=$5 int_pass=$6 int_fail=$7 int_skip=$8
-  local assertions=$9 total_time=$10
+  local assertions=$9 total_time=${10}
   shift 10
   local failed_names="$*"
 
