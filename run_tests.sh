@@ -68,6 +68,7 @@ FAILED_NAMES=""
 # *        neither NO_COLOR nor CI are set.
 # */
 init_colors() {
+  RED=''; GREEN=''; YELLOW=''; MAGENTA=''; CYAN=''; BOLD=''; RESET=''
   if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ] && [ "${CI:-}" = "" ]; then
     if command -v tput >/dev/null 2>&1 && tput colors 2>/dev/null | grep -q '[0-9]'; then
       RED=$(tput setaf 1)
