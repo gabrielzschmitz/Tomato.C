@@ -33,7 +33,7 @@ jobs:
           sudo apt install -y build-essential pkg-config \
             libncursesw5-dev libnotify-dev
       - name: Build and run tests
-        run: ./run_tests.sh
+        run: ./run_tests.sh --verbose --clean
 
   #/**
   # * Build and run all tests on macOS (Intel x86_64).
@@ -48,7 +48,7 @@ jobs:
       - name: Install build dependencies
         run: brew install ncurses
       - name: Build and run tests
-        run: ./run_tests.sh
+        run: ./run_tests.sh --verbose --clean
 
   #/**
   # * Build and run all tests on macOS (Apple Silicon ARM64).
@@ -62,4 +62,4 @@ jobs:
       - name: Install build dependencies
         run: brew install ncurses
       - name: Build and run tests
-        run: ./run_tests.sh
+        run: ./run_tests.sh --verbose --clean
