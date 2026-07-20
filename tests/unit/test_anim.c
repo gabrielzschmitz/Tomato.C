@@ -172,7 +172,7 @@ static void test_deserialize_sprites(void) {
   fwrite(sprite_data, 1, strlen(sprite_data), tmp);
   rewind(tmp);
   char tmp_path[64];
-  snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
+  snprintf(tmp_path, sizeof(tmp_path), "/dev/fd/%d", fileno(tmp));
   Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->frame_count, 2);
@@ -201,7 +201,7 @@ static void test_deserialize_sprites_default_frame_default(void) {
   fwrite(sprite_data, 1, strlen(sprite_data), tmp);
   rewind(tmp);
   char tmp_path[64];
-  snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
+  snprintf(tmp_path, sizeof(tmp_path), "/dev/fd/%d", fileno(tmp));
   Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->default_frame, 0);
@@ -499,7 +499,7 @@ static void test_deserialize_sprites_default_frame_explicit(void) {
   fwrite(sprite_data, 1, strlen(sprite_data), tmp);
   rewind(tmp);
   char tmp_path[64];
-  snprintf(tmp_path, sizeof(tmp_path), "/proc/self/fd/%d", fileno(tmp));
+  snprintf(tmp_path, sizeof(tmp_path), "/dev/fd/%d", fileno(tmp));
   Rollfilm* rf = DeserializeSprites(tmp_path, 0);
   ASSERT_NOT_NULL(rf);
   ASSERT_EQ(rf->default_frame, 0);
