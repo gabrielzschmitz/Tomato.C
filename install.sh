@@ -148,6 +148,7 @@ detect_os() {
       debian|ubuntu)        PKG_MANAGER="apt"    ;;
       rhel|fedora|centos)   PKG_MANAGER="dnf"    ;;
       arch|manjaro|cachyos) PKG_MANAGER="pacman" ;;
+      void)                 PKG_MANAGER="xbps"   ;;
       alpine)               PKG_MANAGER="apk"    ;;
       opensuse*|suse)       PKG_MANAGER="zypper" ;;
       *)
@@ -183,6 +184,7 @@ check_dependencies() {
     dnf)    echo "gcc make pkgconfig ncurses-devel libnotify-devel"              ;;
     pacman) echo "gcc make pkg-config ncurses libnotify"                         ;;
     apk)    echo "gcc make pkgconfig musl-dev ncurses-dev libnotify-dev"         ;;
+    xbps)   echo "gcc make pkg-config ncurses libnotify"                         ;;
     zypper) echo "gcc make pkg-config ncurses-devel libnotify-devel"             ;;
     brew)   echo "ncurses"                                                       ;;
   esac
@@ -213,6 +215,9 @@ install_dependencies() {
       ;;
     apk)
       sudo apk add $packages
+      ;;
+    xbps)
+      sudo xbps-install -S $packages
       ;;
     zypper)
       sudo zypper install -y $packages
