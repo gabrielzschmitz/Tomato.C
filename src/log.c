@@ -1085,7 +1085,8 @@ void GetPomodoroHistoryDay(const char* path) {
   }
 
   /* Allocate records array */
-  pomodoroLogRecord* records = (pomodoroLogRecord*)malloc((size_t)count * sizeof(pomodoroLogRecord));
+  pomodoroLogRecord* records =
+    (pomodoroLogRecord*)malloc((size_t)count * sizeof(pomodoroLogRecord));
   if (!records) {
     printf("Memory allocation error.\n");
     fclose(file);
@@ -1126,10 +1127,18 @@ void GetPomodoroHistoryDay(const char* path) {
   int* uLong = (int*)malloc((size_t)uCount * sizeof(int));
   time_t* uStart = (time_t*)malloc((size_t)uCount * sizeof(time_t));
   time_t* uEnd = (time_t*)malloc((size_t)uCount * sizeof(time_t));
-  if (!uIdx || !uStatus || !uCycles || !uWork || !uShort || !uLong || !uStart || !uEnd) {
+  if (!uIdx || !uStatus || !uCycles || !uWork || !uShort || !uLong || !uStart ||
+      !uEnd) {
     printf("Memory allocation error.\n");
-    free(records); free(uIdx); free(uStatus); free(uCycles);
-    free(uWork); free(uShort); free(uLong); free(uStart); free(uEnd);
+    free(records);
+    free(uIdx);
+    free(uStatus);
+    free(uCycles);
+    free(uWork);
+    free(uShort);
+    free(uLong);
+    free(uStart);
+    free(uEnd);
     return;
   }
 
@@ -1186,11 +1195,17 @@ void GetPomodoroHistoryDay(const char* path) {
 
   /* Determine index column width and build table rows */
   int idxW = snprintf(NULL, 0, "%d", uCount);
-  char (*rows)[128] = (char(*)[128])malloc((size_t)uCount * 128);
+  char (*rows)[128] = (char (*)[128])malloc((size_t)uCount * 128);
   if (!rows) {
     printf("Memory allocation error.\n");
-    free(uIdx); free(uStatus); free(uCycles); free(uWork);
-    free(uShort); free(uLong); free(uStart); free(uEnd);
+    free(uIdx);
+    free(uStatus);
+    free(uCycles);
+    free(uWork);
+    free(uShort);
+    free(uLong);
+    free(uStart);
+    free(uEnd);
     return;
   }
   int maxRow = 0;
@@ -1210,13 +1225,19 @@ void GetPomodoroHistoryDay(const char* path) {
     char sts[6], ets[6];
     strftime(sts, 6, "%H:%M", stm);
     strftime(ets, 6, "%H:%M", etm);
-    snprintf(rows[i], 128, "#%-*d     %s   %s   %d min", idxW,
-             i + 1, sts, ets, durMin);
+    snprintf(rows[i], 128, "#%-*d     %s   %s   %d min", idxW, i + 1, sts, ets,
+             durMin);
     int len = (int)strlen(rows[i]);
     if (len > maxRow) maxRow = len;
   }
-  free(uIdx); free(uStatus); free(uCycles); free(uWork);
-  free(uShort); free(uLong); free(uStart); free(uEnd);
+  free(uIdx);
+  free(uStatus);
+  free(uCycles);
+  free(uWork);
+  free(uShort);
+  free(uLong);
+  free(uStart);
+  free(uEnd);
 
   /* Box width */
   static const char* weeks[] = {"Sun", "Mon", "Tue", "Wed",

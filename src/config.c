@@ -1603,7 +1603,8 @@ static void loadTomlFile(const char* path) {
                &g_config.visual.ui.icons.misc.visual_cursor);
     if (g_config.visual.ui.icons.misc.visual_cursor &&
         g_config.visual.ui.icons.misc.visual_cursor != old)
-      g_config.visual.ui.icons.misc.visual_cursor = strdup(g_config.visual.ui.icons.misc.visual_cursor);
+      g_config.visual.ui.icons.misc.visual_cursor =
+        strdup(g_config.visual.ui.icons.misc.visual_cursor);
   }
   {
     const char* old = g_config.visual.ui.icons.misc.insert_cursor;
@@ -1611,7 +1612,8 @@ static void loadTomlFile(const char* path) {
                &g_config.visual.ui.icons.misc.insert_cursor);
     if (g_config.visual.ui.icons.misc.insert_cursor &&
         g_config.visual.ui.icons.misc.insert_cursor != old)
-      g_config.visual.ui.icons.misc.insert_cursor = strdup(g_config.visual.ui.icons.misc.insert_cursor);
+      g_config.visual.ui.icons.misc.insert_cursor =
+        strdup(g_config.visual.ui.icons.misc.insert_cursor);
   }
   readIconArray(root, "visual.ui.icons.misc.border_chars",
                 g_config.visual.ui.icons.misc.border_chars);
