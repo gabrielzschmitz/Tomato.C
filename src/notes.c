@@ -936,7 +936,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
     const char* prefix;
     switch (notes->items[i]->state) {
       case NOTE_DONE:
-        prefix = "[ ] ";
+        prefix = "[X] ";
         break;
       case NOTE_UNDONE:
         prefix = "[ ] ";
@@ -1015,7 +1015,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           if (num_input_lines == 0) {
             num_input_lines = 1;
             wrapped_input = (char**)malloc(sizeof(char*));
-            if (wrapped_input) wrapped_input[0] = (char*)"";
+            if (wrapped_input) wrapped_input[0] = strdup("");
           }
           for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
             if (wl == 0) {
@@ -1220,7 +1220,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           if (num_input_lines == 0) {
             num_input_lines = 1;
             wrapped_input = (char**)malloc(sizeof(char*));
-            if (wrapped_input) wrapped_input[0] = (char*)"";
+            if (wrapped_input) wrapped_input[0] = strdup("");
           }
           for (int wl = 0; wl < num_input_lines && render_y < end_y; wl++) {
             if (wl == 0) {
@@ -1269,7 +1269,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           if (num_input_lines == 0) {
             num_input_lines = 1;
             wrapped_input = (char**)malloc(sizeof(char*));
-            if (wrapped_input) wrapped_input[0] = (char*)"";
+            if (wrapped_input) wrapped_input[0] = strdup("");
           }
           int sel_start = 0;
           int sel_end = 0;

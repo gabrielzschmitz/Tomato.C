@@ -8,6 +8,7 @@
 #include "config.h"
 #include "log.h"
 #include "notify.h"
+#include "pomodoro.h"
 #include "tomato.h"
 #include "ui.h"
 #include "util.h"
@@ -127,14 +128,12 @@ void UpdateWorkTime(AppData* app) {
         SetError(app, "Saving pomodoro on work end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
-    if (app->pomodoro_data.current_cycle >=
-        app->pomodoro_data.total_cycles - 1) {
+    TransitionPomodoroStep(&app->pomodoro_data);
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+    app->pomodoro_data.step_start_time = time(NULL);
+    if (app->pomodoro_data.current_step == LONG_PAUSE) {
       ExecuteHistory(app->screen->panels[0].scene_history, LONG_PAUSE);
       app->screen->panels[0].menu_index = -1;
-      app->pomodoro_data.current_step = LONG_PAUSE;
-      app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-      app->pomodoro_data.current_step_time = 0;
-      app->pomodoro_data.step_start_time = time(NULL);
       if (!AUTOSTART_PAUSE) app->is_paused = true;
       if (Notify(&app->notification_long_pause) != NO_ERROR)
         SetError(app, "Sending long pause notification",
@@ -142,10 +141,6 @@ void UpdateWorkTime(AppData* app) {
     } else {
       ExecuteHistory(app->screen->panels[0].scene_history, SHORT_PAUSE);
       app->screen->panels[0].menu_index = -1;
-      app->pomodoro_data.current_step = SHORT_PAUSE;
-      app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-      app->pomodoro_data.current_step_time = 0;
-      app->pomodoro_data.step_start_time = time(NULL);
       if (!AUTOSTART_PAUSE) app->is_paused = true;
       if (Notify(&app->notification_short_pause) != NO_ERROR)
         SetError(app, "Sending short pause notification",
@@ -176,13 +171,11 @@ void UpdateShortPause(AppData* app) {
         SetError(app, "Saving pomodoro on pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
+    TransitionPomodoroStep(&app->pomodoro_data);
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
+    app->pomodoro_data.step_start_time = time(NULL);
     ExecuteHistory(app->screen->panels[0].scene_history, WORK_TIME);
     app->screen->panels[0].menu_index = -1;
-    app->pomodoro_data.current_step = WORK_TIME;
-    app->pomodoro_data.current_cycle += 1;
-    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
-    app->pomodoro_data.current_step_time = 0;
-    app->pomodoro_data.step_start_time = time(NULL);
     if (!AUTOSTART_WORK) app->is_paused = true;
     if (Notify(&app->notification_work) != NO_ERROR)
       SetError(app, "Sending work notification", NOTIFICATION_SEND_ERROR);
@@ -212,13 +205,10 @@ void UpdateLongPause(AppData* app) {
         SetError(app, "Saving pomodoro on long pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
+    TransitionPomodoroStep(&app->pomodoro_data);
+    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     ExecuteHistory(app->screen->panels[0].scene_history, MAIN_MENU);
     app->screen->panels[0].menu_index = MAIN_MENU_MENU;
-    app->pomodoro_data.current_step = MAIN_MENU;
-    app->pomodoro_data.current_cycle = 0;
-    app->pomodoro_data.current_step_time = 0;
-    app->pomodoro_data.total_elapsed = 0;
-    app->pomodoro_data.delta_time_ms = GetCurrentTimeMS();
     if (Notify(&app->notification_end_cycle) != NO_ERROR)
       SetError(app, "Sending end notification", NOTIFICATION_SEND_ERROR);
   }
