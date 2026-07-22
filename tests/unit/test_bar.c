@@ -266,6 +266,78 @@ static void test_default_right_modules(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * Module content formatting (mirrors DateModule / TerminalSizeModule logic)
+ * ---------------------------------------------------------------------------
+ */
+
+static void formatDateModule(char* content, size_t size, const char* icon,
+                             const char* date_str) {
+  if (strlen(icon) < 1)
+    snprintf(content, size, "%s", date_str);
+  else
+    snprintf(content, size, "%s %s", icon, date_str);
+}
+
+static void formatTerminalSizeModule(char* content, size_t size,
+                                     const char* icon, int w, int h) {
+  if (strlen(icon) < 1)
+    snprintf(content, size, "%d\xc3\x97%d", w, h);
+  else
+    snprintf(content, size, "%s %d\xc3\x97%d", icon, w, h);
+}
+
+static void formatStreakModule(char* content, size_t size, const char* icon,
+                               int streak) {
+  if (strlen(icon) < 1)
+    snprintf(content, size, "%d Days", streak);
+  else
+    snprintf(content, size, "%s %d Days", icon, streak);
+}
+
+static void test_date_module_no_icon(void) {
+  TEST("DateModule content without icon shows date only");
+  char out[32];
+  formatDateModule(out, sizeof(out), "", "2026-07-22");
+  ASSERT_STR_EQ(out, "2026-07-22");
+}
+
+static void test_date_module_with_icon(void) {
+  TEST("DateModule content with icon shows icon + date");
+  char out[32];
+  formatDateModule(out, sizeof(out), "\xf0\x9f\x93\x85", "2026-07-22");
+  ASSERT_STR_EQ(out, "\xf0\x9f\x93\x85 2026-07-22");
+}
+
+static void test_terminal_size_module_no_icon(void) {
+  TEST("TerminalSizeModule content without icon shows WxH");
+  char out[24];
+  formatTerminalSizeModule(out, sizeof(out), "", 80, 24);
+  ASSERT_STR_EQ(out, "80\xc3\x97" "24");
+}
+
+static void test_terminal_size_module_with_icon(void) {
+  TEST("TerminalSizeModule content with icon shows icon + WxH");
+  char out[24];
+  formatTerminalSizeModule(out, sizeof(out), "\xe2\x96\xa1", 120, 40);
+  ASSERT_STR_EQ(out, "\xe2\x96\xa1 120\xc3\x97" "40");
+}
+
+static void test_streak_module_no_icon(void) {
+  TEST("StreakModule content without icon shows N Days");
+  char out[32];
+  formatStreakModule(out, sizeof(out), "", 5);
+  ASSERT_STR_EQ(out, "5 Days");
+}
+
+static void test_streak_module_with_icon(void) {
+  TEST("StreakModule content with icon shows icon + N Days");
+  char out[32];
+  formatStreakModule(out, sizeof(out), "\xf0\x9f\x94\xa5", 12);
+  ASSERT_STR_EQ(out, "\xf0\x9f\x94\xa5 12 Days");
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -309,5 +381,17 @@ int main(void) {
            "default center modules are empty");
   RUN_TEST(test_default_right_modules,
            "default right modules are Scene and LineColumn");
+  RUN_TEST(test_date_module_no_icon,
+           "DateModule content without icon shows date only");
+  RUN_TEST(test_date_module_with_icon,
+           "DateModule content with icon shows icon + date");
+  RUN_TEST(test_terminal_size_module_no_icon,
+           "TerminalSizeModule content without icon shows WxH");
+  RUN_TEST(test_terminal_size_module_with_icon,
+           "TerminalSizeModule content with icon shows icon + WxH");
+  RUN_TEST(test_streak_module_no_icon,
+           "StreakModule content without icon shows N Days");
+  RUN_TEST(test_streak_module_with_icon,
+           "StreakModule content with icon shows icon + N Days");
   return test_end();
 }

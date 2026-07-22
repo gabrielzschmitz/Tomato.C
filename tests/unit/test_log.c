@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -416,6 +417,271 @@ static void test_get_history_day_many_sessions(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * SavePomodoro / LoadPomodoro — round-trip
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_save_and_load_pomodoro(void) {
+  TEST("SavePomodoro then LoadPomodoro fields match");
+  char tmp[] = "/tmp/t_log_sl_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  PomodoroData in;
+  memset(&in, 0, sizeof(in));
+  in.total_cycles = 4;
+  in.current_cycle = 2;
+  in.work_time = 25;
+  in.short_pause_time = 5;
+  in.long_pause_time = 30;
+  in.current_step = 1;
+  in.current_step_time = 300;
+  in.total_elapsed = 1800;
+  in.status = 1;
+  in.session_index = 7;
+  in.session_start_time = 1700000000;
+
+  ErrorType err = SavePomodoro(tmp, &in, true);
+  ASSERT_EQ(err, NO_ERROR);
+
+  PomodoroData out;
+  memset(&out, 0, sizeof(out));
+  err = LoadPomodoro(tmp, &out);
+  ASSERT_EQ(err, NO_ERROR);
+  ASSERT_EQ(out.total_cycles, in.total_cycles);
+  ASSERT_EQ(out.current_cycle, in.current_cycle);
+  ASSERT_EQ(out.work_time, in.work_time);
+  ASSERT_EQ(out.short_pause_time, in.short_pause_time);
+  ASSERT_EQ(out.long_pause_time, in.long_pause_time);
+  ASSERT_EQ(out.current_step, in.current_step);
+  ASSERT_EQ(out.current_step_time, in.current_step_time);
+  ASSERT_EQ(out.total_elapsed, in.total_elapsed);
+  ASSERT_EQ(out.status, in.status);
+
+  remove(tmp);
+}
+
+static void test_save_pomodoro_append(void) {
+  TEST("SavePomodoro append creates multiple records");
+  char tmp[] = "/tmp/t_log_sa_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  PomodoroData d1, d2;
+  memset(&d1, 0, sizeof(d1));
+  d1.session_index = 1;
+  d1.total_cycles = 4;
+  d1.work_time = 25;
+  d1.current_step = 1;
+  d1.current_step_time = 100;
+
+  memset(&d2, 0, sizeof(d2));
+  d2.session_index = 2;
+  d2.total_cycles = 4;
+  d2.work_time = 25;
+  d2.current_step = 3;
+  d2.current_step_time = 200;
+
+  ASSERT_EQ(SavePomodoro(tmp, &d1, true), NO_ERROR);
+  ASSERT_EQ(SavePomodoro(tmp, &d2, true), NO_ERROR);
+
+  PomodoroData out;
+  memset(&out, 0, sizeof(out));
+  ASSERT_EQ(LoadPomodoro(tmp, &out), NO_ERROR);
+  ASSERT_EQ(out.session_index, 2);
+  ASSERT_EQ(out.current_step_time, 200);
+
+  remove(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * GetLastLogIndexOnly
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_get_last_log_index_empty(void) {
+  TEST("GetLastLogIndexOnly empty file returns 0");
+  char tmp[] = "/tmp/t_log_li_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  ASSERT_EQ(GetLastLogIndexOnly(tmp), 0);
+  remove(tmp);
+}
+
+static void test_get_last_log_index_after_save(void) {
+  TEST("GetLastLogIndexOnly returns last session_index");
+  char tmp[] = "/tmp/t_log_ls_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  PomodoroData d;
+  memset(&d, 0, sizeof(d));
+  d.session_index = 42;
+  d.total_cycles = 4;
+  d.work_time = 25;
+  ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+
+  ASSERT_EQ(GetLastLogIndexOnly(tmp), 42);
+  remove(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * RemoveUncompletedEntries — binary log cleanup
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_remove_uncompleted_entries(void) {
+  TEST("RemoveUncompletedEntries removes uncompleted entry for given index");
+  char tmp[] = "/tmp/t_log_ru_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  /* Write 3 completed (status=0) then 2 uncompleted (status=1) */
+  for (int i = 1; i <= 5; i++) {
+    PomodoroData d;
+    memset(&d, 0, sizeof(d));
+    d.session_index = i;
+    d.total_cycles = 4;
+    d.work_time = 25;
+    d.current_step = 1;
+    d.status = (i <= 3) ? 0 : 1;
+    ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+  }
+
+  /* Remove uncompleted for session_index 5 only */
+  ASSERT_EQ(RemoveUncompletedEntries(tmp, 5), NO_ERROR);
+
+  /* Session 5 removed, session 4 (uncompleted) is now last */
+  PomodoroData out;
+  memset(&out, 0, sizeof(out));
+  ASSERT_EQ(LoadPomodoro(tmp, &out), NO_ERROR);
+  ASSERT_EQ(out.session_index, 4);
+
+  /* Remove session 4 as well */
+  ASSERT_EQ(RemoveUncompletedEntries(tmp, 4), NO_ERROR);
+
+  /* Now session 3 (completed) is last */
+  memset(&out, 0, sizeof(out));
+  ASSERT_EQ(LoadPomodoro(tmp, &out), NO_ERROR);
+  ASSERT_EQ(out.session_index, 3);
+  ASSERT_EQ(out.status, 0);
+
+  remove(tmp);
+}
+
+static void test_remove_uncompleted_all_completed(void) {
+  TEST("RemoveUncompletedEntries with all completed keeps all");
+  char tmp[] = "/tmp/t_log_ra_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  for (int i = 1; i <= 3; i++) {
+    PomodoroData d;
+    memset(&d, 0, sizeof(d));
+    d.session_index = i;
+    d.total_cycles = 4;
+    d.work_time = 25;
+    d.current_step = 1;
+    d.status = 0;
+    ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+  }
+
+  ASSERT_EQ(RemoveUncompletedEntries(tmp, 3), NO_ERROR);
+
+  PomodoroData out;
+  ASSERT_EQ(LoadPomodoro(tmp, &out), NO_ERROR);
+  ASSERT_EQ(out.session_index, 3);
+
+  remove(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * E2 — File I/O error paths
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_load_empty_file(void) {
+  TEST("LoadPomodoro empty file returns NO_ERROR, data unchanged");
+  char tmp[] = "/tmp/t_log_em_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  PomodoroData out;
+  memset(&out, 0xFF, sizeof(out));
+  ErrorType err = LoadPomodoro(tmp, &out);
+  ASSERT_EQ(err, NO_ERROR);
+  /* Data is left as-is when no valid record exists */
+  remove(tmp);
+}
+
+static void test_load_corrupted_file_partial_record(void) {
+  TEST("LoadPomodoro partial (truncated) record does not crash");
+  char tmp[] = "/tmp/t_log_co_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+
+  pomodoroLogRecord rec;
+  memset(&rec, 0, sizeof(rec));
+  rec.session_index = 1;
+  rec.total_cycles = 4;
+  rec.work_time = 25;
+  size_t half = sizeof(rec) / 2;
+  ASSERT_EQ((int)write(fd, &rec, half), (int)half);
+  close(fd);
+
+  PomodoroData out;
+  memset(&out, 0xFF, sizeof(out));
+  ErrorType err = LoadPomodoro(tmp, &out);
+  ASSERT_EQ(err, NO_ERROR);
+
+  remove(tmp);
+}
+
+static void test_load_garbage_file(void) {
+  TEST("LoadPomodoro garbage binary does not crash");
+  char tmp[] = "/tmp/t_log_ga_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+
+  unsigned char garbage[] = {
+    0xFF, 0xFE, 0x00, 0x01, 0xDE, 0xAD, 0xBE, 0xEF,
+    0xBA, 0xDD, 0xCA, 0xFE, 0x00, 0x11, 0x22, 0x33
+  };
+  write(fd, garbage, sizeof(garbage));
+  close(fd);
+
+  PomodoroData out;
+  memset(&out, 0xFF, sizeof(out));
+  ErrorType err = LoadPomodoro(tmp, &out);
+  ASSERT_EQ(err, NO_ERROR);
+
+  remove(tmp);
+}
+
+static void test_save_pomodoro_nonexistent_dir(void) {
+  TEST("SavePomodoro to nonexistent directory returns TIMER_LOG_ERROR");
+  PomodoroData d;
+  memset(&d, 0, sizeof(d));
+  d.session_index = 1;
+  d.total_cycles = 4;
+  d.work_time = 25;
+
+  ErrorType err = SavePomodoro("/nonexistent_dir_xyz/log.bin", &d, true);
+  ASSERT_EQ(err, TIMER_LOG_ERROR);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -454,5 +720,25 @@ int main(void) {
            "HistSessionsForDay skip instant endTime");
   RUN_TEST(test_get_history_day_many_sessions,
            "GetPomodoroHistoryDay >100 sessions no crash");
+  RUN_TEST(test_save_and_load_pomodoro,
+           "SavePomodoro then LoadPomodoro fields match");
+  RUN_TEST(test_save_pomodoro_append,
+           "SavePomodoro append creates multiple records");
+  RUN_TEST(test_get_last_log_index_empty,
+           "GetLastLogIndexOnly empty file returns 1");
+  RUN_TEST(test_get_last_log_index_after_save,
+           "GetLastLogIndexOnly returns last session_index");
+  RUN_TEST(test_remove_uncompleted_entries,
+           "RemoveUncompletedEntries removes uncompleted entries");
+  RUN_TEST(test_remove_uncompleted_all_completed,
+           "RemoveUncompletedEntries all completed keeps all");
+  RUN_TEST(test_load_empty_file,
+           "LoadPomodoro empty file returns empty data");
+  RUN_TEST(test_load_corrupted_file_partial_record,
+           "LoadPomodoro partial record does not crash");
+  RUN_TEST(test_load_garbage_file,
+           "LoadPomodoro garbage binary does not crash");
+  RUN_TEST(test_save_pomodoro_nonexistent_dir,
+           "SavePomodoro to nonexistent dir returns TIMER_LOG_ERROR");
   return test_end();
 }

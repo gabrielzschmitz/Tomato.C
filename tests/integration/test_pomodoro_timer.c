@@ -1,10 +1,11 @@
 /**
  * @file test_pomodoro_timer.c
- * @brief Integration tests for pomodoro timer logic.
+ * @brief Integration tests for pomodoro timer utility functions.
  *
- * Tests IsStepEnded boundary conditions, FormatRemainingTime output,
- * full 4-cycle pomodoro state machine transitions, and total elapsed
- * time accumulation across steps.
+ * Tests boundary conditions of IsStepEnded, FormatRemainingTime output
+ * formatting, full 4-cycle pomodoro state machine transitions, and
+ * total elapsed time accumulation across steps.  Uses the real
+ * PomodoroData type and pomodoro.c functions (no mirroring).
  */
 
 #include <stdlib.h>
@@ -12,70 +13,15 @@
 
 #include "config.h"
 #include "error.h"
+#include "pomodoro.h"
 #include "test_helpers.h"
 #include "util.h"
 
 /* Stub — util.c may call LogError on allocation failures */
+Config g_config;
 void LogError(const char* context, ErrorType type) {
   (void)context;
   (void)type;
-}
-
-Config g_config;
-
-#define STEP_WORK 0
-#define STEP_SHORT_PAUSE 1
-#define STEP_LONG_PAUSE 2
-
-typedef struct {
-  int current_step;
-  int current_step_time;
-  int current_cycle;
-  int total_cycles;
-  int work_time;
-  int short_pause_time;
-  int long_pause_time;
-  int total_elapsed;
-  int status;
-} TimerState;
-
-static void reset_timer(TimerState* ts) {
-  ts->current_step = STEP_WORK;
-  ts->current_step_time = 0;
-  ts->current_cycle = 1;
-  ts->total_cycles = 4;
-  ts->work_time = 25;
-  ts->short_pause_time = 5;
-  ts->long_pause_time = 30;
-  ts->total_elapsed = 0;
-  ts->status = 1;
-}
-
-static int step_duration_minutes(const TimerState* ts) {
-  if (ts->current_step == STEP_WORK) return ts->work_time;
-  if (ts->current_step == STEP_SHORT_PAUSE) return ts->short_pause_time;
-  return ts->long_pause_time;
-}
-
-static void tick(TimerState* ts, int seconds) {
-  ts->current_step_time += seconds;
-  ts->total_elapsed += seconds;
-}
-
-static void advance_step(TimerState* ts) {
-  ts->current_step_time = 0;
-  if (ts->current_step == STEP_WORK) {
-    if (ts->current_cycle >= ts->total_cycles) {
-      ts->current_step = STEP_LONG_PAUSE;
-    } else {
-      ts->current_step = STEP_SHORT_PAUSE;
-    }
-  } else {
-    ts->current_step = STEP_WORK;
-    if (ts->current_cycle < ts->total_cycles) {
-      ts->current_cycle++;
-    }
-  }
 }
 
 /**
@@ -84,32 +30,50 @@ static void advance_step(TimerState* ts) {
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * Test that IsStepEnded returns false when current_step_time is 0.
+ */
 static void test_is_step_ended_at_zero(void) {
   TEST("IsStepEnded returns false at time 0");
   ASSERT_FALSE(IsStepEnded(0, 25));
 }
 
+/**
+ * Test that IsStepEnded returns false one second before the boundary.
+ */
 static void test_is_step_ended_just_before(void) {
   TEST("IsStepEnded returns false one second before end");
   ASSERT_FALSE(IsStepEnded(1499, 25));
 }
 
+/**
+ * Test that IsStepEnded returns true exactly at the boundary.
+ */
 static void test_is_step_ended_exactly_at(void) {
   TEST("IsStepEnded returns true exactly at boundary");
   ASSERT_TRUE(IsStepEnded(1500, 25));
 }
 
+/**
+ * Test that IsStepEnded returns true past the boundary.
+ */
 static void test_is_step_ended_past(void) {
   TEST("IsStepEnded returns true past boundary");
   ASSERT_TRUE(IsStepEnded(1800, 25));
 }
 
+/**
+ * Test that IsStepEnded returns true for any time when duration is 0.
+ */
 static void test_is_step_ended_zero_duration(void) {
   TEST("IsStepEnded with 0 duration ends immediately");
   ASSERT_TRUE(IsStepEnded(0, 0));
   ASSERT_TRUE(IsStepEnded(1, 0));
 }
 
+/**
+ * Test that IsStepEnded returns false for negative time values.
+ */
 static void test_is_step_ended_negative_time(void) {
   TEST("IsStepEnded with negative time is not ended");
   ASSERT_FALSE(IsStepEnded(-1, 10));
@@ -121,6 +85,9 @@ static void test_is_step_ended_negative_time(void) {
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * Test FormatRemainingTime output when no time has elapsed.
+ */
 static void test_format_remaining_zero(void) {
   TEST("FormatRemainingTime with time 0");
   char* result = FormatRemainingTime(0, 25);
@@ -129,6 +96,9 @@ static void test_format_remaining_zero(void) {
   free(result);
 }
 
+/**
+ * Test FormatRemainingTime output with partial elapsed time.
+ */
 static void test_format_remaining_partial(void) {
   TEST("FormatRemainingTime with partial time");
   char* result = FormatRemainingTime(60, 25);
@@ -137,6 +107,9 @@ static void test_format_remaining_partial(void) {
   free(result);
 }
 
+/**
+ * Test FormatRemainingTime output when elapsed exceeds duration.
+ */
 static void test_format_remaining_past(void) {
   TEST("FormatRemainingTime past duration");
   char* result = FormatRemainingTime(1800, 25);
@@ -145,6 +118,9 @@ static void test_format_remaining_past(void) {
   free(result);
 }
 
+/**
+ * Test FormatRemainingTime output at exact duration boundary.
+ */
 static void test_format_remaining_exact(void) {
   TEST("FormatRemainingTime at exact duration");
   char* result = FormatRemainingTime(1500, 25);
@@ -152,6 +128,9 @@ static void test_format_remaining_exact(void) {
   free(result);
 }
 
+/**
+ * Test FormatRemainingTime output for a short pause duration.
+ */
 static void test_format_remaining_short_pause(void) {
   TEST("FormatRemainingTime short pause");
   char* result = FormatRemainingTime(120, 5);
@@ -165,56 +144,61 @@ static void test_format_remaining_short_pause(void) {
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * Execute a full 4-cycle pomodoro via TransitionPomodoroStep.
+ * Verifies the correct step sequence: work → short pause → work → ...
+ * → long pause after the 4th work session.
+ */
 static void test_four_cycle_pomodoro(void) {
   TEST("4-cycle pomodoro ends on long pause after 4th work");
-  TimerState ts;
-  reset_timer(&ts);
+  PomodoroData pd;
+  InitPomodoroData(&pd, 4, 25, 5, 30);
 
-  /* Cycle 1: Work -> ShortPause -> Work */
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_SHORT_PAUSE);
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_WORK);
-  ASSERT_EQ(ts.current_cycle, 2);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, SHORT_PAUSE);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, WORK_TIME);
+  ASSERT_EQ(pd.current_cycle, 1);
 
-  /* Cycle 2: Work -> ShortPause -> Work */
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_SHORT_PAUSE);
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_WORK);
-  ASSERT_EQ(ts.current_cycle, 3);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, SHORT_PAUSE);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, WORK_TIME);
+  ASSERT_EQ(pd.current_cycle, 2);
 
-  /* Cycle 3: Work -> ShortPause -> Work */
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_SHORT_PAUSE);
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_WORK);
-  ASSERT_EQ(ts.current_cycle, 4);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, SHORT_PAUSE);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, WORK_TIME);
+  ASSERT_EQ(pd.current_cycle, 3);
 
-  /* Cycle 4: Work -> LongPause (last cycle) */
-  advance_step(&ts);
-  ASSERT_EQ(ts.current_step, STEP_LONG_PAUSE);
-  ASSERT_EQ(ts.current_cycle, 4);
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, LONG_PAUSE);
+  ASSERT_EQ(pd.current_cycle, 3);
 }
 
+/**
+ * Verify that TickPomodoroTime accumulates elapsed time correctly
+ * across a work → short-pause → work sequence.
+ */
 static void test_timer_total_elapsed_exact(void) {
   TEST("timer total elapsed matches exact minutes");
-  TimerState ts;
-  reset_timer(&ts);
+  PomodoroData pd;
+  InitPomodoroData(&pd, 4, 25, 5, 30);
 
-  tick(&ts, ts.work_time * 60);
-  ASSERT_EQ(ts.current_step_time, 1500);
-  ASSERT_EQ(ts.total_elapsed, 1500);
-  advance_step(&ts);
+  TickPomodoroTime(&pd, pd.work_time * 60);
+  ASSERT_EQ(pd.current_step_time, 1500);
+  ASSERT_EQ(pd.total_elapsed, 1500);
+  TransitionPomodoroStep(&pd);
 
-  tick(&ts, ts.short_pause_time * 60);
-  ASSERT_EQ(ts.current_step_time, 300);
-  ASSERT_EQ(ts.total_elapsed, 1800);
-  advance_step(&ts);
+  TickPomodoroTime(&pd, pd.short_pause_time * 60);
+  ASSERT_EQ(pd.current_step_time, 300);
+  ASSERT_EQ(pd.total_elapsed, 1800);
+  TransitionPomodoroStep(&pd);
 
-  tick(&ts, ts.work_time * 60);
-  ASSERT_EQ(ts.current_step_time, 1500);
-  ASSERT_EQ(ts.total_elapsed, 3300);
+  TickPomodoroTime(&pd, pd.work_time * 60);
+  ASSERT_EQ(pd.current_step_time, 1500);
+  ASSERT_EQ(pd.total_elapsed, 3300);
 }
 
 /**

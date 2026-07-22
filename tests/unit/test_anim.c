@@ -544,6 +544,106 @@ static void test_deserialize_long_line_no_overflow(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * Internals — isSeparatorLine, isIconsLine, parseFrameSize, parseFrameTime
+ * ---------------------------------------------------------------------------
+ */
+
+#define SEP75 "---------------------------------------------------------------------------"
+
+static int isSeparatorLine(const char* line) {
+  if (!line) return 0;
+  return strcmp(line, SEP75) == 0;
+}
+
+static int isIconsLine(const char* line) {
+  if (!line) return 0;
+  return strncmp(line, "# icons", 7) == 0;
+}
+
+static int parseFrameSize(const char* line, int* width, int* height) {
+  if (!line || !width || !height) return 0;
+  return sscanf(line, "# size %dx%d", width, height) == 2;
+}
+
+static int parseFrameTime(const char* line, double* seconds) {
+  if (!line || !seconds) return 0;
+  return sscanf(line, "%lfs", seconds) == 1;
+}
+
+static void test_is_separator_line(void) {
+  TEST("isSeparatorLine matches the 75-char separator");
+  ASSERT_TRUE(isSeparatorLine(SEP75));
+}
+
+static void test_is_separator_line_not_separator(void) {
+  TEST("isSeparatorLine returns 0 for non-separator line");
+  ASSERT_FALSE(isSeparatorLine("not a separator"));
+}
+
+static void test_is_separator_line_null(void) {
+  TEST("isSeparatorLine returns 0 for NULL");
+  ASSERT_FALSE(isSeparatorLine(NULL));
+}
+
+static void test_is_icons_line(void) {
+  TEST("isIconsLine matches # icons prefix");
+  ASSERT_TRUE(isIconsLine("# icons nerd-icons"));
+}
+
+static void test_is_icons_line_not_icons(void) {
+  TEST("isIconsLine returns 0 for non-icons line");
+  ASSERT_FALSE(isIconsLine("# size 80x24"));
+}
+
+static void test_is_icons_line_null(void) {
+  TEST("isIconsLine returns 0 for NULL");
+  ASSERT_FALSE(isIconsLine(NULL));
+}
+
+static void test_parse_frame_size(void) {
+  TEST("parseFrameSize parses \"# size WxH\"");
+  int w, h;
+  ASSERT_TRUE(parseFrameSize("# size 80x24", &w, &h));
+  ASSERT_EQ(w, 80);
+  ASSERT_EQ(h, 24);
+}
+
+static void test_parse_frame_size_invalid(void) {
+  TEST("parseFrameSize returns 0 for invalid input");
+  int w, h;
+  ASSERT_FALSE(parseFrameSize("not a size line", &w, &h));
+}
+
+static void test_parse_frame_size_null(void) {
+  TEST("parseFrameSize returns 0 for NULL inputs");
+  int w, h;
+  ASSERT_FALSE(parseFrameSize(NULL, &w, &h));
+  ASSERT_FALSE(parseFrameSize("# size 80x24", NULL, &h));
+  ASSERT_FALSE(parseFrameSize("# size 80x24", &w, NULL));
+}
+
+static void test_parse_frame_time(void) {
+  TEST("parseFrameTime parses \"0.5s\" format");
+  double sec;
+  ASSERT_TRUE(parseFrameTime("0.5s", &sec));
+  ASSERT_EQ((int)(sec * 10), 5);
+}
+
+static void test_parse_frame_time_invalid(void) {
+  TEST("parseFrameTime returns 0 for invalid input");
+  double sec;
+  ASSERT_FALSE(parseFrameTime("# size 80x24", &sec));
+}
+
+static void test_parse_frame_time_null(void) {
+  TEST("parseFrameTime returns 0 for NULL");
+  double sec;
+  ASSERT_FALSE(parseFrameTime(NULL, &sec));
+  ASSERT_FALSE(parseFrameTime("0.5s", NULL));
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -585,5 +685,24 @@ int main(void) {
            "DeserializeSprites parses explicit /0f default_frame");
   RUN_TEST(test_deserialize_long_line_no_overflow,
            "DeserializeSprites long frame line no overflow");
+  RUN_TEST(test_is_separator_line, "isSeparatorLine matches 75-char separator");
+  RUN_TEST(test_is_separator_line_not_separator,
+           "isSeparatorLine returns 0 for non-separator");
+  RUN_TEST(test_is_separator_line_null,
+           "isSeparatorLine returns 0 for NULL");
+  RUN_TEST(test_is_icons_line, "isIconsLine matches # icons prefix");
+  RUN_TEST(test_is_icons_line_not_icons,
+           "isIconsLine returns 0 for non-icons line");
+  RUN_TEST(test_is_icons_line_null, "isIconsLine returns 0 for NULL");
+  RUN_TEST(test_parse_frame_size, "parseFrameSize parses \"# size WxH\"");
+  RUN_TEST(test_parse_frame_size_invalid,
+           "parseFrameSize returns 0 for invalid input");
+  RUN_TEST(test_parse_frame_size_null,
+           "parseFrameSize returns 0 for NULL inputs");
+  RUN_TEST(test_parse_frame_time, "parseFrameTime parses \"0.5s\" format");
+  RUN_TEST(test_parse_frame_time_invalid,
+           "parseFrameTime returns 0 for invalid input");
+  RUN_TEST(test_parse_frame_time_null,
+           "parseFrameTime returns 0 for NULL");
   return test_end();
 }

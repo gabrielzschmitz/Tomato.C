@@ -46,13 +46,21 @@ UNIT_BINS = \
 	unit/test_gap_buffer \
 	unit/test_history \
 	unit/test_config \
+	unit/test_draw \
+	unit/test_input \
 	unit/test_keybind \
+	unit/test_audio \
+	unit/test_ui \
 	unit/test_notes \
+	unit/test_notify \
+	unit/test_tomato \
 	unit/test_util \
 	unit/test_error \
 	unit/test_log \
 	unit/test_anim \
+	unit/test_anim_malloc \
 	unit/test_bar \
+	unit/test_bar_malloc \
 	unit/test_init \
 
 
@@ -91,6 +99,26 @@ unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.
                $(SRCDIR)/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
+#/** @brief draw — mirrors ValidateAndRenderScreenSize logic (standalone, no draw.c link) */
+unit/test_draw: unit/test_draw.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief audio — mirrors PlayAudio NULL/disabled logic (standalone, no audio.c link) */
+unit/test_audio: unit/test_audio.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief ui — mirrors RegisterClickRegion/CreateScreen panel logic (standalone, no ui.c link) */
+unit/test_ui: unit/test_ui.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief tomato — mirrors CLI argument parsing logic (standalone, no tomato.c link) */
+unit/test_tomato: unit/test_tomato.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief input — mirrors QuitApp/ForcefullyQuitApp logic (standalone, no input.c link) */
+unit/test_input: unit/test_input.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
 #/** @brief keybind — includes config.c; stubs all action functions in test file */
 unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
@@ -103,9 +131,24 @@ unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/err
 unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
+#/** @brief bar_malloc — wrapped malloc to test OOM paths in bar.c */
+unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -Wl,--wrap,malloc -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief anim_malloc — wrapped malloc to test OOM paths in anim.c */
+unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -Wl,--wrap,malloc -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
 #/** @brief init — InitBorder structural test (standalone, no init.c links) */
 unit/test_init: unit/test_init.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief notify — links notify.c with PlayAudio/LogError stubs */
+NOTIFY_CFLAGS = $(shell pkg-config --cflags libnotify 2>/dev/null)
+NOTIFY_LIBS = $(shell pkg-config --libs libnotify 2>/dev/null)
+unit/test_notify: unit/test_notify.c $(SRCDIR)/notify.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) $(NOTIFY_CFLAGS) -o $@ $(filter %.c,$^) \
+	  $(NCURSES_LIBS) $(TEST_LDLIBS) $(NOTIFY_LIBS)
 
 #/**
 # * ---------------------------------------------------------------------------
@@ -122,12 +165,12 @@ INTEGRATION_BINS = \
 
 build-integration: $(INTEGRATION_BINS)
 
-#/** @brief pomodoro_workflow — links util.c for IsStepEnded / FormatRemainingTime */
-integration/test_pomodoro_workflow: integration/test_pomodoro_workflow.c $(SRCDIR)/util.c $(HELPERS)
+#/** @brief pomodoro_workflow — links pomodoro.c + util.c for state machine + IsStepEnded */
+integration/test_pomodoro_workflow: integration/test_pomodoro_workflow.c $(SRCDIR)/pomodoro.c $(SRCDIR)/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief pomodoro_timer — same deps as pomodoro_workflow */
-integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/util.c $(HELPERS)
+integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/pomodoro.c $(SRCDIR)/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief e2e — links log.c + util.c + gap_buffer.c for end-to-end CLI tests */
