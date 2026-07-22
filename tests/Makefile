@@ -23,6 +23,15 @@ NCURSES_CFLAGS = $(shell pkg-config --cflags ncursesw 2>/dev/null || echo "")
 NCURSES_LIBS = $(shell pkg-config --libs ncursesw 2>/dev/null || echo "-lncurses -ltinfo")
 TEST_LDLIBS = -lm
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+  WRAP_MALLOC = -Wl,--wrap,malloc
+  MALLOC_WRAP_TESTS = unit/test_anim_malloc unit/test_bar_malloc
+else
+  WRAP_MALLOC =
+  MALLOC_WRAP_TESTS =
+endif
+
 ifdef ASAN
   BASE_CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
   TEST_LDLIBS += -fsanitize=address -fsanitize=undefined
@@ -58,9 +67,8 @@ UNIT_BINS = \
 	unit/test_error \
 	unit/test_log \
 	unit/test_anim \
-	unit/test_anim_malloc \
+	$(MALLOC_WRAP_TESTS) \
 	unit/test_bar \
-	unit/test_bar_malloc \
 	unit/test_init \
 
 
@@ -133,11 +141,11 @@ unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
 
 #/** @brief bar_malloc — wrapped malloc to test OOM paths in bar.c */
 unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -Wl,--wrap,malloc -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim_malloc — wrapped malloc to test OOM paths in anim.c */
 unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -Wl,--wrap,malloc -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief init — InitBorder structural test (standalone, no init.c links) */
 unit/test_init: unit/test_init.c $(HELPERS)
