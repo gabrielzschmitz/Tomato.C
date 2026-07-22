@@ -23,6 +23,15 @@ NCURSES_CFLAGS = $(shell pkg-config --cflags ncursesw 2>/dev/null || echo "")
 NCURSES_LIBS = $(shell pkg-config --libs ncursesw 2>/dev/null || echo "-lncurses -ltinfo")
 TEST_LDLIBS = -lm
 
+ifdef ASAN
+  BASE_CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+  TEST_LDLIBS += -fsanitize=address -fsanitize=undefined
+endif
+ifdef UBSAN
+  BASE_CFLAGS += -fsanitize=undefined
+  TEST_LDLIBS += -fsanitize=undefined
+endif
+
 TEST_CFLAGS = $(BASE_CFLAGS) $(NCURSES_CFLAGS)
 
 HELPERS = helpers/test_helpers.h
@@ -44,6 +53,7 @@ UNIT_BINS = \
 	unit/test_log \
 	unit/test_anim \
 	unit/test_bar \
+	unit/test_init \
 
 
 all: build
@@ -91,6 +101,10 @@ unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/err
 
 #/** @brief bar — structural tests; stubs notes.c functions */
 unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief init — InitBorder structural test (standalone, no init.c links) */
+unit/test_init: unit/test_init.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/**

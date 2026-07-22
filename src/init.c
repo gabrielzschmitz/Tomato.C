@@ -494,6 +494,14 @@ static ErrorType initPomodoroData(AppData* app) {
  * @return ErrorType NO_ERROR on success, or FILE_ERROR on failure
  */
 static ErrorType debugSeedHistory(void) {
+  /* Check if log already exists and has data - don't destroy real history. */
+  FILE* check = FOpenNoFollow(POMODORO_LOG, "rb");
+  if (check) {
+    fseek(check, 0, SEEK_END);
+    long sz = ftell(check);
+    fclose(check);
+    if (sz > 0) return NO_ERROR;
+  }
   FILE* f = FOpenNoFollow(POMODORO_LOG, "wb");
   if (!f) return FILE_ERROR;
 

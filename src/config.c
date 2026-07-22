@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1023,7 +1024,7 @@ static void readFloat(toml_table_t* root, const char* path, float* out) {
  * @param out Output pointer for the string (caller does not own memory)
  */
 static void readString(toml_table_t* root, const char* path, const char** out) {
-  char buf[256];
+  char buf[PATH_MAX];
   snprintf(buf, sizeof(buf), "%s", path);
   char* last_dot = strrchr(buf, '.');
   toml_table_t* tbl;
@@ -1054,7 +1055,7 @@ static void readIconArray(toml_table_t* root, const char* path,
   toml_array_t* arr = toml_table_array(root, path);
   if (!arr) {
     /* Try as nested table path */
-    char buf[256];
+    char buf[PATH_MAX];
     snprintf(buf, sizeof(buf), "%s", path);
     char* last_dot = strrchr(buf, '.');
     if (last_dot) {
@@ -1068,7 +1069,7 @@ static void readIconArray(toml_table_t* root, const char* path,
   if (len > 3) len = 3;
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
-    if (v.ok) out[i] = v.u.s;
+    if (v.ok) out[i] = strdup(v.u.s);
   }
 }
 
@@ -1093,7 +1094,7 @@ static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
   *count = len;
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
-    if (v.ok) out[i] = v.u.s;
+    if (v.ok) out[i] = strdup(v.u.s);
   }
 }
 
@@ -1422,17 +1423,26 @@ cleanup:
  */
 static void readNotificationConfig(toml_table_t* root, const char* prefix,
                                    NotificationConfig* cfg) {
-  char path[256];
+  char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s.title", prefix);
+  const char* old_title = cfg->title;
   readString(root, path, &cfg->title);
+  if (cfg->title && cfg->title != old_title) cfg->title = strdup(cfg->title);
   snprintf(path, sizeof(path), "%s.description", prefix);
+  const char* old_desc = cfg->description;
   readString(root, path, &cfg->description);
+  if (cfg->description && cfg->description != old_desc)
+    cfg->description = strdup(cfg->description);
   snprintf(path, sizeof(path), "%s.audio_path", prefix);
+  const char* old_audio = cfg->audio_path;
   readString(root, path, &cfg->audio_path);
-  if (cfg->audio_path) {
+  if (cfg->audio_path && cfg->audio_path != old_audio) {
     char* expanded = expandDatadir(cfg->audio_path);
     if (expanded) {
+      free((char*)cfg->audio_path);
       cfg->audio_path = expanded;
+    } else {
+      cfg->audio_path = strdup(cfg->audio_path);
     }
   }
 }
@@ -1457,7 +1467,7 @@ static void readNoiseTracks(toml_table_t* root) {
     if (!tbl) continue;
     toml_value_t v;
     v = toml_table_string(tbl, "name");
-    if (v.ok) g_config.noise.tracks[i].name = v.u.s;
+    if (v.ok) g_config.noise.tracks[i].name = strdup(v.u.s);
     v = toml_table_string(tbl, "sound_path");
     if (v.ok) {
       char* expanded = expandDatadir(v.u.s);
@@ -1471,7 +1481,7 @@ static void readNoiseTracks(toml_table_t* root) {
     if (icons_arr && toml_array_len(icons_arr) >= 3) {
       for (int j = 0; j < 3; j++) {
         toml_value_t iv = toml_array_string(icons_arr, j);
-        if (iv.ok) g_config.noise.tracks[i].icons[j] = iv.u.s;
+        if (iv.ok) g_config.noise.tracks[i].icons[j] = strdup(iv.u.s);
       }
     }
   }
@@ -1497,7 +1507,10 @@ static void loadTomlFile(const char* path) {
   }
 
   readInt(root, "visual.animations", &g_config.visual.animations);
+  const char* old_icons = g_config.visual.icons;
   readString(root, "visual.icons", &g_config.visual.icons);
+  if (g_config.visual.icons && g_config.visual.icons != old_icons)
+    g_config.visual.icons = strdup(g_config.visual.icons);
   /* Sync icons_index from the string after TOML override */
   if (strcmp(g_config.visual.icons, "nerd-icons") == 0)
     g_config.visual.icons_index = 0;
@@ -1584,10 +1597,22 @@ static void loadTomlFile(const char* path) {
   readIconArray(root, "visual.ui.icons.misc.back",
                 g_config.visual.ui.icons.misc.back);
 
-  readString(root, "visual.ui.icons.misc.visual_cursor",
-             &g_config.visual.ui.icons.misc.visual_cursor);
-  readString(root, "visual.ui.icons.misc.insert_cursor",
-             &g_config.visual.ui.icons.misc.insert_cursor);
+  {
+    const char* old = g_config.visual.ui.icons.misc.visual_cursor;
+    readString(root, "visual.ui.icons.misc.visual_cursor",
+               &g_config.visual.ui.icons.misc.visual_cursor);
+    if (g_config.visual.ui.icons.misc.visual_cursor &&
+        g_config.visual.ui.icons.misc.visual_cursor != old)
+      g_config.visual.ui.icons.misc.visual_cursor = strdup(g_config.visual.ui.icons.misc.visual_cursor);
+  }
+  {
+    const char* old = g_config.visual.ui.icons.misc.insert_cursor;
+    readString(root, "visual.ui.icons.misc.insert_cursor",
+               &g_config.visual.ui.icons.misc.insert_cursor);
+    if (g_config.visual.ui.icons.misc.insert_cursor &&
+        g_config.visual.ui.icons.misc.insert_cursor != old)
+      g_config.visual.ui.icons.misc.insert_cursor = strdup(g_config.visual.ui.icons.misc.insert_cursor);
+  }
   readIconArray(root, "visual.ui.icons.misc.border_chars",
                 g_config.visual.ui.icons.misc.border_chars);
   readIconArray(root, "visual.ui.icons.misc.history",
@@ -1604,9 +1629,13 @@ static void loadTomlFile(const char* path) {
                 g_config.visual.ui.icons.misc.icons_module);
 
   readInt(root, "pomodoro.amount", &g_config.pomodoro.amount);
+  if (g_config.pomodoro.amount < 1) g_config.pomodoro.amount = 1;
   readInt(root, "pomodoro.work_time", &g_config.pomodoro.work_time);
+  if (g_config.pomodoro.work_time < 1) g_config.pomodoro.work_time = 1;
   readInt(root, "pomodoro.short_pause", &g_config.pomodoro.short_pause);
+  if (g_config.pomodoro.short_pause < 1) g_config.pomodoro.short_pause = 1;
   readInt(root, "pomodoro.long_pause", &g_config.pomodoro.long_pause);
+  if (g_config.pomodoro.long_pause < 1) g_config.pomodoro.long_pause = 1;
 
   readBool(root, "notifications.enabled", &g_config.notifications.enabled);
   readBool(root, "notifications.sound", &g_config.notifications.sound);
@@ -1623,6 +1652,8 @@ static void loadTomlFile(const char* path) {
 
   readBool(root, "noise.enabled", &g_config.noise.enabled);
   readInt(root, "noise.master_volume", &g_config.noise.master_volume);
+  if (g_config.noise.master_volume < 0) g_config.noise.master_volume = 0;
+  if (g_config.noise.master_volume > 100) g_config.noise.master_volume = 100;
   readNoiseTracks(root);
 
   readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
@@ -1667,6 +1698,8 @@ static void loadTomlFile(const char* path) {
 
   readBool(root, "misc.wsl", &g_config.misc.wsl);
   readInt(root, "misc.fps", &g_config.misc.fps);
+  if (g_config.misc.fps < 1) g_config.misc.fps = 1;
+  if (g_config.misc.fps > 240) g_config.misc.fps = 240;
   readInt(root, "misc.max_note_depth", &g_config.misc.max_note_depth);
 
   readKeybindings(root);

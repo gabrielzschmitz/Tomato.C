@@ -19,7 +19,7 @@
 #define MAX_RECENT_SESSIONS 3
 #define HISTORY_VISIBLE_MONTHS 5
 #define MAX_ERROR_ENTRIES 128
-#define FPMS 1000.0 / FPS
+#define FPMS (1000.0 / (FPS))
 
 #ifdef DEBUG_FLAG
 #define DEBUG 1

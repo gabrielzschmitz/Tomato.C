@@ -129,6 +129,10 @@ ErrorType CreateTimerLog(const char* path) {
     return SOCKET_LISTEN_ERROR;
   }
 
+  if (server_sock >= FD_SETSIZE) {
+    close(server_sock);
+    return SOCKET_CREATION_ERROR;
+  }
   FD_ZERO(&master_set);
   FD_SET(server_sock, &master_set);
   max_sd = server_sock;
@@ -417,7 +421,7 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 ErrorType SetTimerLog(const char* path, const char* log) {
-  static char last_log[32] = "";
+  static char last_log[64] = "";
 
   /* Skip sending if the log is identical to the last one */
   /* Always send pause updates so the client keeps echoing the paused time. */
@@ -452,7 +456,7 @@ ErrorType SetTimerLog(const char* path, const char* log) {
   }
 
   /* Truncate log to buffer size */
-  const int max_length = 31;
+  const int max_length = 63;
   char message[max_length + 2];
   snprintf(message, sizeof(message), "%.*s\n", max_length, log);
   message[max_length + 1] = '\0'; /* Ensure null termination */
@@ -1060,8 +1064,7 @@ void GetPomodoroHistoryDay(const char* path) {
   int month = lt->tm_mon + 1;
   int day = lt->tm_mday;
 
-  /* Read all records for today into array */
-  pomodoroLogRecord records[200];
+  /* First pass: count matching records */
   int count = 0;
   FILE* file = fopen(path, "rb");
   if (!file) {
@@ -1069,35 +1072,81 @@ void GetPomodoroHistoryDay(const char* path) {
     return;
   }
   pomodoroLogRecord rec;
-  while (fread(&rec, sizeof(rec), 1, file) == 1 && count < 200) {
+  while (fread(&rec, sizeof(rec), 1, file) == 1) {
     if (rec.session_index == 0) continue;
     time_t ts = (time_t)rec.session_start_time;
     if (!histIsSameDay(ts, year, month, day)) continue;
-    records[count++] = rec;
+    count++;
   }
-  fclose(file);
   if (count == 0) {
     printf("No sessions found for today (%04d-%02d-%02d).\n", year, month, day);
+    fclose(file);
     return;
   }
 
-  /* Build unique session list (last record per session_index wins) */
-  int uIdx[100], uStatus[100], uCycles[100], uWork[100];
-  int uShort[100], uLong[100];
-  time_t uStart[100], uEnd[100];
+  /* Allocate records array */
+  pomodoroLogRecord* records = (pomodoroLogRecord*)malloc((size_t)count * sizeof(pomodoroLogRecord));
+  if (!records) {
+    printf("Memory allocation error.\n");
+    fclose(file);
+    return;
+  }
+
+  /* Second pass: read matching records */
+  rewind(file);
+  int idx = 0;
+  while (fread(&rec, sizeof(rec), 1, file) == 1 && idx < count) {
+    if (rec.session_index == 0) continue;
+    time_t ts = (time_t)rec.session_start_time;
+    if (!histIsSameDay(ts, year, month, day)) continue;
+    records[idx++] = rec;
+  }
+  fclose(file);
+
+  /* First unique pass: count unique session indices */
   int uCount = 0;
-  for (int i = 0; i < count && uCount < 100; i++) {
-    int idx = records[i].session_index;
+  for (int i = 0; i < count; i++) {
+    int idx_i = records[i].session_index;
+    int found = 0;
+    for (int j = 0; j < i; j++) {
+      if (records[j].session_index == idx_i) {
+        found = 1;
+        break;
+      }
+    }
+    if (!found) uCount++;
+  }
+
+  /* Allocate unique session arrays */
+  int* uIdx = (int*)malloc((size_t)uCount * sizeof(int));
+  int* uStatus = (int*)malloc((size_t)uCount * sizeof(int));
+  int* uCycles = (int*)malloc((size_t)uCount * sizeof(int));
+  int* uWork = (int*)malloc((size_t)uCount * sizeof(int));
+  int* uShort = (int*)malloc((size_t)uCount * sizeof(int));
+  int* uLong = (int*)malloc((size_t)uCount * sizeof(int));
+  time_t* uStart = (time_t*)malloc((size_t)uCount * sizeof(time_t));
+  time_t* uEnd = (time_t*)malloc((size_t)uCount * sizeof(time_t));
+  if (!uIdx || !uStatus || !uCycles || !uWork || !uShort || !uLong || !uStart || !uEnd) {
+    printf("Memory allocation error.\n");
+    free(records); free(uIdx); free(uStatus); free(uCycles);
+    free(uWork); free(uShort); free(uLong); free(uStart); free(uEnd);
+    return;
+  }
+
+  /* Second unique pass: fill arrays */
+  uCount = 0;
+  for (int i = 0; i < count; i++) {
+    int idx_i = records[i].session_index;
     int found = -1;
     for (int j = 0; j < uCount; j++) {
-      if (uIdx[j] == idx) {
+      if (uIdx[j] == idx_i) {
         found = j;
         break;
       }
     }
     if (found < 0) {
       found = uCount++;
-      uIdx[found] = idx;
+      uIdx[found] = idx_i;
       uStart[found] = (time_t)records[i].session_start_time;
     }
     uStatus[found] = records[i].status;
@@ -1108,6 +1157,7 @@ void GetPomodoroHistoryDay(const char* path) {
     uEnd[found] =
       (time_t)(records[i].session_start_time + records[i].total_elapsed);
   }
+  free(records);
 
   /* Compute stats from unique sessions */
   int totalSessions = uCount;
@@ -1136,7 +1186,13 @@ void GetPomodoroHistoryDay(const char* path) {
 
   /* Determine index column width and build table rows */
   int idxW = snprintf(NULL, 0, "%d", uCount);
-  char rows[100][128];
+  char (*rows)[128] = (char(*)[128])malloc((size_t)uCount * 128);
+  if (!rows) {
+    printf("Memory allocation error.\n");
+    free(uIdx); free(uStatus); free(uCycles); free(uWork);
+    free(uShort); free(uLong); free(uStart); free(uEnd);
+    return;
+  }
   int maxRow = 0;
   for (int i = 0; i < uCount; i++) {
     int durSec;
@@ -1154,11 +1210,13 @@ void GetPomodoroHistoryDay(const char* path) {
     char sts[6], ets[6];
     strftime(sts, 6, "%H:%M", stm);
     strftime(ets, 6, "%H:%M", etm);
-    snprintf(rows[i], sizeof(rows[i]), "#%-*d     %s   %s   %d min", idxW,
+    snprintf(rows[i], 128, "#%-*d     %s   %s   %d min", idxW,
              i + 1, sts, ets, durMin);
     int len = (int)strlen(rows[i]);
     if (len > maxRow) maxRow = len;
   }
+  free(uIdx); free(uStatus); free(uCycles); free(uWork);
+  free(uShort); free(uLong); free(uStart); free(uEnd);
 
   /* Box width */
   static const char* weeks[] = {"Sun", "Mon", "Tue", "Wed",
@@ -1201,6 +1259,7 @@ void GetPomodoroHistoryDay(const char* path) {
   printf("│%*s│\n", innerW, "");
   printf("│ %-*s│\n", innerW - 1, header);
   for (int i = 0; i < uCount; i++) printf("│ %-*s│\n", innerW - 1, rows[i]);
+  free(rows);
   printf("└");
   for (int i = 0; i < boxW - 2; i++) printf("─");
   printf("┘\n");

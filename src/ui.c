@@ -1643,8 +1643,12 @@ SlideDef** BuildContinueSlides(AppData* app, Dimensions size) {
 
   char total_bar[64];
   char* bp = total_bar;
-  for (int i = 0; i < 10; i++)
-    bp += sprintf(bp, "%s", i < total_bar_filled ? filled : empty_ch);
+  for (int i = 0; i < 10; i++) {
+    int remaining = (int)(sizeof(total_bar) - (bp - total_bar) - 1);
+    if (remaining <= 0) break;
+    int n = snprintf(bp, (size_t)remaining, "%s", i < total_bar_filled ? filled : empty_ch);
+    bp += n;
+  }
   *bp = '\0';
 
   char started_str[64] = "--";
@@ -1892,10 +1896,16 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
     int filled = (data->volume[i] * bar_w) / 100;
     int empty = bar_w - filled;
     char* bp = vol_bars[i];
-    for (int j = 0; j < filled; j++)
-      bp += sprintf(bp, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    for (int j = 0; j < empty; j++)
-      bp += sprintf(bp, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    for (int j = 0; j < filled; j++) {
+      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    for (int j = 0; j < empty; j++) {
+      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
     *bp = '\0';
   }
   {
@@ -1903,10 +1913,16 @@ static void noiseSlideRender(AppData* app, SlideDef* def) {
     int filled = (data->master_volume * bar_w) / 100;
     int empty = bar_w - filled;
     char* bp = vol_bars[track_count];
-    for (int j = 0; j < filled; j++)
-      bp += sprintf(bp, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    for (int j = 0; j < empty; j++)
-      bp += sprintf(bp, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    for (int j = 0; j < filled; j++) {
+      int remaining = (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s", ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    for (int j = 0; j < empty; j++) {
+      int remaining = (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s", INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
     *bp = '\0';
   }
 
@@ -2114,10 +2130,15 @@ void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
              params->total);
   else {
     char* p = buf;
-    p += sprintf(p, "%s ", params->title);
-    for (int i = 0; i < params->total; i++)
-      p +=
-        sprintf(p, "%s", i <= slide_idx ? params->icon_on : params->icon_off);
+    int remaining = (int)(sizeof(buf) - (p - buf) - 1);
+    int n = snprintf(p, (size_t)remaining, "%s ", params->title);
+    p += n;
+    remaining -= n;
+    for (int i = 0; i < params->total && remaining > 0; i++) {
+      n = snprintf(p, (size_t)remaining, "%s", i <= slide_idx ? params->icon_on : params->icon_off);
+      p += n;
+      remaining -= n;
+    }
     *p = '\0';
   }
   int dot_w = utf8DisplayWidth(buf);

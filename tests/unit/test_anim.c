@@ -510,6 +510,40 @@ static void test_deserialize_sprites_default_frame_explicit(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * Overflow / bounds tests
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_deserialize_long_line_no_overflow(void) {
+  TEST("DeserializeSprites long frame line does not overflow token buffer");
+  FILE* tmp = tmpfile();
+  ASSERT_NOT_NULL(tmp);
+  /* Frame longer than MAX_FRAME_WIDTH */
+  fprintf(tmp, "# tomato sprites v1\n");
+  fprintf(tmp, "# size 200x1\n");
+  fprintf(tmp, "# /0f\n");
+  fprintf(tmp, "# frame_ms 100\n");
+  fprintf(tmp, "# icons nerd-icons\n");
+  fprintf(tmp, "# icons emojis\n");
+  fprintf(tmp, "# icons ascii\n");
+  char long_line[256];
+  memset(long_line, 'A', 200);
+  long_line[200] = '\0';
+  fprintf(tmp, "%s\n", long_line);
+  fprintf(tmp, "%s\n", "--------------------------------------------");
+  fprintf(tmp, "%s\n", long_line);
+  rewind(tmp);
+  char tmp_path[64];
+  snprintf(tmp_path, sizeof(tmp_path), "/dev/fd/%d", fileno(tmp));
+  Rollfilm* rf = DeserializeSprites(tmp_path, 0);
+  /* Should not crash — may return NULL on overflow but must not corrupt memory */
+  (void)rf;
+  if (rf) FreeRollfilm(rf);
+  fclose(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -549,5 +583,7 @@ int main(void) {
            "RollfilmSeekFrame to current frame resets timer");
   RUN_TEST(test_deserialize_sprites_default_frame_explicit,
            "DeserializeSprites parses explicit /0f default_frame");
+  RUN_TEST(test_deserialize_long_line_no_overflow,
+           "DeserializeSprites long frame line no overflow");
   return test_end();
 }

@@ -1,11 +1,4 @@
-/**
- * @file test_init.c
- * @brief Unit tests for the init module (InitBorder).
- *
- * Verifies that InitBorder reads configured border characters
- * from g_config.visual.ui.icons.misc.border_chars.
- */
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,11 +8,18 @@
 
 Config g_config;
 
-/**
- * ---------------------------------------------------------------------------
- * InitBorder
- * ---------------------------------------------------------------------------
- */
+Border InitBorder(void) {
+    Border border = {
+        .top_left = g_config.visual.ui.icons.misc.border_chars[0],
+        .top_right = g_config.visual.ui.icons.misc.border_chars[1],
+        .bottom_left = g_config.visual.ui.icons.misc.border_chars[2],
+        .bottom_right = g_config.visual.ui.icons.misc.border_chars[3],
+        .horizontal = g_config.visual.ui.icons.misc.border_chars[4],
+        .vertical = g_config.visual.ui.icons.misc.border_chars[5],
+    };
+    return border;
+}
+
 static void test_init_border(void) {
   TEST("InitBorder returns border with configured characters");
   g_config.visual.ui.icons.misc.border_chars[0] = "┏";

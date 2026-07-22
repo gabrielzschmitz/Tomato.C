@@ -8,6 +8,14 @@
 
 #include "config.h"
 #include "test_helpers.h"
+#include "tomato.h"
+
+Config g_config;
+
+/**
+ * @brief Helper to set FPS for FPMS macro tests.
+ */
+static void set_fps(int fps) { g_config.misc.fps = fps; }
 
 /**
  * ---------------------------------------------------------------------------
@@ -83,6 +91,16 @@ static void test_separator_length(void) {
   ASSERT_EQ(strlen(SEPARATOR), 75);
 }
 
+static void test_fpms_macro(void) {
+  TEST("FPMS macro evaluates correctly with parentheses");
+  set_fps(120);
+  ASSERT_EQ((int)(60 * FPMS), (int)(60 * (1000.0 / 120)));
+  set_fps(60);
+  ASSERT_EQ((int)(60 * FPMS), (int)(60 * (1000.0 / 60)));
+  set_fps(1);
+  ASSERT_EQ((int)(60 * FPMS), (int)(60 * (1000.0 / 1)));
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Main
@@ -100,5 +118,7 @@ int main(void) {
   RUN_TEST(test_mode_constants, "mode constants have correct values");
   RUN_TEST(test_keycode_aliases, "CTRL aliases match ASCII control codes");
   RUN_TEST(test_separator_length, "SEPARATOR is correct length");
+  RUN_TEST(test_fpms_macro,
+           "FPMS macro evaluates correctly with parentheses");
   return test_end();
 }

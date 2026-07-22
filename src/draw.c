@@ -44,7 +44,7 @@ ErrorType DrawScreen(AppData* app) {
   ClearClickRegions(app);
   renderPopups(app);
 
-  if (!ValidateAndRenderScreenSize(app)) return status;
+  if (!ValidateAndRenderScreenSize(app)) return DRAW_ERROR;
 
   Border border = InitBorder();
   renderPanel(app, border);

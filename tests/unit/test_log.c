@@ -388,6 +388,34 @@ static void test_hist_level_for_count_twenty(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * GetPomodoroHistoryDay — dynamic allocation test
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_get_history_day_many_sessions(void) {
+  TEST("GetPomodoroHistoryDay handles >100 sessions without crash");
+  char tmp[] = "/tmp/t_log_day_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  FILE* f = fopen(tmp, "wb");
+  ASSERT_NOT_NULL(f);
+  time_t today = time(NULL);
+  /* Write 150 unique session records for today */
+  for (int i = 1; i <= 150; i++) {
+    write_rec(f, (uint16_t)i, 0, 4, 4, 25, 5, 15, 0, 0, 0,
+              (uint32_t)today + (i * 60));
+  }
+  fclose(f);
+
+  /* Call GetPomodoroHistoryDay — must not crash */
+  GetPomodoroHistoryDay(tmp);
+  remove(tmp);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -424,5 +452,7 @@ int main(void) {
            "HistSessionsForDay endTime from total_elapsed");
   RUN_TEST(test_hist_sessions_skip_instant_end_time,
            "HistSessionsForDay skip instant endTime");
+  RUN_TEST(test_get_history_day_many_sessions,
+           "GetPomodoroHistoryDay >100 sessions no crash");
   return test_end();
 }

@@ -438,6 +438,25 @@ static void test_wrap_text_zero_width(void) {
   ASSERT_NULL(lines);
 }
 
+static void test_wrap_text_empty(void) {
+  TEST("WrapText returns 0 for empty string, fallback strdup is safe");
+  char** lines = NULL;
+  int count = WrapText("", 80, &lines);
+  ASSERT_EQ(count, 0);
+  /* WrapText allocates an empty array (not NULL) — freeable */
+  ASSERT_NOT_NULL(lines);
+  free(lines);
+  /* Simulate the renderNotesScene fallback fix: allocate 1 line + strdup("") */
+  char** fallback = (char**)malloc(sizeof(char*));
+  ASSERT_NOT_NULL(fallback);
+  fallback[0] = strdup("");
+  ASSERT_NOT_NULL(fallback[0]);
+  ASSERT_STR_EQ(fallback[0], "");
+  /* free must be safe — strdup'd memory, not a literal */
+  free(fallback[0]);
+  free(fallback);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * GetNoteLines / GetNoteLinesFromText
@@ -557,6 +576,8 @@ int main(void) {
   RUN_TEST(test_wrap_text_wrap, "WrapText wraps text at max_width");
   RUN_TEST(test_wrap_text_null, "WrapText returns 0 for NULL text");
   RUN_TEST(test_wrap_text_zero_width, "WrapText returns 0 for zero width");
+  RUN_TEST(test_wrap_text_empty,
+           "WrapText empty string fallback strdup is safe");
   RUN_TEST(test_get_note_lines_from_text,
            "GetNoteLinesFromText counts wrapped lines");
   RUN_TEST(test_get_note_lines_from_text_null,

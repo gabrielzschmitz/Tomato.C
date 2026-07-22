@@ -70,6 +70,7 @@ static ErrorType sendNotification(const char* title, const char* description) {
   {
     size_t j = 0;
     for (size_t i = 0; i < desc_len; i++) {
+      if (description[i] == '\\') esc_desc[j++] = '\\';
       if (description[i] == '"') esc_desc[j++] = '\\';
       esc_desc[j++] = description[i];
     }
@@ -78,6 +79,7 @@ static ErrorType sendNotification(const char* title, const char* description) {
   {
     size_t j = 0;
     for (size_t i = 0; i < title_len; i++) {
+      if (title[i] == '\\') esc_title[j++] = '\\';
       if (title[i] == '"') esc_title[j++] = '\\';
       esc_title[j++] = title[i];
     }

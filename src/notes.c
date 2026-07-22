@@ -1064,7 +1064,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
           if (num_input_lines == 0) {
             num_input_lines = 1;
             wrapped_input = (char**)malloc(sizeof(char*));
-            if (wrapped_input) wrapped_input[0] = (char*)"";
+            if (wrapped_input) wrapped_input[0] = strdup("");
           }
 
           int sel_start = 0;
@@ -1143,7 +1143,7 @@ void RenderNotes(AppData* app, NotesData* notes, int start_x, int start_y,
     if (num_lines == 0) {
       num_lines = 1;
       wrapped_lines = (char**)malloc(sizeof(char*));
-      if (wrapped_lines) wrapped_lines[0] = (char*)"";
+      if (wrapped_lines) wrapped_lines[0] = strdup("");
     }
 
     for (int wl = 0; wl < num_lines && render_y < end_y; wl++) {

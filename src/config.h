@@ -378,8 +378,8 @@ extern const char* default_user_config_dir;
 /** 0/1 — WSL mode (default: 0). */
 #define WSL (g_config.misc.wsl)
 /** Sprite separator string. */
-static const char* SEPARATOR =
-  "---------------------------------------------------------------------------";
+#define SEPARATOR \
+  "---------------------------------------------------------------------------"
 /** Target frame rate (default: 120). */
 #define FPS (g_config.misc.fps)
 /** Maximum hierarchical note depth, 0-3 (default: 1). */

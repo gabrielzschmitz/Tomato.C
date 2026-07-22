@@ -45,7 +45,7 @@ static int parseFrameSize(const char* line, int* frame_count, int* frame_height,
 static int parseFrameTime(const char* line, double* frame_time);
 static bool isIconsLine(const char* line, int icon_type);
 static bool isSeparatorLine(const char* line);
-static int handleUnicode(const char* src, char** dest);
+static int handleUnicode(const char* src, char** dest, size_t dest_len);
 static int handleColor(const char* src, int* dest);
 /* Utility */
 static int getWidestFrame(Rollfilm* rollfilm);
@@ -373,7 +373,8 @@ static struct FrameToken* deserializeFrameLine(const char* src, int* color) {
   while (*src != '\0') {
     if (*src == '\\' && *(src + 1) == 'u') {
       if (current_token->color == NO_COLOR) current_token->color = *color;
-      int length = handleUnicode(src, &current_token->token);
+      size_t cur_len = strlen(current_token->token);
+      int length = handleUnicode(src, &current_token->token, cur_len);
       src += length + 3;
       current_token->length += length;
     } else if (*src == '\\' && *(src + 1) == 'c') {
@@ -417,6 +418,7 @@ static struct FrameToken* deserializeFrameLine(const char* src, int* color) {
     } else {
       if (current_token->color == NO_COLOR) current_token->color = *color;
       if (*src != '\n') {
+        if (current_token->length >= MAX_FRAME_WIDTH - 1) break;
         char buf[2] = {*src, '\0'};
         strcat(current_token->token, buf);
         current_token->length++;
@@ -613,7 +615,7 @@ static bool isSeparatorLine(const char* line) {
  * @param dest Pointer to destination pointer (updated)
  * @return Number of bytes consumed
  */
-static int handleUnicode(const char* src, char** dest) {
+static int handleUnicode(const char* src, char** dest, size_t dest_len) {
   /* Create a buffer to store the UTF-8 character
    * (max 4 bytes for UTF-8 + 1 for null terminator) */
   char utf8_char[5] = {0};
@@ -653,7 +655,7 @@ static int handleUnicode(const char* src, char** dest) {
   }
 
   /* Append the UTF-8 character to the destination string */
-  size_t dest_len = strlen(*dest);
+  if (dest_len + utf8_length >= MAX_FRAME_WIDTH) return 0;
   for (int i = 0; i < utf8_length; ++i) (*dest)[dest_len + i] = utf8_char[i];
   (*dest)[dest_len + utf8_length] = '\0';
 
