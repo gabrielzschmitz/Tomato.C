@@ -107,8 +107,8 @@ unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.
                $(SRCDIR)/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
-#/** @brief draw — mirrors ValidateAndRenderScreenSize logic (standalone, no draw.c link) */
-unit/test_draw: unit/test_draw.c $(HELPERS)
+#/** @brief draw — links draw.c + util.c; stubs all external deps for DrawScreen */
+unit/test_draw: unit/test_draw.c $(SRCDIR)/draw.c $(SRCDIR)/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief audio — mirrors PlayAudio NULL/disabled logic (standalone, no audio.c link) */
