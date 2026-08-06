@@ -34,6 +34,8 @@ static void renderDebugInfo(AppData* app);
 /**
  * Draw the entire screen based on the current app state.
  * Renders all visible panels, animations, and UI elements.
+ * When the terminal is too small, renders a screen-size error message
+ * instead and returns NO_ERROR so the app keeps running (not fatal).
  * @param app Pointer to the application data
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
@@ -44,7 +46,7 @@ ErrorType DrawScreen(AppData* app) {
   ClearClickRegions(app);
   renderPopups(app);
 
-  if (!ValidateAndRenderScreenSize(app)) return DRAW_ERROR;
+  if (!ValidateAndRenderScreenSize(app)) return NO_ERROR;
 
   Border border = InitBorder();
   renderPanel(app, border);
