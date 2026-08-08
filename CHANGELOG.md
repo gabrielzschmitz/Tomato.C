@@ -7,6 +7,97 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-08
+
+### Added
+
+- **Automated installation script** — Added `install.sh` to detect the
+  operating system and package manager, install build dependencies, and set up
+  Tomato.C system-wide with the appropriate data prefix. Supports APT, DNF,
+  Pacman, APK, Zypper, Homebrew, and XBPS.
+
+- **Uninstallation support** — `install.sh --uninstall` now removes the
+  installed binary, shared application data, and Linux desktop entry while
+  preserving user configuration files.
+
+- **Void Linux support** — Added installation support for Void Linux through
+  the XBPS package manager.
+
+- **Dedicated Pomodoro state machine** — Added `pomodoro.c` and `pomodoro.h` to
+  centralize Pomodoro initialization, time ticking, step transitions, and
+  duration calculations.
+
+- **Expanded test coverage** — Added unit and integration tests across
+  animation, audio, drawing, input, notifications, logging, configuration, UI,
+  initialization, history, Tomato, and Pomodoro modules.
+
+- **Out-of-memory tests** — Added allocation-failure tests for animation and
+  bar modules, with platform-aware malloc wrapping.
+
+### Fixed
+
+- **Animation frame buffer overflows** — Added buffer bounds checks and
+  explicit length handling during frame deserialization.
+
+- **Configuration memory handling** — Fixed configuration string lifetime
+  issues by using `strdup`, added `PATH_MAX` handling for paths, and validated
+  numeric configuration values against their supported bounds.
+
+- **Memory leaks and allocation errors** — Improved allocation and cleanup
+  handling across sessions, logging, notifications, and other dynamic data
+  paths.
+
+- **UI rendering buffer safety** — Added bounds checking to `snprintf` loops
+  used by UI rendering functions to prevent buffer overflows.
+
+- **`FPS` macro safety** — Wrapped the `FPS` macro in parentheses to prevent
+  unexpected expression evaluation.
+
+- **Small terminal handling** — `DrawScreen` now returns `NO_ERROR` when the
+  terminal is too small after displaying the appropriate error message,
+  allowing the application to continue running gracefully.
+
+- **Portable test binary discovery** — Replaced the non-portable `find
+  -executable` test with `find -perm -111`, improving compatibility with POSIX
+  environments such as macOS and Alpine.
+
+- **macOS animation tests** — Replaced Linux-specific `/proc/self/fd` paths
+  with portable `/dev/fd` paths for sprite deserialization tests.
+
+- **Test script robustness** — Fixed unbound `MAGENTA` variables in `build.sh`,
+  `install.sh`, and `run_tests.sh`, and corrected positional parameter
+  expansion from `$10` to `${10}` in `run_tests.sh`.
+
+### Changed
+
+- **Pomodoro state management** — `update.c` now uses the centralized
+  `TransitionPomodoroStep` state-machine function for work, short-pause, and
+  long-pause transitions instead of maintaining duplicated transition logic.
+
+- **Build system** — Added the new Pomodoro module to the build configuration.
+
+- **Installation workflow** — Installation is now handled through `install.sh`,
+  with automatic dependency detection and system-wide setup.
+
+- **Test integration** — Integration tests now link against the real Pomodoro
+  implementation instead of maintaining a separate copy of its logic.
+
+- **Draw tests** — `unit/test_draw` now links against the real `draw.c` and
+  `util.c` implementations instead of mirrored test logic.
+
+- **CI test workflow** — Ubuntu and macOS test jobs now run `run_tests.sh` with
+  `--verbose` and `--clean` to ensure clean builds and detailed test output.
+
+- **Test platform handling** — Malloc wrapping is now enabled only on supported
+  platforms, allowing out-of-memory tests to run on Linux without breaking
+  other environments.
+
+- **Code formatting** — Source files were reformatted to comply with the
+  project's `.clang-format` rules and style guidelines.
+
+- **Documentation** — README installation, uninstallation, contribution,
+  development, and documentation instructions were updated and streamlined.
+
 ## [1.0.3] - 2026-07-19
 
 ### Fixed
