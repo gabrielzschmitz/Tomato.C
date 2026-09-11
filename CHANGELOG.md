@@ -7,6 +7,38 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-11
+
+### Added
+
+- **tcc (Tiny C Compiler) support** — Tomato.C can now be compiled with tcc by
+  passing `CC=tcc ./build.sh` (or `CC=tcc ./install.sh`); gcc remains the
+  default. The build system detects tcc automatically to adapt the warning
+  flags, skip `-D_FORTIFY_SOURCE` (glibc rejects it without `__GNUC__`), drop
+  the `-Wl,--wrap`-based out-of-memory tests that tcc's linker cannot build,
+  and work around the libnotify enum-value `__attribute__` that tcc cannot
+  parse.
+
+- **Notification daemon check during install** — `install.sh` now verifies
+  that a desktop notification daemon is running on Linux by probing D-Bus for
+  an owner of `org.freedesktop.Notifications`. When none is active, the user is
+  warned (with per-distribution install tips) both during and after the
+  install. macOS is unaffected, as it delivers notifications via `osascript`.
+
+### Changed
+
+- **Documentation** — The README now explains how to build with tcc using
+  `CC=tcc ./build.sh` or `CC=tcc ./install.sh`, or by editing the compiler
+  default in `build/config.mk`.
+
+### Fixed
+
+- **`build.sh` reporting success on failed builds** — The build script now
+  captures the exit status of `make` immediately. Previously, when `bear` was
+  in use, the status was read after the `compile_commands.json` handling, so a
+  failed build could print `[OK]`, attempt to move a missing binary, print
+  “Build complete.”, and exit 0. Failures now print `[ERR]` and exit non-zero.
+
 ## [1.1.0] - 2026-08-08
 
 ### Added
