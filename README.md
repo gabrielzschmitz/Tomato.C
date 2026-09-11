@@ -35,7 +35,20 @@ curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/instal
 git clone https://github.com/gabrielzschmitz/Tomato.C.git
 cd Tomato.C
 ./build.sh
+# And/or
+./install.sh
 ```
+
+By default the build uses [gcc](https://gcc.gnu.org/). To use
+[tcc](https://bellard.org/tcc) (Tiny C Compiler), pass it on the command line:
+
+```bash
+CC=tcc ./build.sh
+# And/or
+CC=tcc ./install.sh
+```
+
+Alternatively for a more permanent change, edit `CC = gcc` in `build/config.mk`.
 </details>
 
 <details>
