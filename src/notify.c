@@ -3,7 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 #ifndef __APPLE__
+#if !defined(__GNUC__) && !defined(__clang__)
+#define __attribute__(x)
 #include <libnotify/notify.h>
+#undef __attribute__
+#else
+#include <libnotify/notify.h>
+#endif
 #endif
 #include <stdlib.h>
 #include <sys/wait.h>

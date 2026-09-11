@@ -15,7 +15,7 @@
 # */
 
 SRCDIR = ../src
-TEST_CC = gcc
+TEST_CC ?= gcc
 BASE_CFLAGS = -std=c99 -g -O0 -Wall -Wextra -Wno-unused-variable -Wno-unused-function \
               -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 \
               -I$(SRCDIR) -I$(SRCDIR)/external -Ihelpers -DUNIT_TEST
@@ -28,6 +28,12 @@ ifeq ($(UNAME_S),Linux)
   WRAP_MALLOC = -Wl,--wrap,malloc
   MALLOC_WRAP_TESTS = unit/test_anim_malloc unit/test_bar_malloc
 else
+  WRAP_MALLOC =
+  MALLOC_WRAP_TESTS =
+endif
+
+IS_TCC := $(shell $(TEST_CC) -v 2>&1 | grep -ci "tcc version")
+ifeq ($(IS_TCC),1)
   WRAP_MALLOC =
   MALLOC_WRAP_TESTS =
 endif

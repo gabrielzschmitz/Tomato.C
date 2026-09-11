@@ -53,14 +53,21 @@ DEPFLAGS = -MD
 # * ---------------------------------------------------------------------------
 # */
 
+ifeq ($(origin CC),default)
 CC = gcc
+endif
+IS_TCC := $(shell $(CC) -v 2>&1 | grep -ci "tcc version")
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
 ifeq ($(UNAME), Darwin)
 CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS)
 else
+ifeq ($(IS_TCC),1)
+CFLAGS = -std=c99 -g -O1 -Wall $(TCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+else
 CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+endif
 endif
 
 #/**
@@ -81,9 +88,12 @@ endif
 # * ---------------------------------------------------------------------------
 # */
 
-HARDEN_CFLAGS  = -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE
+HARDEN_CFLAGS  = -fstack-protector-strong -fPIE
+ifneq ($(IS_TCC),1)
+HARDEN_CFLAGS += -D_FORTIFY_SOURCE=2
+endif
 ifneq ($(UNAME), Darwin)
-HARDEN_LDFLAGS = -pie -Wl,-z,relro,-z,now -z noexecstack
+HARDEN_LDFLAGS = -pie -Wl,-z,relro,-z,now -Wl,-z,noexecstack
 endif
 
 CFLAGS  += $(HARDEN_CFLAGS)
