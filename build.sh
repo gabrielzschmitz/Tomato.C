@@ -170,22 +170,25 @@ build() {
   echo " ${CYAN}[MAKE]${RESET} Running: ${BOLD}$make_cmd $make_target${RESET}"
   echo ""
 
+  local build_exit=0
   if [ -n "$bear_prefix" ]; then
     $make_cmd $make_target
-    if [ -f "compile_commands.json" ]; then
-      mv compile_commands.json ..
-      echo " ${GREEN}[OK]${RESET}  compile_commands.json moved to project root"
-    fi
+    build_exit=$?
   else
     $make_cmd $make_target
+    build_exit=$?
   fi
+  echo ""
 
-  local build_exit=$?
   if [ "$build_exit" -ne 0 ]; then
-    echo ""
     echo " ${RED}[ERR]${RESET}  Build failed (exit code $build_exit)" >&2
     cd ..
     exit 1
+  fi
+
+  if [ -n "$bear_prefix" ] && [ -f "compile_commands.json" ]; then
+    mv compile_commands.json ..
+    echo " ${GREEN}[OK]${RESET}  compile_commands.json moved to project root"
   fi
 
   # Move the executable
