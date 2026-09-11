@@ -33,6 +33,7 @@ PREFIX="/usr/local"
 DESTDIR=""
 UNINSTALL=0
 OS_ID=""; OS_NAME=""; PKG_MANAGER=""
+NOTIFY_OK=1
 
 #/**
 # * ---------------------------------------------------------------------------
@@ -248,6 +249,70 @@ install_dependencies() {
 
 #/**
 # * ---------------------------------------------------------------------------
+# * Notification check
+# * ---------------------------------------------------------------------------
+# */
+
+#/**
+# * @brief Print the warning body telling the user no notification daemon
+# *        was detected and how to install/start one.
+# *
+# * Assumes NOTIFY_OK is 0 (set by check_notifications). No-op on macOS.
+# */
+notify_warning() {
+  echo ""
+  echo "   Desktop toasts won't display until you install and start one."
+  echo "   Example:"
+  case "$PKG_MANAGER" in
+    pacman) echo "     sudo pacman -S dunst   (then run: dunst &)"   ;;
+    apt)    echo "     sudo apt install dunst (then run: dunst &)"   ;;
+    dnf)    echo "     sudo dnf install dunst (then run: dunst &)"   ;;
+    apk)    echo "     sudo apk add dunst     (then run: dunst &)"   ;;
+    xbps)   echo "     sudo xbps-install -S dunst (then run: dunst &)" ;;
+    zypper) echo "     sudo zypper install dunst (then run: dunst &)" ;;
+  esac
+  echo ""
+  echo "   Tomato.C still works as a Pomodoro timer without toasts."
+}
+
+#/**
+# * @brief Verify a desktop notification daemon is available on Linux.
+# *
+# * macOS is skipped because osascript delivers notifications natively.
+# * On Linux the app relies on libnotify (DBus org.freedesktop.Notifications),
+# * so we probe the session bus for an owner of that name.  If no daemon is
+# * running this prints a warning but does not abort the installation,
+# * since the timer itself still works without toasts.
+# *
+# * Sets global NOTIFY_OK to 0/1 and calls notify_warning on failure.
+# */
+check_notifications() {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    return 0
+  fi
+
+  echo " ${CYAN}[NOTIFY]${RESET} Checking for a notification daemon..."
+
+  local owner=""
+  if command -v dbus-send >/dev/null 2>&1; then
+    owner=$(dbus-send --session --dest=org.freedesktop.DBus \
+      --type=method_call --print-reply /org/freedesktop/DBus \
+      org.freedesktop.DBus.GetNameOwner \
+      string:org.freedesktop.Notifications 2>/dev/null)
+  fi
+
+  if [ -n "$owner" ]; then
+    NOTIFY_OK=1
+    echo " ${GREEN}[OK]${RESET}  Notification daemon detected"
+  else
+    NOTIFY_OK=0
+    echo " ${YELLOW}[WARN]${RESET}  No notification daemon found."
+    notify_warning
+  fi
+}
+
+#/**
+# * ---------------------------------------------------------------------------
 # * Build
 # * ---------------------------------------------------------------------------
 # */
@@ -405,8 +470,16 @@ main() {
 
   detect_os
   install_dependencies
+  check_notifications
   build_project
   install_files
+
+  if [ "$NOTIFY_OK" -eq 0 ]; then
+    echo ""
+    echo " ${YELLOW}[WARN]${RESET}  Reminder: no notification daemon was found."
+    echo " Start one to enable desktop toasts:"
+    notify_warning
+  fi
 }
 
 main "$@"
