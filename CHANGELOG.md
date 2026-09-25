@@ -7,6 +7,17 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-09-25
+
+### Added
+
+- **zig (Zig Compiler) support** — Tomato.C can now also be compiled with
+  Zig by passing `CC="zig cc" ./build.sh` (or `CC="zig cc" ./install.sh`);
+  gcc remains the default. The build system detects `zig cc` automatically
+  to silence the clang-only `-Wtypedef-redefinition` warnings, and the test
+  suite skips the `-Wl,--wrap`-based out-of-memory tests that Zig's linker
+  does not support.
+
 ## [1.1.1] - 2026-09-11
 
 ### Added

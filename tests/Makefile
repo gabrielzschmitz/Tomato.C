@@ -38,6 +38,12 @@ ifeq ($(IS_TCC),1)
   MALLOC_WRAP_TESTS =
 endif
 
+IS_ZIG := $(shell printf '%s' "$(TEST_CC)" | grep -ci "zig")
+ifeq ($(IS_ZIG),1)
+  WRAP_MALLOC =
+  MALLOC_WRAP_TESTS =
+endif
+
 ifdef ASAN
   BASE_CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
   TEST_LDLIBS += -fsanitize=address -fsanitize=undefined

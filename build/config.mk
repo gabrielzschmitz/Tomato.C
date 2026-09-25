@@ -54,20 +54,28 @@ DEPFLAGS = -MD
 # */
 
 ifeq ($(origin CC),default)
-CC = gcc
+CC = zig cc
 endif
 IS_TCC := $(shell $(CC) -v 2>&1 | grep -ci "tcc version")
+IS_ZIG := $(shell printf '%s' "$(CC)" | grep -ci "zig")
 TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
+ZIGFLAGS = $(GCCFLAGS) -Wno-unknown-warning-option -Wno-typedef-redefinition \
+           -Wno-unused-but-set-variable
 DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
-ifeq ($(UNAME), Darwin)
-CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS)
-else
 ifeq ($(IS_TCC),1)
-CFLAGS = -std=c99 -g -O1 -Wall $(TCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+WARNFLAGS = $(TCCFLAGS)
 else
-CFLAGS = -std=c99 -g -O1 -Wall $(GCCFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+ifeq ($(IS_ZIG),1)
+WARNFLAGS = $(ZIGFLAGS)
+else
+WARNFLAGS = $(GCCFLAGS)
 endif
+endif
+ifeq ($(UNAME), Darwin)
+CFLAGS = -std=c99 -g -O1 -Wall $(WARNFLAGS) $(DFLAGS)
+else
+CFLAGS = -std=c99 -g -O1 -Wall $(WARNFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
 endif
 
 #/**

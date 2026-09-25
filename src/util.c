@@ -336,6 +336,8 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
  * @return FILE pointer on success, NULL on error (sets errno)
  */
 FILE* FOpenNoFollow(const char* path, const char* mode) {
+  if (path == NULL || mode == NULL) return NULL;
+
   int flags = O_NOFOLLOW;
   if (mode[0] == 'a' || (mode[0] == 'a' && mode[1] == 'b'))
     flags |= O_WRONLY | O_APPEND | O_CREAT;

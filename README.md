@@ -40,12 +40,19 @@ cd Tomato.C
 ```
 
 By default the build uses [gcc](https://gcc.gnu.org/). To use
-[tcc](https://bellard.org/tcc) (Tiny C Compiler), pass it on the command line:
+[tcc](https://bellard.org/tcc) (Tiny C Compiler) or [zig](https://ziglang.org)
+as an alternative, pass it on the command line:
 
 ```bash
 CC=tcc ./build.sh
 # And/or
 CC=tcc ./install.sh
+```
+
+```bash
+CC="zig cc" ./build.sh
+# And/or
+CC="zig cc" ./install.sh
 ```
 
 Alternatively for a more permanent change, edit `CC = gcc` in `build/config.mk`.
