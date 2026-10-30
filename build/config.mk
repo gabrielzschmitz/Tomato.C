@@ -54,7 +54,7 @@ DEPFLAGS = -MD
 # */
 
 ifeq ($(origin CC),default)
-CC = zig cc
+CC = gcc
 endif
 IS_TCC := $(shell $(CC) -v 2>&1 | grep -ci "tcc version")
 IS_ZIG := $(shell printf '%s' "$(CC)" | grep -ci "zig")
