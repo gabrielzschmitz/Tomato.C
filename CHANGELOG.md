@@ -7,6 +7,13 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-10-29
+
+### Fixed
+
+- **Default compiler** — Changed `CC = zig cc` to `CC = gcc` as it should be
+  per default.
+
 ## [1.1.2] - 2026-09-25
 
 ### Added
