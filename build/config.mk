@@ -75,7 +75,7 @@ endif
 ifeq ($(UNAME), Darwin)
 CFLAGS = -std=c99 -g -O1 -Wall $(WARNFLAGS) $(DFLAGS)
 else
-CFLAGS = -std=c99 -g -O1 -Wall $(WARNFLAGS) $(DFLAGS) $(shell pkg-config --cflags libnotify)
+CFLAGS = -std=c99 -g -O1 -Wall $(WARNFLAGS) $(DFLAGS) $(shell pkg-config --cflags-only-I ncursesw libnotify)
 endif
 
 #/**
