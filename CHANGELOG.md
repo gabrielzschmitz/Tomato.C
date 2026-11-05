@@ -7,6 +7,15 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-11-05
+
+### Fixed
+
+- **Audio playback on Nix builds** — The Nix package now wraps `tomato` with
+  `LD_LIBRARY_PATH` pointing at `libpulseaudio` and `alsa-lib`. miniaudio loads
+  these at runtime, and without them notification sounds and white noise were
+  silently muted.
+
 ## [1.2.1] - 2026-11-05
 
 ### Fixed
