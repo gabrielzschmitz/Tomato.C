@@ -10,16 +10,29 @@
 # * and through the flake (`nix build .#`).
 # */
 
-{ lib, stdenv, pkg-config, gnumake, ncurses, libnotify }:
+{
+  lib,
+  stdenv,
+  pkg-config,
+  gnumake,
+  ncurses,
+  libnotify,
+}:
 
 stdenv.mkDerivation {
   pname = "tomato-c";
-  version = "1.1.3"; # Bump on each release (matching the git tag).
+  version = "1.2.0"; # Bump on each release (matching the git tag).
 
   src = lib.cleanSource ./.;
 
-  nativeBuildInputs = [ pkg-config gnumake ];
-  buildInputs = [ ncurses libnotify ];
+  nativeBuildInputs = [
+    pkg-config
+    gnumake
+  ];
+  buildInputs = [
+    ncurses
+    libnotify
+  ];
 
   buildPhase = ''
     runHook preBuild
