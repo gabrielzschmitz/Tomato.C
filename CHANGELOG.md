@@ -7,6 +7,35 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-05
+
+### Added
+
+- **Nix packaging** — Added a Nix flake, package derivation (`default.nix`),
+  and development shells (flake `devShells` plus a classic `shell.nix`) so
+  Tomato.C can be built reproducibly with `nix build .#`, run with
+  `nix run .#`, and developed in an isolated environment via `nix develop` or
+  `nix-shell`. The flake also exposes a build smoke check (`nix flake check`).
+
+### Fixed
+
+- **`ncurses.h` not found with non-gcc compilers** — `build/config.mk` now
+  adds ncursesw's pkg-config include path (`--cflags-only-I`) to the compile
+  flags, so bare compilers such as `tcc` and `zig cc` that don't inherit the
+  wrapped gcc's include paths can find the ncurses headers. Previously
+  `CC=tcc ./build.sh` and `CC="zig cc" ./build.sh` failed with
+  `include file 'ncurses.h' not found` in Nix environments.
+
+- **Portable test runner** — `run_tests.sh` now resolves `make` from `PATH`
+  instead of hardcoding `/usr/bin/make`, so the test suite runs on systems
+  (such as NixOS) where make lives elsewhere.
+
+### Changed
+
+- **Documentation** — The README now documents the Nix build and development
+  workflow (flake and `nix-shell` entry points, packaged binary, and
+  available toolchain).
+
 ## [1.1.3] - 2026-10-29
 
 ### Fixed
