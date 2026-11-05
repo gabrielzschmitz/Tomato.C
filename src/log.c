@@ -356,11 +356,11 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
                   break;
               }
               if (is_paused) {
-                const char* play_icon = PLAY_ICONS[icon_type];
-                if (play_icon[0] && step_icon[0])
-                  printf("%s %s %s\n", play_icon, step_icon, time_part);
-                else if (play_icon[0])
-                  printf("%s %s\n", play_icon, time_part);
+                const char* pause_icon = PAUSE_ICONS[icon_type];
+                if (pause_icon[0] && step_icon[0])
+                  printf("%s %s %s\n", pause_icon, step_icon, time_part);
+                else if (pause_icon[0])
+                  printf("%s %s\n", pause_icon, time_part);
                 else if (step_icon[0])
                   printf("%s %s\n", step_icon, time_part);
                 else
