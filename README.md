@@ -26,6 +26,7 @@ customize or contribute to the project.
 ```bash
 curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/install.sh | bash
 ```
+
 </details>
 
 <details>
@@ -56,6 +57,7 @@ CC="zig cc" ./install.sh
 ```
 
 Alternatively for a more permanent change, edit `CC = gcc` in `build/config.mk`.
+
 </details>
 
 <details>
@@ -72,6 +74,7 @@ Via curl:
 ```bash
 curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/install.sh | bash -s -- --uninstall
 ```
+
 </details>
 
 ---
@@ -134,6 +137,35 @@ Feel free to contribute to the project, the requirements are to follow
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0), follow
 [DOXYGEN](https://www.doxygen.nl/index.html) style of documenting code and use
 `.clang-format` to format the files.
+
+### Development
+
+A [Nix](https://nixos.org) package, flake, and development shell are included
+for reproducible builds and tooling.
+
+Build and run the packaged binary:
+
+```bash
+nix build .#    # builds into result/bin/tomato
+nix run   .#    # runs the binary
+nix flake check # builds and smoke-tests the package
+```
+
+Enter a development shell (flake or classic `nix-shell`):
+
+```bash
+nix develop # flake-based shell
+nix-shell   # classic (non-flake) shell
+```
+
+The shell provides `gcc`, `make`, `pkg-config`, `ncurses`, `libnotify`, plus
+`clang-format`, `bear`, `doxygen`, `tcc`, `zig`, and `valgrind`. From inside
+it, build and test as usual:
+
+```bash
+./build.sh
+./run_tests.sh
+```
 
 ---
 
