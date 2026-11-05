@@ -7,6 +7,13 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-05
+
+### Fixed
+
+- **`tomato -t` pause icon** — The timer log now displays the pause icon while
+  the timer is paused instead of the play icon.
+
 ## [1.2.0] - 2026-11-05
 
 ### Added

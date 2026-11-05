@@ -21,7 +21,7 @@
 
 stdenv.mkDerivation {
   pname = "tomato-c";
-  version = "1.2.0"; # Bump on each release (matching the git tag).
+  version = "1.2.1";
 
   src = lib.cleanSource ./.;
 
