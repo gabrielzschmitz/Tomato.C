@@ -164,7 +164,7 @@ setup_paths() {
 clean_artifacts() {
   echo " ${BOLD}Cleaning build artifacts...${RESET}"
   local clean_output
-  clean_output=$(/usr/bin/make -C "$TESTS_DIR" clean 2>&1)
+  clean_output=$(make -C "$TESTS_DIR" clean 2>&1)
 
   local clean_exit=$?
   if [ "$clean_exit" -ne 0 ]; then
@@ -192,7 +192,7 @@ build_tests() {
   echo " ${BOLD}Building tests...${RESET}"
 
   local build_output
-  build_output=$(/usr/bin/make -B -C "$TESTS_DIR" build $build_flags 2>&1)
+  build_output=$(make -B -C "$TESTS_DIR" build $build_flags 2>&1)
 
   local build_exit=$?
   if [ "$build_exit" -ne 0 ]; then
