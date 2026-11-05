@@ -17,6 +17,9 @@
   gnumake,
   ncurses,
   libnotify,
+  libpulseaudio,
+  alsa-lib,
+  makeWrapper,
 }:
 
 stdenv.mkDerivation {
@@ -28,10 +31,13 @@ stdenv.mkDerivation {
   nativeBuildInputs = [
     pkg-config
     gnumake
+    makeWrapper
   ];
   buildInputs = [
     ncurses
     libnotify
+    libpulseaudio
+    alsa-lib
   ];
 
   buildPhase = ''
@@ -46,6 +52,9 @@ stdenv.mkDerivation {
     runHook preInstall
 
     install -Dm755 build/tomato "$out/bin/tomato"
+    # miniaudio dlopen()s libpulse/libasound at runtime; make them findable.
+    wrapProgram "$out/bin/tomato" \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libpulseaudio alsa-lib ]}
 
     mkdir -p "$out/share/tomato/sprites" \
              "$out/share/tomato/sounds" \
