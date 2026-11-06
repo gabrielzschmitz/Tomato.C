@@ -2885,12 +2885,9 @@ void CreateHistoryStatsDialog(AppData* app) {
     int* seenIdx = malloc(sizeof(int) * seenCap);
     int* seenCycles = malloc(sizeof(int) * seenCap);
     int* seenWork = malloc(sizeof(int) * seenCap);
-    int* seenShort = malloc(sizeof(int) * seenCap);
-    int* seenLong = malloc(sizeof(int) * seenCap);
     int* seenStatus = malloc(sizeof(int) * seenCap);
     int nSeen = 0;
-    if (seenIdx && seenCycles && seenWork && seenShort && seenLong &&
-        seenStatus) {
+    if (seenIdx && seenCycles && seenWork && seenStatus) {
       for (int i = 0; i < nRecs; i++) {
         pomodoroLogRecord* rec = &allRecs[i];
         time_t ts = (time_t)rec->session_start_time;
@@ -2922,26 +2919,19 @@ void CreateHistoryStatsDialog(AppData* app) {
         }
         seenCycles[found] = rec->total_cycles;
         seenWork[found] = rec->work_time;
-        seenShort[found] = rec->short_pause_time;
-        seenLong[found] = rec->long_pause_time;
         seenStatus[found] = rec->status;
       }
 
       for (int i = 0; i < nSeen; i++) {
         totalSessions++;
         if (seenStatus[i] == 0) {
-          totalFocusMins +=
-            (seenCycles[i] * seenWork[i] * 60 +
-             (seenCycles[i] - 1) * seenShort[i] * 60 + seenLong[i] * 60) /
-            60;
+          totalFocusMins += seenCycles[i] * seenWork[i];
         }
       }
     }
     free(seenIdx);
     free(seenCycles);
     free(seenWork);
-    free(seenShort);
-    free(seenLong);
     free(seenStatus);
   }
   free(allRecs);
