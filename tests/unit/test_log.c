@@ -457,6 +457,57 @@ static void test_work_totals_exclude_breaks(void) {
   remove(tmp);
 }
 
+static void test_save_notes_replaces_file_atomically(void) {
+  TEST("SaveNotes replaces the file and leaves no temp file");
+  char tmp[] = "/tmp/t_log_notes_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  ASSERT_EQ(write(fd, "old\n", 4), 4);
+  close(fd);
+
+  NoteItem* item = calloc(1, sizeof(NoteItem));
+  ASSERT_NOT_NULL(item);
+  item->id = 1;
+  item->page_id = 0;
+  item->depth = 0;
+  item->parent_id = -1;
+  item->state = NOTE_UNDONE;
+  item->text = GapBufferCreate();
+  ASSERT_NOT_NULL(item->text);
+  ASSERT_TRUE(GapBufferSetText(item->text, "hello"));
+
+  NotesData nd;
+  memset(&nd, 0, sizeof(nd));
+  nd.items = &item;
+  nd.count = 1;
+  nd.capacity = 1;
+  ASSERT_EQ(SaveNotes(tmp, &nd), NO_ERROR);
+
+  FILE* f = fopen(tmp, "rb");
+  ASSERT_NOT_NULL(f);
+  char buf[256] = {0};
+  size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+  fclose(f);
+  buf[n] = '\0';
+  ASSERT_NOT_NULL(strstr(buf, "|hello"));
+  ASSERT_NULL(strstr(buf, "old"));
+
+  char temp_path[256];
+  snprintf(temp_path, sizeof(temp_path), "%s.tmp", tmp);
+  ASSERT_NULL(fopen(temp_path, "rb"));
+
+  GapBufferFree(item->text);
+  free(item);
+  remove(tmp);
+}
+
+static void test_save_notes_missing_dir_fails(void) {
+  TEST("SaveNotes to a missing directory returns FILE_ERROR");
+  NotesData nd;
+  memset(&nd, 0, sizeof(nd));
+  ASSERT_EQ(SaveNotes("/nonexistent_dir_xyz/notes.log", &nd), FILE_ERROR);
+}
+
 static void test_overview_counts_beyond_1000_records(void) {
   TEST("history overview counts sessions beyond 1000 records");
   char tmp[] = "/tmp/t_log_big_XXXXXX";
@@ -789,6 +840,10 @@ int main(void) {
            "GetPomodoroHistoryDay >100 sessions no crash");
   RUN_TEST(test_work_totals_exclude_breaks,
            "pomodoro totals count only work time, not breaks");
+  RUN_TEST(test_save_notes_replaces_file_atomically,
+           "SaveNotes replaces the file and leaves no temp file");
+  RUN_TEST(test_save_notes_missing_dir_fails,
+           "SaveNotes to a missing directory returns FILE_ERROR");
   RUN_TEST(test_overview_counts_beyond_1000_records,
            "history overview counts sessions beyond 1000 records");
   RUN_TEST(test_save_and_load_pomodoro,
