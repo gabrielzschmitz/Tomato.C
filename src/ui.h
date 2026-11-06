@@ -2,6 +2,7 @@
 #define UI_H_
 
 #include "anim.h"
+#include "error.h"
 #include "history.h"
 #include "util.h"
 
@@ -134,6 +135,17 @@ typedef enum {
   PREF_SELECT, /**< Selection from a list of named options */
 } PrefFieldType;
 
+/** Maximum number of preference rows tracked for snapshot and save. */
+#define PREFS_MAX_FIELDS 32
+
+/** How a preference value is written into config.toml. */
+typedef enum {
+  PREF_TOML_INT,    /**< Integer (also used for 0/1 keys read as integers) */
+  PREF_TOML_BOOL,   /**< TOML true/false */
+  PREF_TOML_FLOAT,  /**< Float written with two decimals */
+  PREF_TOML_OPTION, /**< Index into options, written as a quoted string */
+} PrefTomlKind;
+
 /**
  * A single entry in the preferences field list.
  * Each entry represents one row in the preferences dialog and can be a
@@ -149,6 +161,8 @@ typedef struct {
   const char** options; /**< Option label array for PREF_SELECT, or NULL */
   int option_count;     /**< Number of entries in options */
   void (*preview)(AppData* app); /**< Preview callback (NULL if none) */
+  const char* toml_path;         /**< "table.key" written on save, or NULL */
+  PrefTomlKind toml_kind;        /**< How the value is written to TOML */
 } PrefField;
 
 /**
@@ -163,6 +177,10 @@ typedef struct {
   int edit_temp;    /**< Original value for Cancel restore */
   int select_index; /**< Select field index (-1 = none) */
   int scroll_row;   /**< Content rows scrolled past in main prefs list */
+  struct {
+    int i;   /**< Integer value when Preferences was opened */
+    float f; /**< Float value when Preferences was opened */
+  } snapshot[PREFS_MAX_FIELDS];
 } PrefsState;
 
 /**
@@ -764,6 +782,34 @@ void ClosePrefsEdit(AppData* app);
  * @param app Application state
  */
 void ClosePrefsSelect(AppData* app);
+
+/**
+ * Record the current value of every preference row as the saved baseline.
+ * @param app Application state
+ */
+void PrefsTakeSnapshot(AppData* app);
+
+/**
+ * Check whether any preference differs from the saved baseline.
+ * @param app Application state
+ * @return true if at least one value changed since the baseline was taken
+ */
+bool PrefsHaveChanges(const AppData* app);
+
+/**
+ * Restore every preference to the saved baseline and re-apply the
+ * settings that depend on them (icons, animations, panel size).
+ * @param app Application state
+ */
+void PrefsRestoreSnapshot(AppData* app);
+
+/**
+ * Write the preferences that changed since the baseline into config.toml.
+ * Takes a new baseline when the write succeeds.
+ * @param app Application state
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType PrefsSaveChanges(AppData* app);
 
 /**
  * Show a desktop notification as a preview of the "Desktop Notifications"

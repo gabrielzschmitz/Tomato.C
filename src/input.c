@@ -2734,6 +2734,7 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
  */
 void OpenPreferencesMenu(AppData* app) {
   if (app->popup_dialog) return;
+  PrefsTakeSnapshot(app);
   app->popup_dialog = CreatePreferencesDialog(app);
 }
 

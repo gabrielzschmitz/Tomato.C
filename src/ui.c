@@ -3744,6 +3744,78 @@ void ClosePrefsSelect(AppData* app) {
   app->popup_dialog = CreatePreferencesDialog(app);
 }
 
+void PrefsTakeSnapshot(AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (f->int_value) app->prefs.snapshot[i].i = *f->int_value;
+    if (f->float_value) app->prefs.snapshot[i].f = *f->float_value;
+  }
+}
+
+bool PrefsHaveChanges(const AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    const PrefField* f = &app->prefs.fields[i];
+    if (f->int_value && *f->int_value != app->prefs.snapshot[i].i) return true;
+    if (f->float_value && *f->float_value != app->prefs.snapshot[i].f)
+      return true;
+  }
+  return false;
+}
+
+void PrefsRestoreSnapshot(AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (f->int_value) *f->int_value = app->prefs.snapshot[i].i;
+    if (f->float_value) *f->float_value = app->prefs.snapshot[i].f;
+  }
+  SyncIconsFromIndex();
+  app->animations = app->icon_animations[GetConfigIconType()];
+  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+}
+
+ErrorType PrefsSaveChanges(AppData* app) {
+  const char* path = GetUserConfigPath();
+  if (path[0] == '\0') return FILE_ERROR;
+
+  ConfigValue values[PREFS_MAX_FIELDS];
+  char buffers[PREFS_MAX_FIELDS][128];
+  int n = 0;
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (!f->toml_path) continue;
+    bool changed =
+      (f->int_value && *f->int_value != app->prefs.snapshot[i].i) ||
+      (f->float_value && *f->float_value != app->prefs.snapshot[i].f);
+    if (!changed) continue;
+
+    char* buf = buffers[n];
+    switch (f->toml_kind) {
+      case PREF_TOML_BOOL:
+        snprintf(buf, sizeof(buffers[n]), "%s",
+                 *f->int_value ? "true" : "false");
+        break;
+      case PREF_TOML_FLOAT:
+        snprintf(buf, sizeof(buffers[n]), "%.2f", *f->float_value);
+        break;
+      case PREF_TOML_OPTION:
+        snprintf(buf, sizeof(buffers[n]), "\"%s\"", f->options[*f->int_value]);
+        break;
+      case PREF_TOML_INT:
+      default:
+        snprintf(buf, sizeof(buffers[n]), "%d", *f->int_value);
+        break;
+    }
+    values[n].path = f->toml_path;
+    values[n].value = buf;
+    n++;
+  }
+  if (n == 0) return NO_ERROR;
+
+  ErrorType err = SaveConfigValues(path, values, n);
+  if (err == NO_ERROR) PrefsTakeSnapshot(app);
+  return err;
+}
+
 /**
  * Preview callback for "Desktop Notifications" - sends a test notification.
  * @param app Application state
