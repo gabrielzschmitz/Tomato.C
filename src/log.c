@@ -589,6 +589,7 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
   FILE* file = FOpenNoFollow(temp_path, "w");
   if (!file) return FILE_ERROR;
 
+  bool write_failed = false;
   for (int i = 0; i < notes->count; i++) {
     NoteItem* item = notes->items[i];
     char* text = GapBufferToString(item->text);
@@ -608,23 +609,30 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
         break;
     }
 
-    fprintf(file, "%d|%d|%d|%d|%c|", item->id, item->page_id, item->depth,
-            item->parent_id, state_char);
+    if (fprintf(file, "%d|%d|%d|%d|%c|", item->id, item->page_id, item->depth,
+                item->parent_id, state_char) < 0)
+      write_failed = true;
 
     for (size_t j = 0; j < strlen(text); j++) {
-      if (text[j] == '|')
-        fprintf(file, "\\|");
-      else
-        fputc(text[j], file);
+      if (text[j] == '|') {
+        if (fprintf(file, "\\|") < 0) write_failed = true;
+      } else if (fputc(text[j], file) == EOF) {
+        write_failed = true;
+      }
     }
-    fputc('\n', file);
+    if (fputc('\n', file) == EOF) write_failed = true;
 
     free(text);
   }
 
-  fflush(file);
-  fsync(fileno(file));
-  fclose(file);
+  if (fflush(file) != 0) write_failed = true;
+  if (fsync(fileno(file)) != 0) write_failed = true;
+  if (fclose(file) != 0) write_failed = true;
+
+  if (write_failed) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
 
   if (rename(temp_path, path) != 0) {
     remove(temp_path);
