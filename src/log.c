@@ -733,11 +733,11 @@ static NoteState charToNoteState(char c) {
 /**
  * Read the binary pomodoro log and return the next session index.
  * @param path File path for the pomodoro log
- * @return The next session index (last index + 1), or FILE_ERROR on failure
+ * @return The next session index (last index + 1, or 1 if no log exists)
  */
 static int GetLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
-  if (!file) return FILE_ERROR;
+  if (!file) return 1;
 
   pomodoroLogRecord record;
   int last_index = 0;
@@ -750,11 +750,11 @@ static int GetLastLogIndex(const char* path) {
 /**
  * Get the last used index from the pomodoro log.
  * @param path File path for the pomodoro log
- * @return Last used index (0 if file is empty), or FILE_ERROR on failure
+ * @return Last used index (0 if the file is missing or empty)
  */
 int GetLastLogIndexOnly(const char* path) {
   FILE* file = fopen(path, "rb");
-  if (!file) return FILE_ERROR;
+  if (!file) return 0;
 
   pomodoroLogRecord record;
   int last_index = 0;

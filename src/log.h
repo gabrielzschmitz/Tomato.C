@@ -111,7 +111,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data, bool append);
 /**
  * Get the last used index from the pomodoro log.
  * @param path File path for the pomodoro log
- * @return Last used index (1 if file is empty)
+ * @return Last used index (0 if the file is missing or empty)
  */
 int GetLastLogIndexOnly(const char* path);
 
