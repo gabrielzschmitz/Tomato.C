@@ -216,6 +216,31 @@ extern Config g_config;
 /** Load (or reload) configuration from TOML files and set defaults. */
 void LoadConfig(void);
 
+/** One TOML value to write: a "table.key" path and its formatted value. */
+typedef struct {
+  const char* path;
+  const char* value;
+} ConfigValue;
+
+/**
+ * Path of the user config file that preferences are saved into.
+ * @return Absolute path, or an empty string if it could not be determined
+ */
+const char* GetUserConfigPath(void);
+
+/**
+ * Write values into a TOML config file, changing only the given keys.
+ * Comments and the rest of the file are kept; missing keys and tables are
+ * added. The file must already parse, and the rewritten file is re-parsed
+ * before it replaces the original.
+ * @param path Config file to update (created if missing)
+ * @param values Entries to write
+ * @param count Number of entries
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
+                           int count);
+
 /**
  * Number of diagnostics queued while loading the configuration.
  * @return Count of queued warnings and errors

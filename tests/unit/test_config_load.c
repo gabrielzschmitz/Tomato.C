@@ -106,6 +106,114 @@ static void test_invalid_icons_fall_back_to_ascii(void) {
   remove(tmp);
 }
 
+static void read_file(const char* path, char* buf, size_t size) {
+  FILE* f = fopen(path, "rb");
+  size_t n = f ? fread(buf, 1, size - 1, f) : 0;
+  if (f) fclose(f);
+  buf[n] = '\0';
+}
+
+static void test_save_keeps_comment_and_updates_value(void) {
+  TEST("SaveConfigValues updates a key and keeps its comment");
+  char tmp[] = "/tmp/t_cfg_save_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp, "# my config\n[visual]\nanimations = 1  # enable anim\n");
+
+  ConfigValue v = {"visual.animations", "0"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
+
+  char buf[512];
+  read_file(tmp, buf, sizeof(buf));
+  ASSERT_NOT_NULL(strstr(buf, "# my config"));
+  ASSERT_NOT_NULL(strstr(buf, "animations = 0  # enable anim"));
+  setDefaults();
+  resetConfigWarnings();
+  loadTomlFile(tmp);
+  ASSERT_EQ(g_config.visual.animations, 0);
+  remove(tmp);
+}
+
+static void test_save_adds_missing_key_to_its_table(void) {
+  TEST("SaveConfigValues adds a missing key to an existing table");
+  char tmp[] = "/tmp/t_cfg_add_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp,
+             "[visual]\nicons = \"nerd-icons\"\n\n[pomodoro]\namount = 4\n");
+
+  ConfigValue v = {"visual.clock_24h", "1"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
+
+  char buf[512];
+  read_file(tmp, buf, sizeof(buf));
+  ASSERT_NOT_NULL(strstr(buf, "amount = 4"));
+  setDefaults();
+  resetConfigWarnings();
+  loadTomlFile(tmp);
+  ASSERT_EQ(g_config.visual.clock_24h, 1);
+  remove(tmp);
+}
+
+static void test_save_appends_missing_table(void) {
+  TEST("SaveConfigValues appends a missing table");
+  char tmp[] = "/tmp/t_cfg_tbl_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp, "# only a comment\n");
+
+  ConfigValue v = {"pomodoro.amount", "3"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
+
+  char buf[512];
+  read_file(tmp, buf, sizeof(buf));
+  ASSERT_NOT_NULL(strstr(buf, "# only a comment"));
+  ASSERT_NOT_NULL(strstr(buf, "[pomodoro]"));
+  setDefaults();
+  resetConfigWarnings();
+  loadTomlFile(tmp);
+  ASSERT_EQ(g_config.pomodoro.amount, 3);
+  remove(tmp);
+}
+
+static void test_save_refuses_invalid_file(void) {
+  TEST("SaveConfigValues refuses a file that does not parse");
+  char tmp[] = "/tmp/t_cfg_bad_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp, "[visual\nanimations = 1\n");
+
+  ConfigValue v = {"visual.animations", "0"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), INVALID_CONFIG);
+
+  char buf[128];
+  read_file(tmp, buf, sizeof(buf));
+  ASSERT_STR_EQ(buf, "[visual\nanimations = 1\n");
+  remove(tmp);
+}
+
+static void test_save_writes_booleans(void) {
+  TEST("SaveConfigValues writes a boolean key as true/false");
+  char tmp[] = "/tmp/t_cfg_bool_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp, "[notifications]\nenabled = true\n");
+
+  ConfigValue v = {"notifications.enabled", "false"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
+
+  setDefaults();
+  resetConfigWarnings();
+  loadTomlFile(tmp);
+  ASSERT_EQ(g_config.notifications.enabled, 0);
+  remove(tmp);
+}
+
 static int stepper_action_for(int key) {
   for (size_t i = 0; i < g_config.num_keys; i++) {
     KeyFunction* k = &g_config.key_bindings[i];
@@ -139,6 +247,16 @@ int main(void) {
            "invalid visual.icons falls back to ascii with a warning");
   RUN_TEST(test_stepper_keys_commit_and_cancel,
            "stepper: Enter commits, Esc/q/Ctrl-C cancel");
+  RUN_TEST(test_save_keeps_comment_and_updates_value,
+           "SaveConfigValues updates a key and keeps its comment");
+  RUN_TEST(test_save_adds_missing_key_to_its_table,
+           "SaveConfigValues adds a missing key to an existing table");
+  RUN_TEST(test_save_appends_missing_table,
+           "SaveConfigValues appends a missing table");
+  RUN_TEST(test_save_refuses_invalid_file,
+           "SaveConfigValues refuses a file that does not parse");
+  RUN_TEST(test_save_writes_booleans,
+           "SaveConfigValues writes a boolean key as true/false");
 
   return test_end();
 }

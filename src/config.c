@@ -1761,6 +1761,330 @@ static void loadTomlFile(const char* path) {
   toml_free(root);
 }
 
+/** Path of the user config file, set by LoadConfig(); empty if unknown. */
+static char user_config_path[1024] = "";
+
+const char* GetUserConfigPath(void) { return user_config_path; }
+
+/** Growable list of owned lines used when rewriting a config file. */
+typedef struct {
+  char** items;
+  int count;
+  int cap;
+} LineList;
+
+static bool lineListInsert(LineList* list, int index, char* line) {
+  if (list->count == list->cap) {
+    int cap = list->cap ? list->cap * 2 : 64;
+    char** grown = realloc(list->items, sizeof(char*) * cap);
+    if (!grown) return false;
+    list->items = grown;
+    list->cap = cap;
+  }
+  memmove(&list->items[index + 1], &list->items[index],
+          sizeof(char*) * (list->count - index));
+  list->items[index] = line;
+  list->count++;
+  return true;
+}
+
+static void lineListFree(LineList* list) {
+  for (int i = 0; i < list->count; i++) free(list->items[i]);
+  free(list->items);
+  list->items = NULL;
+  list->count = 0;
+  list->cap = 0;
+}
+
+static char* copyText(const char* s, size_t len) {
+  char* out = malloc(len + 1);
+  if (!out) return NULL;
+  memcpy(out, s, len);
+  out[len] = '\0';
+  return out;
+}
+
+/** Return the first non-blank character of a line (or the terminator). */
+static const char* skipBlank(const char* s) {
+  while (*s == ' ' || *s == '\t') s++;
+  return s;
+}
+
+/**
+ * Return the table name of a "[name]" header line, or NULL if the line is
+ * not a single-bracket table header. Trailing comments are ignored.
+ */
+static char* tableHeaderName(const char* line) {
+  const char* s = skipBlank(line);
+  if (*s != '[' || s[1] == '[') return NULL;
+  const char* close = strchr(s, ']');
+  if (!close) return NULL;
+  const char* name = s + 1;
+  while (name < close && (*name == ' ' || *name == '\t')) name++;
+  const char* end = close;
+  while (end > name && (end[-1] == ' ' || end[-1] == '\t')) end--;
+  return copyText(name, (size_t)(end - name));
+}
+
+/** True if the line starts a table or array-of-tables header. */
+static bool isTableHeader(const char* line) { return *skipBlank(line) == '['; }
+
+/** Find the position of a '#' that starts a comment, outside quotes. */
+static const char* findComment(const char* s) {
+  bool in_quotes = false;
+  for (; *s; s++) {
+    if (*s == '"') {
+      in_quotes = !in_quotes;
+    } else if (*s == '#' && !in_quotes) {
+      return s;
+    }
+  }
+  return NULL;
+}
+
+/**
+ * Locate the line range of a table: lines strictly after its header up to
+ * the next header. The empty name denotes the top level before any header.
+ */
+static bool findTableRange(const LineList* list, const char* table, int* start,
+                           int* end) {
+  int first_header = list->count;
+  for (int i = 0; i < list->count; i++) {
+    if (!isTableHeader(list->items[i])) continue;
+    if (first_header == list->count) first_header = i;
+    if (table[0] == '\0') continue;
+    char* name = tableHeaderName(list->items[i]);
+    bool match = name && strcmp(name, table) == 0;
+    free(name);
+    if (match) {
+      int j = i + 1;
+      while (j < list->count && !isTableHeader(list->items[j])) j++;
+      *start = i + 1;
+      *end = j;
+      return true;
+    }
+  }
+  if (table[0] == '\0') {
+    *start = 0;
+    *end = first_header;
+    return true;
+  }
+  return false;
+}
+
+/** Find a "key = value" line for key within [start, end); -1 if absent. */
+static int findKeyLine(const LineList* list, const char* key, int start,
+                       int end) {
+  size_t klen = strlen(key);
+  for (int i = start; i < end; i++) {
+    const char* s = skipBlank(list->items[i]);
+    if (strncmp(s, key, klen) != 0) continue;
+    const char* after = skipBlank(s + klen);
+    if (*after == '=') return i;
+  }
+  return -1;
+}
+
+/** Build "key = value" keeping the original indent and trailing comment. */
+static char* rebuildValueLine(const char* line, const char* key,
+                              const char* value) {
+  const char* s = skipBlank(line);
+  size_t indent = (size_t)(s - line);
+  const char* eq = strchr(s, '=');
+  const char* comment = eq ? findComment(eq + 1) : NULL;
+  size_t key_len = strlen(key);
+  size_t value_len = strlen(value);
+  size_t comment_len = comment ? strlen(comment) : 0;
+  size_t total =
+    indent + key_len + 3 + value_len + (comment ? 2 : 0) + comment_len + 1;
+  char* out = malloc(total);
+  if (!out) return NULL;
+  int n = snprintf(out, total, "%.*s%s = %s", (int)indent, line, key, value);
+  if (comment) snprintf(out + n, total - n, "  %s", comment);
+  return out;
+}
+
+/**
+ * Write values into a TOML config file, changing only the keys given.
+ * Comments and the layout of the rest of the file are preserved. Missing
+ * keys are added to their table, and missing tables are appended. The file
+ * must already parse; the rewritten file is checked before it replaces the
+ * original, so a failed save leaves the previous contents in place.
+ * @param path Config file to update (created if missing)
+ * @param values Table paths and TOML-formatted values to write
+ * @param count Number of entries in values
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
+                           int count) {
+  if (!path || !values) return INVALID_ARGUMENT_ERROR;
+
+  bool missing = false;
+  FILE* in = fopen(path, "rb");
+  if (!in) {
+    if (errno != ENOENT) return FILE_ERROR;
+    missing = true;
+  }
+  size_t size = 0;
+  char* text = NULL;
+  if (in) {
+    fseek(in, 0, SEEK_END);
+    long len = ftell(in);
+    fseek(in, 0, SEEK_SET);
+    if (len < 0) {
+      fclose(in);
+      return FILE_ERROR;
+    }
+    size = (size_t)len;
+    text = malloc(size + 1);
+    if (!text || fread(text, 1, size, in) != size) {
+      free(text);
+      fclose(in);
+      return FILE_ERROR;
+    }
+    fclose(in);
+    text[size] = '\0';
+  } else {
+    text = copyText("", 0);
+  }
+  if (!text) return MALLOC_ERROR;
+
+  if (!missing && size > 0) {
+    char errbuf[200];
+    char* check = copyText(text, size);
+    toml_table_t* root =
+      check ? toml_parse(check, errbuf, sizeof(errbuf)) : NULL;
+    free(check);
+    if (!root) {
+      free(text);
+      return INVALID_CONFIG;
+    }
+    toml_free(root);
+  }
+
+  LineList list = {0};
+  char* cursor = text;
+  while (*cursor) {
+    char* nl = strchr(cursor, '\n');
+    size_t len = nl ? (size_t)(nl - cursor) : strlen(cursor);
+    char* line = copyText(cursor, len);
+    if (!line || !lineListInsert(&list, list.count, line)) {
+      free(line);
+      lineListFree(&list);
+      free(text);
+      return MALLOC_ERROR;
+    }
+    cursor = nl ? nl + 1 : cursor + len;
+  }
+  free(text);
+
+  for (int v = 0; v < count; v++) {
+    const char* dot = strrchr(values[v].path, '.');
+    const char* key = dot ? dot + 1 : values[v].path;
+    size_t table_len = dot ? (size_t)(dot - values[v].path) : 0;
+    char* table = copyText(values[v].path, table_len);
+    if (!table) {
+      lineListFree(&list);
+      return MALLOC_ERROR;
+    }
+
+    int start = 0, end = 0;
+    if (!findTableRange(&list, table, &start, &end)) {
+      char* header = malloc(table_len + 3);
+      char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
+      if (!header || !line) {
+        free(header);
+        free(line);
+        free(table);
+        lineListFree(&list);
+        return MALLOC_ERROR;
+      }
+      snprintf(header, table_len + 3, "[%s]", table);
+      sprintf(line, "%s = %s", key, values[v].value);
+      lineListInsert(&list, list.count, copyText("", 0));
+      lineListInsert(&list, list.count, header);
+      lineListInsert(&list, list.count, line);
+    } else {
+      int idx = findKeyLine(&list, key, start, end);
+      if (idx >= 0) {
+        char* line = rebuildValueLine(list.items[idx], key, values[v].value);
+        if (!line) {
+          free(table);
+          lineListFree(&list);
+          return MALLOC_ERROR;
+        }
+        free(list.items[idx]);
+        list.items[idx] = line;
+      } else {
+        int at = start;
+        for (int i = start; i < end; i++)
+          if (*skipBlank(list.items[i]) != '\0') at = i + 1;
+        char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
+        if (!line) {
+          free(table);
+          lineListFree(&list);
+          return MALLOC_ERROR;
+        }
+        sprintf(line, "%s = %s", key, values[v].value);
+        lineListInsert(&list, at, line);
+      }
+    }
+    free(table);
+  }
+
+  size_t out_len = 1;
+  for (int i = 0; i < list.count; i++) out_len += strlen(list.items[i]) + 1;
+  char* out = malloc(out_len);
+  if (!out) {
+    lineListFree(&list);
+    return MALLOC_ERROR;
+  }
+  out[0] = '\0';
+  for (int i = 0; i < list.count; i++) {
+    strcat(out, list.items[i]);
+    strcat(out, "\n");
+  }
+  lineListFree(&list);
+
+  char temp_path[1100];
+  if (snprintf(temp_path, sizeof(temp_path), "%s.tmp", path) >=
+      (int)sizeof(temp_path)) {
+    free(out);
+    return FILE_ERROR;
+  }
+  FILE* tmp = FOpenNoFollow(temp_path, "w");
+  if (!tmp) {
+    free(out);
+    return FILE_ERROR;
+  }
+  bool write_failed = fputs(out, tmp) == EOF;
+  free(out);
+  if (fflush(tmp) != 0) write_failed = true;
+  if (fsync(fileno(tmp)) != 0) write_failed = true;
+  if (fclose(tmp) != 0) write_failed = true;
+  if (write_failed) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
+
+  FILE* check = fopen(temp_path, "r");
+  char errbuf[200];
+  toml_table_t* reparsed =
+    check ? toml_parse_file(check, errbuf, sizeof(errbuf)) : NULL;
+  if (check) fclose(check);
+  if (!reparsed) {
+    remove(temp_path);
+    return INVALID_CONFIG;
+  }
+  toml_free(reparsed);
+
+  if (rename(temp_path, path) != 0) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
+  return NO_ERROR;
+}
+
 /**
  * Load configuration from TOML files.
  *
@@ -1793,6 +2117,7 @@ void LoadConfig(void) {
   } else {
     return;
   }
+  snprintf(user_config_path, sizeof(user_config_path), "%s", path);
   loadTomlFile(path);
 }
 

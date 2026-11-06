@@ -13,6 +13,8 @@
 #ifndef TEST_KEYBIND_STUBS_H_
 #define TEST_KEYBIND_STUBS_H_
 
+#include <stdio.h>
+
 #include "error.h"
 
 typedef struct AppData {
@@ -112,6 +114,11 @@ void ReturnToMainMenu(AppData* app) { (void)app; }
 int EnsureDir(const char* dir) {
   (void)dir;
   return 0;
+}
+
+/* Test stand-in for util.c's FOpenNoFollow: same contract, no symlink check. */
+FILE* FOpenNoFollow(const char* path, const char* mode) {
+  return fopen(path, mode);
 }
 
 void LogError(const char* context, ErrorType type) {
