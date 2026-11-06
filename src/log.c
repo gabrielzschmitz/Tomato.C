@@ -1298,20 +1298,47 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
   FILE* file = fopen(path, "rb");
   if (!file) return stats;
 
-  pomodoroLogRecord records[1000];
   int count = 0;
+  int cap = 1024;
+  pomodoroLogRecord* records = malloc(sizeof(pomodoroLogRecord) * cap);
+  if (!records) {
+    fclose(file);
+    return stats;
+  }
 
-  while (fread(&records[count], sizeof(pomodoroLogRecord), 1, file) == 1) {
-    count++;
-    if (count >= 1000) break;
+  pomodoroLogRecord rec;
+  while (fread(&rec, sizeof(rec), 1, file) == 1) {
+    if (count == cap) {
+      pomodoroLogRecord* grown =
+        realloc(records, sizeof(pomodoroLogRecord) * cap * 2);
+      if (!grown) {
+        free(records);
+        fclose(file);
+        return stats;
+      }
+      records = grown;
+      cap *= 2;
+    }
+    records[count++] = rec;
   }
   fclose(file);
 
-  if (count == 0) return stats;
+  if (count == 0) {
+    free(records);
+    return stats;
+  }
+
+  int* completedIdx = malloc(sizeof(int) * count);
+  int* sessionIndices = malloc(sizeof(int) * count);
+  if (!completedIdx || !sessionIndices) {
+    free(completedIdx);
+    free(sessionIndices);
+    free(records);
+    return stats;
+  }
 
   int totalWorkSeconds = 0;
   int totalSessionSeconds = 0;
-  int completedIdx[1000];
   int nCompleted = 0;
 
   for (int i = 0; i < count; i++) {
@@ -1337,7 +1364,6 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
   stats.completedSessions = nCompleted;
 
   int uniqueSessions = 0;
-  int sessionIndices[1000];
   for (int i = 0; i < count; i++) {
     if (records[i].session_index > 0) {
       int alreadyCounted = 0;
@@ -1392,6 +1418,9 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
     }
   }
 
+  free(completedIdx);
+  free(sessionIndices);
+  free(records);
   return stats;
 }
 
