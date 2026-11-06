@@ -512,6 +512,11 @@ static void test_get_last_log_index_empty(void) {
   remove(tmp);
 }
 
+static void test_get_last_log_index_missing(void) {
+  TEST("GetLastLogIndexOnly missing file returns 0");
+  ASSERT_EQ(GetLastLogIndexOnly("/nonexistent_dir_xyz/log.bin"), 0);
+}
+
 static void test_get_last_log_index_after_save(void) {
   TEST("GetLastLogIndexOnly returns last session_index");
   char tmp[] = "/tmp/t_log_ls_XXXXXX";
@@ -725,7 +730,9 @@ int main(void) {
   RUN_TEST(test_save_pomodoro_append,
            "SavePomodoro append creates multiple records");
   RUN_TEST(test_get_last_log_index_empty,
-           "GetLastLogIndexOnly empty file returns 1");
+           "GetLastLogIndexOnly empty file returns 0");
+  RUN_TEST(test_get_last_log_index_missing,
+           "GetLastLogIndexOnly missing file returns 0");
   RUN_TEST(test_get_last_log_index_after_save,
            "GetLastLogIndexOnly returns last session_index");
   RUN_TEST(test_remove_uncompleted_entries,
