@@ -335,7 +335,8 @@ PrefsBack             = ["q", "ESC", "CTRLC"]
 StepperDecrement      = ["h", "KEY_LEFT"]
 StepperIncrement      = ["l", "KEY_RIGHT"]
 PrefsPreview          = ["p"]
-StepperClose          = ["ENTER", "KEY_ENTER", "q", "ESC", "CTRLC"]
+StepperClose          = ["ENTER", "KEY_ENTER"]
+StepperCancel         = ["q", "ESC", "CTRLC"]
 
 # DEFAULT mode — Preferences select sub-dialog
 [keybindings.DEFAULT.SCENE_PREFS_SELECT]

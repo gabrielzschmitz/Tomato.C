@@ -856,10 +856,17 @@ void StepperDecrement(AppData* app);
 void StepperIncrement(AppData* app);
 
 /**
- * Close the stepper sub-dialog and return to the main preferences dialog.
+ * Commit the stepper value and return to the main preferences dialog.
  * @param app Application state
  */
 void StepperClose(AppData* app);
+
+/**
+ * Discard changes made in the stepper, restore the value it was opened
+ * with, and return to the main preferences dialog.
+ * @param app Application state
+ */
+void StepperCancel(AppData* app);
 
 /**
  * Apply the selected value and close the option selector sub-dialog.

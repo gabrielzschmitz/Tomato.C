@@ -3610,7 +3610,7 @@ FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx) {
                       app->prefs.fields[idx].preview != NULL);
   Dimensions size = {.width = has_preview ? 56 : 44, .height = 8};
   Vector2D pos = {.x = 0, .y = 0};
-  MenuItem mi[] = {{"Save", ClosePrefsEdit}, {"Cancel", ClosePrefsEdit}};
+  MenuItem mi[] = {{"Save", StepperClose}, {"Cancel", StepperCancel}};
   Menu menu = {.items = mi,
                .selected_item = 0,
                .focused_color = COLOR_WHITE,
@@ -4258,7 +4258,7 @@ static void prefsStepperRender(AppData* app, SlideDef* def) {
   mvprintw(fy, fx, "Cancel");
   if (on_esc) attroff(A_REVERSE);
   RegisterClickRegion(app, s3, fy, w3, 1, REGION_SLIDE_NAV,
-                      (MenuAction)StepperClose, -1, 0, 0);
+                      (MenuAction)StepperCancel, -1, 0, 0);
 }
 
 /**

@@ -228,11 +228,11 @@ const KeyFunction DEFAULT_KEYS[] = {
    "Confirm and close"},
   {KEY_ENTER, StepperClose, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
    "Confirm and close"},
-  {'q', StepperClose, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
+  {'q', StepperCancel, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
    "Cancel and close"},
-  {ESC, StepperClose, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
+  {ESC, StepperCancel, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
    "Cancel and close"},
-  {CTRLC, StepperClose, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
+  {CTRLC, StepperCancel, DEFAULT, SCENE_PREFS_STEPPER, "Preferences",
    "Cancel and close"},
 
   /* Preferences select sub-dialog */
@@ -564,6 +564,7 @@ static const struct {
   {"StepperDecrement", StepperDecrement},
   {"StepperIncrement", StepperIncrement},
   {"StepperClose", StepperClose},
+  {"StepperCancel", StepperCancel},
   {"SelectApply", SelectApply},
   {"SelectCancel", SelectCancel},
   {"SelectPrevOption", SelectPrevOption},

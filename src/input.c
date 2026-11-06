@@ -3134,7 +3134,7 @@ void StepperIncrement(AppData* app) {
 }
 
 /**
- * Close the stepper sub-dialog and return to the main preferences dialog.
+ * Commit the stepper value and return to the main preferences dialog.
  * @param app Application state
  */
 void StepperClose(AppData* app) {
@@ -3142,6 +3142,12 @@ void StepperClose(AppData* app) {
   FreeFloatingDialog(app->popup_dialog);
   app->popup_dialog = CreatePreferencesDialog(app);
 }
+
+/**
+ * Discard changes made in the stepper and return to the preferences dialog.
+ * @param app Application state
+ */
+void StepperCancel(AppData* app) { ClosePrefsEdit(app); }
 
 /**
  * Apply the selected value and close the option selector sub-dialog.
