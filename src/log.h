@@ -76,7 +76,8 @@ char* FormatTimerLog(PomodoroData data, bool is_paused);
 
 /**
  * Save notes to a file for persistence.
- * Writes the current notes data structure to disk.
+ * Writes the notes to a temporary file and renames it over the target,
+ * so an interrupted save leaves the previous notes file intact.
  * @param path File path for the notes log
  * @param notes Pointer to the notes data to save
  * @return ErrorType NO_ERROR on success, or an error code on failure

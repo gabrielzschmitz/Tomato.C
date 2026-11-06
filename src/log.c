@@ -581,7 +581,12 @@ static void reliableSleep(int seconds) {
 ErrorType SaveNotes(const char* path, const NotesData* notes) {
   if (!path || !notes) return NO_ERROR;
 
-  FILE* file = FOpenNoFollow(path, "w");
+  char temp_path[4096];
+  if (snprintf(temp_path, sizeof(temp_path), "%s.tmp", path) >=
+      (int)sizeof(temp_path))
+    return FILE_ERROR;
+
+  FILE* file = FOpenNoFollow(temp_path, "w");
   if (!file) return FILE_ERROR;
 
   for (int i = 0; i < notes->count; i++) {
@@ -617,7 +622,14 @@ ErrorType SaveNotes(const char* path, const NotesData* notes) {
     free(text);
   }
 
+  fflush(file);
+  fsync(fileno(file));
   fclose(file);
+
+  if (rename(temp_path, path) != 0) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
   return NO_ERROR;
 }
 
