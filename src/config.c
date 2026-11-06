@@ -1990,9 +1990,11 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
 
     int start = 0, end = 0;
     if (!findTableRange(&list, table, &start, &end)) {
+      char* blank = copyText("", 0);
       char* header = malloc(table_len + 3);
       char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
-      if (!header || !line) {
+      if (!blank || !header || !line) {
+        free(blank);
         free(header);
         free(line);
         free(table);
@@ -2001,7 +2003,7 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
       }
       snprintf(header, table_len + 3, "[%s]", table);
       sprintf(line, "%s = %s", key, values[v].value);
-      lineListInsert(&list, list.count, copyText("", 0));
+      lineListInsert(&list, list.count, blank);
       lineListInsert(&list, list.count, header);
       lineListInsert(&list, list.count, line);
     } else {
