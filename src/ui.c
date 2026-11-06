@@ -864,14 +864,15 @@ void RenderFloatingDialog(AppData* app, FloatingDialog* dialog) {
   for (int i = 1; i < height - 1; i++)
     for (int j = 1; j < width - 1; j++) mvprintw(y + i, x + j, " ");
 
-  /* Print message (supports multi-line with \n) */
-  int msg_x = x + 2;
+  /* Print message (supports multi-line with \n), centring each line */
   int msg_y = y + 1;
   int msg_lines = 0;
   const char* msg = dialog->message;
   while (*msg) {
     const char* nl = strchr(msg, '\n');
     int len = nl ? (int)(nl - msg) : (int)strlen(msg);
+    int msg_x = x + (width - len) / 2;
+    if (msg_x < x + 1) msg_x = x + 1;
     mvprintw(msg_y + msg_lines, msg_x, "%.*s", len, msg);
     msg_lines++;
     msg = nl ? nl + 1 : msg + len;

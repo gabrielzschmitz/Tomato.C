@@ -2999,7 +2999,7 @@ void PrefsEdit(AppData* app) {
  */
 static void showPrefsSavePrompt(AppData* app) {
   const char* message =
-    "Changes were applied on current session, save into config.toml?";
+    "Changes were applied on current session,\nsave into config.toml?";
   MenuItem menu_items[] = {{"Save", PrefsSaveAndClose},
                            {"Discard", PrefsDiscardAndClose}};
   Menu menu = {.items = menu_items,
