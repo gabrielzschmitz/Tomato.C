@@ -1619,7 +1619,7 @@ void ReturnToMainMenu(AppData* app) {
     app->screen->panels[app->screen->current_panel].scene_history->present;
   if (!(POMODORO_SCENES & (1 << current_scene))) return;
 
-  if (WORK_LOG) {
+  if (HISTORY_LOG) {
     if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
       SetError(app, "Saving pomodoro on return to menu", TIMER_LOG_ERROR);
   }
