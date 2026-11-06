@@ -43,6 +43,30 @@ void LogError(const char* context, ErrorType error) {
 }
 
 /**
+ * Push a message onto the top of the error line stack.
+ * @param level Severity of the message
+ * @param text Text to display (truncated to the entry size)
+ */
+static void pushErrorEntry(ErrorLevel level, const char* text) {
+  for (int i = MAX_ERROR_ENTRIES - 1; i > 0; i--) {
+    error_stack[i] = error_stack[i - 1];
+  }
+
+  error_stack[0].timestamp = time(NULL);
+  error_stack[0].level = level;
+  memset(error_stack[0].message, 0, sizeof(error_stack[0].message));
+  snprintf(error_stack[0].message, sizeof(error_stack[0].message), "%s", text);
+
+  if (error_count < MAX_ERROR_ENTRIES) error_count++;
+  if (error_count > MAX_ERROR_ENTRIES) error_count = MAX_ERROR_ENTRIES;
+}
+
+void SetErrorMessage(ErrorLevel level, const char* message) {
+  if (message == NULL) return;
+  pushErrorEntry(level, message);
+}
+
+/**
  * Set and display an error at the bottom of the screen.
  * Adds error to the display stack and logs to file.
  * If error level is CRITICAL, freezes the app and shows quit confirmation.
@@ -59,18 +83,7 @@ void SetError(AppData* app, const char* context, ErrorType type) {
   snprintf(message, sizeof(message), "[%s] %s: %s", error_level, context,
            error_message);
 
-  for (int i = MAX_ERROR_ENTRIES - 1; i > 0; i--) {
-    error_stack[i] = error_stack[i - 1];
-  }
-
-  error_stack[0].timestamp = time(NULL);
-  error_stack[0].level = level;
-  memset(error_stack[0].message, 0, sizeof(error_stack[0].message));
-  snprintf(error_stack[0].message, sizeof(error_stack[0].message), "%s",
-           message);
-
-  if (error_count < MAX_ERROR_ENTRIES) error_count++;
-  if (error_count > MAX_ERROR_ENTRIES) error_count = MAX_ERROR_ENTRIES;
+  pushErrorEntry(level, message);
 
   LogError(context, type);
 

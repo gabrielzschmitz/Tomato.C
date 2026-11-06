@@ -128,6 +128,14 @@ void LogError(const char* context, ErrorType error);
 void SetError(AppData* app, const char* context, ErrorType type);
 
 /**
+ * Show a message on the error line without an error code or log entry.
+ * Used for diagnostics that were already logged, such as config warnings.
+ * @param level Severity used for the color and auto-clear timeout
+ * @param message Text to display
+ */
+void SetErrorMessage(ErrorLevel level, const char* message);
+
+/**
  * Clear all errors from the error stack.
  * Resets the error display and allows normal app operation.
  */
