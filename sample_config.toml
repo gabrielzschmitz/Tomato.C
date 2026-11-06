@@ -151,7 +151,8 @@ sel_color      = 11
 [logging]
 timer_log     = true     # 0/1 — disable -t flag if off
 timerlog_icons = true    # 0/1 — icons in timer log
-work_log      = true     # 0/1 — disable resume_from_unfinished_session if off
+work_log      = true     # 0/1 — offer to resume an unfinished session at startup
+history_log   = true     # 0/1 — record pomodoro history and enable tomato -h
 notepad_log   = true     # 0/1 — save notepad on exit
 
 # Auto-Start Settings ---------------------------------------------------------
