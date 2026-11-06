@@ -415,6 +415,48 @@ static void test_get_history_day_many_sessions(void) {
   remove(tmp);
 }
 
+/* Captures what fn(arg) prints to stdout. Returned buffer is static. */
+static char capture_buf[4096];
+static const char* capture_stdout(void (*fn)(const char*), const char* arg) {
+  char tmp[] = "/tmp/t_log_cap_XXXXXX";
+  int fd = mkstemp(tmp);
+  fflush(stdout);
+  int saved = dup(STDOUT_FILENO);
+  dup2(fd, STDOUT_FILENO);
+  fn(arg);
+  fflush(stdout);
+  dup2(saved, STDOUT_FILENO);
+  close(saved);
+  lseek(fd, 0, SEEK_SET);
+  ssize_t n = read(fd, capture_buf, sizeof(capture_buf) - 1);
+  capture_buf[n > 0 ? n : 0] = '\0';
+  close(fd);
+  remove(tmp);
+  return capture_buf;
+}
+
+static void test_work_totals_exclude_breaks(void) {
+  TEST("pomodoro totals count only work time, not breaks");
+  char tmp[] = "/tmp/t_log_wt_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  FILE* f = fopen(tmp, "wb");
+  ASSERT_NOT_NULL(f);
+  /* 2 cycles of 25 min work, 5 min short break, 30 min long break.
+   * Work time is 50 min; breaks must not be counted. */
+  write_rec(f, 1, 0, 2, 2, 25, 5, 30, 0, 0, 0, (uint32_t)time(NULL));
+  fclose(f);
+
+  const char* overview = capture_stdout((void (*)(const char*))GetPomodoroHistory, tmp);
+  ASSERT_NOT_NULL(strstr(overview, "Work: 50 min"));
+
+  const char* day = capture_stdout(GetPomodoroHistoryDay, tmp);
+  ASSERT_NOT_NULL(strstr(day, "Focus Time: 50 min"));
+  remove(tmp);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * SavePomodoro / LoadPomodoro — round-trip
@@ -725,6 +767,8 @@ int main(void) {
            "HistSessionsForDay skip instant endTime");
   RUN_TEST(test_get_history_day_many_sessions,
            "GetPomodoroHistoryDay >100 sessions no crash");
+  RUN_TEST(test_work_totals_exclude_breaks,
+           "pomodoro totals count only work time, not breaks");
   RUN_TEST(test_save_and_load_pomodoro,
            "SavePomodoro then LoadPomodoro fields match");
   RUN_TEST(test_save_pomodoro_append,
