@@ -1488,8 +1488,45 @@ static void readNoiseTracks(toml_table_t* root) {
   }
 }
 
+#define MAX_CONFIG_WARNINGS 8
+#define CONFIG_WARNING_LEN 256
+
+typedef struct {
+  ErrorLevel level;
+  char message[CONFIG_WARNING_LEN];
+} ConfigWarning;
+
+static ConfigWarning config_warnings[MAX_CONFIG_WARNINGS];
+static int config_warning_count = 0;
+
+/**
+ * Queue a configuration diagnostic for display once the UI is running.
+ * Messages beyond MAX_CONFIG_WARNINGS are dropped.
+ * @param level Severity of the diagnostic
+ * @param message Text to show on the error line
+ */
+static void addConfigWarning(ErrorLevel level, const char* message) {
+  if (config_warning_count >= MAX_CONFIG_WARNINGS) return;
+  ConfigWarning* w = &config_warnings[config_warning_count++];
+  w->level = level;
+  snprintf(w->message, sizeof(w->message), "%s", message);
+}
+
+/** Clear the configuration diagnostics queue. */
+static void resetConfigWarnings(void) { config_warning_count = 0; }
+
+int GetConfigWarningCount(void) { return config_warning_count; }
+
+const char* GetConfigWarning(int index, ErrorLevel* level) {
+  if (index < 0 || index >= config_warning_count) return NULL;
+  if (level) *level = config_warnings[index].level;
+  return config_warnings[index].message;
+}
+
 /**
  * Parse a single TOML file and overlay its values onto g_config.
+ * A file that fails to parse is ignored as a whole and a diagnostic is
+ * queued with the parser's message.
  * @param path Absolute path to the .toml file
  */
 static void loadTomlFile(const char* path) {
@@ -1503,7 +1540,10 @@ static void loadTomlFile(const char* path) {
   toml_table_t* root = toml_parse_file(f, errbuf, sizeof(errbuf));
   fclose(f);
   if (!root) {
-    LogError("loadTomlFile", FILE_ERROR);
+    char msg[CONFIG_WARNING_LEN];
+    snprintf(msg, sizeof(msg), "%s ignored: %s", path, errbuf);
+    addConfigWarning(ERROR_LEVEL_ERROR, msg);
+    LogError(msg, FILE_ERROR);
     return;
   }
 
@@ -1513,12 +1553,21 @@ static void loadTomlFile(const char* path) {
   if (g_config.visual.icons && g_config.visual.icons != old_icons)
     g_config.visual.icons = strdup(g_config.visual.icons);
   /* Sync icons_index from the string after TOML override */
-  if (strcmp(g_config.visual.icons, "nerd-icons") == 0)
+  if (strcmp(g_config.visual.icons, "nerd-icons") == 0) {
     g_config.visual.icons_index = 0;
-  else if (strcmp(g_config.visual.icons, "emojis") == 0)
+  } else if (strcmp(g_config.visual.icons, "emojis") == 0) {
     g_config.visual.icons_index = 1;
-  else
+  } else if (strcmp(g_config.visual.icons, "ascii") == 0) {
     g_config.visual.icons_index = 2;
+  } else {
+    char msg[CONFIG_WARNING_LEN];
+    snprintf(msg, sizeof(msg), "visual.icons \"%s\" is not valid; using ascii",
+             g_config.visual.icons);
+    addConfigWarning(ERROR_LEVEL_WARNING, msg);
+    g_config.visual.icons = "ascii";
+    g_config.visual.icons_index = 2;
+  }
+  readInt(root, "visual.clock_24h", &g_config.visual.clock_24h);
   readInt(root, "visual.bg_transparency", &g_config.visual.bg_transparency);
   readInt(root, "visual.status_bar_spacing",
           &g_config.visual.status_bar_spacing);
@@ -1727,6 +1776,7 @@ void LoadConfig(void) {
   if (loaded) return;
   loaded = true;
 
+  resetConfigWarnings();
   setDefaults();
 
   loadTomlFile(SYSTEM_CONFIG_PATH);

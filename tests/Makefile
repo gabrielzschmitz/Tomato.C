@@ -70,6 +70,7 @@ UNIT_BINS = \
 	unit/test_draw \
 	unit/test_input \
 	unit/test_keybind \
+	unit/test_config_load \
 	unit/test_audio \
 	unit/test_ui \
 	unit/test_notes \
@@ -142,6 +143,10 @@ unit/test_input: unit/test_input.c $(HELPERS)
 #/** @brief keybind — includes config.c; stubs all action functions in test file */
 unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief config_load — includes config.c; tests loadTomlFile diagnostics */
+unit/test_config_load: unit/test_config_load.c $(SRCDIR)/config.c $(SRCDIR)/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+	$(TEST_CC) $(TEST_CFLAGS) -DSAMPLE_CONFIG_PATH=\"$(abspath $(SRCDIR)/../sample_config.toml)\" -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim — links util.c and error.c */
 unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)

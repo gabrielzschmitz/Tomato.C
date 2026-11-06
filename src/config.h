@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 
+#include "error.h"
 #include "input.h"
 
 /* Config struct hierarchy -------------------------------------------------- */
@@ -214,6 +215,20 @@ extern Config g_config;
 
 /** Load (or reload) configuration from TOML files and set defaults. */
 void LoadConfig(void);
+
+/**
+ * Number of diagnostics queued while loading the configuration.
+ * @return Count of queued warnings and errors
+ */
+int GetConfigWarningCount(void);
+
+/**
+ * Get one queued configuration diagnostic.
+ * @param index Zero-based diagnostic index
+ * @param level Output severity of the diagnostic (may be NULL)
+ * @return Message text, or NULL if index is out of range
+ */
+const char* GetConfigWarning(int index, ErrorLevel* level);
 
 /** Sync g_config.visual.icons string from icons_index (0-2). */
 void SyncIconsFromIndex(void);
