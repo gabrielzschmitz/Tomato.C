@@ -1175,8 +1175,7 @@ void GetPomodoroHistoryDay(const char* path) {
   for (int i = 0; i < uCount; i++) {
     if (uStatus[i] == 0) {
       completedSessions++;
-      totalWorkSeconds += (uCycles[i] * uWork[i] * 60) +
-                          ((uCycles[i] - 1) * uShort[i] * 60) + (uLong[i] * 60);
+      totalWorkSeconds += uCycles[i] * uWork[i] * 60;
     }
   }
   int totalWorkMinutes = totalWorkSeconds / 60;
@@ -1331,7 +1330,7 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
         int longP = records[i].long_pause_time * 60;
         int totalSec = (cycles * work) + ((cycles - 1) * shortP) + longP;
         totalSessionSeconds += totalSec;
-        totalWorkSeconds += totalSec;
+        totalWorkSeconds += cycles * work;
       }
     }
   }
