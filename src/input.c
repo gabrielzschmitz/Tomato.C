@@ -1,6 +1,7 @@
 #include "input.h"
 
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,6 +18,7 @@
 #include "config.h"
 #include "draw.h"
 #include "error.h"
+#include "init.h"
 #include "log.h"
 #include "notes.h"
 #include "notify.h"
@@ -40,6 +42,7 @@ static void historyRebuildOverview(AppData* app);
 static void historyMoveCursorByDays(AppData* app, int dayDelta);
 /* Preferences */
 static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
+static void PrefsRequestClose(AppData* app);
 
 /**
  * ---------------------------------------------------------------------------
@@ -270,7 +273,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
       app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE &&
       app->popup_dialog->slide_type != SLIDE_TYPE_NOISE) {
-    ClosePopup(app);
+    PrefsRequestClose(app);
     return;
   }
   if (inside_popup) {
@@ -704,6 +707,20 @@ bool HandlePopupInput(AppData* app, int key) {
   if (key == '?' || key == KEY_F(1)) {
     OpenHelp(app);
     return true;
+  }
+
+  /* Save/discard confirmation for unsaved preference changes */
+  if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
+    if (IsKeyAssignedToAction(key, ExecuteMenuAction)) {
+      ExecuteMenuAction(app);
+    } else if (IsKeyAssignedToAction(key, ClosePopup)) {
+      PrefsRequestClose(app);
+    } else if (IsKeyAssignedToAction(key, ChangeSelectedItemLeft)) {
+      ChangeSelectedItemLeft(app);
+    } else if (IsKeyAssignedToAction(key, ChangeSelectedItemRight)) {
+      ChangeSelectedItemRight(app);
+    }
+    return true; /* consume all keys while the confirmation is active */
   }
 
   /* White noise dialog — dispatch via configurable key bindings */
@@ -2976,10 +2993,80 @@ void PrefsEdit(AppData* app) {
 }
 
 /**
- * Go back from the preferences dialog.
+ * Show the save/discard confirmation for pending preference changes.
+ * Replaces the preferences dialog with a centered confirmation menu.
  * @param app Application state
  */
-void PrefsBack(AppData* app) { ClosePopup(app); }
+static void showPrefsSavePrompt(AppData* app) {
+  const char* message =
+    "Changes were applied on current session, save into config.toml?";
+  MenuItem menu_items[] = {{"Save", PrefsSaveAndClose},
+                           {"Discard", PrefsDiscardAndClose}};
+  Menu menu = {.items = menu_items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "<",
+               .select_style_right = ">",
+               .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+  Border border = InitBorder();
+
+  FloatingDialog* dialog =
+    CreateCenterFloatingDialog(app->screen, menu, message, border);
+  if (!dialog) return;
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = dialog;
+}
+
+/**
+ * Reopen the preferences list, cancelling a pending close.
+ * @param app Application state
+ */
+static void cancelPrefsPrompt(AppData* app) {
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Close the current popup. If the preferences list has unsaved changes,
+ * ask whether to save them instead of closing directly.
+ * @param app Application state
+ */
+static void PrefsRequestClose(AppData* app) {
+  if (!app->popup_dialog) return;
+  if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
+    cancelPrefsPrompt(app);
+    return;
+  }
+  if (app->popup_dialog->slide_type != SLIDE_TYPE_PREFERENCES ||
+      !PrefsHaveChanges(app)) {
+    ClosePopup(app);
+    return;
+  }
+  showPrefsSavePrompt(app);
+}
+
+void PrefsBack(AppData* app) { PrefsRequestClose(app); }
+
+void PrefsSaveAndClose(AppData* app) {
+  ErrorType status = PrefsSaveChanges(app);
+  if (status != NO_ERROR) {
+    char message[128];
+    snprintf(message, sizeof(message), "Saving preferences: %s",
+             GetErrorMessage(status));
+    SetErrorMessage(ERROR_LEVEL_ERROR, message);
+    LogError("PrefsSaveChanges", status);
+    return; /* keep the prompt open so the user can retry or discard */
+  }
+  ClosePopup(app);
+}
+
+void PrefsDiscardAndClose(AppData* app) {
+  PrefsRestoreSnapshot(app);
+  app->prefs.edit_index = -1;
+  app->prefs.select_index = -1;
+  ClosePopup(app);
+}
 
 /**
  * After a scroll, clamp the selection so it stays inside the visible field

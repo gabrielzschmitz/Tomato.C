@@ -4087,7 +4087,7 @@ static void prefsSlideRender(AppData* app, SlideDef* def) {
   mvprintw(qy, qx + displayWidth("q "), "Back");
   if (on_q) attroff(A_REVERSE);
   RegisterClickRegion(app, qx, qy, qw, 1, REGION_SLIDE_NAV,
-                      (MenuAction)ClosePopup, -1, 0, 0);
+                      (MenuAction)PrefsBack, -1, 0, 0);
 }
 
 /**

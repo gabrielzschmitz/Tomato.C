@@ -816,10 +816,22 @@ void PrefsToggle(AppData* app);
 void PrefsEdit(AppData* app);
 
 /**
- * Go back from the preferences dialog.
+ * Go back from the preferences dialog, asking to save pending changes.
  * @param app Application state
  */
 void PrefsBack(AppData* app);
+
+/**
+ * Save pending preference changes into config.toml and close the dialog.
+ * @param app Application state
+ */
+void PrefsSaveAndClose(AppData* app);
+
+/**
+ * Discard pending preference changes and close the dialog.
+ * @param app Application state
+ */
+void PrefsDiscardAndClose(AppData* app);
 
 /**
  * Preview the currently selected setting. For sound/notification fields: plays
