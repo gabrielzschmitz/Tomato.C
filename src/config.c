@@ -1891,22 +1891,60 @@ static int findKeyLine(const LineList* list, const char* key, int start,
   return -1;
 }
 
-/** Build "key = value" keeping the original indent and trailing comment. */
-static char* rebuildValueLine(const char* line, const char* key,
-                              const char* value) {
-  const char* s = skipBlank(line);
-  size_t indent = (size_t)(s - line);
-  const char* eq = strchr(s, '=');
-  const char* comment = eq ? findComment(eq + 1) : NULL;
-  size_t key_len = strlen(key);
+/**
+ * Replace the value in a "key = value" line, keeping the original indent,
+ * padding, and trailing comment.
+ */
+static char* rebuildValueLine(const char* line, const char* value) {
+  const char* eq = strchr(skipBlank(line), '=');
+  if (!eq) return NULL;
+
+  const char* value_start = eq + 1;
+  while (*value_start == ' ' || *value_start == '\t') value_start++;
+  const char* comment = findComment(value_start);
+  const char* end = comment ? comment : value_start + strlen(value_start);
+
+  /* Trim trailing blanks so they can be reused as padding. */
+  const char* value_end = end;
+  while (value_end > value_start &&
+         (value_end[-1] == ' ' || value_end[-1] == '\t'))
+    value_end--;
+
   size_t value_len = strlen(value);
-  size_t comment_len = comment ? strlen(comment) : 0;
-  size_t total =
-    indent + key_len + 3 + value_len + (comment ? 2 : 0) + comment_len + 1;
+  size_t old_value_len = (size_t)(value_end - value_start);
+  size_t gap_len = (size_t)(end - value_end);
+  size_t old_gap_len = gap_len;
+
+  /* Keep the comment in its original column when the new value changes
+   * width, as long as the existing gap provides enough padding. */
+  if (comment) {
+    if (value_len < old_value_len) {
+      gap_len += old_value_len - value_len;
+    } else if (value_len > old_value_len) {
+      size_t grown = value_len - old_value_len;
+      if (grown < gap_len)
+        gap_len -= grown;
+      else if (gap_len > 0)
+        gap_len = 1;
+    }
+  }
+
+  size_t prefix_len = (size_t)(value_start - line);
+  size_t suffix_len = strlen(end);
+  size_t copy_gap = gap_len < old_gap_len ? gap_len : old_gap_len;
+  size_t total = prefix_len + value_len + gap_len + suffix_len + 1;
   char* out = malloc(total);
   if (!out) return NULL;
-  int n = snprintf(out, total, "%.*s%s = %s", (int)indent, line, key, value);
-  if (comment) snprintf(out + n, total - n, "  %s", comment);
+
+  char* p = out;
+  memcpy(p, line, prefix_len);
+  p += prefix_len;
+  memcpy(p, value, value_len);
+  p += value_len;
+  memcpy(p, value_end, copy_gap);
+  p += copy_gap;
+  for (size_t i = copy_gap; i < gap_len; i++) *p++ = ' ';
+  memcpy(p, end, suffix_len + 1);
   return out;
 }
 
@@ -2015,7 +2053,7 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
     } else {
       int idx = findKeyLine(&list, key, start, end);
       if (idx >= 0) {
-        char* line = rebuildValueLine(list.items[idx], key, values[v].value);
+        char* line = rebuildValueLine(list.items[idx], values[v].value);
         if (!line) {
           free(table);
           lineListFree(&list);

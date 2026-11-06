@@ -150,6 +150,32 @@ static void test_save_keeps_comment_and_updates_value(void) {
   remove(tmp);
 }
 
+static void test_save_preserves_alignment_spacing(void) {
+  TEST("SaveConfigValues preserves key, value, and comment spacing");
+  char tmp[] = "/tmp/t_cfg_spacing_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  write_file(tmp,
+             "[visual]\n"
+             "clock_24h            = 1            "
+             "# 0/1 \xE2\x80\x94 use 24-hour clock\n");
+
+  ConfigValue v = {"visual.clock_24h", "0"};
+  ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
+
+  char buf[512];
+  read_file(tmp, buf, sizeof(buf));
+  ASSERT_STR_EQ(buf,
+                "[visual]\n"
+                "clock_24h            = 0            "
+                "# 0/1 \xE2\x80\x94 use 24-hour clock\n");
+  ASSERT_NULL(strstr(buf, "clock_24h = 0  #"));
+
+  remove(tmp);
+}
+
 static void test_save_adds_missing_key_to_its_table(void) {
   TEST("SaveConfigValues adds a missing key to an existing table");
   char tmp[] = "/tmp/t_cfg_add_XXXXXX";
@@ -335,6 +361,8 @@ int main(void) {
            "stepper: Enter commits, Esc/q/Ctrl-C cancel");
   RUN_TEST(test_save_keeps_comment_and_updates_value,
            "SaveConfigValues updates a key and keeps its comment");
+  RUN_TEST(test_save_preserves_alignment_spacing,
+           "SaveConfigValues preserves key, value, and comment spacing");
   RUN_TEST(test_save_adds_missing_key_to_its_table,
            "SaveConfigValues adds a missing key to an existing table");
   RUN_TEST(test_save_appends_missing_table,
