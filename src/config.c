@@ -840,8 +840,11 @@ static void setDefaults(void) {
   {
     const char* state_home = getenv("XDG_STATE_HOME");
     const char* home = getenv("HOME");
+    const char* state_override = getenv("TOMATO_STATE_DIR");
     char state_dir[4096];
-    if (state_home && state_home[0] == '/')
+    if (state_override && state_override[0] == '/')
+      snprintf(state_dir, sizeof(state_dir), "%s", state_override);
+    else if (state_home && state_home[0] == '/')
       snprintf(state_dir, sizeof(state_dir), "%s/tomato", state_home);
     else if (home)
       snprintf(state_dir, sizeof(state_dir), "%s/.local/state/tomato", home);
@@ -849,8 +852,11 @@ static void setDefaults(void) {
       snprintf(state_dir, sizeof(state_dir), "/tmp/tomato");
 
     const char* runtime_dir = getenv("XDG_RUNTIME_DIR");
+    const char* runtime_override = getenv("TOMATO_RUNTIME_DIR");
     char socket_dir[4096];
-    if (runtime_dir && runtime_dir[0] == '/')
+    if (runtime_override && runtime_override[0] == '/')
+      snprintf(socket_dir, sizeof(socket_dir), "%s", runtime_override);
+    else if (runtime_dir && runtime_dir[0] == '/')
       snprintf(socket_dir, sizeof(socket_dir), "%s", runtime_dir);
     else
       snprintf(socket_dir, sizeof(socket_dir), "%s", state_dir);
@@ -2088,12 +2094,40 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
 }
 
 /**
+ * Resolve the user configuration file path.
+ *
+ * Precedence:
+ *   1. $TOMATO_CONFIG_DIR/config.toml (must be an absolute path)
+ *   2. $XDG_CONFIG_HOME/tomato/config.toml
+ *   3. $HOME/.config/tomato/config.toml
+ *
+ * Returns false when none of the base directories are usable.
+ */
+static bool resolveUserConfigPath(char* path, size_t size) {
+  const char* override = getenv("TOMATO_CONFIG_DIR");
+  const char* xdg = getenv("XDG_CONFIG_HOME");
+  const char* home = getenv("HOME");
+  if (override && override[0] == '/') {
+    snprintf(path, size, "%s/config.toml", override);
+  } else if (xdg && xdg[0]) {
+    snprintf(path, size, "%s/tomato/config.toml", xdg);
+  } else if (home && home[0]) {
+    snprintf(path, size, "%s/%s/tomato/config.toml", home,
+             DEFAULT_USER_CONFIG_DIR);
+  } else {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Load configuration from TOML files.
  *
  * Order of precedence (later overrides earlier):
  *   1. Built-in defaults (setDefaults)
  *   2. System-wide /etc/tomato/config.toml
- *   3. User $XDG_CONFIG_HOME/tomato/config.toml or
+ *   3. User $TOMATO_CONFIG_DIR/config.toml,
+ *   $XDG_CONFIG_HOME/tomato/config.toml, or
  *   $HOME/.config/tomato/config.toml
  *
  * This function is idempotent — it only runs once (guarded by a static flag).
@@ -2108,17 +2142,8 @@ void LoadConfig(void) {
 
   loadTomlFile(SYSTEM_CONFIG_PATH);
 
-  const char* xdg = getenv("XDG_CONFIG_HOME");
-  const char* home = getenv("HOME");
   char path[1024];
-  if (xdg && xdg[0]) {
-    snprintf(path, sizeof(path), "%s/tomato/config.toml", xdg);
-  } else if (home) {
-    snprintf(path, sizeof(path), "%s/%s/tomato/config.toml", home,
-             DEFAULT_USER_CONFIG_DIR);
-  } else {
-    return;
-  }
+  if (!resolveUserConfigPath(path, sizeof(path))) return;
   snprintf(user_config_path, sizeof(user_config_path), "%s", path);
   loadTomlFile(path);
 }

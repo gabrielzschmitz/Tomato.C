@@ -33,6 +33,21 @@ static void write_file(const char* path, const char* text) {
   }
 }
 
+/* Save an environment variable so a test can restore it afterwards. */
+static char* save_env(const char* name) {
+  const char* value = getenv(name);
+  return value ? strdup(value) : NULL;
+}
+
+static void restore_env(const char* name, char* value) {
+  if (value) {
+    setenv(name, value, 1);
+    free(value);
+  } else {
+    unsetenv(name);
+  }
+}
+
 static void test_parse_error_is_queued(void) {
   TEST("unparseable config queues an error diagnostic");
   char tmp[] = "/tmp/t_cfg_load_XXXXXX";
@@ -214,6 +229,77 @@ static void test_save_writes_booleans(void) {
   remove(tmp);
 }
 
+static void test_user_config_override(void) {
+  TEST("TOMATO_CONFIG_DIR overrides the user config path");
+  char* old_override = save_env("TOMATO_CONFIG_DIR");
+  char* old_xdg = save_env("XDG_CONFIG_HOME");
+  setenv("TOMATO_CONFIG_DIR", "/tmp/t_cfg_override", 1);
+  setenv("XDG_CONFIG_HOME", "/tmp/t_cfg_xdg", 1);
+
+  char path[1024];
+  ASSERT_TRUE(resolveUserConfigPath(path, sizeof(path)));
+  ASSERT_STR_EQ(path, "/tmp/t_cfg_override/config.toml");
+
+  restore_env("XDG_CONFIG_HOME", old_xdg);
+  restore_env("TOMATO_CONFIG_DIR", old_override);
+}
+
+static void test_user_config_falls_back_to_xdg(void) {
+  TEST("user config falls back to XDG_CONFIG_HOME");
+  char* old_override = save_env("TOMATO_CONFIG_DIR");
+  char* old_xdg = save_env("XDG_CONFIG_HOME");
+  unsetenv("TOMATO_CONFIG_DIR");
+  setenv("XDG_CONFIG_HOME", "/tmp/t_cfg_xdg", 1);
+
+  char path[1024];
+  ASSERT_TRUE(resolveUserConfigPath(path, sizeof(path)));
+  ASSERT_STR_EQ(path, "/tmp/t_cfg_xdg/tomato/config.toml");
+
+  restore_env("XDG_CONFIG_HOME", old_xdg);
+  restore_env("TOMATO_CONFIG_DIR", old_override);
+}
+
+static void test_user_config_ignores_relative_override(void) {
+  TEST("relative TOMATO_CONFIG_DIR is ignored");
+  char* old_override = save_env("TOMATO_CONFIG_DIR");
+  char* old_xdg = save_env("XDG_CONFIG_HOME");
+  setenv("TOMATO_CONFIG_DIR", "relative/path", 1);
+  setenv("XDG_CONFIG_HOME", "/tmp/t_cfg_xdg", 1);
+
+  char path[1024];
+  ASSERT_TRUE(resolveUserConfigPath(path, sizeof(path)));
+  ASSERT_STR_EQ(path, "/tmp/t_cfg_xdg/tomato/config.toml");
+
+  restore_env("XDG_CONFIG_HOME", old_xdg);
+  restore_env("TOMATO_CONFIG_DIR", old_override);
+}
+
+static void test_state_and_runtime_overrides(void) {
+  TEST("TOMATO_STATE_DIR and TOMATO_RUNTIME_DIR override XDG paths");
+  char* old_state = save_env("TOMATO_STATE_DIR");
+  char* old_runtime = save_env("TOMATO_RUNTIME_DIR");
+  char* old_xdg_state = save_env("XDG_STATE_HOME");
+  char* old_xdg_runtime = save_env("XDG_RUNTIME_DIR");
+  setenv("TOMATO_STATE_DIR", "/tmp/t_cfg_state", 1);
+  setenv("TOMATO_RUNTIME_DIR", "/tmp/t_cfg_runtime", 1);
+  setenv("XDG_STATE_HOME", "/tmp/t_cfg_unused_state", 1);
+  setenv("XDG_RUNTIME_DIR", "/tmp/t_cfg_unused_runtime", 1);
+
+  setDefaults();
+  ASSERT_STR_EQ(g_config.logging.pomodoro_log, "/tmp/t_cfg_state/pomodoro.bin");
+  ASSERT_STR_EQ(g_config.logging.notes_log, "/tmp/t_cfg_state/notes.log");
+  ASSERT_STR_EQ(g_config.logging.error_log, "/tmp/t_cfg_state/errors.log");
+  ASSERT_STR_EQ(g_config.logging.timer_file,
+                "/tmp/t_cfg_runtime/tomato_timer.sock");
+
+  restore_env("XDG_RUNTIME_DIR", old_xdg_runtime);
+  restore_env("XDG_STATE_HOME", old_xdg_state);
+  restore_env("TOMATO_RUNTIME_DIR", old_runtime);
+  restore_env("TOMATO_STATE_DIR", old_state);
+  rmdir("/tmp/t_cfg_state");
+  rmdir("/tmp/t_cfg_runtime");
+}
+
 static int stepper_action_for(int key) {
   for (size_t i = 0; i < g_config.num_keys; i++) {
     KeyFunction* k = &g_config.key_bindings[i];
@@ -257,6 +343,14 @@ int main(void) {
            "SaveConfigValues refuses a file that does not parse");
   RUN_TEST(test_save_writes_booleans,
            "SaveConfigValues writes a boolean key as true/false");
+  RUN_TEST(test_user_config_override,
+           "TOMATO_CONFIG_DIR overrides the user config path");
+  RUN_TEST(test_user_config_falls_back_to_xdg,
+           "user config falls back to XDG_CONFIG_HOME");
+  RUN_TEST(test_user_config_ignores_relative_override,
+           "relative TOMATO_CONFIG_DIR is ignored");
+  RUN_TEST(test_state_and_runtime_overrides,
+           "TOMATO_STATE_DIR and TOMATO_RUNTIME_DIR override XDG paths");
 
   return test_end();
 }

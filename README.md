@@ -161,9 +161,10 @@ nix-shell   # classic (non-flake) shell
 The shell provides `gcc`, `make`, `pkg-config`, `ncurses`, `libnotify`, plus
 `clang-format`, `bear`, `doxygen`, `tcc`, `zig`, and `valgrind`. It also keeps
 Tomato.C's config, state, and runtime files under `.tmp/` in the repository
-(`XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_RUNTIME_DIR`), so running the
-development binary never touches your real config. From inside it, build and
-test as usual:
+using `TOMATO_CONFIG_DIR`, `TOMATO_STATE_DIR`, and `TOMATO_RUNTIME_DIR`, so
+running the development binary never touches your real config. The shell does
+not override the `XDG_*` variables, leaving the rest of your environment
+untouched. From inside it, build and test as usual:
 
 ```bash
 ./build.sh

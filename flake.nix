@@ -45,11 +45,11 @@
           shellHook = ''
             TOMATO_DEV_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
             export TOMATO_DEV_ROOT
-            export XDG_CONFIG_HOME="$TOMATO_DEV_ROOT/.tmp/config"
-            export XDG_STATE_HOME="$TOMATO_DEV_ROOT/.tmp/state"
-            export XDG_RUNTIME_DIR="$TOMATO_DEV_ROOT/.tmp/runtime"
-            mkdir -p "$XDG_CONFIG_HOME/tomato" "$XDG_STATE_HOME" "$XDG_RUNTIME_DIR"
-            chmod 700 "$XDG_RUNTIME_DIR"
+            export TOMATO_CONFIG_DIR="$TOMATO_DEV_ROOT/.tmp/config/tomato"
+            export TOMATO_STATE_DIR="$TOMATO_DEV_ROOT/.tmp/state/tomato"
+            export TOMATO_RUNTIME_DIR="$TOMATO_DEV_ROOT/.tmp/runtime"
+            mkdir -p "$TOMATO_CONFIG_DIR" "$TOMATO_STATE_DIR" "$TOMATO_RUNTIME_DIR"
+            chmod 700 "$TOMATO_RUNTIME_DIR"
             echo "Tomato.C dev files: $TOMATO_DEV_ROOT/.tmp"
           '';
         };
