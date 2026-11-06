@@ -74,8 +74,14 @@ int main(int argc, char* argv[]) {
   AppData app;
   if (InitScreen() != NO_ERROR)
     handleErrorAndExit("Initializing screen", WINDOW_CREATION_ERROR, NULL, 0);
-  if (InitApp(&app) != NO_ERROR)
-    handleErrorAndExit("Initializing app data", INIT_ERROR, NULL, 0);
+  ErrorType init_status = InitApp(&app);
+  if (init_status != NO_ERROR)
+    handleErrorAndExit("Initializing app data", init_status, NULL, 0);
+  for (int i = 0; i < GetConfigWarningCount(); i++) {
+    ErrorLevel level = ERROR_LEVEL_WARNING;
+    const char* message = GetConfigWarning(i, &level);
+    SetErrorMessage(level, message);
+  }
 
   /* Log process */
   pid_t pid = fork();
