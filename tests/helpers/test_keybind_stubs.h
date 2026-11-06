@@ -95,6 +95,7 @@ void PrefsScrollDown(AppData* app) { (void)app; }
 void StepperDecrement(AppData* app) { (void)app; }
 void StepperIncrement(AppData* app) { (void)app; }
 void StepperClose(AppData* app) { (void)app; }
+void StepperCancel(AppData* app) { (void)app; }
 void SelectApply(AppData* app) { (void)app; }
 void SelectCancel(AppData* app) { (void)app; }
 void SelectPrevOption(AppData* app) { (void)app; }

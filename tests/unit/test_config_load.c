@@ -106,6 +106,26 @@ static void test_invalid_icons_fall_back_to_ascii(void) {
   remove(tmp);
 }
 
+static int stepper_action_for(int key) {
+  for (size_t i = 0; i < g_config.num_keys; i++) {
+    KeyFunction* k = &g_config.key_bindings[i];
+    if (k->key == key && k->scene_types == SCENE_PREFS_STEPPER) {
+      if (k->action == StepperClose) return 1;
+      if (k->action == StepperCancel) return 2;
+    }
+  }
+  return 0;
+}
+
+static void test_stepper_keys_commit_and_cancel(void) {
+  TEST("stepper: Enter commits, Esc/q/Ctrl-C cancel");
+  setDefaults();
+  ASSERT_EQ(stepper_action_for(ENTER), 1);
+  ASSERT_EQ(stepper_action_for(ESC), 2);
+  ASSERT_EQ(stepper_action_for('q'), 2);
+  ASSERT_EQ(stepper_action_for(CTRLC), 2);
+}
+
 int main(void) {
   test_begin("config_load");
 
@@ -117,6 +137,8 @@ int main(void) {
            "sample_config.toml loads cleanly and matches defaults");
   RUN_TEST(test_invalid_icons_fall_back_to_ascii,
            "invalid visual.icons falls back to ascii with a warning");
+  RUN_TEST(test_stepper_keys_commit_and_cancel,
+           "stepper: Enter commits, Esc/q/Ctrl-C cancel");
 
   return test_end();
 }
