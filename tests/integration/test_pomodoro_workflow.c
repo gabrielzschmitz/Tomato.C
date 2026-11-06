@@ -195,6 +195,22 @@ static void test_total_elapsed_accumulates(void) {
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * Completing a cycle must release its session index so the next session
+ * in the same run is logged under a new index.
+ */
+static void test_session_index_reset_after_cycle(void) {
+  TEST("session index cleared when a cycle completes");
+  PomodoroData pd;
+  InitPomodoroData(&pd, 1, 25, 5, 30);
+  pd.session_index = 7;
+  pd.current_step = LONG_PAUSE;
+  pd.current_step_time = pd.long_pause_time * 60;
+  TransitionPomodoroStep(&pd);
+  ASSERT_EQ(pd.current_step, MAIN_MENU);
+  ASSERT_EQ(pd.session_index, 0);
+}
+
 int main(void) {
   test_begin("pomodoro_workflow");
   RUN_TEST(test_initial_state, "pomodoro starts in work step");
@@ -213,5 +229,7 @@ int main(void) {
            "IsStepEnded used by timer (boundary)");
   RUN_TEST(test_total_elapsed_accumulates,
            "total elapsed accumulates across ticks");
+  RUN_TEST(test_session_index_reset_after_cycle,
+           "session index cleared when a cycle completes");
   return test_end();
 }
