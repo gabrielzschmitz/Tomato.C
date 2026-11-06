@@ -124,7 +124,7 @@ void UpdateWorkTime(AppData* app) {
                   app->pomodoro_data.work_time)) {
     if (WORK_LOG) {
       skip_auto_save = true;
-      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
         SetError(app, "Saving pomodoro on work end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
@@ -167,7 +167,7 @@ void UpdateShortPause(AppData* app) {
                   app->pomodoro_data.short_pause_time)) {
     if (WORK_LOG) {
       skip_auto_save = true;
-      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
         SetError(app, "Saving pomodoro on pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
@@ -201,7 +201,7 @@ void UpdateLongPause(AppData* app) {
     if (WORK_LOG) {
       skip_auto_save = true;
       app->pomodoro_data.status = 0;
-      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+      if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
         SetError(app, "Saving pomodoro on long pause end", TIMER_LOG_ERROR);
       skip_auto_save = false;
     }
@@ -385,12 +385,12 @@ static void updatePomodoroLog(AppData* app) {
   }
 
   if (last_logged_step == -1 || last_logged_step != current_step) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
       SetError(app, "Logging pomodoro step change", TIMER_LOG_ERROR);
     last_logged_step = current_step;
     last_logged_minute = current_minute;
   } else if (current_minute != last_logged_minute && current_minute > 0) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
       SetError(app, "Logging pomodoro minute", TIMER_LOG_ERROR);
     last_logged_minute = current_minute;
   }

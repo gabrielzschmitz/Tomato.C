@@ -816,15 +816,12 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
 }
 
 /**
- * Save current pomodoro state to a log file.
- * Format: timestamp|step|current/total|work|short|long|current_step_time|last_step|elapsed/total
- * @param path   File path for the pomodoro log
- * @param data   Pointer to the pomodoro data to save
- * @param append If true, append new line; if false, update last line (rewrite file)
+ * Append the current pomodoro state to the binary log as one record.
+ * @param path File path for the pomodoro log
+ * @param data Pointer to the pomodoro data to save
  * @return ErrorType NO_ERROR on success, or TIMER_LOG_ERROR on failure
  */
-ErrorType SavePomodoro(const char* path, const PomodoroData* data,
-                       bool append) {
+ErrorType SavePomodoro(const char* path, const PomodoroData* data) {
   if (!path || !data) return NO_ERROR;
 
   int index =
@@ -843,7 +840,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data,
     .status = (uint8_t)data->status,
     .session_start_time = (uint32_t)data->session_start_time};
 
-  FILE* file = FOpenNoFollow(path, append ? "ab" : "wb");
+  FILE* file = FOpenNoFollow(path, "ab");
   if (!file) return TIMER_LOG_ERROR;
 
   if (fwrite(&record, sizeof(record), 1, file) != 1) {

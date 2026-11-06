@@ -1620,7 +1620,7 @@ void ReturnToMainMenu(AppData* app) {
   if (!(POMODORO_SCENES & (1 << current_scene))) return;
 
   if (WORK_LOG) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
       SetError(app, "Saving pomodoro on return to menu", TIMER_LOG_ERROR);
   }
 

@@ -101,13 +101,12 @@ ErrorType LoadNotes(const char* path, NotesData* notes);
 
 /**
  * Save current pomodoro state to a log file.
- * Writes timestamp and all pomodoro data fields.
+ * Appends one binary record with the current pomodoro data.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to save
- * @param append If true, append new line; if false, update last line
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
-ErrorType SavePomodoro(const char* path, const PomodoroData* data, bool append);
+ErrorType SavePomodoro(const char* path, const PomodoroData* data);
 
 /**
  * Get the last used index from the pomodoro log.

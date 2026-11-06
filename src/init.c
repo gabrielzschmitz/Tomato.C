@@ -130,7 +130,7 @@ ErrorType EndApp(AppData* app) {
     if (SaveNotes(NOTES_LOG, app->notes) != NO_ERROR)
       LogError("Saving notes on exit", END_APP_ERROR);
   if (WORK_LOG && app->pomodoro_data.current_step != MAIN_MENU)
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data, true) != NO_ERROR)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
       LogError("Saving pomodoro data on exit", END_APP_ERROR);
   FreeNotesData(app->notes);
   FreeScreen(app->screen);
