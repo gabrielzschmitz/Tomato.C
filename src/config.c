@@ -870,6 +870,7 @@ static void setDefaults(void) {
   }
   g_config.logging.timer_log = 1;
   g_config.logging.work_log = 1;
+  g_config.logging.history_log = 1;
   g_config.logging.notepad_log = 1;
   g_config.logging.timerlog_icons = 1;
 
@@ -1692,6 +1693,7 @@ static void loadTomlFile(const char* path) {
     if (!g_config.logging.timer_file) LogError("loadTomlFile", MALLOC_ERROR);
   }
   readBool(root, "logging.work_log", &g_config.logging.work_log);
+  readBool(root, "logging.history_log", &g_config.logging.history_log);
   readBool(root, "logging.notepad_log", &g_config.logging.notepad_log);
   readBool(root, "logging.timerlog_icons", &g_config.logging.timerlog_icons);
 

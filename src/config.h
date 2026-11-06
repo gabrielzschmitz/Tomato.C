@@ -169,6 +169,7 @@ typedef struct {
   int timer_log;            /**< 0/1 — enables `-t` CLI flag */
   const char* timer_file;   /**< path to timer socket file */
   int work_log;             /**< 0/1 — enables cycle resume */
+  int history_log;          /**< 0/1 — records pomodoro history and tomato -h */
   int notepad_log;          /**< 0/1 — save notes on exit */
   int timerlog_icons;       /**< 0/1 — icons in timer log */
 } ConfigLogging;
@@ -357,6 +358,8 @@ void SyncIconsFromIndex(void);
 #define TIMER_FILE (g_config.logging.timer_file)
 /** 0/1 — enables resume from unfinished cycle (default: 1). */
 #define WORK_LOG (g_config.logging.work_log)
+/** 0/1 — record pomodoro history and enable tomato -h (default: 1). */
+#define HISTORY_LOG (g_config.logging.history_log)
 /** 0/1 — save notepad data on exit (default: 1). */
 #define NOTEPAD_LOG (g_config.logging.notepad_log)
 /** 0/1 — icons in timer-log output (default: 1). */
