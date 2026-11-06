@@ -23,6 +23,10 @@
 # *   --no-color          Disable ANSI colors
 # *   --help|-h           Show this help
 # *
+# * Environment:
+# *   CC                  Compiler for the test build (e.g. CC=tcc)
+# *   TEST_CC             Same as CC, but takes precedence
+# *
 # * Exit codes: 0 = all pass, nonzero = failure
 # */
 
@@ -126,6 +130,10 @@ parse_args() {
         echo "  --no-color          Disable ANSI colors"
         echo "  --help|-h           Show this help"
         echo ""
+        echo "Environment:"
+        echo "  CC                  Compiler for the test build (e.g. CC=tcc)"
+        echo "  TEST_CC             Same as CC, but takes precedence"
+        echo ""
         echo "Exit codes: 0 = all pass, nonzero = failure"
         exit 0
         ;;
@@ -157,6 +165,19 @@ setup_paths() {
 # * Build
 # * ---------------------------------------------------------------------------
 # */
+
+#/**
+# * @brief Select the compiler used for the test build.
+# *
+# * Mirrors the CC variable used by build.sh.  TEST_CC takes precedence
+# * when both are set, and make falls back to gcc when neither is set.
+# */
+setup_compiler() {
+  if [ -n "${CC:-}" ] && [ -z "${TEST_CC:-}" ]; then
+    TEST_CC="$CC"
+    export TEST_CC
+  fi
+}
 
 #/**
 # * @brief Remove all build artifacts via make clean.
@@ -457,6 +478,7 @@ main() {
   init_colors
   parse_args "$@"
   setup_paths
+  setup_compiler
 
   print_header
 

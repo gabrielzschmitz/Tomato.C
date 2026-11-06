@@ -21,6 +21,9 @@ BASE_CFLAGS = -std=c99 -g -O0 -Wall -Wextra -Wno-unused-variable -Wno-unused-fun
               -I$(SRCDIR) -I$(SRCDIR)/external -Ihelpers -DUNIT_TEST
 NCURSES_CFLAGS = $(shell pkg-config --cflags ncursesw 2>/dev/null || echo "")
 NCURSES_LIBS = $(shell pkg-config --libs ncursesw 2>/dev/null || echo "-lncurses -ltinfo")
+NCURSES_LIBDIRS = $(shell pkg-config --libs-only-L ncursesw 2>/dev/null | sed 's/-L//g')
+NOTIFY_LIBDIRS = $(shell pkg-config --libs-only-L libnotify 2>/dev/null | sed 's/-L//g')
+RPATH_FLAGS = $(foreach dir,$(NCURSES_LIBDIRS) $(NOTIFY_LIBDIRS),-Wl,-rpath,$(dir))
 TEST_LDLIBS = -lm
 
 UNAME_S := $(shell uname -s)
@@ -36,6 +39,8 @@ IS_TCC := $(shell $(TEST_CC) -v 2>&1 | grep -ci "tcc version")
 ifeq ($(IS_TCC),1)
   WRAP_MALLOC =
   MALLOC_WRAP_TESTS =
+  # tcc does not record pkg-config library directories as an rpath.
+  TEST_LDLIBS += $(RPATH_FLAGS)
 endif
 
 IS_ZIG := $(shell printf '%s' "$(TEST_CC)" | grep -ci "zig")
