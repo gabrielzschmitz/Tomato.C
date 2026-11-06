@@ -2856,71 +2856,95 @@ void CreateHistoryStatsDialog(AppData* app) {
   int levelCounts[4] = {0};
 
   /* Read log and aggregate */
-  pomodoroLogRecord allRecs[2000];
   int nRecs = 0;
+  int recCap = 1024;
+  pomodoroLogRecord* allRecs = malloc(sizeof(pomodoroLogRecord) * recCap);
   FILE* file = fopen(POMODORO_LOG, "rb");
-  if (file) {
-    while (fread(&allRecs[nRecs], sizeof(allRecs[nRecs]), 1, file) == 1) {
-      if (allRecs[nRecs].session_index == 0) continue;
-      nRecs++;
-      if (nRecs >= 2000) break;
-    }
-    fclose(file);
-  }
-
-  /* Deduplicate sessions (keep last record per session_index) and compute focus */
-  {
-    int seenIdx[2000];
-    int seenCycles[2000], seenWork[2000], seenShort[2000], seenLong[2000];
-    int seenStatus[2000];
-    int nSeen = 0;
-
-    for (int i = 0; i < nRecs; i++) {
-      pomodoroLogRecord* rec = &allRecs[i];
-      time_t ts = (time_t)rec->session_start_time;
-      struct tm* rtm = localtime(&ts);
-      if (!rtm) continue;
-      int y = rtm->tm_year + 1900;
-      int m = rtm->tm_mon + 1;
-
-      bool inRange = false;
-      if (y == endYear || (y == endYear - 1 && m > endMonth) ||
-          (y == endYear && m <= endMonth)) {
-        inRange = true;
-      }
-      if (!inRange && endYear > 0) continue;
-
-      dayCounts[rtm->tm_wday]++;
-      monthCounts[m - 1]++;
-
-      int found = -1;
-      for (int j = 0; j < nSeen; j++) {
-        if (seenIdx[j] == rec->session_index) {
-          found = j;
+  if (file && allRecs) {
+    pomodoroLogRecord rec;
+    while (fread(&rec, sizeof(rec), 1, file) == 1) {
+      if (rec.session_index == 0) continue;
+      if (nRecs == recCap) {
+        pomodoroLogRecord* grown =
+          realloc(allRecs, sizeof(pomodoroLogRecord) * recCap * 2);
+        if (!grown) {
+          LogError("CreateHistoryStatsDialog", MALLOC_ERROR);
           break;
         }
+        allRecs = grown;
+        recCap *= 2;
       }
-      if (found < 0) {
-        found = nSeen++;
-        seenIdx[found] = rec->session_index;
-      }
-      seenCycles[found] = rec->total_cycles;
-      seenWork[found] = rec->work_time;
-      seenShort[found] = rec->short_pause_time;
-      seenLong[found] = rec->long_pause_time;
-      seenStatus[found] = rec->status;
-    }
-
-    for (int i = 0; i < nSeen; i++) {
-      totalSessions++;
-      if (seenStatus[i] == 0) {
-        totalFocusMins +=
-          (seenCycles[i] * seenWork[i] * 60 +
-           (seenCycles[i] - 1) * seenShort[i] * 60 + seenLong[i] * 60) /
-          60;
-      }
+      allRecs[nRecs++] = rec;
     }
   }
+  if (file) fclose(file);
+
+  /* Deduplicate sessions (keep last record per session_index) and compute focus */
+  if (allRecs) {
+    size_t seenCap = nRecs > 0 ? (size_t)nRecs : 1;
+    int* seenIdx = malloc(sizeof(int) * seenCap);
+    int* seenCycles = malloc(sizeof(int) * seenCap);
+    int* seenWork = malloc(sizeof(int) * seenCap);
+    int* seenShort = malloc(sizeof(int) * seenCap);
+    int* seenLong = malloc(sizeof(int) * seenCap);
+    int* seenStatus = malloc(sizeof(int) * seenCap);
+    int nSeen = 0;
+    if (seenIdx && seenCycles && seenWork && seenShort && seenLong &&
+        seenStatus) {
+      for (int i = 0; i < nRecs; i++) {
+        pomodoroLogRecord* rec = &allRecs[i];
+        time_t ts = (time_t)rec->session_start_time;
+        struct tm* rtm = localtime(&ts);
+        if (!rtm) continue;
+        int y = rtm->tm_year + 1900;
+        int m = rtm->tm_mon + 1;
+
+        bool inRange = false;
+        if (y == endYear || (y == endYear - 1 && m > endMonth) ||
+            (y == endYear && m <= endMonth)) {
+          inRange = true;
+        }
+        if (!inRange && endYear > 0) continue;
+
+        dayCounts[rtm->tm_wday]++;
+        monthCounts[m - 1]++;
+
+        int found = -1;
+        for (int j = 0; j < nSeen; j++) {
+          if (seenIdx[j] == rec->session_index) {
+            found = j;
+            break;
+          }
+        }
+        if (found < 0) {
+          found = nSeen++;
+          seenIdx[found] = rec->session_index;
+        }
+        seenCycles[found] = rec->total_cycles;
+        seenWork[found] = rec->work_time;
+        seenShort[found] = rec->short_pause_time;
+        seenLong[found] = rec->long_pause_time;
+        seenStatus[found] = rec->status;
+      }
+
+      for (int i = 0; i < nSeen; i++) {
+        totalSessions++;
+        if (seenStatus[i] == 0) {
+          totalFocusMins +=
+            (seenCycles[i] * seenWork[i] * 60 +
+             (seenCycles[i] - 1) * seenShort[i] * 60 + seenLong[i] * 60) /
+            60;
+        }
+      }
+    }
+    free(seenIdx);
+    free(seenCycles);
+    free(seenWork);
+    free(seenShort);
+    free(seenLong);
+    free(seenStatus);
+  }
+  free(allRecs);
 
   for (int i = 0; i < 7; i++) {
     if (dayCounts[i] > bestDowCount) {
