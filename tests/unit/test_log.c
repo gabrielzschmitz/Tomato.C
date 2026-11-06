@@ -555,7 +555,7 @@ static void test_save_and_load_pomodoro(void) {
   in.session_index = 7;
   in.session_start_time = 1700000000;
 
-  ErrorType err = SavePomodoro(tmp, &in, true);
+  ErrorType err = SavePomodoro(tmp, &in);
   ASSERT_EQ(err, NO_ERROR);
 
   PomodoroData out;
@@ -597,8 +597,8 @@ static void test_save_pomodoro_append(void) {
   d2.current_step = 3;
   d2.current_step_time = 200;
 
-  ASSERT_EQ(SavePomodoro(tmp, &d1, true), NO_ERROR);
-  ASSERT_EQ(SavePomodoro(tmp, &d2, true), NO_ERROR);
+  ASSERT_EQ(SavePomodoro(tmp, &d1), NO_ERROR);
+  ASSERT_EQ(SavePomodoro(tmp, &d2), NO_ERROR);
 
   PomodoroData out;
   memset(&out, 0, sizeof(out));
@@ -642,7 +642,7 @@ static void test_get_last_log_index_after_save(void) {
   d.session_index = 42;
   d.total_cycles = 4;
   d.work_time = 25;
-  ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+  ASSERT_EQ(SavePomodoro(tmp, &d), NO_ERROR);
 
   ASSERT_EQ(GetLastLogIndexOnly(tmp), 42);
   remove(tmp);
@@ -670,7 +670,7 @@ static void test_remove_uncompleted_entries(void) {
     d.work_time = 25;
     d.current_step = 1;
     d.status = (i <= 3) ? 0 : 1;
-    ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+    ASSERT_EQ(SavePomodoro(tmp, &d), NO_ERROR);
   }
 
   /* Remove uncompleted for session_index 5 only */
@@ -709,7 +709,7 @@ static void test_remove_uncompleted_all_completed(void) {
     d.work_time = 25;
     d.current_step = 1;
     d.status = 0;
-    ASSERT_EQ(SavePomodoro(tmp, &d, true), NO_ERROR);
+    ASSERT_EQ(SavePomodoro(tmp, &d), NO_ERROR);
   }
 
   ASSERT_EQ(RemoveUncompletedEntries(tmp, 3), NO_ERROR);
@@ -794,7 +794,7 @@ static void test_save_pomodoro_nonexistent_dir(void) {
   d.total_cycles = 4;
   d.work_time = 25;
 
-  ErrorType err = SavePomodoro("/nonexistent_dir_xyz/log.bin", &d, true);
+  ErrorType err = SavePomodoro("/nonexistent_dir_xyz/log.bin", &d);
   ASSERT_EQ(err, TIMER_LOG_ERROR);
 }
 
