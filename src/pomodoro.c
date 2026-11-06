@@ -52,7 +52,8 @@ void TickPomodoroTime(PomodoroData* pd, int seconds) {
  * The transition rules are:
  * - WORK_TIME -> SHORT_PAUSE (normal), or LONG_PAUSE on the final cycle
  * - SHORT_PAUSE -> WORK_TIME (cycle counter advances)
- * - LONG_PAUSE -> MAIN_MENU (cycle resets, session marked completed)
+ * - LONG_PAUSE -> MAIN_MENU (cycle resets, session marked completed and
+ *   its session index released for the next session)
  *
  * @param pd Pointer to the pomodoro data
  */
@@ -72,6 +73,7 @@ void TransitionPomodoroStep(PomodoroData* pd) {
     pd->current_cycle = 0;
     pd->total_elapsed = 0;
     pd->status = 0;
+    pd->session_index = 0;
   }
 }
 
