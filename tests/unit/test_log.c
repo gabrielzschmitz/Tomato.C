@@ -457,6 +457,26 @@ static void test_work_totals_exclude_breaks(void) {
   remove(tmp);
 }
 
+static void test_overview_counts_beyond_1000_records(void) {
+  TEST("history overview counts sessions beyond 1000 records");
+  char tmp[] = "/tmp/t_log_big_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+
+  FILE* f = fopen(tmp, "wb");
+  ASSERT_NOT_NULL(f);
+  uint32_t now = (uint32_t)time(NULL);
+  for (int i = 1; i <= 1100; i++)
+    write_rec(f, (uint16_t)i, 0, 1, 1, 25, 5, 30, 0, 0, 0, now);
+  fclose(f);
+
+  const char* overview =
+    capture_stdout((void (*)(const char*))GetPomodoroHistory, tmp);
+  ASSERT_NOT_NULL(strstr(overview, "Total sessions: 1100"));
+  remove(tmp);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * SavePomodoro / LoadPomodoro — round-trip
@@ -769,6 +789,8 @@ int main(void) {
            "GetPomodoroHistoryDay >100 sessions no crash");
   RUN_TEST(test_work_totals_exclude_breaks,
            "pomodoro totals count only work time, not breaks");
+  RUN_TEST(test_overview_counts_beyond_1000_records,
+           "history overview counts sessions beyond 1000 records");
   RUN_TEST(test_save_and_load_pomodoro,
            "SavePomodoro then LoadPomodoro fields match");
   RUN_TEST(test_save_pomodoro_append,
