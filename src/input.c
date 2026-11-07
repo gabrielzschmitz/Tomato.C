@@ -43,7 +43,9 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta);
 /* Preferences */
 static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
 static void PrefsRequestClose(AppData* app);
-/* Confirmation dialogs */
+/* Text input */
+static bool IsTextInputByte(int key);
+static bool InputEnsureCapacity(InputState* input, int needed);
 static bool IsConfirmationDialog(const FloatingDialog* dialog);
 
 /**
@@ -51,6 +53,16 @@ static bool IsConfirmationDialog(const FloatingDialog* dialog);
  * Input Dispatching
  * ---------------------------------------------------------------------------
  */
+
+/**
+ * Check whether a key value is a printable text byte.
+ * Accepts ASCII printable characters and raw UTF-8 bytes (0x80-0xFF).
+ * @param key Key value returned by getch()
+ * @return true if the key should be inserted as text
+ */
+static bool IsTextInputByte(int key) {
+  return (key >= ' ' && key <= '~') || (key >= 0x80 && key <= 0xFF);
+}
 
 /**
  * Check whether a dialog is one of the confirmation popups.
@@ -62,6 +74,31 @@ static bool IsConfirmationDialog(const FloatingDialog* dialog) {
   MenuAction first = dialog->menu.items[0].action;
   return first == ForcefullyQuitApp || first == ForcefullySkipPomodoroStep ||
          first == ResetPomodoroStep || first == ResetPomodoroCycle;
+}
+
+/**
+ * Ensure the input buffer can hold at least needed text bytes.
+ * Grows the allocation geometrically and updates max_len.
+ * @param input Input state to resize
+ * @param needed Number of text bytes required (excluding the null terminator)
+ * @return true on success, false on allocation failure
+ */
+static bool InputEnsureCapacity(InputState* input, int needed) {
+  if (!input) return false;
+  if (needed <= input->max_len) return true;
+
+  int capacity = input->max_len + 1;
+  if (capacity < 256) capacity = 256;
+  while (capacity <= needed) capacity *= 2;
+
+  char* grown = realloc(input->buffer, (size_t)capacity);
+  if (!grown) {
+    LogError("InputEnsureCapacity", MALLOC_ERROR);
+    return false;
+  }
+  input->buffer = grown;
+  input->max_len = capacity - 1;
+  return true;
 }
 
 /**
@@ -81,8 +118,8 @@ void ProcessKeyInput(AppData* app, int key) {
   if (current_mode == NORMAL && (!input || input->len == 0))
     effective_mode = DEFAULT;
 
-  /* Handle printable characters in INSERT mode via special entry */
-  if (effective_mode == INSERT && key >= ' ' && key <= '~') {
+  /* Handle printable and UTF-8 bytes in INSERT mode via special entry */
+  if (effective_mode == INSERT && IsTextInputByte(key)) {
     for (size_t i = 0; i < numKeyFunctions; i++) {
       if (keys[i].key == -1 && (keys[i].modes & effective_mode) &&
           (keys[i].scene_types & (1 << current_scene))) {
@@ -948,17 +985,23 @@ bool HandlePopupInput(AppData* app, int key) {
  */
 InputState* InputStateCreate(void) {
   InputState* s = (InputState*)malloc(sizeof(InputState));
-  if (s) {
-    s->buffer[0] = '\0';
-    s->len = 0;
-    s->cursor = 0;
-    s->max_len = sizeof(s->buffer) - 1;
-    s->is_task = true;
-    s->pending_parent_id = -1;
-    s->insert_after_id = -1;
-    s->selection.start = 0;
-    s->selection.end = 0;
+  if (!s) return NULL;
+
+  s->max_len = 255;
+  s->buffer = (char*)malloc((size_t)s->max_len + 1);
+  if (!s->buffer) {
+    free(s);
+    return NULL;
   }
+
+  s->buffer[0] = '\0';
+  s->len = 0;
+  s->cursor = 0;
+  s->is_task = true;
+  s->pending_parent_id = -1;
+  s->insert_after_id = -1;
+  s->selection.start = 0;
+  s->selection.end = 0;
   return s;
 }
 
@@ -968,6 +1011,7 @@ InputState* InputStateCreate(void) {
  */
 void InputStateDestroy(InputState** input) {
   if (input && *input) {
+    free((*input)->buffer);
     free(*input);
     *input = NULL;
   }
@@ -979,7 +1023,7 @@ void InputStateDestroy(InputState** input) {
  */
 void InputStateClear(InputState* s) {
   if (s) {
-    s->buffer[0] = '\0';
+    if (s->buffer) s->buffer[0] = '\0';
     s->len = 0;
     s->cursor = 0;
     s->selection.start = 0;
@@ -1041,7 +1085,8 @@ void SwitchToInsertMode(AppData* app) {
 void SwitchToInsertModeAppend(AppData* app) {
   if (app->popup_dialog != NULL) return;
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  if (input && input->cursor < input->len) input->cursor++;
+  if (input && input->cursor < input->len)
+    input->cursor = UTF8NextCharStart(input->buffer, input->len, input->cursor);
   app->screen->panels[app->screen->current_panel].mode = INSERT;
 }
 
@@ -1080,7 +1125,8 @@ void SwitchToNormalMode(AppData* app) {
  */
 void InputCursorLeft(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
-  if (input && input->cursor > 0) input->cursor--;
+  if (input && input->cursor > 0)
+    input->cursor = UTF8PrevCharStart(input->buffer, input->cursor);
 }
 
 /**
@@ -1091,10 +1137,11 @@ void InputCursorRight(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
   int mode = app->screen->panels[app->screen->current_panel].mode;
+  int next = UTF8NextCharStart(input->buffer, input->len, input->cursor);
   if (mode == INSERT) {
-    if (input->cursor < input->len) input->cursor++;
+    if (input->cursor < input->len) input->cursor = next;
   } else {
-    if (input->len > 0 && input->cursor < input->len - 1) input->cursor++;
+    if (next < input->len) input->cursor = next;
   }
 }
 
@@ -1106,10 +1153,11 @@ void InputBackspace(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
   if (input->cursor > 0) {
-    for (int i = input->cursor - 1; i < input->len - 1; i++)
-      input->buffer[i] = input->buffer[i + 1];
-    input->cursor--;
-    input->len--;
+    int prev = UTF8PrevCharStart(input->buffer, input->cursor);
+    memmove(input->buffer + prev, input->buffer + input->cursor,
+            (size_t)(input->len - input->cursor + 1));
+    input->len -= input->cursor - prev;
+    input->cursor = prev;
     input->buffer[input->len] = '\0';
   }
 }
@@ -1125,14 +1173,16 @@ void InputDeleteChar(AppData* app) {
   SaveNotesToHistory(app->notes, input->cursor);
 
   if (input->cursor < input->len) {
-    for (int i = input->cursor; i < input->len - 1; i++)
-      input->buffer[i] = input->buffer[i + 1];
-    input->len--;
+    int next = UTF8NextCharStart(input->buffer, input->len, input->cursor);
+    memmove(input->buffer + input->cursor, input->buffer + next,
+            (size_t)(input->len - next + 1));
+    input->len -= next - input->cursor;
     input->buffer[input->len] = '\0';
+
     int mode = app->screen->panels[app->screen->current_panel].mode;
-    int max_cursor =
-      (mode == INSERT) ? input->len : (input->len > 0 ? input->len - 1 : 0);
-    if (input->cursor > max_cursor) input->cursor = max_cursor;
+    if (input->cursor > input->len) input->cursor = input->len;
+    if (mode != INSERT && input->len > 0 && input->cursor >= input->len)
+      input->cursor = UTF8PrevCharStart(input->buffer, input->len);
   }
   if (input->len == 0) {
     input->cursor = 0;
@@ -1160,19 +1210,20 @@ void InputVisualDelete(AppData* app) {
   int end_sel = (input->selection.start < input->cursor)
                   ? input->cursor
                   : input->selection.start;
-  end_sel++;
+  if (end_sel < input->len)
+    end_sel = UTF8NextCharStart(input->buffer, input->len, end_sel);
   int sel_len = end_sel - start_sel;
   if (sel_len > 0 && start_sel < input->len) {
-    for (int i = start_sel; i < input->len - sel_len; i++)
-      input->buffer[i] = input->buffer[i + sel_len];
+    memmove(input->buffer + start_sel, input->buffer + end_sel,
+            (size_t)(input->len - end_sel + 1));
     input->len -= sel_len;
     input->buffer[input->len] = '\0';
     input->cursor = start_sel;
     input->selection.start = start_sel;
     int mode = app->screen->panels[app->screen->current_panel].mode;
-    int max_cursor =
-      (mode == INSERT) ? input->len : (input->len > 0 ? input->len - 1 : 0);
-    if (input->cursor > max_cursor) input->cursor = max_cursor;
+    if (input->cursor > input->len) input->cursor = input->len;
+    if (mode != INSERT && input->len > 0 && input->cursor >= input->len)
+      input->cursor = UTF8PrevCharStart(input->buffer, input->len);
   }
   if (input->len == 0) {
     input->len = 0;
@@ -1183,8 +1234,8 @@ void InputVisualDelete(AppData* app) {
     curs_set(1);
     refresh();
   } else {
-    if (input->cursor > 0 && input->cursor > input->len - 1)
-      input->cursor = (input->len > 0) ? input->len - 1 : 0;
+    if (input->cursor > 0 && input->cursor >= input->len)
+      input->cursor = UTF8PrevCharStart(input->buffer, input->len);
     app->screen->panels[app->screen->current_panel].mode = NORMAL;
     noecho();
     curs_set(0);
@@ -1331,14 +1382,15 @@ void InputInsertChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
   int key = app->user_input;
-  if (key >= ' ' && key <= '~' && input->len < input->max_len) {
-    for (int i = input->len; i > input->cursor; i--)
-      input->buffer[i] = input->buffer[i - 1];
-    input->buffer[input->cursor] = key;
-    input->cursor++;
-    input->len++;
-    input->buffer[input->len] = '\0';
-  }
+  if (!IsTextInputByte(key)) return;
+  if (!InputEnsureCapacity(input, input->len + 1)) return;
+
+  for (int i = input->len; i > input->cursor; i--)
+    input->buffer[i] = input->buffer[i - 1];
+  input->buffer[input->cursor] = (char)key;
+  input->cursor++;
+  input->len++;
+  input->buffer[input->len] = '\0';
 }
 
 /**
@@ -2209,23 +2261,22 @@ void UndoNotes(AppData* app) {
       char* text = GapBufferToString(note->text);
       if (text) {
         int len = strlen(text);
-        if (len >= input->max_len) len = input->max_len - 1;
-        memcpy(input->buffer, text, len);
-        input->buffer[len] = '\0';
-        input->len = len;
-        /* Restore cursor - clamp to valid range */
-        if (snap && snap->saved_cursor >= 0) {
-          input->cursor = snap->saved_cursor;
-        } else {
-          input->cursor = len;
+        if (InputEnsureCapacity(input, len)) {
+          memcpy(input->buffer, text, (size_t)len);
+          input->buffer[len] = '\0';
+          input->len = len;
+          /* Restore cursor - clamp to valid range */
+          if (snap && snap->saved_cursor >= 0) {
+            input->cursor = snap->saved_cursor;
+          } else {
+            input->cursor = len;
+          }
+          /* Clamp to a valid UTF-8 boundary for the current mode */
+          input->cursor = UTF8AlignCursor(input->buffer, len, input->cursor);
+          if (app->screen->panels[app->screen->current_panel].mode != INSERT &&
+              len > 0 && input->cursor >= len)
+            input->cursor = UTF8PrevCharStart(input->buffer, len);
         }
-        /* Clamp to valid range for current mode */
-        int max_cursor =
-          (app->screen->panels[app->screen->current_panel].mode == INSERT)
-            ? len
-            : (len > 0 ? len - 1 : 0);
-        if (input->cursor > max_cursor) input->cursor = max_cursor;
-        if (input->cursor < 0) input->cursor = 0;
         free(text);
       }
     }
@@ -2291,23 +2342,22 @@ void RedoNotes(AppData* app) {
       char* text = GapBufferToString(note->text);
       if (text) {
         int len = strlen(text);
-        if (len >= input->max_len) len = input->max_len - 1;
-        memcpy(input->buffer, text, len);
-        input->buffer[len] = '\0';
-        input->len = len;
-        /* Restore cursor - clamp to valid range */
-        if (snap && snap->saved_cursor >= 0) {
-          input->cursor = snap->saved_cursor;
-        } else {
-          input->cursor = len;
+        if (InputEnsureCapacity(input, len)) {
+          memcpy(input->buffer, text, (size_t)len);
+          input->buffer[len] = '\0';
+          input->len = len;
+          /* Restore cursor - clamp to valid range */
+          if (snap && snap->saved_cursor >= 0) {
+            input->cursor = snap->saved_cursor;
+          } else {
+            input->cursor = len;
+          }
+          /* Clamp to a valid UTF-8 boundary for the current mode */
+          input->cursor = UTF8AlignCursor(input->buffer, len, input->cursor);
+          if (app->screen->panels[app->screen->current_panel].mode != INSERT &&
+              len > 0 && input->cursor >= len)
+            input->cursor = UTF8PrevCharStart(input->buffer, len);
         }
-        /* Clamp to valid range for current mode */
-        int max_cursor =
-          (app->screen->panels[app->screen->current_panel].mode == INSERT)
-            ? len
-            : (len > 0 ? len - 1 : 0);
-        if (input->cursor > max_cursor) input->cursor = max_cursor;
-        if (input->cursor < 0) input->cursor = 0;
         free(text);
       }
     }

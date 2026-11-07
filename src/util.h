@@ -129,6 +129,32 @@ int UTF16CharCount(const char* str);
 int UTF16CharFitWidth(const char* str, int max_width, int* byte_count);
 
 /**
+ * Return the start offset of the UTF-8 character before pos.
+ * @param str UTF-8 string
+ * @param pos Current byte offset
+ * @return Byte offset of the previous character start (0 at the beginning)
+ */
+int UTF8PrevCharStart(const char* str, int pos);
+
+/**
+ * Return the start offset of the UTF-8 character after pos.
+ * @param str UTF-8 string
+ * @param len Length of str in bytes
+ * @param pos Current byte offset
+ * @return Byte offset of the next character start (len at the end)
+ */
+int UTF8NextCharStart(const char* str, int len, int pos);
+
+/**
+ * Move pos to the nearest preceding UTF-8 character boundary.
+ * @param str UTF-8 string
+ * @param len Length of str in bytes
+ * @param pos Byte offset to align
+ * @return Aligned byte offset within [0, len]
+ */
+int UTF8AlignCursor(const char* str, int len, int pos);
+
+/**
  * ---------------------------------------------------------------------------
  * Math
  * ---------------------------------------------------------------------------

@@ -239,6 +239,41 @@ static void test_utf16_char_fit_width_zero_max(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * UTF-8 cursor helpers
+ * ---------------------------------------------------------------------------
+ */
+
+static const char* utf8_sample(void) { return "a\xC3\xA9\xF0\x9F\x8D\x85"; }
+
+static void test_utf8_prev_char_start(void) {
+  TEST("UTF8PrevCharStart steps over multibyte sequences");
+  const char* s = utf8_sample();
+  ASSERT_EQ(UTF8PrevCharStart(s, 7), 3); /* before the emoji */
+  ASSERT_EQ(UTF8PrevCharStart(s, 3), 1); /* before é */
+  ASSERT_EQ(UTF8PrevCharStart(s, 1), 0); /* before a */
+  ASSERT_EQ(UTF8PrevCharStart(s, 0), 0);
+}
+
+static void test_utf8_next_char_start(void) {
+  TEST("UTF8NextCharStart steps over multibyte sequences");
+  const char* s = utf8_sample();
+  ASSERT_EQ(UTF8NextCharStart(s, 7, 0), 1);
+  ASSERT_EQ(UTF8NextCharStart(s, 7, 1), 3);
+  ASSERT_EQ(UTF8NextCharStart(s, 7, 3), 7);
+  ASSERT_EQ(UTF8NextCharStart(s, 7, 7), 7);
+}
+
+static void test_utf8_align_cursor(void) {
+  TEST("UTF8AlignCursor snaps into the middle of a character");
+  const char* s = utf8_sample();
+  ASSERT_EQ(UTF8AlignCursor(s, 7, 2), 1);
+  ASSERT_EQ(UTF8AlignCursor(s, 7, 5), 3);
+  ASSERT_EQ(UTF8AlignCursor(s, 7, 99), 7);
+  ASSERT_EQ(UTF8AlignCursor(s, 7, -4), 0);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -281,5 +316,11 @@ int main(void) {
            "UTF16CharFitWidth handles empty string");
   RUN_TEST(test_utf16_char_fit_width_zero_max,
            "UTF16CharFitWidth returns 0 for 0 max_width");
+  RUN_TEST(test_utf8_prev_char_start,
+           "UTF8PrevCharStart steps over multibyte sequences");
+  RUN_TEST(test_utf8_next_char_start,
+           "UTF8NextCharStart steps over multibyte sequences");
+  RUN_TEST(test_utf8_align_cursor,
+           "UTF8AlignCursor snaps into the middle of a character");
   return test_end();
 }

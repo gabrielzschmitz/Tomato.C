@@ -229,6 +229,59 @@ int UTF16CharFitWidth(const char* str, int max_width, int* byte_count) {
 }
 
 /**
+ * Return the start offset of the UTF-8 character before pos.
+ * @param str UTF-8 string
+ * @param pos Current byte offset
+ * @return Byte offset of the previous character start (0 at the beginning)
+ */
+int UTF8PrevCharStart(const char* str, int pos) {
+  if (!str || pos <= 0) return 0;
+  int i = pos - 1;
+  while (i > 0 && ((unsigned char)str[i] & 0xC0) == 0x80) i--;
+  return i;
+}
+
+/**
+ * Return the start offset of the UTF-8 character after pos.
+ * @param str UTF-8 string
+ * @param len Length of str in bytes
+ * @param pos Current byte offset
+ * @return Byte offset of the next character start (len at the end)
+ */
+int UTF8NextCharStart(const char* str, int len, int pos) {
+  if (!str || pos < 0) return 0;
+  if (pos >= len) return len;
+
+  unsigned char c = (unsigned char)str[pos];
+  int step = 1;
+  if ((c & 0xE0) == 0xC0)
+    step = 2;
+  else if ((c & 0xF0) == 0xE0)
+    step = 3;
+  else if ((c & 0xF8) == 0xF0)
+    step = 4;
+
+  int next = pos + step;
+  return next < len ? next : len;
+}
+
+/**
+ * Move pos to the nearest preceding UTF-8 character boundary.
+ * @param str UTF-8 string
+ * @param len Length of str in bytes
+ * @param pos Byte offset to align
+ * @return Aligned byte offset within [0, len]
+ */
+int UTF8AlignCursor(const char* str, int len, int pos) {
+  if (!str) return 0;
+  if (pos < 0) return 0;
+  if (pos > len) pos = len;
+  while (pos > 0 && pos < len && ((unsigned char)str[pos] & 0xC0) == 0x80)
+    pos--;
+  return pos;
+}
+
+/**
  * ---------------------------------------------------------------------------
  * Math
  * ---------------------------------------------------------------------------

@@ -72,9 +72,13 @@ static void (*resolve_insert(SceneType scene))(AppData*) {
   return NULL;
 }
 
+static int is_text_input_byte(int key) {
+  return (key >= ' ' && key <= '~') || (key >= 0x80 && key <= 0xFF);
+}
+
 static void (*resolve_process(int key, int mode, SceneType scene,
                               size_t input_len))(AppData*) {
-  if (mode == INSERT && key >= ' ' && key <= '~') {
+  if (mode == INSERT && is_text_input_byte(key)) {
     void* sentinel = resolve_insert(scene);
     if (sentinel) return sentinel;
   }
@@ -310,6 +314,13 @@ static void test_insert_sentinel_only_printable(void) {
   ASSERT_EQ(resolve_process(ESC, INSERT, NOTES, 0), InputESC);
 }
 
+static void test_insert_utf8_bytes_dispatch(void) {
+  TEST("INSERT UTF-8 bytes route to InputInsertChar");
+  ASSERT_EQ(resolve_process(0xC3, INSERT, NOTES, 0), InputInsertChar);
+  ASSERT_EQ(resolve_process(0xA9, INSERT, NOTES, 0), InputInsertChar);
+  ASSERT_EQ(resolve_process(0xF0, INSERT, NOTES, 0), InputInsertChar);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Tests — POMODORO scene bindings
@@ -509,6 +520,9 @@ int main(void) {
   reset_defaults();
   RUN_TEST(test_insert_sentinel_only_printable,
            "INSERT ESC uses normal lookup");
+  reset_defaults();
+  RUN_TEST(test_insert_utf8_bytes_dispatch,
+           "INSERT UTF-8 bytes route to InputInsertChar");
 
   /* Pomodoro */
   reset_defaults();
