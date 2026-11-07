@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include <stdio.h>
+#include <time.h>
 
 typedef struct AppData AppData;
 
@@ -77,6 +78,12 @@ void GetCurrentTime(char* buffer, size_t buffer_size);
  * @return Current time in milliseconds since epoch
  */
 double GetCurrentTimeMS(void);
+
+/**
+ * Return the clock used by GetCurrentTimeMS.
+ * @return clockid_t passed to clock_gettime
+ */
+clockid_t GetTimerClock(void);
 
 /**
  * Convert elapsed seconds and total time to formatted string.

@@ -239,6 +239,24 @@ static void test_utf16_char_fit_width_zero_max(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * Timer clock
+ * ---------------------------------------------------------------------------
+ */
+
+static void test_timer_clock_excludes_suspend(void) {
+  TEST("Timer clock defaults to CLOCK_MONOTONIC");
+  ASSERT_EQ((int)GetTimerClock(), (int)CLOCK_MONOTONIC);
+}
+
+static void test_current_time_monotonic(void) {
+  TEST("GetCurrentTimeMS is monotonic");
+  double before = GetCurrentTimeMS();
+  double after = GetCurrentTimeMS();
+  ASSERT_TRUE(after >= before);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * UTF-8 cursor helpers
  * ---------------------------------------------------------------------------
  */
@@ -316,6 +334,9 @@ int main(void) {
            "UTF16CharFitWidth handles empty string");
   RUN_TEST(test_utf16_char_fit_width_zero_max,
            "UTF16CharFitWidth returns 0 for 0 max_width");
+  RUN_TEST(test_timer_clock_excludes_suspend,
+           "timer clock defaults to CLOCK_MONOTONIC");
+  RUN_TEST(test_current_time_monotonic, "GetCurrentTimeMS is monotonic");
   RUN_TEST(test_utf8_prev_char_start,
            "UTF8PrevCharStart steps over multibyte sequences");
   RUN_TEST(test_utf8_next_char_start,

@@ -74,6 +74,24 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
 }
 
 /**
+ * Clock used for timer and animation timestamps.
+ *
+ * CLOCK_MONOTONIC deliberately stops while the machine is suspended: a
+ * pomodoro session should not expire while the user's laptop is asleep.
+ * Define TOMATO_TIMER_CLOCK as CLOCK_BOOTTIME at build time to count
+ * suspend time instead (Linux only).
+ */
+#ifndef TOMATO_TIMER_CLOCK
+#define TOMATO_TIMER_CLOCK CLOCK_MONOTONIC
+#endif
+
+/**
+ * Return the clock used by GetCurrentTimeMS.
+ * @return clockid_t passed to clock_gettime
+ */
+clockid_t GetTimerClock(void) { return TOMATO_TIMER_CLOCK; }
+
+/**
  * Get the current time in milliseconds.
  * Used for frame timing and animation updates.
  * @return Current time in milliseconds since epoch
@@ -83,7 +101,7 @@ double GetCurrentTimeMS(void) {
   const double NANOSECONDS_TO_MILLISECONDS = 1.0 / 1000000.0;
 
   struct timespec current_time;
-  if (clock_gettime(CLOCK_MONOTONIC, &current_time) != 0) {
+  if (clock_gettime(GetTimerClock(), &current_time) != 0) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (tv.tv_sec * SECONDS_TO_MILLISECONDS) +
