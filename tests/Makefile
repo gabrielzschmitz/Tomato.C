@@ -80,6 +80,7 @@ UNIT_BINS = \
 	unit/test_ui \
 	unit/test_notes \
 	unit/test_notify \
+	unit/test_pomodoro \
 	unit/test_tomato \
 	unit/test_util \
 	unit/test_error \
@@ -135,6 +136,10 @@ unit/test_audio: unit/test_audio.c $(HELPERS)
 
 #/** @brief ui — mirrors RegisterClickRegion/CreateScreen panel logic (standalone, no ui.c link) */
 unit/test_ui: unit/test_ui.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief pomodoro — links pomodoro.c; no external calls outside input.h */
+unit/test_pomodoro: unit/test_pomodoro.c $(SRCDIR)/pomodoro.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief tomato — mirrors CLI argument parsing logic (standalone, no tomato.c link) */

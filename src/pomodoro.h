@@ -30,6 +30,18 @@ void InitPomodoroData(PomodoroData* pd, int total_cycles, int work_time,
 void TickPomodoroTime(PomodoroData* pd, int seconds);
 
 /**
+ * Compute how many whole timer ticks elapsed and advance the reference.
+ *
+ * The reference is advanced by whole intervals only, so the fractional
+ * remainder is kept for the next call instead of being discarded.
+ * @param last_ms Pointer to the last reference time in milliseconds
+ * @param now_ms Current time in milliseconds
+ * @param interval_ms Duration of one tick in milliseconds
+ * @return Number of whole ticks elapsed, or 0 if the interval has not passed
+ */
+int AdvancePomodoroClock(double* last_ms, double now_ms, double interval_ms);
+
+/**
  * Transition the pomodoro state machine to the next step.
  * WORK_TIME -> SHORT_PAUSE (or LONG_PAUSE on final cycle)
  * SHORT_PAUSE -> WORK_TIME (increments cycle counter)

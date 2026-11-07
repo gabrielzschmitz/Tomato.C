@@ -47,6 +47,28 @@ void TickPomodoroTime(PomodoroData* pd, int seconds) {
 }
 
 /**
+ * Compute how many whole timer ticks elapsed and advance the reference.
+ *
+ * Advancing by whole intervals keeps the leftover fraction for the next
+ * call. Resetting the reference to the current time would drop that
+ * fraction and make the timer run long.
+ * @param last_ms Pointer to the last reference time in milliseconds
+ * @param now_ms Current time in milliseconds
+ * @param interval_ms Duration of one tick in milliseconds
+ * @return Number of whole ticks elapsed, or 0 if the interval has not passed
+ */
+int AdvancePomodoroClock(double* last_ms, double now_ms, double interval_ms) {
+  if (!last_ms || interval_ms <= 0.0) return 0;
+
+  double elapsed = now_ms - *last_ms;
+  if (elapsed < interval_ms) return 0;
+
+  int ticks = (int)(elapsed / interval_ms);
+  *last_ms += ticks * interval_ms;
+  return ticks;
+}
+
+/**
  * Transition the pomodoro state machine to the next step.
  *
  * The transition rules are:

@@ -341,18 +341,20 @@ void UpdateContinue(AppData* app) {
  */
 static void updatePomodoroTime(AppData* app) {
   double current_time = GetCurrentTimeMS();
-  double delta_time = current_time - app->pomodoro_data.delta_time_ms;
 
   int speed_multiplier = 1;
   if (DEBUG) speed_multiplier = 100;
-  if (delta_time >= 1000.0 / speed_multiplier) {
-    app->pomodoro_data.delta_time_ms = current_time;
-    app->pomodoro_data.current_step_time += 1;
-    app->pomodoro_data.total_elapsed += 1;
-    if (app->pomodoro_data.current_step_time ==
-        app->pomodoro_data.last_step_time + 10)
-      app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
-  }
+  double interval_ms = 1000.0 / speed_multiplier;
+
+  int ticks = AdvancePomodoroClock(&app->pomodoro_data.delta_time_ms,
+                                   current_time, interval_ms);
+  if (ticks <= 0) return;
+
+  TickPomodoroTime(&app->pomodoro_data, ticks);
+
+  if (app->pomodoro_data.current_step_time >=
+      app->pomodoro_data.last_step_time + 10)
+    app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
 }
 
 /**
