@@ -110,84 +110,99 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
 ErrorType HandleInputs(AppData* app) {
   ErrorType status = NO_ERROR;
   ESCDELAY = 25;
+  bool handled = false;
 
-  if (app->user_input != -1) app->last_input = app->user_input;
-  app->user_input = getch();
+  /* Drain every queued key instead of reading one and flushing the rest.
+   * This keeps pasted text and fast key sequences from being dropped. */
+  while (status == NO_ERROR) {
+    int key = getch();
+    if (key == ERR) break;
 
-  if (app->frozen) {
-    if (app->popup_dialog) HandlePopupInput(app, app->user_input);
-    return status;
-  }
+    if (app->frozen) {
+      if (app->user_input != -1) app->last_input = app->user_input;
+      app->user_input = key;
+      handled = true;
+      if (app->popup_dialog) HandlePopupInput(app, key);
+      if (!app->running) break;
+      continue;
+    }
 
-  int key = app->user_input;
-  /* Handle mouse events — drain queue, process buttons from the first
-   * event so click/scroll are never overwritten by a subsequent
-   * REPORT_MOUSE_POSITION, then store the last event for hover tracking. */
-  if (key == KEY_MOUSE) {
-    MEVENT event, last_event, button_event;
-    bool has_button = false;
-    bool valid = false;
-    while (getmouse(&event) == OK) {
-      if (event.bstate & (BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON4_PRESSED |
-                          BUTTON5_PRESSED)) {
-        button_event = event;
-        has_button = true;
+    /* Handle mouse events — drain queue, process buttons from the first
+     * event so click/scroll are never overwritten by a subsequent
+     * REPORT_MOUSE_POSITION, then store the last event for hover tracking. */
+    if (key == KEY_MOUSE) {
+      MEVENT event, last_event, button_event;
+      bool has_button = false;
+      bool valid = false;
+      while (getmouse(&event) == OK) {
+        if (event.bstate & (BUTTON1_PRESSED | BUTTON1_RELEASED |
+                            BUTTON4_PRESSED | BUTTON5_PRESSED)) {
+          button_event = event;
+          has_button = true;
+        }
+        last_event = event;
+        valid = true;
+
+        key = getch();
+        if (key != KEY_MOUSE) {
+          if (key != ERR) ungetch(key);
+          break;
+        }
       }
-      last_event = event;
-      valid = true;
+      if (valid) {
+        if (has_button) {
+          app->mouse_x = button_event.x;
+          app->mouse_y = button_event.y;
+          app->mouse_bstate = button_event.bstate;
+          ErrorType merr = HandleMouseEvent(app, &button_event);
+          if (merr != NO_ERROR) {
+            status = merr;
+            SetError(app, "HandleInputs", merr);
+          }
+        }
+        app->mouse_x = last_event.x;
+        app->mouse_y = last_event.y;
+        app->mouse_bstate = last_event.bstate;
+        if (!has_button) {
+          ErrorType merr = HandleMouseEvent(app, &last_event);
+          if (merr != NO_ERROR) {
+            status = merr;
+            SetError(app, "HandleInputs", merr);
+          }
+        }
+      }
+      app->user_input = -1;
+      handled = true;
+      if (!app->running) break;
+      continue;
+    }
 
-      key = getch();
-      if (key != KEY_MOUSE) {
-        if (key != ERR) ungetch(key);
+    if (app->user_input != -1) app->last_input = app->user_input;
+    app->user_input = key;
+    handled = true;
+
+    int current_mode = app->screen->panels[app->screen->current_panel].mode;
+
+    /* Dispatch to mode-specific handler */
+    switch (current_mode) {
+      case DEFAULT:
+        status = HandleDefaultMode(app, key);
         break;
-      }
+      case NORMAL:
+        status = HandleNormalMode(app, key);
+        break;
+      case INSERT:
+        status = HandleInsertMode(app, key);
+        break;
+      case VISUAL:
+        status = HandleVisualMode(app, key);
+        break;
     }
-    if (valid) {
-      if (has_button) {
-        app->mouse_x = button_event.x;
-        app->mouse_y = button_event.y;
-        app->mouse_bstate = button_event.bstate;
-        ErrorType merr = HandleMouseEvent(app, &button_event);
-        if (merr != NO_ERROR) {
-          status = merr;
-          SetError(app, "HandleInputs", merr);
-        }
-      }
-      app->mouse_x = last_event.x;
-      app->mouse_y = last_event.y;
-      app->mouse_bstate = last_event.bstate;
-      if (!has_button) {
-        ErrorType merr = HandleMouseEvent(app, &last_event);
-        if (merr != NO_ERROR) {
-          status = merr;
-          SetError(app, "HandleInputs", merr);
-        }
-      }
-    }
-    flushinp();
-    app->user_input = -1;
-    return status;
+
+    if (!app->running) break;
   }
 
-  int current_mode = app->screen->panels[app->screen->current_panel].mode;
-
-  /* Dispatch to mode-specific handler */
-  switch (current_mode) {
-    case DEFAULT:
-      status = HandleDefaultMode(app, key);
-      break;
-    case NORMAL:
-      status = HandleNormalMode(app, key);
-      break;
-    case INSERT:
-      status = HandleInsertMode(app, key);
-      break;
-    case VISUAL:
-      status = HandleVisualMode(app, key);
-      break;
-  }
-  flushinp();
-
+  if (!handled) app->user_input = -1;
   return status;
 }
 
