@@ -32,21 +32,20 @@ ErrorType Notify(const Notification* notification) {
     LogError("Notification", NULL_POINTER_ERROR);
     return NULL_POINTER_ERROR;
   }
-  ErrorType status = NO_ERROR;
-
-  /* Attempt to send the notification */
-  status = sendNotification(notification->title, notification->description);
-  if (status != NO_ERROR) {
+  /* Attempt to send the notification, but never let a missing notification
+   * daemon suppress the sound. Both paths are attempted independently. */
+  ErrorType send_status =
+    sendNotification(notification->title, notification->description);
+  if (send_status != NO_ERROR)
     LogError("Notification", NOTIFICATION_SEND_ERROR);
-    return status;
-  }
 
-  /* Attempt to play the notification audio */
-  status =
+  ErrorType audio_status =
     PlayAudio(notification->audio_path, NOTIFICATIONS_SOUND_VOLUME, false);
-  if (status != NO_ERROR) LogError("Audio Playback", AUDIO_PLAYBACK_ERROR);
+  if (audio_status != NO_ERROR)
+    LogError("Audio Playback", AUDIO_PLAYBACK_ERROR);
 
-  return status;
+  if (audio_status != NO_ERROR) return audio_status;
+  return send_status;
 }
 
 /**

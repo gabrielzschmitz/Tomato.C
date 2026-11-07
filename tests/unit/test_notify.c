@@ -16,6 +16,8 @@
 
 Config g_config;
 
+static int play_audio_calls = 0;
+
 /* stubs */
 void LogError(const char* context, ErrorType type) {
   (void)context;
@@ -27,6 +29,7 @@ ErrorType PlayAudio(const char* audio_path, const float volume,
   (void)audio_path;
   (void)volume;
   (void)loop;
+  play_audio_calls++;
   return NO_ERROR;
 }
 
@@ -79,6 +82,22 @@ static void test_notify_null_description(void) {
   ASSERT_EQ(result, NULL_POINTER_ERROR);
 }
 
+/** @brief Sound still plays when the desktop notification fails. */
+static void test_notify_plays_sound_when_send_fails(void) {
+  TEST("Notify plays sound even when sendNotification fails");
+  Notification n;
+  memset(&n, 0, sizeof(n));
+  n.title = NULL; /* forces a send failure */
+  n.description = "desc";
+  g_config.notifications.enabled = 1;
+  play_audio_calls = 0;
+
+  ErrorType result = Notify(&n);
+
+  ASSERT_EQ(result, NULL_POINTER_ERROR);
+  ASSERT_EQ(play_audio_calls, 1);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Main
@@ -93,5 +112,7 @@ int main(void) {
   RUN_TEST(test_notify_null_title, "Notify with NULL title returns error");
   RUN_TEST(test_notify_null_description,
            "Notify with NULL description returns error");
+  RUN_TEST(test_notify_plays_sound_when_send_fails,
+           "Notify plays sound even when sendNotification fails");
   return test_end();
 }
