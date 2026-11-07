@@ -410,7 +410,8 @@ static void updateTimerLog(AppData* app, const int* steps,
                           app->pomodoro_data.current_step)) {
     char* time_string = FormatTimerLog(app->pomodoro_data, app->is_paused);
     if (time_string != NULL) {
-      SetTimerLog(TIMER_FILE, time_string);
+      if (SetTimerLog(TIMER_FILE, time_string) != NO_ERROR)
+        SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
       free(time_string);
     } else {
       SetError(app, "updateTimerLog", TIMER_LOG_ERROR);

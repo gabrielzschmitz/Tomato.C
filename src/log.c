@@ -26,6 +26,8 @@
 /* PRIVATE LOG FUNCTIONS */
 /* Retry configuration for socket connections */
 #define SOCKET_RETRY_COUNT 3
+/* Minimum time between identical or failed timer-log attempts. */
+#define SOCKET_MIN_INTERVAL_MS 1000.0
 static time_t retry_start = 0;
 
 /**
@@ -422,35 +424,45 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
  */
 ErrorType SetTimerLog(const char* path, const char* log) {
   static char last_log[64] = "";
+  static double last_attempt_ms = 0.0;
+  static bool attempted = false;
+  static bool last_failed = false;
 
-  /* Skip sending if the log is identical to the last one */
-  /* Always send pause updates so the client keeps echoing the paused time. */
-  if (strcmp(last_log, log) == 0 && log[0] != 'P') return NO_ERROR;
+  double now_ms = GetCurrentTimeMS();
+  bool same_log = strcmp(last_log, log) == 0;
 
-  int sock;
-  struct sockaddr_un addr;
-  int retries = 0;
+  if (attempted) {
+    double since_ms = now_ms - last_attempt_ms;
 
-  do {
-    sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sock == -1) {
-      LogError("SetTimerLog", SOCKET_CREATION_ERROR);
-      return SOCKET_CREATION_ERROR;
-    }
+    /* The log only changes about once a second, but this runs every frame.
+     * Send identical logs at most once a second so a paused timer does not
+     * open a socket per frame. */
+    if (same_log && since_ms < SOCKET_MIN_INTERVAL_MS) return NO_ERROR;
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
+    /* Never block the UI retrying a dead server. Try again next second.
+     * Suppress the duplicate error so the caller does not push one per
+     * frame. */
+    if (last_failed && since_ms < SOCKET_MIN_INTERVAL_MS) return NO_ERROR;
+  }
 
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
+  last_attempt_ms = now_ms;
+  attempted = true;
 
-    close(sock);
-    sock = -1;
-    retries++;
-    if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
-  } while (retries < SOCKET_RETRY_COUNT);
-
+  int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock == -1) {
+    last_failed = true;
+    LogError("SetTimerLog", SOCKET_CREATION_ERROR);
+    return SOCKET_CREATION_ERROR;
+  }
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
+
+  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+    close(sock);
+    last_failed = true;
     LogError("SetTimerLog", SOCKET_CONNECTION_ERROR);
     return SOCKET_CONNECTION_ERROR;
   }
@@ -464,9 +476,12 @@ ErrorType SetTimerLog(const char* path, const char* log) {
   if (send(sock, message, strlen(message), 0) == -1) {
     LogError("SetTimerLog", SOCKET_WRITE_ERROR);
     close(sock);
+    last_failed = true;
     return SOCKET_WRITE_ERROR;
   }
   close(sock);
+
+  last_failed = false;
 
   /* Update the last log */
   strncpy(last_log, log, sizeof(last_log) - 1);

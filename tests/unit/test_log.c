@@ -800,6 +800,51 @@ static void test_save_pomodoro_nonexistent_dir(void) {
 
 /**
  * ---------------------------------------------------------------------------
+ * Timer log socket
+ * ---------------------------------------------------------------------------
+ */
+
+static void make_missing_socket_path(char* buffer, size_t size) {
+  snprintf(buffer, size, "/tmp/tomato_log_missing_%ld.sock", (long)getpid());
+  unlink(buffer);
+}
+
+static void test_set_timer_log_fails_fast(void) {
+  TEST("SetTimerLog fails fast when the server is missing");
+  char path[128];
+  make_missing_socket_path(path, sizeof(path));
+
+  double start = GetCurrentTimeMS();
+  ErrorType err = SetTimerLog(path, "W 25:00");
+  double elapsed = GetCurrentTimeMS() - start;
+
+  ASSERT_EQ((int)err, (int)SOCKET_CONNECTION_ERROR);
+  ASSERT_TRUE(elapsed < 500.0);
+}
+
+static void test_set_timer_log_throttles_retries(void) {
+  TEST("SetTimerLog throttles repeated attempts");
+  char path[128];
+  make_missing_socket_path(path, sizeof(path));
+
+  /* The previous test left a recent failed attempt in the static throttle
+   * state. Wait past the interval so this test starts from a fresh attempt. */
+  usleep(1100000);
+
+  ASSERT_EQ((int)SetTimerLog(path, "W 25:00"), (int)SOCKET_CONNECTION_ERROR);
+
+  double start = GetCurrentTimeMS();
+  ErrorType err = SetTimerLog(path, "W 25:00");
+  double elapsed = GetCurrentTimeMS() - start;
+
+  /* The duplicate failure is suppressed, so the caller does not report it
+   * again on every frame. */
+  ASSERT_EQ((int)err, (int)NO_ERROR);
+  ASSERT_TRUE(elapsed < 100.0);
+}
+
+/**
+ * ---------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------------
  */
@@ -868,5 +913,9 @@ int main(void) {
            "LoadPomodoro garbage binary does not crash");
   RUN_TEST(test_save_pomodoro_nonexistent_dir,
            "SavePomodoro to nonexistent dir returns TIMER_LOG_ERROR");
+  RUN_TEST(test_set_timer_log_fails_fast,
+           "SetTimerLog fails fast with no server");
+  RUN_TEST(test_set_timer_log_throttles_retries,
+           "SetTimerLog throttles repeated attempts");
   return test_end();
 }
