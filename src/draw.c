@@ -16,7 +16,6 @@
 #include "util.h"
 
 /* PRIVATE DRAW FUNCTIONS */
-static void renderPopups(AppData* app);
 static void renderPanel(AppData* app, Border border);
 static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
                              Dimensions size, Vector2D position);
@@ -44,7 +43,6 @@ ErrorType DrawScreen(AppData* app) {
   erase();
 
   ClearClickRegions(app);
-  renderPopups(app);
 
   if (!ValidateAndRenderScreenSize(app)) return NO_ERROR;
 
@@ -77,37 +75,6 @@ bool ValidateAndRenderScreenSize(AppData* app) {
   }
   app->block_input = false;
   return true;
-}
-
-/**
- * Render popup dialogs (quit, skip, reset) when triggered.
- * Only renders in NORMAL or DEFAULT mode.
- * @param app Pointer to the application data
- */
-static void renderPopups(AppData* app) {
-  int current_mode = app->screen->panels[app->screen->current_panel].mode;
-  InputState* input = app->screen->panels[app->screen->current_panel].input;
-  bool is_default_mode =
-    (current_mode == DEFAULT) || (input && input->len == 0);
-  if (is_default_mode && app->notes != NULL && !app->notes->is_move_mode &&
-      IsKeyAssignedToAction(app->user_input, QuitApp))
-    RenderQuitConfirmation(app);
-
-  int steps[] = {WORK_TIME, SHORT_PAUSE, LONG_PAUSE};
-  size_t steps_count = sizeof(steps) / sizeof(steps[0]);
-  int current_scene =
-    app->screen->panels[app->screen->current_panel].scene_history->present;
-  if (IsKeyAssignedToAction(app->last_input, SkipPomodoroStep) &&
-      IsCurrentStepInList(steps, steps_count,
-                          app->pomodoro_data.current_step) &&
-      (POMODORO_SCENES & (1 << current_scene)))
-    RenderSkipConfirmation(app);
-  if ((IsKeyAssignedToAction(app->last_input, ResetPomodoroStep) ||
-       IsKeyAssignedToAction(app->last_input, ResetPomodoroCycle)) &&
-      IsCurrentStepInList(steps, steps_count,
-                          app->pomodoro_data.current_step) &&
-      (POMODORO_SCENES & (1 << current_scene)))
-    RenderResetMenu(app);
 }
 
 /**

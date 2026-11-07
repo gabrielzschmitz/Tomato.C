@@ -43,12 +43,26 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta);
 /* Preferences */
 static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
 static void PrefsRequestClose(AppData* app);
+/* Confirmation dialogs */
+static bool IsConfirmationDialog(const FloatingDialog* dialog);
 
 /**
  * ---------------------------------------------------------------------------
  * Input Dispatching
  * ---------------------------------------------------------------------------
  */
+
+/**
+ * Check whether a dialog is one of the confirmation popups.
+ * @param dialog Dialog to inspect
+ * @return true for quit, skip, and reset confirmations
+ */
+static bool IsConfirmationDialog(const FloatingDialog* dialog) {
+  if (!dialog) return false;
+  MenuAction first = dialog->menu.items[0].action;
+  return first == ForcefullyQuitApp || first == ForcefullySkipPomodoroStep ||
+         first == ResetPomodoroStep || first == ResetPomodoroCycle;
+}
 
 /**
  * Process a single key input and dispatch to appropriate handler.
@@ -724,6 +738,21 @@ bool HandlePopupInput(AppData* app, int key) {
     return true;
   }
 
+  /* Quit / skip / reset confirmations: only menu navigation, confirm, and
+   * cancel are valid here. This prevents the quit key from bypassing the
+   * dialog and keeps all confirmations behaving the same way. */
+  if (IsConfirmationDialog(app->popup_dialog)) {
+    if (IsKeyAssignedToAction(key, ExecuteMenuAction))
+      ExecuteMenuAction(app);
+    else if (IsKeyAssignedToAction(key, ChangeSelectedItemLeft))
+      ChangeSelectedItemLeft(app);
+    else if (IsKeyAssignedToAction(key, ChangeSelectedItemRight))
+      ChangeSelectedItemRight(app);
+    else if (IsKeyAssignedToAction(key, ClosePopup))
+      ClosePopup(app);
+    return true; /* consume all keys while a confirmation is active */
+  }
+
   /* Save/discard confirmation for unsaved preference changes */
   if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
     if (IsKeyAssignedToAction(key, ExecuteMenuAction)) {
@@ -1373,7 +1402,8 @@ void ChangeDebugAnimation(AppData* app, int step) {
  */
 void QuitApp(AppData* app) {
   if (app->notes && app->notes->is_move_mode) return;
-  if (app->user_input == app->last_input) app->running = false;
+  if (app->popup_dialog != NULL) return;
+  RenderQuitConfirmation(app);
 }
 
 /**
@@ -1582,33 +1612,13 @@ void ResetPomodoroCycle(AppData* app) { StartPomodoro(app); }
  * @param app Pointer to the application data
  */
 void SkipPomodoroStep(AppData* app) {
-  if (app->user_input != app->last_input) return;
   /* Only work in pomodoro scenes */
   int current_scene =
     app->screen->panels[app->screen->current_panel].scene_history->present;
   if (!(POMODORO_SCENES & (1 << current_scene))) return;
+  if (app->popup_dialog != NULL) return;
 
-  ResetInput(app);
-  ClosePopup(app);
-
-  int step = app->pomodoro_data.current_step;
-  int duration;
-
-  switch (step) {
-    case WORK_TIME:
-      duration = app->pomodoro_data.work_time;
-      break;
-    case SHORT_PAUSE:
-      duration = app->pomodoro_data.short_pause_time;
-      break;
-    case LONG_PAUSE:
-      duration = app->pomodoro_data.long_pause_time;
-      break;
-    default:
-      return;
-  }
-
-  app->pomodoro_data.current_step_time = duration * 60;
+  RenderSkipConfirmation(app);
 }
 
 /**

@@ -2,7 +2,7 @@
  * @file test_input.c
  * @brief Unit tests for the input module.
  *
- * Tests QuitApp double-press guard, ForcefullyQuitApp immediate quit,
+ * Tests QuitApp confirmation flow, ForcefullyQuitApp immediate quit,
  * move-mode blocking, and AbandonPreviousSession data reset.
  */
 
@@ -26,51 +26,49 @@ typedef struct NotesData {
 
 typedef struct {
   NotesData* notes;
-  int user_input;
-  int last_input;
+  bool popup_open;
   bool running;
 } TestApp;
 
 /**
  * ---------------------------------------------------------------------------
- * QuitApp double-press logic
+ * QuitApp confirmation flow
  * ---------------------------------------------------------------------------
  */
 
-/** @brief A single 'q' press does not quit; a second consecutive 'q' does. */
-static void test_quitapp_double_press(void) {
-  TEST("QuitApp requires double press to quit");
-  TestApp app;
-  app.notes = NULL;
-  app.user_input = 'q';
-  app.last_input = -1;
-  app.running = true;
-
-  if (app.notes && app.notes->is_move_mode) {}
-  else if (app.user_input == app.last_input) app.running = false;
-
-  ASSERT_TRUE(app.running);
-
-  app.last_input = 'q';
-  if (app.notes && app.notes->is_move_mode) {}
-  else if (app.user_input == app.last_input) app.running = false;
-
-  ASSERT_FALSE(app.running);
+/* Mirrors QuitApp: open the confirmation popup instead of quitting. */
+static void quit_app(TestApp* app) {
+  if (app->notes && app->notes->is_move_mode) return;
+  if (app->popup_open) return;
+  app->popup_open = true;
 }
 
-/** @brief Different consecutive input does not trigger quit. */
-static void test_quitapp_single_press_does_not_quit(void) {
-  TEST("QuitApp single press does not quit");
+/** @brief The first quit press opens the confirmation and keeps running. */
+static void test_quitapp_opens_confirmation(void) {
+  TEST("QuitApp opens confirmation on first press");
   TestApp app;
   app.notes = NULL;
-  app.user_input = 'q';
-  app.last_input = 'x';
+  app.popup_open = false;
   app.running = true;
 
-  if (app.notes && app.notes->is_move_mode) {}
-  else if (app.user_input == app.last_input) app.running = false;
+  quit_app(&app);
 
   ASSERT_TRUE(app.running);
+  ASSERT_TRUE(app.popup_open);
+}
+
+/** @brief Pressing quit again while the dialog is open does not quit. */
+static void test_quitapp_does_not_bypass_confirmation(void) {
+  TEST("QuitApp does not bypass an open confirmation");
+  TestApp app;
+  app.notes = NULL;
+  app.popup_open = true;
+  app.running = true;
+
+  quit_app(&app);
+
+  ASSERT_TRUE(app.running);
+  ASSERT_TRUE(app.popup_open);
 }
 
 /** @brief ForcefullyQuitApp sets running to false unconditionally. */
@@ -89,14 +87,13 @@ static void test_quitapp_move_mode_blocks(void) {
   nd.is_move_mode = true;
   TestApp app;
   app.notes = &nd;
-  app.user_input = 'q';
-  app.last_input = 'q';
+  app.popup_open = false;
   app.running = true;
 
-  if (app.notes && app.notes->is_move_mode) {}
-  else if (app.user_input == app.last_input) app.running = false;
+  quit_app(&app);
 
   ASSERT_TRUE(app.running);
+  ASSERT_FALSE(app.popup_open);
 }
 
 /**
@@ -152,9 +149,10 @@ static void test_abandon_previous_session(void) {
 
 int main(void) {
   test_begin("input");
-  RUN_TEST(test_quitapp_double_press, "QuitApp requires double press to quit");
-  RUN_TEST(test_quitapp_single_press_does_not_quit,
-           "QuitApp single press does not quit");
+  RUN_TEST(test_quitapp_opens_confirmation,
+           "QuitApp opens confirmation on first press");
+  RUN_TEST(test_quitapp_does_not_bypass_confirmation,
+           "QuitApp does not bypass an open confirmation");
   RUN_TEST(test_forcefully_quitapp_immediate,
            "ForcefullyQuitApp quits immediately");
   RUN_TEST(test_quitapp_move_mode_blocks,

@@ -134,7 +134,7 @@ void RenderErrorLine(void) {}
 int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
   (void)key;
   (void)action;
-  return 0; /* no keys assigned - renderPopups becomes a no-op */
+  return 0; /* no keys assigned */
 }
 
 /* From anim.c */
