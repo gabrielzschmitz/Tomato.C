@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
     /* Timer log process */
     if (CreateTimerLog(TIMER_FILE) != NO_ERROR)
       LogError("Timer log server failure", TIMER_LOG_ERROR);
-    exit(0);
+    _exit(0);
   } else if (pid < 0)
     handleErrorAndExit("Forking the main process", FORK_ERROR, NULL, 0);
 
