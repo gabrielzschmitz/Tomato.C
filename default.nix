@@ -20,6 +20,8 @@
   libpulseaudio,
   alsa-lib,
   makeWrapper,
+  glib,
+  gdk-pixbuf,
 }:
 
 stdenv.mkDerivation {
@@ -38,6 +40,8 @@ stdenv.mkDerivation {
     libnotify
     libpulseaudio
     alsa-lib
+    glib
+    gdk-pixbuf
   ];
 
   buildPhase = ''
@@ -52,20 +56,31 @@ stdenv.mkDerivation {
     runHook preInstall
 
     install -Dm755 build/tomato "$out/bin/tomato"
-    # miniaudio dlopen()s libpulse/libasound at runtime; make them findable.
+    # Ensure all dynamically linked runtime dependencies are discoverable,
+    # including libraries loaded indirectly or via dlopen() (e.g. miniaudio's
+    # PulseAudio/ALSA backends and GLib/GDK Pixbuf dependencies).
     wrapProgram "$out/bin/tomato" \
-      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libpulseaudio alsa-lib ]}
+      --prefix LD_LIBRARY_PATH : ${
+        lib.makeLibraryPath [
+          ncurses
+          libnotify
+          libpulseaudio
+          alsa-lib
+          glib
+          gdk-pixbuf
+        ]
+      }
 
     mkdir -p "$out/share/tomato/sprites" \
              "$out/share/tomato/sounds" \
              "$out/share/tomato/icons" \
              "$out/share/applications"
 
-    install -m644 resources/sprites/*.asc        "$out/share/tomato/sprites/"
-    install -m644 resources/sounds/*.mp3         "$out/share/tomato/sounds/"
-    install -m644 resources/icons/tomato.png     "$out/share/tomato/icons/tomato.png"
-    install -m644 resources/icons/tomato.svg     "$out/share/tomato/icons/tomato.svg"
-    install -m644 sample_config.toml             "$out/share/tomato/sample_config.toml"
+    install -m644 resources/sprites/*.asc    "$out/share/tomato/sprites/"
+    install -m644 resources/sounds/*.mp3     "$out/share/tomato/sounds/"
+    install -m644 resources/icons/tomato.png "$out/share/tomato/icons/tomato.png"
+    install -m644 resources/icons/tomato.svg "$out/share/tomato/icons/tomato.svg"
+    install -m644 sample_config.toml         "$out/share/tomato/sample_config.toml"
 
     install -m644 tomato.desktop "$out/share/applications/tomato.desktop"
     substituteInPlace "$out/share/applications/tomato.desktop" \
