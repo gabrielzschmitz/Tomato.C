@@ -143,7 +143,14 @@ static ErrorType sendNotification(const char* title, const char* description) {
     /* Create and show the notification */
     NotifyNotification* notification =
       notify_notification_new(title, description, NULL);
-    if (!notify_notification_show(notification, NULL)) {
+    if (!notification) {
+      LogError("sendNotification", MALLOC_ERROR);
+      notify_uninit();
+      return MALLOC_ERROR;
+    }
+    bool shown = notify_notification_show(notification, NULL);
+    g_object_unref(notification);
+    if (!shown) {
       LogError("sendNotification", NOTIFICATION_SEND_ERROR);
       notify_uninit();
       return NOTIFICATION_SEND_ERROR;
