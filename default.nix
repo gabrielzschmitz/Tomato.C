@@ -26,7 +26,7 @@
 
 stdenv.mkDerivation {
   pname = "tomato-c";
-  version = "1.2.2";
+  version = lib.strings.trim (builtins.readFile ./VERSION);
 
   src = lib.cleanSource ./.;
 

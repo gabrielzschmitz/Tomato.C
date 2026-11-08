@@ -19,6 +19,10 @@
 #include "update.h"
 #include "util.h"
 
+#ifndef TOMATO_VERSION
+#define TOMATO_VERSION "unknown"
+#endif
+
 /* Helper function to handle errors and cleanup */
 static void handleErrorAndExit(const char* context, ErrorType error,
                                AppData* app, pid_t pid);
@@ -29,7 +33,7 @@ static void handleErrorAndExit(const char* context, ErrorType error,
  */
 static void printUsage(FILE* stream) {
   fprintf(stream,
-          "usage: tomato\n"
+          "usage: tomato [--help] [--version]\n"
           "       tomato [-loop true|false] -t [iconset]\n"
           "       tomato -h [overview|today]\n"
           "\n"
@@ -37,6 +41,8 @@ static void printUsage(FILE* stream) {
           "  -loop true|false  stream the timer status (default: true);\n"
           "                    false prints once and exits\n"
           "  -h                show pomodoro history\n"
+          "  --help            show this help\n"
+          "  --version         show the version\n"
           "  iconset           nerd-icons, emojis, ascii, or no-icons\n");
 }
 
@@ -135,11 +141,25 @@ int main(int argc, char* argv[]) {
       GetPomodoroHistoryDay(POMODORO_LOG);
       return 0;
     }
+    printUsage(stderr);
+    return 1;
+  } else if (argc >= 2 && !strcmp("--help", argv[1])) {
+    if (argc != 2) {
+      printUsage(stderr);
+      return 1;
+    }
     printUsage(stdout);
+    return 0;
+  } else if (argc >= 2 && !strcmp("--version", argv[1])) {
+    if (argc != 2) {
+      printUsage(stderr);
+      return 1;
+    }
+    printf("tomato %s\n", TOMATO_VERSION);
     return 0;
   } else if (argc != 1) {
-    printUsage(stdout);
-    return 0;
+    printUsage(stderr);
+    return 1;
   }
 
   /* Enable emojis */

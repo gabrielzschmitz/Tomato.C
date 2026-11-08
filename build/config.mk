@@ -23,6 +23,10 @@ APPPREFIX = $(PREFIX)/share/applications
 DATAPREFIX = ./resources
 INCLUDES = -I$(PREFIX)/include
 LIBDIR = -L$(PREFIX)/lib
+VERSION := $(shell cat ../VERSION 2>/dev/null)
+ifeq ($(strip $(VERSION)),)
+VERSION := unknown
+endif
 
 #/**
 # * ---------------------------------------------------------------------------
@@ -62,7 +66,8 @@ TCCFLAGS = -Wwrite-strings
 GCCFLAGS = -Wextra -Wno-unused-variable
 ZIGFLAGS = $(GCCFLAGS) -Wno-unknown-warning-option -Wno-typedef-redefinition \
            -Wno-unused-but-set-variable
-DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -D_POSIX_C_SOURCE=200809L
+DFLAGS = -DDATADIR=\"$(DATAPREFIX)\" -DTOMATO_VERSION=\"$(VERSION)\" \
+         -D_POSIX_C_SOURCE=200809L
 ifeq ($(IS_TCC),1)
 WARNFLAGS = $(TCCFLAGS)
 else

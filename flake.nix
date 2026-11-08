@@ -103,9 +103,13 @@
           build =
             pkgs.runCommand "tomato-c-build-check" { nativeBuildInputs = [ self.packages.${system}.default ]; }
               ''
-                # Running with an unknown argument prints usage and exits 0,
-                # so this smoke-tests the binary without a TTY.
+                # Smoke-test the CLI without a TTY.
+                tomato --version | grep -q "^tomato "
                 tomato bogusarg 2>&1 | grep -q "usage"
+                if tomato bogusarg >/dev/null 2>&1; then
+                  echo "unknown argument must exit nonzero" >&2
+                  exit 1
+                fi
                 touch "$out"
               '';
         }

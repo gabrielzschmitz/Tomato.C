@@ -2,7 +2,8 @@
  * @file test_tomato.c
  * @brief Unit tests for the CLI argument parser (tomato.c / main.c).
  *
- * Tests timer looping and one-shot modes, icon sets, and history.
+ * Tests timer looping and one-shot modes, icon sets, history,
+ * --help, --version, and invalid arguments.
  */
 
 #include <stdbool.h>
@@ -29,6 +30,8 @@ typedef enum {
   CLI_MODE_NORMAL,
   CLI_MODE_TIMER,
   CLI_MODE_HISTORY,
+  CLI_MODE_HELP,
+  CLI_MODE_VERSION,
   CLI_MODE_ERROR
 } CliMode;
 
@@ -97,6 +100,12 @@ static CliMode parseArgs(int argc, char* argv[], IconChoice* icon_out,
       return CLI_MODE_HISTORY;
     return CLI_MODE_ERROR;
   }
+
+  if (strcmp("--help", argv[1]) == 0)
+    return argc == 2 ? CLI_MODE_HELP : CLI_MODE_ERROR;
+
+  if (strcmp("--version", argv[1]) == 0)
+    return argc == 2 ? CLI_MODE_VERSION : CLI_MODE_ERROR;
 
   return CLI_MODE_ERROR;
 }
@@ -299,6 +308,57 @@ static void test_h_today(void) {
   ASSERT_EQ(parseArgs(3, argv, &icon, &loop), CLI_MODE_HISTORY);
 }
 
+/** @brief -h with an unknown subcommand is an error. */
+static void test_h_with_invalid_subcommand(void) {
+  TEST("parseArgs -h stats returns error");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "-h", "stats"};
+  ASSERT_EQ(parseArgs(3, argv, &icon, &loop), CLI_MODE_ERROR);
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * --help / --version
+ * ---------------------------------------------------------------------------
+ */
+
+/** @brief --help selects help mode. */
+static void test_long_help_flag(void) {
+  TEST("parseArgs --help selects help mode");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "--help"};
+  ASSERT_EQ(parseArgs(2, argv, &icon, &loop), CLI_MODE_HELP);
+}
+
+/** @brief --help with an extra argument is an error. */
+static void test_long_help_with_extra_arg(void) {
+  TEST("parseArgs --help extra returns error");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "--help", "extra"};
+  ASSERT_EQ(parseArgs(3, argv, &icon, &loop), CLI_MODE_ERROR);
+}
+
+/** @brief --version selects version mode. */
+static void test_long_version_flag(void) {
+  TEST("parseArgs --version selects version mode");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "--version"};
+  ASSERT_EQ(parseArgs(2, argv, &icon, &loop), CLI_MODE_VERSION);
+}
+
+/** @brief --version with an extra argument is an error. */
+static void test_long_version_with_extra_arg(void) {
+  TEST("parseArgs --version extra returns error");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "--version", "extra"};
+  ASSERT_EQ(parseArgs(3, argv, &icon, &loop), CLI_MODE_ERROR);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Unknown / edge cases
@@ -311,6 +371,15 @@ static void test_unknown_flag(void) {
   IconChoice icon = ICON_NONE;
   bool loop = false;
   char* argv[] = {"tomato", "-x"};
+  ASSERT_EQ(parseArgs(2, argv, &icon, &loop), CLI_MODE_ERROR);
+}
+
+/** @brief Positional argument returns an error. */
+static void test_unknown_positional(void) {
+  TEST("parseArgs unknown positional returns error");
+  IconChoice icon = ICON_NONE;
+  bool loop = false;
+  char* argv[] = {"tomato", "stats"};
   ASSERT_EQ(parseArgs(2, argv, &icon, &loop), CLI_MODE_ERROR);
 }
 
@@ -342,6 +411,12 @@ int main(void) {
   RUN_TEST(test_h_flag, "-h selects history mode");
   RUN_TEST(test_h_overview, "-h overview selects history mode");
   RUN_TEST(test_h_today, "-h today selects history mode");
+  RUN_TEST(test_h_with_invalid_subcommand, "-h stats returns error");
+  RUN_TEST(test_long_help_flag, "--help selects help mode");
+  RUN_TEST(test_long_help_with_extra_arg, "--help extra returns error");
+  RUN_TEST(test_long_version_flag, "--version selects version mode");
+  RUN_TEST(test_long_version_with_extra_arg, "--version extra returns error");
   RUN_TEST(test_unknown_flag, "unknown flag returns error");
+  RUN_TEST(test_unknown_positional, "unknown positional returns error");
   return test_end();
 }

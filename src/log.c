@@ -24,8 +24,6 @@
 #include "tomato.h"
 
 /* PRIVATE LOG FUNCTIONS */
-/* Retry configuration for socket connections */
-#define SOCKET_RETRY_COUNT 3
 /* Minimum time between identical or failed timer-log attempts. */
 #define SOCKET_MIN_INTERVAL_MS 1000.0
 static time_t retry_start = 0;
@@ -65,7 +63,6 @@ typedef struct {
 } pomodoroHistoryStats;
 
 /* Timer */
-static void socketRetryDelay(void);
 static int getRetryDelay(void);
 static void resetRetryDelay(void);
 static void reliableSleep(int seconds);
@@ -526,15 +523,6 @@ char* FormatTimerLog(PomodoroData data, bool is_paused) {
 
   free(remaining_time);
   return log_string;
-}
-
-/**
- * Sleep for 1 second between socket connection retries.
- * Uses select() which is immune to signal interruption.
- */
-static void socketRetryDelay(void) {
-  struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
-  while (select(0, NULL, NULL, NULL, &tv) < 0 && errno == EINTR);
 }
 
 /**
