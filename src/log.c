@@ -115,13 +115,15 @@ ErrorType CreateTimerLog(const char* path) {
     return UNLINK_ERROR;
   }
 
-  /* Bind and listen */
-  if (bind(server_sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+  /* Create the socket node with owner-only permissions from the start. */
+  mode_t old_umask = umask(0077);
+  int bind_result = bind(server_sock, (struct sockaddr*)&addr, sizeof(addr));
+  umask(old_umask);
+  if (bind_result == -1) {
     LogError("CreateTimerLog", SOCKET_BIND_ERROR);
     close(server_sock);
     return SOCKET_BIND_ERROR;
   }
-  chmod(path, 0700); /* restrict socket to owner only */
   if (listen(server_sock, 5) == -1) {
     LogError("CreateTimerLog", SOCKET_LISTEN_ERROR);
     close(server_sock);

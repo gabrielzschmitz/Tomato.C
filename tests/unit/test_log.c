@@ -6,11 +6,13 @@
  * and HistSessionsForDay (deduplication, formula-based duration, end times).
  */
 
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -867,6 +869,36 @@ static void test_set_timer_log_throttles_retries(void) {
   ASSERT_TRUE(elapsed < 100.0);
 }
 
+static void test_timer_socket_is_private(void) {
+  TEST("CreateTimerLog creates an owner-only socket");
+  char dir[] = "/tmp/t_log_sock_XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  char path[512];
+  snprintf(path, sizeof(path), "%s/timer.sock", dir);
+
+  pid_t pid = fork();
+  ASSERT_GT(pid, -1);
+  if (pid == 0) {
+    CreateTimerLog(path);
+    _exit(0);
+  }
+
+  struct stat st;
+  int found = -1;
+  for (int i = 0; i < 200; i++) {
+    found = lstat(path, &st);
+    if (found == 0) break;
+    usleep(10000);
+  }
+  ASSERT_EQ(found, 0);
+  ASSERT_EQ(st.st_mode & 0777, 0700);
+
+  kill(pid, SIGTERM);
+  waitpid(pid, NULL, 0);
+  unlink(path);
+  rmdir(dir);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Main
@@ -943,5 +975,7 @@ int main(void) {
            "SetTimerLog fails fast with no server");
   RUN_TEST(test_set_timer_log_throttles_retries,
            "SetTimerLog throttles repeated attempts");
+  RUN_TEST(test_timer_socket_is_private,
+           "CreateTimerLog creates an owner-only socket");
   return test_end();
 }
