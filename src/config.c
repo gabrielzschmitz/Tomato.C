@@ -9,10 +9,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "error.h"
@@ -660,6 +662,65 @@ static int sceneFromString(const char* s) {
 }
 
 /**
+ * Create or validate a directory that only the current user may access.
+ * @param dir Directory path
+ * @param uid Expected owner
+ * @return true when the directory exists with owner-only permissions
+ */
+static bool ensurePrivateDir(const char* dir, uid_t uid) {
+  struct stat st;
+  if (lstat(dir, &st) == 0) {
+    if (!S_ISDIR(st.st_mode) || st.st_uid != uid) return false;
+    if ((st.st_mode & 0777) == 0700) return true;
+    return chmod(dir, 0700) == 0;
+  }
+  if (errno != ENOENT) return false;
+  if (mkdir(dir, 0700) == 0) return true;
+  if (errno != EEXIST || lstat(dir, &st) != 0) return false;
+  if (!S_ISDIR(st.st_mode) || st.st_uid != uid) return false;
+  return chmod(dir, 0700) == 0;
+}
+
+/**
+ * Resolve the state directory used for logs and the timer socket.
+ *
+ * HOME and XDG_STATE_HOME may be unset in services and minimal containers,
+ * so fall back to the passwd home directory. If that is unavailable too,
+ * use a per-user private directory instead of a shared, predictable path.
+ * @param out Receives the resolved path
+ * @param size Size of the output buffer
+ */
+static void resolveStateDir(char* out, size_t size) {
+  const char* override = getenv("TOMATO_STATE_DIR");
+  const char* state_home = getenv("XDG_STATE_HOME");
+  const char* home = getenv("HOME");
+
+  if (override && override[0] == '/') {
+    snprintf(out, size, "%s", override);
+    return;
+  }
+  if (state_home && state_home[0] == '/') {
+    snprintf(out, size, "%s/tomato", state_home);
+    return;
+  }
+  if (home && home[0] == '/') {
+    snprintf(out, size, "%s/.local/state/tomato", home);
+    return;
+  }
+
+  struct passwd pw;
+  struct passwd* result = NULL;
+  char buf[1024];
+  if (getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result) == 0 && result &&
+      result->pw_dir && result->pw_dir[0] == '/') {
+    snprintf(out, size, "%s/.local/state/tomato", result->pw_dir);
+    return;
+  }
+
+  snprintf(out, size, "/tmp/tomato-%lu", (unsigned long)getuid());
+}
+
+/**
  * Initialise every g_config field to its built-in default value.
  *
  * This is called before any TOML file is loaded, so TOML values only need
@@ -838,18 +899,8 @@ static void setDefaults(void) {
 
   /* Resolve XDG-compliant paths for log files and socket */
   {
-    const char* state_home = getenv("XDG_STATE_HOME");
-    const char* home = getenv("HOME");
-    const char* state_override = getenv("TOMATO_STATE_DIR");
     char state_dir[4096];
-    if (state_override && state_override[0] == '/')
-      snprintf(state_dir, sizeof(state_dir), "%s", state_override);
-    else if (state_home && state_home[0] == '/')
-      snprintf(state_dir, sizeof(state_dir), "%s/tomato", state_home);
-    else if (home)
-      snprintf(state_dir, sizeof(state_dir), "%s/.local/state/tomato", home);
-    else
-      snprintf(state_dir, sizeof(state_dir), "/tmp/tomato");
+    resolveStateDir(state_dir, sizeof(state_dir));
 
     const char* runtime_dir = getenv("XDG_RUNTIME_DIR");
     const char* runtime_override = getenv("TOMATO_RUNTIME_DIR");
@@ -861,8 +912,14 @@ static void setDefaults(void) {
     else
       snprintf(socket_dir, sizeof(socket_dir), "%s", state_dir);
 
-    /* Create both directories (mkdir -p) */
-    EnsureDir(state_dir);
+    /* Create both directories (mkdir -p). The per-user fallback must be
+     * owner-only, so validate it instead of relying on the ambient umask. */
+    if (strncmp(state_dir, "/tmp/tomato-", 12) == 0) {
+      if (!ensurePrivateDir(state_dir, getuid()))
+        LogError("resolveStateDir", FILE_ERROR);
+    } else {
+      EnsureDir(state_dir);
+    }
     EnsureDir(socket_dir);
 
     char buf[8192];

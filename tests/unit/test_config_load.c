@@ -326,6 +326,66 @@ static void test_state_and_runtime_overrides(void) {
   rmdir("/tmp/t_cfg_runtime");
 }
 
+static void test_state_dir_falls_back_to_passwd(void) {
+  TEST("state dir uses passwd home when HOME is unset");
+  char* old_home = save_env("HOME");
+  char* old_xdg_state = save_env("XDG_STATE_HOME");
+  char* old_override = save_env("TOMATO_STATE_DIR");
+  unsetenv("HOME");
+  unsetenv("XDG_STATE_HOME");
+  unsetenv("TOMATO_STATE_DIR");
+
+  char dir[4096];
+  resolveStateDir(dir, sizeof(dir));
+
+  struct passwd pw;
+  struct passwd* result = NULL;
+  char buf[1024];
+  bool have_passwd =
+    getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result) == 0 && result &&
+    result->pw_dir && result->pw_dir[0] == '/';
+  if (have_passwd) {
+    char expected[4096];
+    snprintf(expected, sizeof(expected), "%s/.local/state/tomato",
+             result->pw_dir);
+    ASSERT_STR_EQ(dir, expected);
+  } else {
+    ASSERT_EQ(strncmp(dir, "/tmp/tomato-", 12), 0);
+  }
+  ASSERT_TRUE(strcmp(dir, "/tmp/tomato") != 0);
+
+  restore_env("TOMATO_STATE_DIR", old_override);
+  restore_env("XDG_STATE_HOME", old_xdg_state);
+  restore_env("HOME", old_home);
+}
+
+static void test_private_dir_helper(void) {
+  TEST("ensurePrivateDir creates and repairs owner-only directories");
+  char parent[] = "/tmp/t_cfg_priv_XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(parent));
+  char dir[512];
+  snprintf(dir, sizeof(dir), "%s/state", parent);
+
+  ASSERT_TRUE(ensurePrivateDir(dir, getuid()));
+  struct stat st;
+  ASSERT_EQ(stat(dir, &st), 0);
+  ASSERT_EQ(st.st_mode & 0777, 0700);
+
+  ASSERT_EQ(chmod(dir, 0755), 0);
+  ASSERT_TRUE(ensurePrivateDir(dir, getuid()));
+  ASSERT_EQ(stat(dir, &st), 0);
+  ASSERT_EQ(st.st_mode & 0777, 0700);
+
+  char link[512];
+  snprintf(link, sizeof(link), "%s/link", parent);
+  ASSERT_EQ(symlink(dir, link), 0);
+  ASSERT_FALSE(ensurePrivateDir(link, getuid()));
+  ASSERT_EQ(unlink(link), 0);
+
+  rmdir(dir);
+  rmdir(parent);
+}
+
 static int stepper_action_for(int key) {
   for (size_t i = 0; i < g_config.num_keys; i++) {
     KeyFunction* k = &g_config.key_bindings[i];
@@ -379,6 +439,10 @@ int main(void) {
            "relative TOMATO_CONFIG_DIR is ignored");
   RUN_TEST(test_state_and_runtime_overrides,
            "TOMATO_STATE_DIR and TOMATO_RUNTIME_DIR override XDG paths");
+  RUN_TEST(test_state_dir_falls_back_to_passwd,
+           "state dir uses passwd home when HOME is unset");
+  RUN_TEST(test_private_dir_helper,
+           "ensurePrivateDir creates and repairs private directories");
 
   return test_end();
 }
