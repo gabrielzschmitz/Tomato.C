@@ -156,6 +156,19 @@ static void test_utf16_char_count_empty(void) {
   ASSERT_EQ(UTF16CharCount(""), 0);
 }
 
+static void test_utf16_char_count_truncated(void) {
+  TEST("UTF16CharCount stops at truncated UTF-8 sequences");
+  ASSERT_EQ(UTF16CharCount("\xE2"), 1);
+  ASSERT_EQ(UTF16CharCount("a\xE2"), 2);
+  ASSERT_EQ(UTF16CharCount("\xE2\x82"), 2);
+  ASSERT_EQ(UTF16CharCount("\xF0\x9F\x92"), 3);
+}
+
+static void test_utf16_char_count_invalid_continuation(void) {
+  TEST("UTF16CharCount treats invalid continuation bytes as one byte");
+  ASSERT_EQ(UTF16CharCount("\xE2\x28\xA1"), 3);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * CheckConfigIconType
@@ -235,6 +248,22 @@ static void test_utf16_char_fit_width_zero_max(void) {
   int count = UTF16CharFitWidth("hello", 0, &bytes);
   ASSERT_EQ(count, 0);
   ASSERT_EQ(bytes, 0);
+}
+
+static void test_utf16_char_fit_width_truncated(void) {
+  TEST("UTF16CharFitWidth stops at truncated UTF-8 sequences");
+  int bytes = 0;
+  int count = UTF16CharFitWidth("\xE2\x82", 10, &bytes);
+  ASSERT_EQ(count, 2);
+  ASSERT_EQ(bytes, 2);
+
+  count = UTF16CharFitWidth("\xF0\x9F\x92", 10, &bytes);
+  ASSERT_EQ(count, 3);
+  ASSERT_EQ(bytes, 3);
+
+  count = UTF16CharFitWidth("\xE2\x82\xAC", 1, &bytes);
+  ASSERT_EQ(count, 1);
+  ASSERT_EQ(bytes, 3);
 }
 
 /**
@@ -317,6 +346,10 @@ int main(void) {
   RUN_TEST(test_format_remaining_time_zero, "FormatRemainingTime with 0 total");
   RUN_TEST(test_utf16_char_count_ascii, "UTF16CharCount ASCII");
   RUN_TEST(test_utf16_char_count_empty, "UTF16CharCount empty");
+  RUN_TEST(test_utf16_char_count_truncated,
+           "UTF16CharCount handles truncated sequences");
+  RUN_TEST(test_utf16_char_count_invalid_continuation,
+           "UTF16CharCount handles invalid continuations");
   RUN_TEST(test_check_config_icon_type, "CheckConfigIconType");
   RUN_TEST(test_get_config_icon_type_nerd,
            "GetConfigIconType returns NERD_ICONS for nerd-icons");
@@ -334,6 +367,8 @@ int main(void) {
            "UTF16CharFitWidth handles empty string");
   RUN_TEST(test_utf16_char_fit_width_zero_max,
            "UTF16CharFitWidth returns 0 for 0 max_width");
+  RUN_TEST(test_utf16_char_fit_width_truncated,
+           "UTF16CharFitWidth handles truncated sequences");
   RUN_TEST(test_timer_clock_excludes_suspend,
            "timer clock defaults to CLOCK_MONOTONIC");
   RUN_TEST(test_current_time_monotonic, "GetCurrentTimeMS is monotonic");

@@ -184,6 +184,36 @@ IconType GetConfigIconType(void) {
  */
 
 /**
+ * Return the length of the UTF-8 character at s.
+ *
+ * Truncated sequences and invalid continuation bytes are treated as a
+ * single byte so callers never read past the terminating NUL.
+ * @param s Start of the sequence
+ * @param remaining Bytes left in the string, excluding the NUL
+ * @return Sequence length in bytes, always at least 1 when remaining > 0
+ */
+static size_t utf8CharLen(const unsigned char* s, size_t remaining) {
+  if (remaining == 0) return 0;
+
+  size_t len;
+  if ((s[0] & 0x80) == 0)
+    return 1;
+  else if ((s[0] & 0xE0) == 0xC0)
+    len = 2;
+  else if ((s[0] & 0xF0) == 0xE0)
+    len = 3;
+  else if ((s[0] & 0xF8) == 0xF0)
+    len = 4;
+  else
+    return 1;
+
+  if (len > remaining) return 1;
+  for (size_t i = 1; i < len; i++)
+    if ((s[i] & 0xC0) != 0x80) return 1;
+  return len;
+}
+
+/**
  * Count UTF-16 characters in a string.
  * @param str UTF-8 string to count
  * @return Number of UTF-16 code units
@@ -191,19 +221,13 @@ IconType GetConfigIconType(void) {
 int UTF16CharCount(const char* str) {
   int count = 0;
   const unsigned char* s = (const unsigned char*)str;
+  size_t remaining = strlen(str);
 
-  while (*s) {
-    if ((*s & 0x80) == 0)
-      s++; /* 1-byte sequence (ASCII) */
-    else if ((*s & 0xE0) == 0xC0)
-      s += 2; /* 2-byte sequence */
-    else if ((*s & 0xF0) == 0xE0)
-      s += 3; /* 3-byte sequence */
-    else if ((*s & 0xF8) == 0xF0) {
-      if (GetConfigIconType() == EMOJIS) count++;
-      s += 4; /* 4-byte sequence */
-    } else
-      s++; /* Invalid UTF-8 byte */
+  while (remaining > 0) {
+    size_t len = utf8CharLen(s, remaining);
+    if (len == 4 && GetConfigIconType() == EMOJIS) count++;
+    s += len;
+    remaining -= len;
     count++;
   }
 
@@ -221,25 +245,14 @@ int UTF16CharCount(const char* str) {
 int UTF16CharFitWidth(const char* str, int max_width, int* byte_count) {
   int char_count = 0;
   const char* s = str;
+  size_t remaining = strlen(str);
   *byte_count = 0;
 
-  while (*s && char_count < max_width) {
-    if ((*s & 0x80) == 0) {
-      s++; /* 1-byte sequence (ASCII) */
-      (*byte_count)++;
-    } else if ((*s & 0xE0) == 0xC0) {
-      s += 2; /* 2-byte sequence */
-      (*byte_count) += 2;
-    } else if ((*s & 0xF0) == 0xE0) {
-      s += 3; /* 3-byte sequence */
-      (*byte_count) += 3;
-    } else if ((*s & 0xF8) == 0xF0) {
-      s += 4; /* 4-byte sequence */
-      (*byte_count) += 4;
-    } else {
-      s++; /* Invalid UTF-8 byte */
-      (*byte_count)++;
-    }
+  while (remaining > 0 && char_count < max_width) {
+    size_t len = utf8CharLen((const unsigned char*)s, remaining);
+    s += len;
+    remaining -= len;
+    (*byte_count) += (int)len;
     char_count++;
   }
 
