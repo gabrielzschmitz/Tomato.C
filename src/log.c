@@ -691,10 +691,13 @@ ErrorType LoadNotes(const char* path, NotesData* notes) {
     text[ti] = '\0';
 
     if (notes->count >= notes->capacity) {
-      notes->capacity *= 2;
+      int new_capacity = notes->capacity > 0 ? notes->capacity * 2 : 1;
+      if (new_capacity <= notes->capacity) continue;
       NoteItem** new_items =
-        (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * notes->capacity);
-      if (new_items) notes->items = new_items;
+        (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
+      if (!new_items) continue;
+      notes->items = new_items;
+      notes->capacity = new_capacity;
     }
 
     NoteItem* item = (NoteItem*)malloc(sizeof(NoteItem));

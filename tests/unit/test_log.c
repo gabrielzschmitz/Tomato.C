@@ -510,6 +510,39 @@ static void test_save_notes_missing_dir_fails(void) {
   ASSERT_EQ(SaveNotes("/nonexistent_dir_xyz/notes.log", &nd), FILE_ERROR);
 }
 
+static void test_load_notes_grows_capacity(void) {
+  TEST("LoadNotes grows capacity before storing every note");
+  char tmp[] = "/tmp/t_log_load_notes_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  FILE* f = fdopen(fd, "w");
+  ASSERT_NOT_NULL(f);
+  for (int i = 0; i < 20; i++)
+    fprintf(f, "%d|0|0|-1|-|note %d\n", i + 1, i + 1);
+  fclose(f);
+
+  NotesData notes;
+  memset(&notes, 0, sizeof(notes));
+  notes.capacity = 2;
+  notes.items = malloc(sizeof(NoteItem*) * 2);
+  ASSERT_NOT_NULL(notes.items);
+
+  ASSERT_EQ(LoadNotes(tmp, &notes), NO_ERROR);
+  ASSERT_EQ(notes.count, 20);
+  ASSERT_TRUE(notes.capacity >= notes.count);
+  char* last_text = GapBufferToString(notes.items[19]->text);
+  ASSERT_NOT_NULL(last_text);
+  ASSERT_STR_EQ(last_text, "note 20");
+  free(last_text);
+
+  for (int i = 0; i < notes.count; i++) {
+    GapBufferFree(notes.items[i]->text);
+    free(notes.items[i]);
+  }
+  free(notes.items);
+  remove(tmp);
+}
+
 static void test_overview_counts_beyond_1000_records(void) {
   TEST("history overview counts sessions beyond 1000 records");
   char tmp[] = "/tmp/t_log_big_XXXXXX";
@@ -945,6 +978,8 @@ int main(void) {
            "SaveNotes replaces the file and leaves no temp file");
   RUN_TEST(test_save_notes_missing_dir_fails,
            "SaveNotes to a missing directory returns FILE_ERROR");
+  RUN_TEST(test_load_notes_grows_capacity,
+           "LoadNotes grows capacity before storing every note");
   RUN_TEST(test_overview_counts_beyond_1000_records,
            "history overview counts sessions beyond 1000 records");
   RUN_TEST(test_save_and_load_pomodoro,
