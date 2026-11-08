@@ -221,31 +221,22 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type) {
   ssize_t n;
   bool was_active = false;
 
-  /* Non-looping mode: connect with retries, read one message, return */
+  /* Non-looping mode: connect once, read one message, return. A one-shot
+   * status query must not hang when the timer server is not running. */
   if (!loop) {
-    int sock = -1;
-    struct sockaddr_un addr;
-    int retries = 0;
-
-    do {
-      sock = socket(AF_UNIX, SOCK_STREAM, 0);
-      if (sock == -1) {
-        LogError("GetTimerLog", SOCKET_CREATION_ERROR);
-        return SOCKET_CREATION_ERROR;
-      }
-      memset(&addr, 0, sizeof(addr));
-      addr.sun_family = AF_UNIX;
-      snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
-
-      if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) break;
-
-      close(sock);
-      sock = -1;
-      retries++;
-      if (retries < SOCKET_RETRY_COUNT) socketRetryDelay();
-    } while (sock == -1 && retries < SOCKET_RETRY_COUNT);
-
+    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sock == -1) {
+      LogError("GetTimerLog", SOCKET_CREATION_ERROR);
+      return SOCKET_CREATION_ERROR;
+    }
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", path);
+
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+      close(sock);
       LogError("GetTimerLog", SOCKET_CONNECTION_ERROR);
       return SOCKET_CONNECTION_ERROR;
     }
