@@ -739,6 +739,30 @@ static void test_load_empty_file(void) {
   ErrorType err = LoadPomodoro(tmp, &out);
   ASSERT_EQ(err, NO_ERROR);
   /* Data is left as-is when no valid record exists */
+  ASSERT_EQ(out.current_step, -1);
+  ASSERT_EQ(out.status, -1);
+  remove(tmp);
+}
+
+static void test_load_invalid_record_does_not_modify_data(void) {
+  TEST("LoadPomodoro invalid record leaves all fields unchanged");
+  char tmp[] = "/tmp/t_log_in_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  FILE* f = fdopen(fd, "wb");
+  ASSERT_NOT_NULL(f);
+  /* Invalid cycle count: rejected after the session check. */
+  write_rec(f, 1, 0, 0, 0, 25, 5, 30, 0, 0, 1, 1700000000);
+  fclose(f);
+
+  PomodoroData out;
+  memset(&out, 0xFF, sizeof(out));
+  ErrorType err = LoadPomodoro(tmp, &out);
+  ASSERT_EQ(err, NO_ERROR);
+  ASSERT_EQ(out.session_index, -1);
+  ASSERT_EQ(out.current_step, -1);
+  ASSERT_EQ(out.status, -1);
+
   remove(tmp);
 }
 
@@ -907,6 +931,8 @@ int main(void) {
            "RemoveUncompletedEntries all completed keeps all");
   RUN_TEST(test_load_empty_file,
            "LoadPomodoro empty file returns empty data");
+  RUN_TEST(test_load_invalid_record_does_not_modify_data,
+           "LoadPomodoro invalid record leaves data unchanged");
   RUN_TEST(test_load_corrupted_file_partial_record,
            "LoadPomodoro partial record does not crash");
   RUN_TEST(test_load_garbage_file,

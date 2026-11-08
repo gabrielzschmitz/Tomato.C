@@ -867,31 +867,33 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
 
   if (last_record.session_index == 0) return NO_ERROR;
 
-  data->session_index = last_record.session_index;
-  data->session_start_time = last_record.session_start_time;
-  data->step_start_time = time(NULL);
-  data->current_step = last_record.current_step;
-  data->current_cycle = last_record.current_cycle - 1;
-  data->total_cycles = last_record.total_cycles;
+  /* Validate into a temporary so a partial record never touches the caller. */
+  PomodoroData loaded = {0};
+  loaded.session_index = last_record.session_index;
+  loaded.session_start_time = last_record.session_start_time;
+  loaded.step_start_time = time(NULL);
+  loaded.current_step = last_record.current_step;
+  loaded.current_cycle = last_record.current_cycle - 1;
+  loaded.total_cycles = last_record.total_cycles;
 
-  if (data->total_cycles < 1 || data->total_cycles > 8) return NO_ERROR;
+  if (loaded.total_cycles < 1 || loaded.total_cycles > 8) return NO_ERROR;
 
-  if (data->current_step != WORK_TIME && data->current_step != SHORT_PAUSE &&
-      data->current_step != LONG_PAUSE) {
+  if (loaded.current_step != WORK_TIME && loaded.current_step != SHORT_PAUSE &&
+      loaded.current_step != LONG_PAUSE) {
     return NO_ERROR;
   }
 
-  data->work_time = last_record.work_time;
-  if (data->work_time < 1 || data->work_time > 120) return NO_ERROR;
+  loaded.work_time = last_record.work_time;
+  if (loaded.work_time < 1 || loaded.work_time > 120) return NO_ERROR;
 
-  data->short_pause_time = last_record.short_pause_time;
-  data->long_pause_time = last_record.long_pause_time;
-  data->total_elapsed = last_record.total_elapsed;
-  data->current_step_time = last_record.current_step_time;
-  data->status = last_record.status;
+  loaded.short_pause_time = last_record.short_pause_time;
+  loaded.long_pause_time = last_record.long_pause_time;
+  loaded.total_elapsed = last_record.total_elapsed;
+  loaded.current_step_time = last_record.current_step_time;
+  loaded.status = last_record.status;
+  loaded.delta_time_ms = GetCurrentTimeMS();
 
-  data->delta_time_ms = GetCurrentTimeMS();
-
+  *data = loaded;
   return NO_ERROR;
 }
 

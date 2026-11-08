@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
   setlocale(LC_CTYPE, "");
 
   /* Init everything */
-  AppData app;
+  AppData app = {0};
   if (InitScreen() != NO_ERROR)
     handleErrorAndExit("Initializing screen", WINDOW_CREATION_ERROR, NULL, 0);
   ErrorType init_status = InitApp(&app);
