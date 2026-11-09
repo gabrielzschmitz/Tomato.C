@@ -16,7 +16,8 @@ typedef struct {
 /**
  * Send a notification with sound using a Notification struct.
  * @param notification Pointer to the notification data
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR when sent or queued, or an error code on validation or
+ *         dispatch failure
  */
 ErrorType Notify(const Notification* notification);
 

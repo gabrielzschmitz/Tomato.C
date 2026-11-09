@@ -183,7 +183,7 @@ NOTIFY_CFLAGS = $(shell pkg-config --cflags libnotify 2>/dev/null)
 NOTIFY_LIBS = $(shell pkg-config --libs libnotify 2>/dev/null)
 unit/test_notify: unit/test_notify.c $(SRCDIR)/notify.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(NOTIFY_CFLAGS) -o $@ $(filter %.c,$^) \
-	  $(NCURSES_LIBS) $(TEST_LDLIBS) $(NOTIFY_LIBS)
+	  $(NCURSES_LIBS) $(TEST_LDLIBS) $(NOTIFY_LIBS) -pthread
 
 #/**
 # * ---------------------------------------------------------------------------

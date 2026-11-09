@@ -1,5 +1,8 @@
 #include "notify.h"
 
+#include <errno.h>
+#include <pthread.h>
+#include <spawn.h>
 #include <stdio.h>
 #include <string.h>
 #ifndef __APPLE__
@@ -21,11 +24,22 @@
 
 /* PRIVATE NOTIFY FUNCTIONS */
 static ErrorType sendNotification(const char* title, const char* description);
+static bool shouldDispatchAsync(void);
+static ErrorType queueNotification(const char* title, const char* description);
+static void* notificationThread(void* arg);
+
+typedef struct {
+  char* title;
+  char* description;
+} NotificationRequest;
+
+extern char** environ;
 
 /**
  * Send a notification with sound using a Notification struct.
  * @param notification Pointer to the notification data
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR when sent or queued, or an error code on validation or
+ *         dispatch failure
  */
 ErrorType Notify(const Notification* notification) {
   if (!notification) {
@@ -34,8 +48,16 @@ ErrorType Notify(const Notification* notification) {
   }
   /* Attempt to send the notification, but never let a missing notification
    * daemon suppress the sound. Both paths are attempted independently. */
-  ErrorType send_status =
-    sendNotification(notification->title, notification->description);
+  ErrorType send_status = NO_ERROR;
+  if (NOTIFICATIONS && (!notification->title || !notification->description)) {
+    send_status = NULL_POINTER_ERROR;
+  } else if (NOTIFICATIONS && shouldDispatchAsync()) {
+    send_status =
+      queueNotification(notification->title, notification->description);
+  } else {
+    send_status =
+      sendNotification(notification->title, notification->description);
+  }
   if (send_status != NO_ERROR)
     LogError("Notification", NOTIFICATION_SEND_ERROR);
 
@@ -46,6 +68,70 @@ ErrorType Notify(const Notification* notification) {
 
   if (audio_status != NO_ERROR) return audio_status;
   return send_status;
+}
+
+/**
+ * Return true when platform notification commands must run off the UI thread.
+ * @return true on macOS and WSL, false otherwise.
+ */
+static bool shouldDispatchAsync(void) {
+#ifdef __APPLE__
+  return true;
+#else
+  return WSL != 0;
+#endif
+}
+
+/**
+ * Copy and dispatch a platform notification to a detached worker thread.
+ * @param title Notification title.
+ * @param description Notification details.
+ * @return NO_ERROR when queued, or an allocation/thread error.
+ */
+static ErrorType queueNotification(const char* title, const char* description) {
+  NotificationRequest* request = calloc(1, sizeof(*request));
+  if (!request) return MALLOC_ERROR;
+
+  size_t title_size = strlen(title) + 1;
+  size_t description_size = strlen(description) + 1;
+  request->title = malloc(title_size);
+  request->description = malloc(description_size);
+  if (!request->title || !request->description) {
+    free(request->title);
+    free(request->description);
+    free(request);
+    return MALLOC_ERROR;
+  }
+  memcpy(request->title, title, title_size);
+  memcpy(request->description, description, description_size);
+
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, notificationThread, request) != 0) {
+    free(request->title);
+    free(request->description);
+    free(request);
+    return PTHREAD_CREATION_ERROR;
+  }
+  if (pthread_detach(thread) != 0) {
+    LogError("queueNotification", PTHREAD_DETACH_ERROR);
+    return PTHREAD_DETACH_ERROR;
+  }
+  return NO_ERROR;
+}
+
+/**
+ * Send one queued notification and release its copied strings.
+ * @param arg NotificationRequest pointer.
+ * @return Always NULL.
+ */
+static void* notificationThread(void* arg) {
+  NotificationRequest* request = (NotificationRequest*)arg;
+  ErrorType status = sendNotification(request->title, request->description);
+  if (status != NO_ERROR) LogError("Notification worker", status);
+  free(request->title);
+  free(request->description);
+  free(request);
+  return NULL;
 }
 
 /**
@@ -91,45 +177,47 @@ static ErrorType sendNotification(const char* title, const char* description) {
     esc_title[j] = '\0';
   }
 
-  pid_t pid = fork();
-  if (pid == -1) {
-    free(esc_desc);
-    free(esc_title);
+  char script[1024];
+  snprintf(script, sizeof(script),
+           "display notification \"%s\" with title \"%s\"", esc_desc,
+           esc_title);
+  char* const args[] = {"osascript", "-e", script, NULL};
+  pid_t pid;
+  int spawn_status = posix_spawnp(&pid, "osascript", NULL, NULL, args, environ);
+  free(esc_desc);
+  free(esc_title);
+  if (spawn_status != 0) {
     LogError("sendNotification", FORK_ERROR);
     return FORK_ERROR;
   }
-  if (pid == 0) {
-    char script[1024];
-    snprintf(script, sizeof(script),
-             "display notification \"%s\" with title \"%s\"", esc_desc,
-             esc_title);
-    execlp("osascript", "osascript", "-e", script, NULL);
-    _exit(1);
-  }
-  free(esc_desc);
-  free(esc_title);
 
   int status;
-  if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status) ||
-      WEXITSTATUS(status) != 0) {
+  pid_t waited;
+  do {
+    waited = waitpid(pid, &status, 0);
+  } while (waited == -1 && errno == EINTR);
+  if (waited == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     LogError("sendNotification", NOTIFICATION_SEND_ERROR);
     return NOTIFICATION_SEND_ERROR;
   }
 #else
   if (WSL) {
-    pid_t pid = fork();
-    if (pid == -1) {
+    char* const args[] = {
+      "notify-send",      "-t", "5000", "-a", "Tomato.C", (char*)title,
+      (char*)description, NULL};
+    pid_t pid;
+    int spawn_status =
+      posix_spawnp(&pid, "notify-send", NULL, NULL, args, environ);
+    if (spawn_status != 0) {
       LogError("sendNotification", FORK_ERROR);
       return FORK_ERROR;
     }
-    if (pid == 0) {
-      execlp("notify-send", "notify-send", "-t", "5000", "-a", "Tomato.C",
-             title, description, NULL);
-      _exit(1);
-    }
     int status;
-    if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status) ||
-        WEXITSTATUS(status) != 0) {
+    pid_t waited;
+    do {
+      waited = waitpid(pid, &status, 0);
+    } while (waited == -1 && errno == EINTR);
+    if (waited == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       LogError("sendNotification", NOTIFICATION_SEND_ERROR);
       return NOTIFICATION_SEND_ERROR;
     }

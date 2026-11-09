@@ -6,7 +6,12 @@
  * and NULL title/description error paths.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "audio.h"
 #include "config.h"
@@ -17,6 +22,11 @@
 Config g_config;
 
 static int play_audio_calls = 0;
+
+static double elapsedMilliseconds(struct timespec start, struct timespec end) {
+  return (end.tv_sec - start.tv_sec) * 1000.0 +
+         (end.tv_nsec - start.tv_nsec) / 1000000.0;
+}
 
 /* stubs */
 void LogError(const char* context, ErrorType type) {
@@ -98,6 +108,63 @@ static void test_notify_plays_sound_when_send_fails(void) {
   ASSERT_EQ(play_audio_calls, 1);
 }
 
+/** @brief WSL notification helper wait does not block Notify. */
+static void test_notify_platform_dispatch_is_async(void) {
+  TEST("Notify returns before slow platform helper exits");
+  char dir[] = "/tmp/t_notify_async_XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+
+  const char* helper_name = "notify-send";
+#ifdef __APPLE__
+  helper_name = "osascript";
+#endif
+  char helper_path[256];
+  char marker_path[256];
+  snprintf(helper_path, sizeof(helper_path), "%s/%s", dir, helper_name);
+  snprintf(marker_path, sizeof(marker_path), "%s/started", dir);
+  FILE* helper = fopen(helper_path, "w");
+  ASSERT_NOT_NULL(helper);
+  fprintf(helper, "#!/bin/sh\n: > '%s'\n/bin/sleep 0.3\n", marker_path);
+  fclose(helper);
+  ASSERT_EQ(chmod(helper_path, 0700), 0);
+
+  const char* old_path = getenv("PATH");
+  char* saved_path = NULL;
+  if (old_path) {
+    saved_path = malloc(strlen(old_path) + 1);
+    ASSERT_NOT_NULL(saved_path);
+    strcpy(saved_path, old_path);
+  }
+  char path[4096];
+  snprintf(path, sizeof(path), "%s:%s", dir, old_path ? old_path : "");
+  ASSERT_EQ(setenv("PATH", path, 1), 0);
+
+  g_config.notifications.enabled = 1;
+#ifndef __APPLE__
+  g_config.misc.wsl = 1;
+#endif
+  Notification notification = {"title", "description", NULL};
+  struct timespec start, end;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  ASSERT_EQ(Notify(&notification), NO_ERROR);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  ASSERT_TRUE(elapsedMilliseconds(start, end) < 200.0);
+
+  for (int i = 0; i < 100 && access(marker_path, F_OK) != 0; i++) usleep(10000);
+  ASSERT_EQ(access(marker_path, F_OK), 0);
+  usleep(350000);
+
+  if (saved_path) {
+    setenv("PATH", saved_path, 1);
+    free(saved_path);
+  } else {
+    unsetenv("PATH");
+  }
+  unlink(marker_path);
+  unlink(helper_path);
+  rmdir(dir);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * Main
@@ -114,5 +181,7 @@ int main(void) {
            "Notify with NULL description returns error");
   RUN_TEST(test_notify_plays_sound_when_send_fails,
            "Notify plays sound even when sendNotification fails");
+  RUN_TEST(test_notify_platform_dispatch_is_async,
+           "Notify returns before platform helper exits");
   return test_end();
 }
