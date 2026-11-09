@@ -162,11 +162,16 @@ ErrorType HandleInputs(AppData* app) {
   ErrorType status = NO_ERROR;
   ESCDELAY = 25;
   bool handled = false;
+  bool first_read = true;
 
-  /* Drain every queued key instead of reading one and flushing the rest.
+  /* Wait for one input event, then drain queued input without blocking.
    * This keeps pasted text and fast key sequences from being dropped. */
   while (status == NO_ERROR) {
     int key = getch();
+    if (first_read) {
+      wtimeout(stdscr, 0);
+      first_read = false;
+    }
     if (key == ERR) break;
 
     if (app->frozen) {
