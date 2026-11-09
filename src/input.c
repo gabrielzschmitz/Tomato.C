@@ -2520,19 +2520,10 @@ void NotesNextPage(AppData* app) {
 }
 
 /**
- * Quit notes scene and return to previous scene.
+ * Open the standard quit confirmation from the NOTES scene.
  * @param app Pointer to the application data
  */
-void QuitAppNotes(AppData* app) {
-  if (!app || !app->notes) return;
-  if (app->notes->is_move_mode) {
-    app->notes->is_move_mode = false;
-    app->user_input = -1;
-    app->last_input = -1;
-    return;
-  }
-  if (app->user_input == app->last_input) app->running = false;
-}
+void QuitAppNotes(AppData* app) { QuitApp(app); }
 
 /**
  * ---------------------------------------------------------------------------

@@ -43,6 +43,9 @@ static void quit_app(TestApp* app) {
   app->popup_open = true;
 }
 
+/* Mirrors QuitAppNotes delegating to the standard confirmation flow. */
+static void quit_app_notes(TestApp* app) { quit_app(app); }
+
 /** @brief The first quit press opens the confirmation and keeps running. */
 static void test_quitapp_opens_confirmation(void) {
   TEST("QuitApp opens confirmation on first press");
@@ -94,6 +97,22 @@ static void test_quitapp_move_mode_blocks(void) {
 
   ASSERT_TRUE(app.running);
   ASSERT_FALSE(app.popup_open);
+}
+
+/** @brief NOTES quit opens confirmation instead of exiting directly. */
+static void test_notes_quit_opens_confirmation(void) {
+  TEST("QuitAppNotes opens standard quit confirmation");
+  NotesData nd;
+  nd.is_move_mode = false;
+  TestApp app;
+  app.notes = &nd;
+  app.popup_open = false;
+  app.running = true;
+
+  quit_app_notes(&app);
+
+  ASSERT_TRUE(app.running);
+  ASSERT_TRUE(app.popup_open);
 }
 
 /**
@@ -157,6 +176,8 @@ int main(void) {
            "ForcefullyQuitApp quits immediately");
   RUN_TEST(test_quitapp_move_mode_blocks,
            "QuitApp is blocked when notes move mode is active");
+  RUN_TEST(test_notes_quit_opens_confirmation,
+           "QuitAppNotes opens standard confirmation");
   RUN_TEST(test_abandon_previous_session,
            "AbandonPreviousSession resets pomodoro data");
   return test_end();
