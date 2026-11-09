@@ -455,9 +455,22 @@ main() {
       echo "${RED}[ERR]${RESET}  git is required. Install git and try again." >&2
       exit 1
     fi
-    git clone --depth=1 https://github.com/gabrielzschmitz/Tomato.C.git /tmp/tomato-install
-    cd /tmp/tomato-install
-    exec ./install.sh "$@"
+    install_dir=$(mktemp -d "${TMPDIR:-/tmp}/tomato-install.XXXXXX") || {
+      echo "${RED}[ERR]${RESET}  Could not create temporary install directory." >&2
+      exit 1
+    }
+    trap 'rm -rf "$install_dir"' 0
+    if ! git clone --depth=1 https://github.com/gabrielzschmitz/Tomato.C.git \
+      "$install_dir"; then
+      echo "${RED}[ERR]${RESET}  Could not clone Tomato.C." >&2
+      exit 1
+    fi
+    (
+      cd "$install_dir" || exit 1
+      ./install.sh "$@"
+    )
+    install_status=$?
+    exit "$install_status"
   fi
 
   init_colors
