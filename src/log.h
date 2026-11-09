@@ -9,12 +9,12 @@
 #include "util.h"
 
 /**
- * Binary log record structure (packed, 28 bytes).
+ * Headerless Pomodoro log record (packed, 21 bytes, native byte order).
+ * The pomodoro.bin format has no version header.
  */
 typedef struct __attribute__((packed)) {
-  uint16_t session_index; /**< Unique session identifier */
-  uint8_t
-    current_step; /**< Current step (0=work, 1=short pause, 2=long pause) */
+  uint16_t session_index;      /**< Unique session identifier */
+  uint8_t current_step;        /**< WORK_TIME=1, SHORT_PAUSE=2, LONG_PAUSE=3 */
   uint8_t current_cycle;       /**< Current cycle number (1-based) */
   uint8_t total_cycles;        /**< Total pomodoro cycles configured */
   uint8_t work_time;           /**< Work time duration in minutes */
@@ -128,7 +128,8 @@ ErrorType RemoveUncompletedEntries(const char* path, int index);
 
 /**
  * Load pomodoro state from a log file.
- * Reads the last line and restores pomodoro data.
+ * Reads and validates the last complete binary record before restoring data.
+ * An invalid record leaves the caller's data unchanged.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to populate
  * @return ErrorType NO_ERROR on success, or an error code on failure

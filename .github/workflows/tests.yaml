@@ -4,7 +4,7 @@
 # *        (unit and integration) on both Ubuntu and macOS.
 # *
 # * Runs on every push and pull_request. Requires the same build dependencies
-# * as build-test.yaml — see that file for rationale.
+# * as build.yaml — see that file for rationale.
 # *
 # * Jobs:
 # *   ubuntu-tests         — full test suite on ubuntu-latest
@@ -37,8 +37,8 @@ jobs:
 
   #/**
   # * Build and run all tests on macOS (Intel x86_64).
-  # * Uses Homebrew's ncurses; no libnotify is needed since macOS
-  # * uses a different notification path (notify-send fallback).
+  # * Uses Homebrew's ncurses; no libnotify is needed because macOS
+  # * sends notifications with osascript.
   # */
   macos-intel-tests:
     name: Run tests (macOS Intel)

@@ -869,7 +869,7 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
 }
 
 /**
- * Append the current pomodoro state to the binary log as one record.
+ * Append the current pomodoro state as one headerless 21-byte binary record.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to save
  * @return ErrorType NO_ERROR on success, or TIMER_LOG_ERROR on failure

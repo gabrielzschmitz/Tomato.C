@@ -187,7 +187,7 @@ typedef struct {
  * Miscellaneous platform / behavior settings.
  */
 typedef struct {
-  int wsl;            /**< 0/1 — WSL mode (wsl-notify-send) */
+  int wsl;            /**< 0/1 — WSL mode (uses notify-send) */
   int fps;            /**< target frame rate */
   int max_note_depth; /**< 0-3 — hierarchical sub-note depth */
 } ConfigMisc;
@@ -196,7 +196,7 @@ typedef struct {
  * Top-level runtime configuration.
  *
  * Every field is overridable via TOML files at
- * /etc/tomato/config.toml and $XDG_CONFIG_HOME/tomato/config.
+ * /etc/tomato/config.toml and $XDG_CONFIG_HOME/tomato/config.toml.
  */
 typedef struct {
   ConfigVisual visual;
@@ -213,7 +213,7 @@ typedef struct {
 /** Global configuration singleton. */
 extern Config g_config;
 
-/** Load (or reload) configuration from TOML files and set defaults. */
+/** Load configuration from TOML files once and set defaults. */
 void LoadConfig(void);
 
 /** One TOML value to write: a "table.key" path and its formatted value. */
@@ -386,15 +386,15 @@ void SyncIconsFromIndex(void);
 
 /* Logging Settings --------------------------------------------------------- */
 
-/** Path to pomodoro binary log (default: /tmp/tomato_pomodoro.bin). */
+/** Path to pomodoro binary log (default: state dir/pomodoro.bin). */
 #define POMODORO_LOG (g_config.logging.pomodoro_log)
-/** Path to notes log (default: /tmp/tomato_notes.log). */
+/** Path to notes log (default: state dir/notes.log). */
 #define NOTES_LOG (g_config.logging.notes_log)
-/** Path to error log (default: /tmp/tomato_errors.log). */
+/** Path to error log (default: state dir/errors.log). */
 #define ERROR_LOG (g_config.logging.error_log)
 /** 0/1 — enables `-t` timer-log CLI flag (default: 1). */
 #define TIMER_LOG (g_config.logging.timer_log)
-/** Path to timer IPC socket (default: /tmp/tomato_timer.sock). */
+/** Path to timer IPC socket (default: runtime dir/tomato_timer.sock). */
 #define TIMER_FILE (g_config.logging.timer_file)
 /** 0/1 — enables resume from unfinished cycle (default: 1). */
 #define WORK_LOG (g_config.logging.work_log)

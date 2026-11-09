@@ -99,7 +99,8 @@ const char* DEFAULT_USER_CONFIG_DIR = ".config";
  *
  * Every (key, action, mode, scene) tuple is listed here with first-match
  * priority — earlier entries override later ones for the same key+scene.
- * When a TOML config provides keybindings this array is replaced entirely.
+ * TOML keybindings merge into this array and replace only matching action
+ * groups for the same mode and scene.
  */
 const KeyFunction DEFAULT_KEYS[] = {
   /* NORMAL mode - editing keys (when Panel.input != NULL) */

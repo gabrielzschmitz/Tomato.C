@@ -150,7 +150,7 @@ void UpdateWorkTime(AppData* app) {
 }
 
 /**
- * Update LONG_PAUSE scene - timer countdown and animations.
+ * Update SHORT_PAUSE scene - timer countdown and animations.
  * @param app Pointer to the application data
  */
 void UpdateShortPause(AppData* app) {

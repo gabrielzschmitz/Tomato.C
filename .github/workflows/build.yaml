@@ -1,5 +1,5 @@
 #/**
-# * @file .github/workflows/build-test.yaml
+# * @file .github/workflows/build.yaml
 # * @brief CI workflow to verify that Tomato.C compiles successfully on
 # *        Ubuntu and macOS without running the test suites.
 # *
