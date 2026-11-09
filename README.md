@@ -148,7 +148,9 @@ Build and run the packaged binary:
 ```bash
 nix build .#    # builds into result/bin/tomato
 nix run   .#    # runs the binary
-nix flake check # builds and smoke-tests the package
+nix build .#tcc # builds with TinyCC
+nix build .#zig # builds with Zig's C compiler
+nix flake check # builds and tests GCC, TinyCC, and Zig variants
 ```
 
 Enter a development shell (flake or classic `nix-shell`):
