@@ -7,6 +7,20 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-09
+
+### Added
+
+- **Nix compiler variants and checks** — Added GCC, TinyCC, and Zig packages.
+  `nix flake check` now builds and tests each compiler variant.
+
+### Fixed
+
+- **Duplicate error level** — The error line no longer repeats its severity
+  prefix.
+- **Timer socket startup race** — The UI waits until the timer server listens
+  before sending its first update, preventing a spurious timer-log error.
+
 ## [1.3.0] - 2026-11-08
 
 ### Added
