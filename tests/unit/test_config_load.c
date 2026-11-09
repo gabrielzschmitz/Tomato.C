@@ -340,6 +340,33 @@ static void test_config_string_ownership(void) {
   ASSERT_FALSE(configStringOwned(heap));
 }
 
+static void test_config_string_replace_preserves_value_on_failure(void) {
+  TEST("config string replacement preserves value when adoption fails");
+  const char* slot = configStringAdopt(strdup("old value"));
+  ASSERT_NOT_NULL(slot);
+  const char* old_value = slot;
+
+  ASSERT_FALSE(configStringReplace(&slot, NULL));
+  ASSERT_TRUE(slot == old_value);
+  ASSERT_STR_EQ(slot, "old value");
+  configStringRelease(&slot);
+}
+
+static void test_empty_noise_tracks_override_previous_tracks(void) {
+  TEST("empty noise track list clears previously loaded tracks");
+  char tmp[] = "/tmp/t_cfg_noise_empty_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp, "[noise]\ntracks = []\n");
+
+  setDefaults();
+  ASSERT_GT(g_config.noise.track_count, 0);
+  loadTomlFile(tmp);
+  ASSERT_EQ(g_config.noise.track_count, 0);
+  remove(tmp);
+}
+
 static void test_reload_replaces_owned_strings(void) {
   TEST("loading config twice replaces previously owned strings");
   char tmp[] = "/tmp/t_cfg_reload_XXXXXX";
@@ -500,6 +527,10 @@ int main(void) {
            "TOMATO_STATE_DIR and TOMATO_RUNTIME_DIR override XDG paths");
   RUN_TEST(test_config_string_ownership,
            "config string registry frees only heap strings");
+  RUN_TEST(test_config_string_replace_preserves_value_on_failure,
+           "config string replacement preserves value when adoption fails");
+  RUN_TEST(test_empty_noise_tracks_override_previous_tracks,
+           "empty noise track list clears previously loaded tracks");
   RUN_TEST(test_reload_replaces_owned_strings,
            "loading config twice replaces owned strings");
   RUN_TEST(test_state_dir_falls_back_to_passwd,

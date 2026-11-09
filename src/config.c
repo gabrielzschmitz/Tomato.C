@@ -77,6 +77,15 @@ static void configStringRelease(const char** slot) {
   *slot = NULL;
 }
 
+/** @brief Adopt replacement before releasing old value, preserving it on OOM. */
+static bool configStringReplace(const char** slot, char* value) {
+  const char* adopted = configStringAdopt(value);
+  if (!adopted) return false;
+  configStringRelease(slot);
+  *slot = adopted;
+  return true;
+}
+
 /** Path to the system-wide TOML configuration file. */
 const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config.toml";
 /**
@@ -1155,8 +1164,7 @@ static void readString(toml_table_t* root, const char* path, const char** out) {
   if (!tbl) return;
   toml_value_t v = toml_table_string(tbl, key);
   if (!v.ok) return;
-  configStringRelease(out);
-  *out = configStringAdopt(v.u.s);
+  if (!configStringReplace(out, v.u.s)) LogError("readString", MALLOC_ERROR);
 }
 
 /**
@@ -1177,8 +1185,8 @@ static void readPathString(toml_table_t* root, const char* path,
     LogError("loadTomlFile", MALLOC_ERROR);
     return;
   }
-  configStringRelease(out);
-  *out = configStringAdopt(expanded);
+  if (!configStringReplace(out, expanded))
+    LogError("readPathString", MALLOC_ERROR);
 }
 
 /**
@@ -1209,8 +1217,8 @@ static void readIconArray(toml_table_t* root, const char* path,
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
     if (!v.ok) continue;
-    configStringRelease(&out[i]);
-    out[i] = configStringAdopt(v.u.s);
+    if (!configStringReplace(&out[i], v.u.s))
+      LogError("readIconArray", MALLOC_ERROR);
   }
 }
 
@@ -1241,8 +1249,8 @@ static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
       configStringRelease(&out[i]);
       continue;
     }
-    configStringRelease(&out[i]);
-    out[i] = configStringAdopt(v.u.s);
+    if (!configStringReplace(&out[i], v.u.s))
+      LogError("readStringArrayFromTable", MALLOC_ERROR);
   }
 }
 
@@ -1318,6 +1326,7 @@ static void readKeybindings(toml_table_t* root) {
           toml_value_t elem = toml_array_string(arr, ki);
           if (!elem.ok) continue;
           int key = keycodeFromString(elem.u.s);
+          free(elem.u.s);
           if (key == 0) continue;
 
           if (tmp_count >= tmp_cap) {
@@ -1378,6 +1387,7 @@ static void readKeybindings(toml_table_t* root) {
         (ActionGroup*)realloc(groups, (n_groups + 1) * sizeof(ActionGroup));
       if (!p) {
         LogError("readKeybindings", MALLOC_ERROR);
+        for (size_t k = 0; k < n_groups; k++) free(groups[k].key_list);
         free(groups);
         goto cleanup;
       }
@@ -1399,6 +1409,7 @@ static void readKeybindings(toml_table_t* root) {
                             (groups[g].key_count + 1) * sizeof(int));
     if (!kp) {
       LogError("readKeybindings", MALLOC_ERROR);
+      for (size_t k = 0; k < n_groups; k++) free(groups[k].key_list);
       free(groups);
       goto cleanup;
     }
@@ -1419,6 +1430,7 @@ static void readKeybindings(toml_table_t* root) {
   int* covered = (int*)CALLOC(old_count, sizeof(int));
   if (!covered) {
     LogError("readKeybindings", MALLOC_ERROR);
+    for (size_t k = 0; k < n_groups; k++) free(groups[k].key_list);
     free(groups);
     goto cleanup;
   }
@@ -1438,6 +1450,7 @@ static void readKeybindings(toml_table_t* root) {
   if (!group_pos) {
     LogError("readKeybindings", MALLOC_ERROR);
     free(covered);
+    for (size_t k = 0; k < n_groups; k++) free(groups[k].key_list);
     free(groups);
     goto cleanup;
   }
@@ -1466,6 +1479,7 @@ static void readKeybindings(toml_table_t* root) {
     LogError("readKeybindings", MALLOC_ERROR);
     free(group_pos);
     free(covered);
+    for (size_t k = 0; k < n_groups; k++) free(groups[k].key_list);
     free(groups);
     goto cleanup;
   }
@@ -1593,8 +1607,8 @@ static void readNotificationConfig(toml_table_t* root, const char* prefix,
     char* expanded = expandDatadir(value);
     configStringRelease(&value);
     if (expanded) {
-      configStringRelease(&cfg->audio_path);
-      cfg->audio_path = configStringAdopt(expanded);
+      if (!configStringReplace(&cfg->audio_path, expanded))
+        LogError("readNotificationConfig", MALLOC_ERROR);
     }
   }
 }
@@ -1617,7 +1631,12 @@ static void readNoiseTracks(toml_table_t* root) {
   toml_array_t* arr = toml_table_array(noise_tbl, "tracks");
   if (!arr) return;
   int len = toml_array_len(arr);
-  if (len <= 0) return;
+  if (len <= 0) {
+    for (int i = 0; i < g_config.noise.track_count; i++)
+      releaseNoiseTrack(&g_config.noise.tracks[i]);
+    g_config.noise.track_count = 0;
+    return;
+  }
   if (len > MAX_NOISE_TRACKS) len = MAX_NOISE_TRACKS;
   int old_count = g_config.noise.track_count;
   for (int i = len; i < old_count; i++)
@@ -1629,16 +1648,17 @@ static void readNoiseTracks(toml_table_t* root) {
     toml_value_t v;
     v = toml_table_string(tbl, "name");
     if (v.ok) {
-      configStringRelease(&g_config.noise.tracks[i].name);
-      g_config.noise.tracks[i].name = configStringAdopt(v.u.s);
+      if (!configStringReplace(&g_config.noise.tracks[i].name, v.u.s))
+        LogError("readNoiseTracks", MALLOC_ERROR);
     }
     v = toml_table_string(tbl, "sound_path");
     if (v.ok) {
       char* expanded = expandDatadir(v.u.s);
       free(v.u.s);
       if (expanded) {
-        configStringRelease(&g_config.noise.tracks[i].sound_path);
-        g_config.noise.tracks[i].sound_path = configStringAdopt(expanded);
+        if (!configStringReplace(&g_config.noise.tracks[i].sound_path,
+                                 expanded))
+          LogError("readNoiseTracks", MALLOC_ERROR);
       }
     }
     v = toml_table_int(tbl, "default_volume");
@@ -1650,8 +1670,8 @@ static void readNoiseTracks(toml_table_t* root) {
       for (int j = 0; j < 3; j++) {
         toml_value_t iv = toml_array_string(icons_arr, j);
         if (!iv.ok) continue;
-        configStringRelease(&g_config.noise.tracks[i].icons[j]);
-        g_config.noise.tracks[i].icons[j] = configStringAdopt(iv.u.s);
+        if (!configStringReplace(&g_config.noise.tracks[i].icons[j], iv.u.s))
+          LogError("readNoiseTracks", MALLOC_ERROR);
       }
     }
   }
