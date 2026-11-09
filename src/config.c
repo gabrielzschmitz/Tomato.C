@@ -28,6 +28,55 @@
 /* Config */
 static char* expandDatadir(const char* input);
 
+/*
+ * Built-in defaults are string literals, while strings loaded from TOML are
+ * heap allocated. Track the heap strings so repeated loads can replace them
+ * without freeing a literal.
+ */
+static char** owned_strings = NULL;
+static size_t owned_count = 0;
+static size_t owned_capacity = 0;
+
+static bool configStringOwned(const char* value) {
+  for (size_t i = 0; i < owned_count; i++)
+    if (owned_strings[i] == value) return true;
+  return false;
+}
+
+static void configStringForget(const char* value) {
+  for (size_t i = 0; i < owned_count; i++) {
+    if (owned_strings[i] == value) {
+      owned_strings[i] = owned_strings[--owned_count];
+      return;
+    }
+  }
+}
+
+/** @brief Register a heap string that config owns; returns the same pointer. */
+static const char* configStringAdopt(char* value) {
+  if (!value) return NULL;
+  if (owned_count == owned_capacity) {
+    size_t capacity = owned_capacity ? owned_capacity * 2 : 64;
+    char** grown = realloc(owned_strings, capacity * sizeof(*grown));
+    if (!grown) {
+      free(value);
+      return NULL;
+    }
+    owned_strings = grown;
+    owned_capacity = capacity;
+  }
+  owned_strings[owned_count++] = value;
+  return value;
+}
+
+/** @brief Free slot when it holds an owned string; leave literals alone. */
+static void configStringRelease(const char** slot) {
+  if (!slot || !*slot || !configStringOwned(*slot)) return;
+  configStringForget(*slot);
+  free((char*)*slot);
+  *slot = NULL;
+}
+
 /** Path to the system-wide TOML configuration file. */
 const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config.toml";
 /**
@@ -924,13 +973,13 @@ static void setDefaults(void) {
 
     char buf[8192];
     snprintf(buf, sizeof(buf), "%s/pomodoro.bin", state_dir);
-    g_config.logging.pomodoro_log = strdup(buf);
+    g_config.logging.pomodoro_log = configStringAdopt(strdup(buf));
     snprintf(buf, sizeof(buf), "%s/notes.log", state_dir);
-    g_config.logging.notes_log = strdup(buf);
+    g_config.logging.notes_log = configStringAdopt(strdup(buf));
     snprintf(buf, sizeof(buf), "%s/errors.log", state_dir);
-    g_config.logging.error_log = strdup(buf);
+    g_config.logging.error_log = configStringAdopt(strdup(buf));
     snprintf(buf, sizeof(buf), "%s/tomato_timer.sock", socket_dir);
-    g_config.logging.timer_file = strdup(buf);
+    g_config.logging.timer_file = configStringAdopt(strdup(buf));
   }
   g_config.logging.timer_log = 1;
   g_config.logging.work_log = 1;
@@ -968,6 +1017,7 @@ static void setDefaults(void) {
  * Called after any preference dialog commit that changes icons_index.
  */
 void SyncIconsFromIndex(void) {
+  configStringRelease(&g_config.visual.icons);
   switch (g_config.visual.icons_index) {
     case 0:
       g_config.visual.icons = "nerd-icons";
@@ -1086,7 +1136,7 @@ static void readFloat(toml_table_t* root, const char* path, float* out) {
  * Silently no-ops if the key is absent or the table segment is missing.
  * @param root Top-level TOML table
  * @param path Dot-separated path to the string key
- * @param out Output pointer for the string (caller does not own memory)
+ * @param out Output pointer for the string (owned by the config registry)
  */
 static void readString(toml_table_t* root, const char* path, const char** out) {
   char buf[PATH_MAX];
@@ -1104,7 +1154,31 @@ static void readString(toml_table_t* root, const char* path, const char** out) {
   }
   if (!tbl) return;
   toml_value_t v = toml_table_string(tbl, key);
-  if (v.ok) *out = v.u.s;
+  if (!v.ok) return;
+  configStringRelease(out);
+  *out = configStringAdopt(v.u.s);
+}
+
+/**
+ * Read a path string and expand its $DATADIR token.
+ * @param root Top-level TOML table
+ * @param path Dot-separated path to the string key
+ * @param out Output pointer, replaced only when the key is present
+ */
+static void readPathString(toml_table_t* root, const char* path,
+                           const char** out) {
+  const char* value = NULL;
+  readString(root, path, &value);
+  if (!value) return;
+
+  char* expanded = expandDatadir(value);
+  configStringRelease(&value);
+  if (!expanded) {
+    LogError("loadTomlFile", MALLOC_ERROR);
+    return;
+  }
+  configStringRelease(out);
+  *out = configStringAdopt(expanded);
 }
 
 /**
@@ -1134,7 +1208,9 @@ static void readIconArray(toml_table_t* root, const char* path,
   if (len > 3) len = 3;
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
-    if (v.ok) out[i] = strdup(v.u.s);
+    if (!v.ok) continue;
+    configStringRelease(&out[i]);
+    out[i] = configStringAdopt(v.u.s);
   }
 }
 
@@ -1143,7 +1219,7 @@ static void readIconArray(toml_table_t* root, const char* path,
  * Silently no-ops if the key is absent.
  * @param tbl  The parent TOML table
  * @param key  The array key within tbl
- * @param out  Output array of string pointers (caller does not own memory)
+ * @param out  Output array of string pointers (owned by the config registry)
  * @param count  Set to the number of elements read (0 if absent)
  * @param max  Maximum elements to read
  */
@@ -1151,15 +1227,22 @@ static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
                                      const char* out[], int* count, int max) {
   toml_array_t* arr = toml_table_array(tbl, key);
   if (!arr) {
+    for (int i = 0; i < *count; i++) configStringRelease(&out[i]);
     *count = 0;
     return;
   }
   int len = toml_array_len(arr);
   if (len > max) len = max;
+  for (int i = len; i < *count; i++) configStringRelease(&out[i]);
   *count = len;
   for (int i = 0; i < len; i++) {
     toml_value_t v = toml_array_string(arr, i);
-    if (v.ok) out[i] = strdup(v.u.s);
+    if (!v.ok) {
+      configStringRelease(&out[i]);
+      continue;
+    }
+    configStringRelease(&out[i]);
+    out[i] = configStringAdopt(v.u.s);
   }
 }
 
@@ -1489,25 +1572,29 @@ cleanup:
 static void readNotificationConfig(toml_table_t* root, const char* prefix,
                                    NotificationConfig* cfg) {
   char path[PATH_MAX];
+  const char* value = NULL;
   snprintf(path, sizeof(path), "%s.title", prefix);
-  const char* old_title = cfg->title;
-  readString(root, path, &cfg->title);
-  if (cfg->title && cfg->title != old_title) cfg->title = strdup(cfg->title);
+  readString(root, path, &value);
+  if (value) {
+    configStringRelease(&cfg->title);
+    cfg->title = value;
+    value = NULL;
+  }
   snprintf(path, sizeof(path), "%s.description", prefix);
-  const char* old_desc = cfg->description;
-  readString(root, path, &cfg->description);
-  if (cfg->description && cfg->description != old_desc)
-    cfg->description = strdup(cfg->description);
+  readString(root, path, &value);
+  if (value) {
+    configStringRelease(&cfg->description);
+    cfg->description = value;
+    value = NULL;
+  }
   snprintf(path, sizeof(path), "%s.audio_path", prefix);
-  const char* old_audio = cfg->audio_path;
-  readString(root, path, &cfg->audio_path);
-  if (cfg->audio_path && cfg->audio_path != old_audio) {
-    char* expanded = expandDatadir(cfg->audio_path);
+  readString(root, path, &value);
+  if (value) {
+    char* expanded = expandDatadir(value);
+    configStringRelease(&value);
     if (expanded) {
-      free((char*)cfg->audio_path);
-      cfg->audio_path = expanded;
-    } else {
-      cfg->audio_path = strdup(cfg->audio_path);
+      configStringRelease(&cfg->audio_path);
+      cfg->audio_path = configStringAdopt(expanded);
     }
   }
 }
@@ -1518,6 +1605,12 @@ static void readNotificationConfig(toml_table_t* root, const char* prefix,
  * If present, replaces the default track list entirely.
  * @param root Top-level TOML table
  */
+static void releaseNoiseTrack(ConfigNoiseTrack* track) {
+  configStringRelease(&track->name);
+  configStringRelease(&track->sound_path);
+  for (int j = 0; j < 3; j++) configStringRelease(&track->icons[j]);
+}
+
 static void readNoiseTracks(toml_table_t* root) {
   toml_table_t* noise_tbl = toml_table_table(root, "noise");
   if (!noise_tbl) return;
@@ -1526,17 +1619,27 @@ static void readNoiseTracks(toml_table_t* root) {
   int len = toml_array_len(arr);
   if (len <= 0) return;
   if (len > MAX_NOISE_TRACKS) len = MAX_NOISE_TRACKS;
+  int old_count = g_config.noise.track_count;
+  for (int i = len; i < old_count; i++)
+    releaseNoiseTrack(&g_config.noise.tracks[i]);
   g_config.noise.track_count = len;
   for (int i = 0; i < len; i++) {
     toml_table_t* tbl = toml_array_table(arr, i);
     if (!tbl) continue;
     toml_value_t v;
     v = toml_table_string(tbl, "name");
-    if (v.ok) g_config.noise.tracks[i].name = strdup(v.u.s);
+    if (v.ok) {
+      configStringRelease(&g_config.noise.tracks[i].name);
+      g_config.noise.tracks[i].name = configStringAdopt(v.u.s);
+    }
     v = toml_table_string(tbl, "sound_path");
     if (v.ok) {
       char* expanded = expandDatadir(v.u.s);
-      g_config.noise.tracks[i].sound_path = expanded ? expanded : strdup(v.u.s);
+      free(v.u.s);
+      if (expanded) {
+        configStringRelease(&g_config.noise.tracks[i].sound_path);
+        g_config.noise.tracks[i].sound_path = configStringAdopt(expanded);
+      }
     }
     v = toml_table_int(tbl, "default_volume");
     if (v.ok) g_config.noise.tracks[i].default_volume = (int)v.u.i;
@@ -1546,7 +1649,9 @@ static void readNoiseTracks(toml_table_t* root) {
     if (icons_arr && toml_array_len(icons_arr) >= 3) {
       for (int j = 0; j < 3; j++) {
         toml_value_t iv = toml_array_string(icons_arr, j);
-        if (iv.ok) g_config.noise.tracks[i].icons[j] = strdup(iv.u.s);
+        if (!iv.ok) continue;
+        configStringRelease(&g_config.noise.tracks[i].icons[j]);
+        g_config.noise.tracks[i].icons[j] = configStringAdopt(iv.u.s);
       }
     }
   }
@@ -1612,10 +1717,7 @@ static void loadTomlFile(const char* path) {
   }
 
   readInt(root, "visual.animations", &g_config.visual.animations);
-  const char* old_icons = g_config.visual.icons;
   readString(root, "visual.icons", &g_config.visual.icons);
-  if (g_config.visual.icons && g_config.visual.icons != old_icons)
-    g_config.visual.icons = strdup(g_config.visual.icons);
   /* Sync icons_index from the string after TOML override */
   if (strcmp(g_config.visual.icons, "nerd-icons") == 0) {
     g_config.visual.icons_index = 0;
@@ -1628,6 +1730,7 @@ static void loadTomlFile(const char* path) {
     snprintf(msg, sizeof(msg), "visual.icons \"%s\" is not valid; using ascii",
              g_config.visual.icons);
     addConfigWarning(ERROR_LEVEL_WARNING, msg);
+    configStringRelease(&g_config.visual.icons);
     g_config.visual.icons = "ascii";
     g_config.visual.icons_index = 2;
   }
@@ -1711,24 +1814,10 @@ static void loadTomlFile(const char* path) {
   readIconArray(root, "visual.ui.icons.misc.back",
                 g_config.visual.ui.icons.misc.back);
 
-  {
-    const char* old = g_config.visual.ui.icons.misc.visual_cursor;
-    readString(root, "visual.ui.icons.misc.visual_cursor",
-               &g_config.visual.ui.icons.misc.visual_cursor);
-    if (g_config.visual.ui.icons.misc.visual_cursor &&
-        g_config.visual.ui.icons.misc.visual_cursor != old)
-      g_config.visual.ui.icons.misc.visual_cursor =
-        strdup(g_config.visual.ui.icons.misc.visual_cursor);
-  }
-  {
-    const char* old = g_config.visual.ui.icons.misc.insert_cursor;
-    readString(root, "visual.ui.icons.misc.insert_cursor",
-               &g_config.visual.ui.icons.misc.insert_cursor);
-    if (g_config.visual.ui.icons.misc.insert_cursor &&
-        g_config.visual.ui.icons.misc.insert_cursor != old)
-      g_config.visual.ui.icons.misc.insert_cursor =
-        strdup(g_config.visual.ui.icons.misc.insert_cursor);
-  }
+  readString(root, "visual.ui.icons.misc.visual_cursor",
+             &g_config.visual.ui.icons.misc.visual_cursor);
+  readString(root, "visual.ui.icons.misc.insert_cursor",
+             &g_config.visual.ui.icons.misc.insert_cursor);
   readIconArray(root, "visual.ui.icons.misc.border_chars",
                 g_config.visual.ui.icons.misc.border_chars);
   readIconArray(root, "visual.ui.icons.misc.history",
@@ -1772,39 +1861,11 @@ static void loadTomlFile(const char* path) {
   if (g_config.noise.master_volume > 100) g_config.noise.master_volume = 100;
   readNoiseTracks(root);
 
-  readString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
-  if (g_config.logging.pomodoro_log) {
-    const char* old = g_config.logging.pomodoro_log;
-    char* expanded = expandDatadir(old);
-    g_config.logging.pomodoro_log = expanded ? expanded : strdup(old);
-    free((char*)old);
-    if (!g_config.logging.pomodoro_log) LogError("loadTomlFile", MALLOC_ERROR);
-  }
-  readString(root, "logging.notes_log", &g_config.logging.notes_log);
-  if (g_config.logging.notes_log) {
-    const char* old = g_config.logging.notes_log;
-    char* expanded = expandDatadir(old);
-    g_config.logging.notes_log = expanded ? expanded : strdup(old);
-    free((char*)old);
-    if (!g_config.logging.notes_log) LogError("loadTomlFile", MALLOC_ERROR);
-  }
-  readString(root, "logging.error_log", &g_config.logging.error_log);
-  if (g_config.logging.error_log) {
-    const char* old = g_config.logging.error_log;
-    char* expanded = expandDatadir(old);
-    g_config.logging.error_log = expanded ? expanded : strdup(old);
-    free((char*)old);
-    if (!g_config.logging.error_log) LogError("loadTomlFile", MALLOC_ERROR);
-  }
+  readPathString(root, "logging.pomodoro_log", &g_config.logging.pomodoro_log);
+  readPathString(root, "logging.notes_log", &g_config.logging.notes_log);
+  readPathString(root, "logging.error_log", &g_config.logging.error_log);
   readBool(root, "logging.timer_log", &g_config.logging.timer_log);
-  readString(root, "logging.timer_file", &g_config.logging.timer_file);
-  if (g_config.logging.timer_file) {
-    const char* old = g_config.logging.timer_file;
-    char* expanded = expandDatadir(old);
-    g_config.logging.timer_file = expanded ? expanded : strdup(old);
-    free((char*)old);
-    if (!g_config.logging.timer_file) LogError("loadTomlFile", MALLOC_ERROR);
-  }
+  readPathString(root, "logging.timer_file", &g_config.logging.timer_file);
   readBool(root, "logging.work_log", &g_config.logging.work_log);
   readBool(root, "logging.history_log", &g_config.logging.history_log);
   readBool(root, "logging.notepad_log", &g_config.logging.notepad_log);

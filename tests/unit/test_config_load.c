@@ -326,6 +326,65 @@ static void test_state_and_runtime_overrides(void) {
   rmdir("/tmp/t_cfg_runtime");
 }
 
+static void test_config_string_ownership(void) {
+  TEST("config string registry frees only heap strings");
+  const char* literal = "literal";
+  configStringRelease(&literal);
+  ASSERT_STR_EQ(literal, "literal");
+
+  char* heap = strdup("heap");
+  const char* owned = configStringAdopt(heap);
+  ASSERT_TRUE(configStringOwned(owned));
+  configStringRelease(&owned);
+  ASSERT_NULL(owned);
+  ASSERT_FALSE(configStringOwned(heap));
+}
+
+static void test_reload_replaces_owned_strings(void) {
+  TEST("loading config twice replaces previously owned strings");
+  char tmp[] = "/tmp/t_cfg_reload_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  FILE* f = fdopen(fd, "w");
+  ASSERT_NOT_NULL(f);
+  fputs(
+    "[visual]\n"
+    "icons = \"emojis\"\n"
+    "\n"
+    "[visual.ui.icons.pomodoro]\n"
+    "work = [\"w1\", \"w2\", \"w3\"]\n"
+    "\n"
+    "[visual.status_bar.modules]\n"
+    "left = [\"InputMode\"]\n"
+    "\n"
+    "[notifications.work]\n"
+    "title = \"One\"\n"
+    "description = \"Desc one\"\n"
+    "audio_path = \"$DATADIR/one.mp3\"\n"
+    "\n"
+    "[[noise.tracks]]\n"
+    "name = \"Rain\"\n"
+    "sound_path = \"/tmp/rain.mp3\"\n"
+    "icons = [\"r1\", \"r2\", \"r3\"]\n",
+    f);
+  fclose(f);
+
+  setDefaults();
+  for (int pass = 0; pass < 2; pass++) {
+    loadTomlFile(tmp);
+    ASSERT_STR_EQ(g_config.visual.icons, "emojis");
+    ASSERT_STR_EQ(g_config.visual.ui.icons.pomodoro.work[0], "w1");
+    ASSERT_STR_EQ(g_config.visual.status_bar_left_modules[0], "InputMode");
+    ASSERT_EQ(g_config.visual.status_bar_left_count, 1);
+    ASSERT_STR_EQ(g_config.notifications.work.title, "One");
+    ASSERT_NOT_NULL(g_config.notifications.work.audio_path);
+    ASSERT_EQ(g_config.noise.track_count, 1);
+    ASSERT_STR_EQ(g_config.noise.tracks[0].name, "Rain");
+    ASSERT_STR_EQ(g_config.noise.tracks[0].icons[1], "r2");
+  }
+  remove(tmp);
+}
+
 static void test_state_dir_falls_back_to_passwd(void) {
   TEST("state dir uses passwd home when HOME is unset");
   char* old_home = save_env("HOME");
@@ -439,6 +498,10 @@ int main(void) {
            "relative TOMATO_CONFIG_DIR is ignored");
   RUN_TEST(test_state_and_runtime_overrides,
            "TOMATO_STATE_DIR and TOMATO_RUNTIME_DIR override XDG paths");
+  RUN_TEST(test_config_string_ownership,
+           "config string registry frees only heap strings");
+  RUN_TEST(test_reload_replaces_owned_strings,
+           "loading config twice replaces owned strings");
   RUN_TEST(test_state_dir_falls_back_to_passwd,
            "state dir uses passwd home when HOME is unset");
   RUN_TEST(test_private_dir_helper,
