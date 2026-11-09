@@ -2,9 +2,7 @@
 *.d
 .vscode/
 media/
-LICENSE
 tomato
-tomatonoise
 compile_commands.json
 .cache/
 .tmp/
