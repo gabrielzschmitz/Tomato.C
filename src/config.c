@@ -1011,7 +1011,7 @@ static void setDefaults(void) {
   g_config.visual.status_bar_right_count = 2;
 
   g_config.misc.wsl = 0;
-  g_config.misc.fps = 120;
+  g_config.misc.fps = 30;
   g_config.misc.max_note_depth = 1;
 
   g_config.key_bindings =
@@ -1896,8 +1896,8 @@ static void loadTomlFile(const char* path) {
 
   readBool(root, "misc.wsl", &g_config.misc.wsl);
   readInt(root, "misc.fps", &g_config.misc.fps);
-  if (g_config.misc.fps < 1) g_config.misc.fps = 1;
-  if (g_config.misc.fps > 240) g_config.misc.fps = 240;
+  if (g_config.misc.fps < 10) g_config.misc.fps = 10;
+  if (g_config.misc.fps > 30) g_config.misc.fps = 30;
   readInt(root, "misc.max_note_depth", &g_config.misc.max_note_depth);
 
   readKeybindings(root);

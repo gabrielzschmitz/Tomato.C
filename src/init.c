@@ -643,8 +643,8 @@ static void initPrefsData(PrefsState* state) {
     /* Misc */
     {"Misc", PREF_SECTION, NULL, NULL, 0, 0, 0, NULL, NULL, 0, NULL, NULL,
      PREF_TOML_INT},
-    {"FPS", PREF_STEPPER_INT, &g_config.misc.fps, NULL, 30, 240, 30, "", NULL,
-     0, NULL, "misc.fps", PREF_TOML_INT},
+    {"FPS", PREF_STEPPER_INT, &g_config.misc.fps, NULL, 10, 30, 10, "", NULL, 0,
+     NULL, "misc.fps", PREF_TOML_INT},
     {"Max Note Depth", PREF_STEPPER_INT, &g_config.misc.max_note_depth, NULL, 0,
      3, 1, "", NULL, 0, NULL, "misc.max_note_depth", PREF_TOML_INT},
     {"Resume Unfinished Session", PREF_TOGGLE, &g_config.logging.work_log, NULL,

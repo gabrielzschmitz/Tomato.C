@@ -424,7 +424,7 @@ extern const char* default_user_config_dir;
 #define SEPARATOR                                                              \
   "--------------------------------------------------------------------------" \
   "-"
-/** Target frame rate (default: 120). */
+/** Maximum animation frame rate (default: 30). */
 #define FPS (g_config.misc.fps)
 /** Maximum hierarchical note depth, 0-3 (default: 1). */
 #define MAX_NOTE_DEPTH (g_config.misc.max_note_depth)
