@@ -40,6 +40,9 @@ typedef struct __attribute__((packed)) {
  */
 ErrorType CreateTimerLog(const char* path);
 
+/** Create timer server and signal readiness after listen succeeds. */
+ErrorType CreateTimerLogWithReadyFD(const char* path, int ready_fd);
+
 /**
  * Get the timer log from the socket (client-side).
  * Connects to the timer log server and reads current status.

@@ -1,5 +1,6 @@
 #include "tomato.h"
 
+#include <errno.h>
 #include <locale.h>
 #include <ncurses.h>
 #include <signal.h>
@@ -178,15 +179,37 @@ int main(int argc, char* argv[]) {
     SetErrorMessage(level, message);
   }
 
-  /* Log process */
+  /* Start timer server and wait until it listens before the UI sends updates. */
+  int ready_pipe[2];
+  if (pipe(ready_pipe) != 0)
+    handleErrorAndExit("Creating timer log readiness pipe", FILE_ERROR, &app,
+                       0);
+
   pid_t pid = fork();
   if (pid == 0) {
-    /* Timer log process */
-    if (CreateTimerLog(TIMER_FILE) != NO_ERROR)
+    close(ready_pipe[0]);
+    ErrorType timer_status =
+      CreateTimerLogWithReadyFD(TIMER_FILE, ready_pipe[1]);
+    if (timer_status != NO_ERROR) {
+      close(ready_pipe[1]);
       LogError("Timer log server failure", TIMER_LOG_ERROR);
+    }
     _exit(0);
-  } else if (pid < 0)
+  } else if (pid < 0) {
+    close(ready_pipe[0]);
+    close(ready_pipe[1]);
     handleErrorAndExit("Forking the main process", FORK_ERROR, NULL, 0);
+  }
+
+  close(ready_pipe[1]);
+  char server_ready = '\0';
+  ssize_t ready_size;
+  do {
+    ready_size = read(ready_pipe[0], &server_ready, sizeof(server_ready));
+  } while (ready_size < 0 && errno == EINTR);
+  close(ready_pipe[0]);
+  if (ready_size != sizeof(server_ready) || server_ready != 'R')
+    SetError(&app, "Starting timer log server", TIMER_LOG_ERROR);
 
   if (DEBUG) {
     /* TEST ERROR LINE - uncomment to test */

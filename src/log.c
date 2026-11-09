@@ -86,7 +86,7 @@ static bool histIsSameMonth(time_t ts, int year, int month);
  * @param path File path for the Unix socket
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
-ErrorType CreateTimerLog(const char* path) {
+ErrorType CreateTimerLogWithReadyFD(const char* path, int ready_fd) {
   int server_sock, client_sock;
   struct sockaddr_un addr;
   fd_set master_set, working_set;
@@ -137,6 +137,21 @@ ErrorType CreateTimerLog(const char* path) {
   FD_ZERO(&master_set);
   FD_SET(server_sock, &master_set);
   max_sd = server_sock;
+
+  if (ready_fd >= 0) {
+    const char ready = 'R';
+    ssize_t written;
+    do {
+      written = write(ready_fd, &ready, sizeof(ready));
+    } while (written < 0 && errno == EINTR);
+    close(ready_fd);
+    if (written != sizeof(ready)) {
+      LogError("CreateTimerLog", SOCKET_WRITE_ERROR);
+      close(server_sock);
+      unlink(path);
+      return SOCKET_WRITE_ERROR;
+    }
+  }
 
   while (1) {
     working_set = master_set;
@@ -204,6 +219,10 @@ ErrorType CreateTimerLog(const char* path) {
   close(server_sock);
   unlink(path);
   return NO_ERROR;
+}
+
+ErrorType CreateTimerLog(const char* path) {
+  return CreateTimerLogWithReadyFD(path, -1);
 }
 
 /**

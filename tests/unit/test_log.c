@@ -909,21 +909,25 @@ static void test_timer_socket_is_private(void) {
   char path[512];
   snprintf(path, sizeof(path), "%s/timer.sock", dir);
 
+  int ready_pipe[2];
+  ASSERT_EQ(pipe(ready_pipe), 0);
+
   pid_t pid = fork();
   ASSERT_GT(pid, -1);
   if (pid == 0) {
-    CreateTimerLog(path);
+    close(ready_pipe[0]);
+    CreateTimerLogWithReadyFD(path, ready_pipe[1]);
     _exit(0);
   }
+  close(ready_pipe[1]);
+  char server_ready = '\0';
+  ASSERT_EQ(read(ready_pipe[0], &server_ready, sizeof(server_ready)),
+            (ssize_t)sizeof(server_ready));
+  ASSERT_EQ(server_ready, 'R');
+  close(ready_pipe[0]);
 
   struct stat st;
-  int found = -1;
-  for (int i = 0; i < 200; i++) {
-    found = lstat(path, &st);
-    if (found == 0) break;
-    usleep(10000);
-  }
-  ASSERT_EQ(found, 0);
+  ASSERT_EQ(lstat(path, &st), 0);
   ASSERT_EQ(st.st_mode & 0777, 0700);
 
   kill(pid, SIGTERM);
