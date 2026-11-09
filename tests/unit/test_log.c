@@ -61,6 +61,59 @@ static void write_rec(FILE* f, uint16_t idx, uint8_t step, uint8_t cycle,
   fwrite(&r, sizeof(r), 1, f);
 }
 
+/** @brief Cached month counts and streaks refresh after log mutations. */
+static void test_history_cache_refreshes_after_log_mutations(void) {
+  TEST("history cache refreshes after append and removal");
+  char tmp[] = "/tmp/t_log_history_cache_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+
+  FILE* file = fdopen(fd, "wb");
+  ASSERT_NOT_NULL(file);
+  write_rec(file, 1, 0, 4, 4, 25, 5, 15, 0, 0, 0,
+            (uint32_t)mkts(2024, 1, 1, 10, 0));
+  write_rec(file, 2, 0, 4, 4, 25, 5, 15, 0, 0, 0,
+            (uint32_t)mkts(2024, 1, 2, 10, 0));
+  write_rec(file, 3, 0, 4, 4, 25, 5, 15, 0, 0, 0,
+            (uint32_t)mkts(2024, 1, 4, 10, 0));
+  fclose(file);
+
+  int counts[31];
+  ASSERT_EQ(HistDailyCounts(tmp, 2024, 1, counts), 31);
+  ASSERT_EQ(counts[0], 1);
+  ASSERT_EQ(counts[1], 1);
+  ASSERT_EQ(counts[3], 1);
+
+  int current = 0, longest = 0;
+  HistStreak(tmp, 2024, 1, 2, &current, &longest);
+  ASSERT_EQ(current, 2);
+  ASSERT_EQ(longest, 2);
+
+  PomodoroData data = {0};
+  data.session_index = 4;
+  data.total_cycles = 4;
+  data.work_time = 25;
+  data.short_pause_time = 5;
+  data.long_pause_time = 15;
+  data.status = 1;
+  data.session_start_time = (time_t)mkts(2024, 1, 3, 10, 0);
+  ASSERT_EQ(SavePomodoro(tmp, &data), NO_ERROR);
+  ASSERT_EQ(HistDailyCounts(tmp, 2024, 1, counts), 31);
+  ASSERT_EQ(counts[2], 1);
+  HistStreak(tmp, 2024, 1, 4, &current, &longest);
+  ASSERT_EQ(current, 4);
+  ASSERT_EQ(longest, 4);
+
+  ASSERT_EQ(RemoveUncompletedEntries(tmp, 4), NO_ERROR);
+  ASSERT_EQ(HistDailyCounts(tmp, 2024, 1, counts), 31);
+  ASSERT_EQ(counts[2], 0);
+  HistStreak(tmp, 2024, 1, 4, &current, &longest);
+  ASSERT_EQ(current, 1);
+  ASSERT_EQ(longest, 2);
+
+  remove(tmp);
+}
+
 /**
  * ---------------------------------------------------------------------------
  * HistSessionsForDay — formula-based duration & end-time edge cases
@@ -451,7 +504,8 @@ static void test_work_totals_exclude_breaks(void) {
   write_rec(f, 1, 0, 2, 2, 25, 5, 30, 0, 0, 0, (uint32_t)time(NULL));
   fclose(f);
 
-  const char* overview = capture_stdout((void (*)(const char*))GetPomodoroHistory, tmp);
+  const char* overview =
+    capture_stdout((void (*)(const char*))GetPomodoroHistory, tmp);
   ASSERT_NOT_NULL(strstr(overview, "Work: 50 min"));
 
   const char* day = capture_stdout(GetPomodoroHistoryDay, tmp);
@@ -830,10 +884,8 @@ static void test_load_garbage_file(void) {
   int fd = mkstemp(tmp);
   ASSERT_GT(fd, -1);
 
-  unsigned char garbage[] = {
-    0xFF, 0xFE, 0x00, 0x01, 0xDE, 0xAD, 0xBE, 0xEF,
-    0xBA, 0xDD, 0xCA, 0xFE, 0x00, 0x11, 0x22, 0x33
-  };
+  unsigned char garbage[] = {0xFF, 0xFE, 0x00, 0x01, 0xDE, 0xAD, 0xBE, 0xEF,
+                             0xBA, 0xDD, 0xCA, 0xFE, 0x00, 0x11, 0x22, 0x33};
   write(fd, garbage, sizeof(garbage));
   close(fd);
 
@@ -944,6 +996,8 @@ static void test_timer_socket_is_private(void) {
 
 int main(void) {
   test_begin("log");
+  RUN_TEST(test_history_cache_refreshes_after_log_mutations,
+           "history cache refreshes after log mutations");
   RUN_TEST(test_hist_days_in_month_jan, "HistDaysInMonth January");
   RUN_TEST(test_hist_days_in_month_feb_non_leap,
            "HistDaysInMonth February non-leap");
@@ -1000,8 +1054,7 @@ int main(void) {
            "RemoveUncompletedEntries removes uncompleted entries");
   RUN_TEST(test_remove_uncompleted_all_completed,
            "RemoveUncompletedEntries all completed keeps all");
-  RUN_TEST(test_load_empty_file,
-           "LoadPomodoro empty file returns empty data");
+  RUN_TEST(test_load_empty_file, "LoadPomodoro empty file returns empty data");
   RUN_TEST(test_load_invalid_record_does_not_modify_data,
            "LoadPomodoro invalid record leaves data unchanged");
   RUN_TEST(test_load_corrupted_file_partial_record,

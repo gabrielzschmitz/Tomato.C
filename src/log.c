@@ -26,7 +26,41 @@
 /* PRIVATE LOG FUNCTIONS */
 /* Minimum time between identical or failed timer-log attempts. */
 #define SOCKET_MIN_INTERVAL_MS 1000.0
+#define HISTORY_CACHE_PATH_SIZE 512
+#define HISTORY_MONTH_CACHE_SIZE 16
+#define HISTORY_STREAK_CACHE_SIZE 16
 static time_t retry_start = 0;
+
+typedef struct {
+  bool valid;
+  int year;
+  int month;
+  int days;
+  int counts[31];
+} HistoryMonthCache;
+
+typedef struct {
+  bool valid;
+  int year;
+  int month;
+  int day;
+  int current;
+  int longest;
+} HistoryStreakCache;
+
+static void invalidateHistoryCache(void);
+static void refreshHistoryCache(const char* path);
+static int compareTimeValues(const void* left, const void* right);
+static void computeHistStreak(const char* path, int year, int month, int day,
+                              int* current, int* longest);
+static HistoryMonthCache history_month_cache[HISTORY_MONTH_CACHE_SIZE];
+static HistoryStreakCache history_streak_cache[HISTORY_STREAK_CACHE_SIZE];
+static char history_cache_path[HISTORY_CACHE_PATH_SIZE];
+static time_t history_cache_checked_at = 0;
+static time_t history_cache_mtime = 0;
+static off_t history_cache_size = -1;
+static int history_month_cache_next = 0;
+static int history_streak_cache_next = 0;
 
 /**
  * Summary of a single recent pomodoro session for history display.
@@ -830,6 +864,7 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
     remove(temp_path);
     return TIMER_LOG_ERROR;
   }
+  invalidateHistoryCache();
   return NO_ERROR;
 }
 
@@ -867,6 +902,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data) {
   }
 
   fclose(file);
+  invalidateHistoryCache();
   return NO_ERROR;
 }
 
@@ -1525,6 +1561,56 @@ static bool histIsSameMonth(time_t ts, int year, int month) {
 }
 
 /**
+ * Invalidate cached history queries after log writes.
+ */
+static void invalidateHistoryCache(void) {
+  for (int i = 0; i < HISTORY_MONTH_CACHE_SIZE; i++)
+    history_month_cache[i].valid = false;
+  for (int i = 0; i < HISTORY_STREAK_CACHE_SIZE; i++)
+    history_streak_cache[i].valid = false;
+  history_cache_checked_at = 0;
+}
+
+/**
+ * Refresh cached log metadata at most once per second.
+ * @param path History log path.
+ */
+static void refreshHistoryCache(const char* path) {
+  if (!path || strlen(path) >= sizeof(history_cache_path)) {
+    invalidateHistoryCache();
+    history_cache_path[0] = '\0';
+    return;
+  }
+
+  if (strcmp(path, history_cache_path) != 0) {
+    invalidateHistoryCache();
+    snprintf(history_cache_path, sizeof(history_cache_path), "%s", path);
+    history_cache_size = -1;
+    history_cache_mtime = 0;
+  }
+
+  time_t now = time(NULL);
+  if (history_cache_checked_at == now) return;
+  history_cache_checked_at = now;
+
+  struct stat file_status;
+  off_t file_size = -1;
+  time_t file_mtime = 0;
+  if (stat(path, &file_status) == 0) {
+    file_size = file_status.st_size;
+    file_mtime = file_status.st_mtime;
+  }
+  if (file_size != history_cache_size || file_mtime != history_cache_mtime) {
+    for (int i = 0; i < HISTORY_MONTH_CACHE_SIZE; i++)
+      history_month_cache[i].valid = false;
+    for (int i = 0; i < HISTORY_STREAK_CACHE_SIZE; i++)
+      history_streak_cache[i].valid = false;
+    history_cache_size = file_size;
+    history_cache_mtime = file_mtime;
+  }
+}
+
+/**
  * Fills daily session-count array for a given month from the binary log.
  * @param path   Binary log path (POMODORO_LOG)
  * @param year   Year
@@ -1533,11 +1619,31 @@ static bool histIsSameMonth(time_t ts, int year, int month) {
  * @return Days in month (same as length of valid entries in counts)
  */
 int HistDailyCounts(const char* path, int year, int month, int* counts) {
+  if (!counts) return 0;
   for (int i = 0; i < 31; i++) counts[i] = 0;
   int dim = HistDaysInMonth(year, month);
 
+  refreshHistoryCache(path);
+  for (int i = 0; i < HISTORY_MONTH_CACHE_SIZE; i++) {
+    HistoryMonthCache* cache = &history_month_cache[i];
+    if (cache->valid && cache->year == year && cache->month == month) {
+      memcpy(counts, cache->counts, sizeof(cache->counts));
+      return cache->days;
+    }
+  }
+
   FILE* file = fopen(path, "rb");
-  if (!file) return dim;
+  if (!file) {
+    history_month_cache_next =
+      (history_month_cache_next + 1) % HISTORY_MONTH_CACHE_SIZE;
+    HistoryMonthCache* cache = &history_month_cache[history_month_cache_next];
+    cache->valid = true;
+    cache->year = year;
+    cache->month = month;
+    cache->days = dim;
+    memset(cache->counts, 0, sizeof(cache->counts));
+    return dim;
+  }
 
   pomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, file) == 1) {
@@ -1549,6 +1655,15 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
     if (d >= 0 && d < dim) counts[d]++;
   }
   fclose(file);
+
+  history_month_cache_next =
+    (history_month_cache_next + 1) % HISTORY_MONTH_CACHE_SIZE;
+  HistoryMonthCache* cache = &history_month_cache[history_month_cache_next];
+  cache->valid = true;
+  cache->year = year;
+  cache->month = month;
+  cache->days = dim;
+  memcpy(cache->counts, counts, sizeof(cache->counts));
   return dim;
 }
 
@@ -1637,104 +1752,148 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
  * @param current Output - current streak length
  * @param longest Output - longest streak ever
  */
-void HistStreak(const char* path, int year, int month, int day, int* current,
-                int* longest) {
-  *current = 0;
-  *longest = 0;
+static int compareTimeValues(const void* left, const void* right) {
+  time_t left_time = *(const time_t*)left;
+  time_t right_time = *(const time_t*)right;
+  return (left_time > right_time) - (left_time < right_time);
+}
 
-  /* Read all unique session dates */
-  time_t sessionDates[2000];
-  int nDates = 0;
-
+/**
+ * Compute streak lengths from unique local calendar dates.
+ * @param path Binary log path.
+ * @param year Streak endpoint year.
+ * @param month Streak endpoint month.
+ * @param day Streak endpoint day.
+ * @param current Receives current streak length.
+ * @param longest Receives longest streak length.
+ */
+static void computeHistStreak(const char* path, int year, int month, int day,
+                              int* current, int* longest) {
+  time_t* dates = NULL;
+  size_t date_count = 0;
+  size_t date_capacity = 0;
   FILE* file = fopen(path, "rb");
   if (file) {
     pomodoroLogRecord record;
     while (fread(&record, sizeof(record), 1, file) == 1) {
       if (record.session_index == 0) continue;
-      time_t ts = (time_t)record.session_start_time;
-      struct tm* tm = localtime(&ts);
-      if (!tm) continue;
-      int y = tm->tm_year + 1900;
-      int m = tm->tm_mon + 1;
-      int d = tm->tm_mday;
 
-      /* Check for duplicates */
-      int dup = 0;
-      for (int i = 0; i < nDates; i++) {
-        struct tm* dtm = localtime(&sessionDates[i]);
-        if (dtm && dtm->tm_year + 1900 == y && dtm->tm_mon + 1 == m &&
-            dtm->tm_mday == d) {
-          dup = 1;
-          break;
+      time_t timestamp = (time_t)record.session_start_time;
+      struct tm local_date;
+      if (!localtime_r(&timestamp, &local_date)) continue;
+
+      local_date.tm_hour = 0;
+      local_date.tm_min = 0;
+      local_date.tm_sec = 0;
+      local_date.tm_isdst = -1;
+      time_t normalized_date = mktime(&local_date);
+      if (normalized_date == (time_t)-1) continue;
+
+      if (date_count == date_capacity) {
+        size_t new_capacity = date_capacity ? date_capacity * 2 : 64;
+        time_t* grown = realloc(dates, new_capacity * sizeof(*dates));
+        if (!grown) {
+          free(dates);
+          fclose(file);
+          LogError("HistStreak", MALLOC_ERROR);
+          return;
         }
+        dates = grown;
+        date_capacity = new_capacity;
       }
-      if (!dup) {
-        /* Store normalized timestamp (midnight) */
-        struct tm nd = {0};
-        nd.tm_year = y - 1900;
-        nd.tm_mon = m - 1;
-        nd.tm_mday = d;
-        time_t nt = mktime(&nd);
-        if (nt != (time_t)-1) sessionDates[nDates++] = nt;
-        if (nDates >= 2000) break;
-      }
+      dates[date_count++] = normalized_date;
     }
     fclose(file);
   }
 
-  if (nDates == 0) return;
-
-  /* Sort dates */
-  for (int i = 0; i < nDates - 1; i++) {
-    for (int j = i + 1; j < nDates; j++) {
-      if (sessionDates[j] < sessionDates[i]) {
-        time_t tmp = sessionDates[i];
-        sessionDates[i] = sessionDates[j];
-        sessionDates[j] = tmp;
-      }
-    }
+  if (date_count == 0) {
+    free(dates);
+    return;
   }
 
-  /* Compute end-of-day timestamp for the given date */
-  struct tm endTm = {0};
-  endTm.tm_year = year - 1900;
-  endTm.tm_mon = month - 1;
-  endTm.tm_mday = day;
-  endTm.tm_hour = 23;
-  endTm.tm_min = 59;
-  endTm.tm_sec = 59;
-  time_t endTs = mktime(&endTm);
-  if (endTs == (time_t)-1) return;
+  qsort(dates, date_count, sizeof(*dates), compareTimeValues);
+  size_t unique_count = 0;
+  for (size_t i = 0; i < date_count; i++) {
+    if (unique_count == 0 || dates[i] != dates[unique_count - 1])
+      dates[unique_count++] = dates[i];
+  }
 
-  /* Current streak: count backwards from end date */
-  *current = 0;
-  time_t cursor = endTs;
-  int daySecs = 86400;
-  for (int i = nDates - 1; i >= 0; i--) {
-    if (sessionDates[i] > endTs) continue;
-    /* Check if this date is within range of our streak */
-    if (sessionDates[i] <= cursor && sessionDates[i] > cursor - daySecs) {
+  struct tm end_date = {0};
+  end_date.tm_year = year - 1900;
+  end_date.tm_mon = month - 1;
+  end_date.tm_mday = day;
+  end_date.tm_hour = 23;
+  end_date.tm_min = 59;
+  end_date.tm_sec = 59;
+  end_date.tm_isdst = -1;
+  time_t end_timestamp = mktime(&end_date);
+  if (end_timestamp == (time_t)-1) {
+    free(dates);
+    return;
+  }
+
+  time_t cursor = end_timestamp;
+  const int day_seconds = 86400;
+  for (size_t i = unique_count; i-- > 0;) {
+    if (dates[i] > end_timestamp) continue;
+    if (dates[i] <= cursor && dates[i] > cursor - day_seconds) {
       (*current)++;
-      cursor = sessionDates[i] - daySecs; /* move to previous day */
-    } else if (sessionDates[i] < cursor - daySecs) {
-      break; /* gap found */
+      cursor = dates[i] - day_seconds;
+    } else if (dates[i] < cursor - day_seconds) {
+      break;
     }
   }
 
-  /* Longest streak: scan all dates */
-  *longest = 0;
-  if (nDates > 0) {
-    int run = 1;
-    for (int i = 1; i < nDates; i++) {
-      if (sessionDates[i] - sessionDates[i - 1] <= daySecs + 3600) {
-        run++;
-      } else {
-        if (run > *longest) *longest = run;
-        run = 1;
-      }
+  int run = 1;
+  for (size_t i = 1; i < unique_count; i++) {
+    if (dates[i] - dates[i - 1] <= day_seconds + 3600) {
+      run++;
+    } else {
+      if (run > *longest) *longest = run;
+      run = 1;
     }
-    if (run > *longest) *longest = run;
   }
+  if (run > *longest) *longest = run;
+  free(dates);
+}
+
+/**
+ * Return cached current and longest streaks for a date.
+ * @param path Binary log path.
+ * @param year Streak endpoint year.
+ * @param month Streak endpoint month.
+ * @param day Streak endpoint day.
+ * @param current Receives current streak length.
+ * @param longest Receives longest streak length.
+ */
+void HistStreak(const char* path, int year, int month, int day, int* current,
+                int* longest) {
+  if (!current || !longest) return;
+  *current = 0;
+  *longest = 0;
+  if (!path) return;
+
+  refreshHistoryCache(path);
+  for (int i = 0; i < HISTORY_STREAK_CACHE_SIZE; i++) {
+    HistoryStreakCache* cache = &history_streak_cache[i];
+    if (cache->valid && cache->year == year && cache->month == month &&
+        cache->day == day) {
+      *current = cache->current;
+      *longest = cache->longest;
+      return;
+    }
+  }
+
+  computeHistStreak(path, year, month, day, current, longest);
+  history_streak_cache_next =
+    (history_streak_cache_next + 1) % HISTORY_STREAK_CACHE_SIZE;
+  HistoryStreakCache* cache = &history_streak_cache[history_streak_cache_next];
+  cache->valid = true;
+  cache->year = year;
+  cache->month = month;
+  cache->day = day;
+  cache->current = *current;
+  cache->longest = *longest;
 }
 
 /**
