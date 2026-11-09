@@ -42,7 +42,7 @@ typedef struct {
 
 /**
  * Play audio from path using miniaudio.
- * Spawns a detached thread to handle playback asynchronously.
+ * Plays through persistent audio engine without waiting for playback completion.
  * Sound is disabled on WSL and when NOTIFICATIONS_SOUND is 0.
  * @param audio_path Path to the audio file to play
  * @param volume Volume level for playback (0.0 to 1.0)

@@ -130,9 +130,9 @@ unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.
 unit/test_draw: unit/test_draw.c $(SRCDIR)/draw.c $(SRCDIR)/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
-#/** @brief audio — mirrors PlayAudio NULL/disabled logic (standalone, no audio.c link) */
-unit/test_audio: unit/test_audio.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
+#/** @brief audio — links audio.c and covers PlayAudio guard behavior */
+unit/test_audio: unit/test_audio.c $(SRCDIR)/audio.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS) -pthread
 
 #/** @brief ui — mirrors RegisterClickRegion/CreateScreen panel logic (standalone, no ui.c link) */
 unit/test_ui: unit/test_ui.c $(HELPERS)

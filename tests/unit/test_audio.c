@@ -2,21 +2,23 @@
  * @file test_audio.c
  * @brief Unit tests for the audio notification module.
  *
- * Tests PlayAudio guard logic for NULL path and valid paths.
+ * Tests PlayAudio guards against the production audio implementation.
  */
 
 #include <stdbool.h>
+#include <string.h>
 
 #include "audio.h"
 #include "config.h"
 #include "error.h"
 #include "test_helpers.h"
 
-#undef NOTIFICATIONS_SOUND
-#define NOTIFICATIONS_SOUND 1
+Config g_config;
 
-#undef WSL
-#define WSL 0
+void LogError(const char* context, ErrorType type) {
+  (void)context;
+  (void)type;
+}
 
 /**
  * ---------------------------------------------------------------------------
@@ -24,23 +26,28 @@
  * ---------------------------------------------------------------------------
  */
 
-/** @brief Mirror of real PlayAudio guard logic under test. */
-static ErrorType playAudio(const char* audio_path) {
-  if (NOTIFICATIONS_SOUND == 0 || WSL != 0) return NO_ERROR;
-  if (audio_path == NULL) return NULL_POINTER_ERROR;
-  return NO_ERROR;
+/** @brief Disabled sound returns without initializing the audio engine. */
+static void test_play_audio_disabled(void) {
+  TEST("PlayAudio disabled sound returns NO_ERROR");
+  memset(&g_config, 0, sizeof(g_config));
+  ASSERT_EQ(PlayAudio("/path/to/sound.wav", 0.5f, false), NO_ERROR);
 }
 
-/** @brief NULL path returns NULL_POINTER_ERROR. */
+/** @brief NULL path returns NULL_POINTER_ERROR before engine initialization. */
 static void test_play_audio_null_path(void) {
   TEST("PlayAudio NULL path returns NULL_POINTER_ERROR");
-  ASSERT_EQ(playAudio(NULL), NULL_POINTER_ERROR);
+  memset(&g_config, 0, sizeof(g_config));
+  g_config.notifications.sound = 1;
+  ASSERT_EQ(PlayAudio(NULL, 0.5f, false), NULL_POINTER_ERROR);
 }
 
-/** @brief Valid path returns NO_ERROR. */
-static void test_play_audio_valid_path(void) {
-  TEST("PlayAudio valid path returns NO_ERROR");
-  ASSERT_EQ(playAudio("/path/to/sound.wav"), NO_ERROR);
+/** @brief WSL skips playback without opening an audio device. */
+static void test_play_audio_wsl_disabled(void) {
+  TEST("PlayAudio skips sound in WSL");
+  memset(&g_config, 0, sizeof(g_config));
+  g_config.notifications.sound = 1;
+  g_config.misc.wsl = 1;
+  ASSERT_EQ(PlayAudio("/path/to/sound.wav", 0.5f, false), NO_ERROR);
 }
 
 /**
@@ -51,9 +58,8 @@ static void test_play_audio_valid_path(void) {
 
 int main(void) {
   test_begin("audio");
-  RUN_TEST(test_play_audio_null_path,
-           "PlayAudio NULL path returns NULL_POINTER_ERROR");
-  RUN_TEST(test_play_audio_valid_path,
-           "PlayAudio valid path returns NO_ERROR");
+  RUN_TEST(test_play_audio_disabled, "PlayAudio disabled sound");
+  RUN_TEST(test_play_audio_null_path, "PlayAudio NULL path");
+  RUN_TEST(test_play_audio_wsl_disabled, "PlayAudio skips WSL");
   return test_end();
 }

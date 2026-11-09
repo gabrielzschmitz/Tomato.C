@@ -1,6 +1,5 @@
 #include "audio.h"
 
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,23 +22,19 @@
 #define keys (g_config.key_bindings)
 
 /* PRIVATE AUDIO FUNCTIONS */
-/* Audio Playback */
-static void* playbackThread(void* arg);
+typedef struct LoopingPlayback {
+  ma_sound sound;
+  struct LoopingPlayback* next;
+} LoopingPlayback;
+
+static ErrorType playLoopingAudio(const char* audio_path, float volume);
 /* Noise Audio */
 static ma_engine noise_engine;
+static ma_sound_group notification_group;
 static ma_sound* noise_sounds = NULL;
+static LoopingPlayback* looping_playbacks = NULL;
 static int noise_sound_count = 0;
 static bool noise_engine_initialized = false;
-
-/**
- * Structure to pass data to the playback thread.
- * Contains all parameters needed to play audio asynchronously.
- */
-static struct playbackData {
-  char audio_path[512]; /**< Path to the audio file to play */
-  float volume;         /**< Volume level for playback (0.0 to 1.0) */
-  bool loop;            /**< true to loop playback, false to play once */
-} playbackData;
 
 /**
  * ---------------------------------------------------------------------------
@@ -49,7 +44,7 @@ static struct playbackData {
 
 /**
  * Play audio from path using miniaudio.
- * Spawns a detached thread to handle playback asynchronously.
+ * Uses persistent audio engine; one-shot sounds self-clean after playback.
  * Sound is disabled on WSL and when NOTIFICATIONS_SOUND is 0.
  * @param audio_path Path to the audio file to play
  * @param volume Volume level for playback (0.0 to 1.0)
@@ -64,92 +59,53 @@ ErrorType PlayAudio(const char* audio_path, const float volume,
     return NULL_POINTER_ERROR;
   }
 
-  /* Prepare playback data */
-  struct playbackData* data =
-    (struct playbackData*)malloc(sizeof(struct playbackData));
-  if (data == NULL) {
-    LogError("PlayAudio", MALLOC_ERROR);
-    return MALLOC_ERROR;
+  if (!noise_engine_initialized) {
+    ErrorType error = InitNoiseAudio();
+    if (error != NO_ERROR) return error;
   }
 
-  strncpy(data->audio_path, audio_path, sizeof(data->audio_path) - 1);
-  data->audio_path[sizeof(data->audio_path) - 1] = '\0';
-  data->volume = volume;
-  data->loop = loop;
+  if (loop) return playLoopingAudio(audio_path, volume);
 
-  /* Create playback thread */
-  pthread_t thread;
-  if (pthread_create(&thread, NULL, playbackThread, data) != 0) {
-    free(data);
-    return PTHREAD_CREATION_ERROR;
+  ma_sound_group_set_volume(&notification_group, volume);
+  if (ma_engine_play_sound(&noise_engine, audio_path, &notification_group) !=
+      MA_SUCCESS) {
+    LogError("PlayAudio", AUDIO_PLAYBACK_ERROR);
+    return AUDIO_PLAYBACK_ERROR;
   }
-
-  /* Detach the thread to allow self-cleanup */
-  if (pthread_detach(thread) != 0) {
-    pthread_join(thread, NULL);
-    return PTHREAD_DETACH_ERROR;
-  }
-
   return NO_ERROR;
 }
 
 /**
- * Playback thread function.
- * Initializes miniaudio engine, loads and plays the audio file.
- * Blocks until playback completes, then cleans up resources.
- * @param arg Pointer to playbackData structure (freed by caller)
- * @return NULL always
+ * Start a looping effect on the shared engine.
+ * @param audio_path Path to audio file.
+ * @param volume Playback volume from 0.0 to 1.0.
+ * @return NO_ERROR on success or an audio error on failure.
  */
-static void* playbackThread(void* arg) {
-  struct playbackData* data = (struct playbackData*)arg;
-  ma_result result;
-  ma_engine engine;
-  ma_sound sound;
+static ErrorType playLoopingAudio(const char* audio_path, float volume) {
+  LoopingPlayback* playback = calloc(1, sizeof(*playback));
+  if (!playback) return MALLOC_ERROR;
 
-  /* Initialize the engine */
-  result = ma_engine_init(NULL, &engine);
+  ma_result result = ma_sound_init_from_file(&noise_engine, audio_path, 0, NULL,
+                                             NULL, &playback->sound);
   if (result != MA_SUCCESS) {
-    LogError("playbackThread", AUDIO_ENGINE_INIT_ERROR);
-    free(data);
-    return NULL;
+    free(playback);
+    LogError("playLoopingAudio", AUDIO_PLAYBACK_ERROR);
+    return AUDIO_PLAYBACK_ERROR;
   }
 
-  /* Set volume for the engine */
-  ma_engine_set_volume(&engine, data->volume);
-
-  /* Initialize the sound from file */
-  result =
-    ma_sound_init_from_file(&engine, data->audio_path, 0, NULL, NULL, &sound);
+  ma_sound_set_looping(&playback->sound, true);
+  ma_sound_set_volume(&playback->sound, volume);
+  result = ma_sound_start(&playback->sound);
   if (result != MA_SUCCESS) {
-    LogError("playbackThread", AUDIO_PLAYBACK_ERROR);
-    ma_engine_uninit(&engine);
-    free(data);
-    return NULL;
+    ma_sound_uninit(&playback->sound);
+    free(playback);
+    LogError("playLoopingAudio", AUDIO_PLAYBACK_ERROR);
+    return AUDIO_PLAYBACK_ERROR;
   }
 
-  /* Enable looping if requested */
-  ma_sound_set_looping(&sound, data->loop);
-
-  /* Start playback */
-  result = ma_sound_start(&sound);
-  if (result != MA_SUCCESS) {
-    LogError("playbackThread", AUDIO_PLAYBACK_ERROR);
-    ma_sound_uninit(&sound);
-    ma_engine_uninit(&engine);
-    free(data);
-    return NULL;
-  }
-
-  /* Wait for playback to complete */
-  while (ma_sound_is_playing(&sound)) ma_sleep(1);
-
-  /* Cleanup all resources */
-  ma_sound_uninit(&sound);
-  ma_engine_uninit(&engine);
-  free(data);
-
-  pthread_exit(NULL);
-  return NULL;
+  playback->next = looping_playbacks;
+  looping_playbacks = playback;
+  return NO_ERROR;
 }
 
 /* ---------------------------------------------------------------------------
@@ -235,6 +191,13 @@ ErrorType InitNoiseAudio(void) {
     return AUDIO_ENGINE_INIT_ERROR;
   }
 
+  result = ma_sound_group_init(&noise_engine, 0, NULL, &notification_group);
+  if (result != MA_SUCCESS) {
+    ma_engine_uninit(&noise_engine);
+    LogError("InitNoiseAudio", AUDIO_ENGINE_INIT_ERROR);
+    return AUDIO_ENGINE_INIT_ERROR;
+  }
+
   noise_engine_initialized = true;
   return NO_ERROR;
 }
@@ -252,6 +215,16 @@ void ShutdownNoiseAudio(void) {
     ma_sound_uninit(&noise_sounds[i]);
   }
 
+  while (looping_playbacks) {
+    LoopingPlayback* playback = looping_playbacks;
+    looping_playbacks = playback->next;
+    ma_sound_stop(&playback->sound);
+    ma_sound_uninit(&playback->sound);
+    free(playback);
+  }
+
+  ma_sound_group_stop(&notification_group);
+  ma_sound_group_uninit(&notification_group);
   ma_engine_uninit(&noise_engine);
   noise_engine_initialized = false;
 }
