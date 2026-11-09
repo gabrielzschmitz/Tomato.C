@@ -77,11 +77,9 @@ void SetErrorMessage(ErrorLevel level, const char* message) {
 void SetError(AppData* app, const char* context, ErrorType type) {
   ErrorLevel level = getErrorLevel(type);
   const char* error_message = GetErrorMessage(type);
-  const char* error_level = getErrorLevelMessage(level);
 
   char message[256];
-  snprintf(message, sizeof(message), "[%s] %s: %s", error_level, context,
-           error_message);
+  snprintf(message, sizeof(message), "%s: %s", context, error_message);
 
   pushErrorEntry(level, message);
 
