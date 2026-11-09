@@ -78,10 +78,11 @@ struct AppData {
     popup_dialog;   /**< Currently displayed popup dialog (or NULL) */
   int current_menu; /**< Index of the currently active menu */
 
-  int user_input;   /**< Most recent user keypress */
-  int last_input;   /**< Previous keypress for edge detection */
-  bool block_input; /**< True to ignore user input temporarily */
-  bool frozen;      /**< True if app is frozen due to critical error */
+  int user_input;      /**< Most recent user keypress */
+  int last_input;      /**< Previous keypress for edge detection */
+  bool block_input;    /**< True to ignore user input temporarily */
+  bool frozen;         /**< True if app is frozen due to critical error */
+  bool redraw_pending; /**< True when visible state needs a redraw */
 
   struct Rollfilm* icon_animations
     [MAX_ICON_TYPES]

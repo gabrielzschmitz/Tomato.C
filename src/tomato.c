@@ -222,13 +222,18 @@ int main(int argc, char* argv[]) {
 
   /* Main application loop */
   while (app.running) {
+    int wait_ms = 1000;
+    if (ANIMATIONS && !app.is_paused) wait_ms = (int)FPMS;
+    wtimeout(stdscr, wait_ms);
+
     if (UpdateApp(&app) != NO_ERROR)
       handleErrorAndExit("Updating app", UPDATE_ERROR, &app, pid);
+    app.redraw_pending = true;
     if (HandleInputs(&app) != NO_ERROR)
       handleErrorAndExit("Handling input", INPUT_ERROR, &app, pid);
-    if (DrawScreen(&app) != NO_ERROR)
+    if (app.redraw_pending && DrawScreen(&app) != NO_ERROR)
       handleErrorAndExit("Drawing screen", DRAW_ERROR, &app, pid);
-    napms(FPMS);
+    app.redraw_pending = false;
   }
 
   /* Cleanup */

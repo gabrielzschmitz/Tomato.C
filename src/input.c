@@ -254,6 +254,7 @@ ErrorType HandleInputs(AppData* app) {
   }
 
   if (!handled) app->user_input = -1;
+  if (handled) app->redraw_pending = true;
   return status;
 }
 
