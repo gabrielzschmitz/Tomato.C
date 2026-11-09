@@ -81,11 +81,11 @@ typedef enum {
  * Manages text buffer, cursor position, and selection for the text editor.
  */
 struct InputState {
-  char* buffer;     /**< Dynamically sized buffer for input text */
-  int len;          /**< Current length of text in buffer */
-  int cursor;       /**< Current cursor position (0 to len) */
-  int max_len;      /**< Current buffer capacity minus one */
-  bool is_task;     /**< true for task [ ], false for note - */
+  char* buffer; /**< Dynamically sized buffer for input text */
+  int len;      /**< Current length of text in buffer */
+  int cursor;   /**< Current cursor position (0 to len) */
+  int max_len;  /**< Current buffer capacity minus one */
+  bool is_task; /**< true for task [ ], false for note - */
   int
     pending_parent_id; /**< ID of parent note for pending insertion (-1 for root) */
   int insert_after_id; /**< Note ID to insert after (-1 for none) */
