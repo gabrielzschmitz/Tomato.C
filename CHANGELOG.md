@@ -7,6 +7,50 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-08
+
+### Added
+
+- **CLI help and version options** — Added `--help`, `--version`, and
+  validation for unsupported arguments. Added `-loop` to stream timer status.
+- **Preference persistence** — Preferences now track changes, preserve
+  comments and alignment when saving, and ask before discarding unsaved edits.
+- **Separate history logging control** — Added `history_log` so Pomodoro
+  history logging can be controlled independently of work-log recording.
+- **Timer suspend choice** — Timer suspend behavior is now explicit, and timer
+  status streaming no longer blocks the UI.
+- **UTF-8 notes input** — Notes accept UTF-8 input and grow their buffer as
+  needed.
+
+### Fixed
+
+- **History accuracy and capacity** — Corrected work-time totals, session
+  indexing, and history statistics. Removed fixed record limits and prevented
+  history writes from truncating existing records.
+- **Atomic notes saving** — Notes save through a temporary file and rename;
+  write failures now report errors.
+- **Configuration loading and ownership** — Fixed repeated-load string leaks,
+  invalid clock handling, failed-load state, and preference-file updates.
+  String replacements now preserve prior values on allocation failure, and
+  empty noise-track lists clear earlier configuration.
+- **Timer and process safety** — Isolated state directories, secured timer
+  socket permissions, avoided blocking UI reads, and used `_exit` in the forked
+  timer child.
+- **Notifications and memory use** — Released notification objects, handled
+  allocation failures, and fixed notes-array growth failures.
+- **Input and UI behavior** — Drained queued keys, opened quit and skip
+  confirmations directly, and improved multi-line dialog centering.
+- **UTF-8 width helpers** — Bounded character-width reads at the string
+  terminator.
+- **Nix runtime dependencies** — Added required GLib and GDK-Pixbuf runtime
+  libraries.
+
+### Changed
+
+- **Nix development environments** — Isolated development config and state
+  through `TOMATO_*` environment variables.
+- **Test runner** — Honored `CC` when building tests.
+
 ## [1.2.2] - 2026-11-05
 
 ### Fixed
