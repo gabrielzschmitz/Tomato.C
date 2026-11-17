@@ -35,6 +35,12 @@ else
   MALLOC_WRAP_TESTS =
 endif
 
+ifeq ($(UNAME_S),Darwin)
+  AUDIO_LIBS = -framework CoreAudio -framework AudioToolbox -framework CoreFoundation
+else
+  AUDIO_LIBS =
+endif
+
 IS_TCC := $(shell $(TEST_CC) -v 2>&1 | grep -ci "tcc version")
 ifeq ($(IS_TCC),1)
   WRAP_MALLOC =
@@ -132,7 +138,7 @@ unit/test_draw: unit/test_draw.c $(SRCDIR)/draw.c $(SRCDIR)/util.c $(HELPERS)
 
 #/** @brief audio — links audio.c and covers PlayAudio guard behavior */
 unit/test_audio: unit/test_audio.c $(SRCDIR)/audio.c $(HELPERS)
-	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS) -pthread
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS) -pthread $(AUDIO_LIBS)
 
 #/** @brief ui — mirrors RegisterClickRegion/CreateScreen panel logic (standalone, no ui.c link) */
 unit/test_ui: unit/test_ui.c $(HELPERS)

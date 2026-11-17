@@ -21,6 +21,8 @@ and this project adheres to
   keyboard and status-bar guidance, and Homebrew build notes. Added
   `ARCHITECTURE.md` and `CONTRIBUTING.md`, and corrected stale source and CI
   comments.
+- **Vendored audio library** — Updated vendored miniaudio from v0.11.21 to
+  v0.11.26.
 
 ### Fixed
 
@@ -30,6 +32,8 @@ and this project adheres to
   confirmation.
 - **Installer temporary checkout** — Cloned curl-based installs into a unique
   temporary directory instead of a fixed `/tmp` path.
+- **macOS audio test linking** — Linked CoreAudio, AudioToolbox, and
+  CoreFoundation when building `unit/test_audio` on macOS.
 
 ## [1.3.1] - 2026-11-09
 
