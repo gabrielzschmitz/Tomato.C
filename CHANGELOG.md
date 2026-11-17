@@ -7,6 +7,30 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-11-16
+
+### Changed
+
+- **Animation and redraw timing** — Bounded the default animation rate to
+  30 FPS, clamped legacy values to 10–30 FPS, and replaced busy redraw polling
+  with timed input.
+- **History, audio, and notification performance** — Cached history daily
+  counts and streak queries. Reused a persistent audio engine for notification
+  sounds. Dispatched macOS and WSL notifications asynchronously.
+- **Documentation** — Added CLI reference, data locations, troubleshooting,
+  keyboard and status-bar guidance, and Homebrew build notes. Added
+  `ARCHITECTURE.md` and `CONTRIBUTING.md`, and corrected stale source and CI
+  comments.
+
+### Fixed
+
+- **Timed input key repeat** — Preserved held-key navigation repeats after
+  moving input handling to timed reads.
+- **Notes quit flow** — Routed notes quit through the standard quit
+  confirmation.
+- **Installer temporary checkout** — Cloned curl-based installs into a unique
+  temporary directory instead of a fixed `/tmp` path.
+
 ## [1.3.1] - 2026-11-09
 
 ### Added
