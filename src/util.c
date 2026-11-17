@@ -437,8 +437,12 @@ FILE* FOpenNoFollow(const char* path, const char* mode) {
 
 /**
  * Create a directory (and parents) if it does not exist.
- * @param dir Path to the directory to create
- * @return 0 on success, -1 on failure (sets errno)
+ *
+ * This function iterates through the provided path and creates any missing
+ * directories along the way. If a directory already exists, it continues.
+ *
+ * @param dir Path to the directory to create.
+ * @return 0 on success, -1 on failure (sets errno).
  */
 int EnsureDir(const char* dir) {
   char tmp[4096];

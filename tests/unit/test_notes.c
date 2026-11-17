@@ -90,7 +90,9 @@ static void test_add_note(void) {
   NotesData* nd = CreateNotesData();
   AddNote(&mock_app, nd, "test note", NOTE_PLAIN);
   ASSERT_EQ(nd->count, 1);
-  ASSERT_STR_EQ(GapBufferToString(nd->items[0]->text), "test note");
+  char* text = GapBufferToString(nd->items[0]->text);
+  ASSERT_STR_EQ(text, "test note");
+  free(text);
   ASSERT_EQ(nd->items[0]->state, NOTE_PLAIN);
   ASSERT_EQ(nd->items[0]->parent_id, -1);
   FreeNotesData(nd);
@@ -296,6 +298,7 @@ static void test_clone_restore(void) {
   char* s = GapBufferToString(nd->items[0]->text);
   ASSERT_STR_EQ(s, "original");
   free(s);
+  FreeClonedNotesData(clone);
   FreeNotesData(nd);
 }
 
@@ -523,7 +526,6 @@ static void test_free_cloned_notes_data_null(void) {
 static void test_save_notes_to_history(void) {
   TEST("SaveNotesToHistory pushes snapshot to history");
   NotesData* nd = CreateNotesData();
-  nd->history = CreateHistory();
   ASSERT_NOT_NULL(nd->history);
   AddNote(&mock_app, nd, "before", NOTE_PLAIN);
   SaveNotesToHistory(nd, -1);

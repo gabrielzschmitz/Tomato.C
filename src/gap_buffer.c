@@ -5,8 +5,9 @@
 
 #include "error.h"
 
-/* PRIVATE GAP BUFFER FUNCTIONS */
-/* Utility */
+/**
+ * Private helper functions for gap buffer operations.
+ */
 static bool ensureCapacity(GapBuffer* gb, size_t needed);
 
 /**
@@ -17,7 +18,7 @@ static bool ensureCapacity(GapBuffer* gb, size_t needed);
 
 /**
  * Create a new empty gap buffer.
- * @return Pointer to the created gap buffer, or NULL on allocation failure
+ * @return Pointer to the created gap buffer, or NULL on allocation failure.
  */
 GapBuffer* GapBufferCreate(void) {
   GapBuffer* gb = (GapBuffer*)malloc(sizeof(GapBuffer));
@@ -42,7 +43,7 @@ GapBuffer* GapBufferCreate(void) {
 
 /**
  * Free a gap buffer and its contents.
- * @param gb Pointer to the gap buffer to free
+ * @param gb Pointer to the gap buffer to free.
  */
 void GapBufferFree(GapBuffer* gb) {
   if (!gb) return;
@@ -54,8 +55,9 @@ void GapBufferFree(GapBuffer* gb) {
 /**
  * Set the buffer contents to a specific text string.
  * Replaces existing content with the new text.
- * @param gb Pointer to the gap buffer
- * @param text New text to set
+ * @param gb Pointer to the gap buffer.
+ * @param text New text to set.
+ * @return true if successful, false otherwise.
  */
 bool GapBufferSetText(GapBuffer* gb, const char* text) {
   if (!gb || !text) return false;
@@ -72,9 +74,10 @@ bool GapBufferSetText(GapBuffer* gb, const char* text) {
 /**
  * Insert a character at the specified position.
  * Moves the gap to the position and inserts the character.
- * @param gb Pointer to the gap buffer
- * @param pos Position to insert at
- * @param c Character to insert
+ * @param gb Pointer to the gap buffer.
+ * @param pos Position to insert at.
+ * @param c Character to insert.
+ * @return true if successful, false otherwise.
  */
 bool GapBufferInsert(GapBuffer* gb, size_t pos, char c) {
   if (!gb) return false;
@@ -90,8 +93,8 @@ bool GapBufferInsert(GapBuffer* gb, size_t pos, char c) {
 
 /**
  * Delete a character at the specified position.
- * @param gb Pointer to the gap buffer
- * @param pos Position to delete at
+ * @param gb Pointer to the gap buffer.
+ * @param pos Position to delete at.
  */
 void GapBufferDelete(GapBuffer* gb, size_t pos) {
   if (!gb) return;
@@ -110,8 +113,8 @@ void GapBufferDelete(GapBuffer* gb, size_t pos) {
 
 /**
  * Get the length of text in the buffer (excluding gap).
- * @param gb Pointer to the gap buffer
- * @return Length of text content
+ * @param gb Pointer to the gap buffer.
+ * @return Length of text content.
  */
 size_t GapBufferLength(const GapBuffer* gb) {
   if (!gb) return 0;
@@ -120,8 +123,8 @@ size_t GapBufferLength(const GapBuffer* gb) {
 
 /**
  * Get the total capacity of the buffer.
- * @param gb Pointer to the gap buffer
- * @return Total capacity including gap
+ * @param gb Pointer to the gap buffer.
+ * @return Total capacity including gap.
  */
 size_t GapBufferCapacity(const GapBuffer* gb) {
   if (!gb) return 0;
@@ -130,7 +133,7 @@ size_t GapBufferCapacity(const GapBuffer* gb) {
 
 /**
  * Clear the buffer contents, resetting to empty state.
- * @param gb Pointer to the gap buffer
+ * @param gb Pointer to the gap buffer.
  */
 void GapBufferClear(GapBuffer* gb) {
   if (!gb) return;
@@ -140,8 +143,8 @@ void GapBufferClear(GapBuffer* gb) {
 
 /**
  * Convert the gap buffer to a contiguous string.
- * @param gb Pointer to the gap buffer
- * @return Newly allocated string (caller must free), or NULL on failure
+ * @param gb Pointer to the gap buffer.
+ * @return Newly allocated string (caller must free), or NULL on failure.
  */
 char* GapBufferToString(const GapBuffer* gb) {
   if (!gb) return NULL;
@@ -158,8 +161,8 @@ char* GapBufferToString(const GapBuffer* gb) {
 /**
  * Ensure the buffer has enough capacity for the needed bytes.
  * Grows buffer exponentially if necessary.
- * @param gb Pointer to the gap buffer
- * @param needed Number of bytes needed
+ * @param gb Pointer to the gap buffer.
+ * @param needed Number of bytes needed.
  */
 static bool ensureCapacity(GapBuffer* gb, size_t needed) {
   if (gb->capacity >= needed) return true;
@@ -180,8 +183,8 @@ static bool ensureCapacity(GapBuffer* gb, size_t needed) {
 
 /**
  * Create a deep copy of a gap buffer.
- * @param gb Pointer to the gap buffer to clone
- * @return New gap buffer with identical content, or NULL on failure
+ * @param gb Pointer to the gap buffer to clone.
+ * @return New gap buffer with identical content, or NULL on failure.
  */
 GapBuffer* GapBufferClone(const GapBuffer* gb) {
   if (!gb) return NULL;

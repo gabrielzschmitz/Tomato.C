@@ -38,14 +38,9 @@ static void continueAndClose(AppData* app);
 static void abandonAndClose(AppData* app);
 static void noiseSlideRender(AppData* app, SlideDef* def);
 static void noiseSlideUpdate(AppData* app, SlideDef* def);
-static SlideToken* parseSlideText(const char* text, int icon_type);
-static SlideDef* buildSlideFromText(const char* text, int w, int h,
-                                    int icon_type);
 static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
 static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
-static int strDisplayWidth(const char* s);
-static int utf8DisplayWidth(const char* s);
 /* History */
 static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
                               int* monthStartWeek, int* monthDays,
@@ -2859,15 +2854,15 @@ void CreateHistoryStatsDialog(AppData* app) {
   /* Read log and aggregate */
   int nRecs = 0;
   int recCap = 1024;
-  pomodoroLogRecord* allRecs = malloc(sizeof(pomodoroLogRecord) * recCap);
+  PomodoroLogRecord* allRecs = malloc(sizeof(PomodoroLogRecord) * recCap);
   FILE* file = fopen(POMODORO_LOG, "rb");
   if (file && allRecs) {
-    pomodoroLogRecord rec;
+    PomodoroLogRecord rec;
     while (fread(&rec, sizeof(rec), 1, file) == 1) {
       if (rec.session_index == 0) continue;
       if (nRecs == recCap) {
-        pomodoroLogRecord* grown =
-          realloc(allRecs, sizeof(pomodoroLogRecord) * recCap * 2);
+        PomodoroLogRecord* grown =
+          realloc(allRecs, sizeof(PomodoroLogRecord) * recCap * 2);
         if (!grown) {
           LogError("CreateHistoryStatsDialog", MALLOC_ERROR);
           break;
@@ -2890,7 +2885,7 @@ void CreateHistoryStatsDialog(AppData* app) {
     int nSeen = 0;
     if (seenIdx && seenCycles && seenWork && seenStatus) {
       for (int i = 0; i < nRecs; i++) {
-        pomodoroLogRecord* rec = &allRecs[i];
+        PomodoroLogRecord* rec = &allRecs[i];
         time_t ts = (time_t)rec->session_start_time;
         struct tm* rtm = localtime(&ts);
         if (!rtm) continue;

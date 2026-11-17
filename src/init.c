@@ -540,7 +540,7 @@ static ErrorType debugSeedHistory(void) {
     uint32_t startOfDay = (uint32_t)mktime(&dayTm);
 
     for (int s = 0; s < count; s++) {
-      pomodoroLogRecord rec;
+      PomodoroLogRecord rec;
       rec.session_index = (uint16_t)sessionIdx++;
       rec.current_step = 1; /* WORK_TIME */
       rec.current_cycle = (uint8_t)(s % 4);

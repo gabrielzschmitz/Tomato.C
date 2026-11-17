@@ -1,11 +1,8 @@
 #ifndef INIT_H_
 #define INIT_H_
 
-#include "audio.h"
 #include "error.h"
 #include "ui.h"
-
-typedef struct AppData AppData;
 
 /**
  * ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@
 #include "config.h"
 #include "error.h"
 #include "gap_buffer.h"
+#include "input.h"
 #include "notes.h"
 #include "tomato.h"
 
@@ -811,7 +812,7 @@ static int GetLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return 1;
 
-  pomodoroLogRecord record;
+  PomodoroLogRecord record;
   int last_index = 0;
   while (fread(&record, sizeof(record), 1, file) == 1)
     if (record.session_index > last_index) last_index = record.session_index;
@@ -828,7 +829,7 @@ int GetLastLogIndexOnly(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return 0;
 
-  pomodoroLogRecord record;
+  PomodoroLogRecord record;
   int last_index = 0;
   while (fread(&record, sizeof(record), 1, file) == 1)
     if (record.session_index > last_index) last_index = record.session_index;
@@ -852,7 +853,7 @@ ErrorType RemoveUncompletedEntries(const char* path, int index) {
   FILE* write_file = FOpenNoFollow(temp_path, "wb");
   if (!write_file) return FILE_ERROR;
 
-  pomodoroLogRecord record;
+  PomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, read_file) == 1) {
     if (record.session_index == index && record.status != 0) continue;
     fwrite(&record, sizeof(record), 1, write_file);
@@ -880,7 +881,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data) {
   int index =
     data->session_index > 0 ? data->session_index : GetLastLogIndex(path);
 
-  pomodoroLogRecord record = {
+  PomodoroLogRecord record = {
     .session_index = (uint16_t)index,
     .current_step = (uint8_t)data->current_step,
     .current_cycle = (uint8_t)(data->current_cycle + 1),
@@ -919,8 +920,8 @@ ErrorType LoadPomodoro(const char* path, PomodoroData* data) {
   FILE* file = fopen(path, "rb");
   if (!file) return NO_ERROR;
 
-  pomodoroLogRecord record;
-  pomodoroLogRecord last_record = {0};
+  PomodoroLogRecord record;
+  PomodoroLogRecord last_record = {0};
 
   while (fread(&record, sizeof(record), 1, file) == 1) last_record = record;
   fclose(file);
@@ -1144,7 +1145,7 @@ void GetPomodoroHistoryDay(const char* path) {
     printf("No sessions found for today (%04d-%02d-%02d).\n", year, month, day);
     return;
   }
-  pomodoroLogRecord rec;
+  PomodoroLogRecord rec;
   while (fread(&rec, sizeof(rec), 1, file) == 1) {
     if (rec.session_index == 0) continue;
     time_t ts = (time_t)rec.session_start_time;
@@ -1158,8 +1159,8 @@ void GetPomodoroHistoryDay(const char* path) {
   }
 
   /* Allocate records array */
-  pomodoroLogRecord* records =
-    (pomodoroLogRecord*)malloc((size_t)count * sizeof(pomodoroLogRecord));
+  PomodoroLogRecord* records =
+    (PomodoroLogRecord*)malloc((size_t)count * sizeof(PomodoroLogRecord));
   if (!records) {
     printf("Memory allocation error.\n");
     fclose(file);
@@ -1373,17 +1374,17 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
 
   int count = 0;
   int cap = 1024;
-  pomodoroLogRecord* records = malloc(sizeof(pomodoroLogRecord) * cap);
+  PomodoroLogRecord* records = malloc(sizeof(PomodoroLogRecord) * cap);
   if (!records) {
     fclose(file);
     return stats;
   }
 
-  pomodoroLogRecord rec;
+  PomodoroLogRecord rec;
   while (fread(&rec, sizeof(rec), 1, file) == 1) {
     if (count == cap) {
-      pomodoroLogRecord* grown =
-        realloc(records, sizeof(pomodoroLogRecord) * cap * 2);
+      PomodoroLogRecord* grown =
+        realloc(records, sizeof(PomodoroLogRecord) * cap * 2);
       if (!grown) {
         free(records);
         fclose(file);
@@ -1645,7 +1646,7 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
     return dim;
   }
 
-  pomodoroLogRecord record;
+  PomodoroLogRecord record;
   while (fread(&record, sizeof(record), 1, file) == 1) {
     if (record.session_index == 0) continue;
     time_t ts = (time_t)record.session_start_time;
@@ -1689,7 +1690,7 @@ int HistSessionsForDay(const char* path, int year, int month, int day,
   FILE* file = fopen(path, "rb");
   if (!file) return 0;
 
-  pomodoroLogRecord record;
+  PomodoroLogRecord record;
   /* Store fields needed for formula per session */
   int lastCycles[100], lastWork[100], lastShort[100], lastLong[100];
   while (fread(&record, sizeof(record), 1, file) == 1) {
@@ -1774,7 +1775,7 @@ static void computeHistStreak(const char* path, int year, int month, int day,
   size_t date_capacity = 0;
   FILE* file = fopen(path, "rb");
   if (file) {
-    pomodoroLogRecord record;
+    PomodoroLogRecord record;
     while (fread(&record, sizeof(record), 1, file) == 1) {
       if (record.session_index == 0) continue;
 

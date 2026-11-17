@@ -5,7 +5,6 @@
 #include "ui.h"
 
 /* Bar specific structs */
-typedef struct AppData AppData;
 typedef struct StatusBar StatusBar;
 typedef struct StatusBarModule StatusBarModule;
 

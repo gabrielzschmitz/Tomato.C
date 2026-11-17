@@ -2,10 +2,13 @@
 #define LOG_H_
 
 #include <ncurses.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "error.h"
-#include "tomato.h"
+#include "notes.h"
+#include "pomodoro.h"
 #include "util.h"
 
 /**
@@ -24,7 +27,7 @@ typedef struct __attribute__((packed)) {
   uint32_t current_step_time;  /**< Elapsed time in current step (seconds) */
   uint8_t status;              /**< 0 = completed, 1 = uncompleted */
   uint32_t session_start_time; /**< Unix timestamp when session started */
-} pomodoroLogRecord;
+} PomodoroLogRecord;
 
 /**
  * ---------------------------------------------------------------------------
@@ -36,11 +39,16 @@ typedef struct __attribute__((packed)) {
  * Create a timer log server using Unix domain sockets.
  * Server listens for connections and serves timer data.
  * @param path File path for the Unix socket
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType CreateTimerLog(const char* path);
 
-/** Create timer server and signal readiness after listen succeeds. */
+/**
+ * Create timer server and signal readiness after listen succeeds.
+ * @param path File path for the Unix socket
+ * @param ready_fd File descriptor for the listening socket
+ * @return NO_ERROR on success, or an error code on failure
+ */
 ErrorType CreateTimerLogWithReadyFD(const char* path, int ready_fd);
 
 /**
@@ -49,7 +57,7 @@ ErrorType CreateTimerLogWithReadyFD(const char* path, int ready_fd);
  * @param path File path for the Unix socket
  * @param loop Whether to continuously poll the socket
  * @param icon_type Icon set to use for display
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type);
 
@@ -58,7 +66,7 @@ ErrorType GetTimerLog(const char* path, bool loop, IconType icon_type);
  * Sends timer data to the Unix socket server.
  * @param path File path for the Unix socket
  * @param log Formatted log string to write
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType SetTimerLog(const char* path, const char* log);
 
@@ -83,7 +91,7 @@ char* FormatTimerLog(PomodoroData data, bool is_paused);
  * so an interrupted save leaves the previous notes file intact.
  * @param path File path for the notes log
  * @param notes Pointer to the notes data to save
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType SaveNotes(const char* path, const NotesData* notes);
 
@@ -92,7 +100,7 @@ ErrorType SaveNotes(const char* path, const NotesData* notes);
  * Reads notes data from disk and populates the notes structure.
  * @param path File path for the notes log
  * @param notes Pointer to the notes data to populate
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType LoadNotes(const char* path, NotesData* notes);
 
@@ -107,7 +115,7 @@ ErrorType LoadNotes(const char* path, NotesData* notes);
  * Appends one binary record with the current pomodoro data.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to save
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType SavePomodoro(const char* path, const PomodoroData* data);
 
@@ -122,7 +130,7 @@ int GetLastLogIndexOnly(const char* path);
  * Remove uncompleted entries for a given index.
  * @param path File path for the pomodoro log
  * @param index Index to remove uncompleted entries for
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType RemoveUncompletedEntries(const char* path, int index);
 
@@ -132,7 +140,7 @@ ErrorType RemoveUncompletedEntries(const char* path, int index);
  * An invalid record leaves the caller's data unchanged.
  * @param path File path for the pomodoro log
  * @param data Pointer to the pomodoro data to populate
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR on success, or an error code on failure
  */
 ErrorType LoadPomodoro(const char* path, PomodoroData* data);
 

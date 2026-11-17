@@ -21,7 +21,6 @@
 #define CTRLW 23
 #define CTRLT 20
 
-typedef struct AppData AppData;
 typedef struct Panel Panel;
 typedef struct InputState InputState;
 typedef struct KeyFunction KeyFunction;

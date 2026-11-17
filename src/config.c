@@ -19,6 +19,7 @@
 
 #include "error.h"
 #include "external/toml-c.h"
+#include "input.h"
 #include "util.h"
 
 /* toml-c.h poisons strdup — restore the system declaration for our use */

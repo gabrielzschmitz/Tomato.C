@@ -121,4 +121,4 @@ void NoiseStopTrack(int track_index);
  */
 void NoiseSetVolume(int track_index, float volume);
 
-#endif /* AUDIO_H */
+#endif /* AUDIO_H_ */

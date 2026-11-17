@@ -22,7 +22,9 @@
 #include "config.h"
 #include "error.h"
 
-/* PRIVATE NOTIFY FUNCTIONS */
+/**
+ * Private helper functions for notification handling.
+ */
 static ErrorType sendNotification(const char* title, const char* description);
 static bool shouldDispatchAsync(void);
 static ErrorType queueNotification(const char* title, const char* description);

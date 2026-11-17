@@ -5,9 +5,17 @@
 #include <stdio.h>
 #include <time.h>
 
+/**
+ * Application data structure.
+ * Contains runtime state for the Tomato.C application.
+ */
 typedef struct AppData AppData;
 
-#define NO_COLOR -1 /* Defining a blank color type */
+/**
+ * Blank color type constant.
+ * Used to indicate no color should be applied.
+ */
+#define NO_COLOR -1
 
 /**
  * Minimum terminal lines needed beyond the largest sprite:

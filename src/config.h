@@ -2,9 +2,17 @@
 #define CONFIG_H_
 
 #include <ncurses.h>
+#include <stdbool.h>
 
 #include "error.h"
-#include "input.h"
+
+typedef struct KeyFunction KeyFunction;
+typedef struct InputState InputState;
+typedef struct NoteItem NoteItem;
+typedef struct TaskItem TaskItem;
+typedef struct Panel Panel;
+typedef struct StatusBar StatusBar;
+typedef struct StatusBarModule StatusBarModule;
 
 /* Config struct hierarchy -------------------------------------------------- */
 
@@ -172,15 +180,15 @@ typedef struct {
   int work_log;             /**< 0/1 — enables cycle resume */
   int history_log;          /**< 0/1 — records pomodoro history and tomato -h */
   int notepad_log;          /**< 0/1 — save notes on exit */
-  int timerlog_icons;       /**< 0/1 — icons in timer log */
+  int timerlog_icons;       /**< 0/1 — icons in timer-log output */
 } ConfigLogging;
 
 /**
  * Auto-start toggles for pomodoro cycles.
  */
 typedef struct {
-  int work;  /**< 0/1 — ask to continue after work */
-  int pause; /**< 0/1 — ask to continue after pause */
+  int work;  /**< 0/1 — ask to auto-start next work cycle (default: 1) */
+  int pause; /**< 0/1 — ask to auto-start next pause (default: 1) */
 } ConfigAutostart;
 
 /**
@@ -236,7 +244,7 @@ const char* GetUserConfigPath(void);
  * @param path Config file to update (created if missing)
  * @param values Entries to write
  * @param count Number of entries
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR when successful, or an error code on failure.
  */
 ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
                            int count);
@@ -440,10 +448,5 @@ extern const char* default_user_config_dir;
 
 /** Shorthand for g_config.key_bindings. */
 #define keys (g_config.key_bindings)
-
-/** Compile-time default keybinding array. Used as fallback when no TOML override is present. */
-extern const KeyFunction default_keys[];
-/** Number of entries in default_keys[]. */
-extern const size_t default_keys_count;
 
 #endif /* CONFIG_H_ */

@@ -152,4 +152,4 @@ bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
  */
 void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index);
 
-#endif /* ANIM_H */
+#endif /* ANIM_H_ */

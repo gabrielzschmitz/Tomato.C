@@ -4,8 +4,9 @@
 
 #include "error.h"
 
-/* PRIVATE HISTORY FUNCTIONS */
-/* History Operations */
+/**
+ * Private helper functions for history operations.
+ */
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*));
 static HistoryNode* popStack(HistoryNode** stack);
 static int getStackCount(const HistoryNode* stack);
@@ -18,7 +19,7 @@ static int getStackCount(const HistoryNode* stack);
 
 /**
  * Create a new History manager.
- * @return Pointer to History, or NULL on allocation failure
+ * @return Pointer to History, or NULL on allocation failure.
  */
 History* CreateHistory(void) {
   History* history = (History*)malloc(sizeof(History));
@@ -34,8 +35,8 @@ History* CreateHistory(void) {
 
 /**
  * Free History and all its data.
- * @param history Pointer to History
- * @param free_fn Function to free data in stacks (can be NULL)
+ * @param history Pointer to History.
+ * @param free_fn Function to free data in stacks (can be NULL).
  */
 void FreeHistory(History* history, void (*free_fn)(void*)) {
   if (!history) return;
@@ -67,10 +68,10 @@ void FreeHistory(History* history, void (*free_fn)(void*)) {
 
 /**
  * Push current state to history.
- * @param history Pointer to History
- * @param data Pointer to data snapshot (caller retains ownership)
- * @param free_fn Function to free the data (can be NULL)
- * @param to_future If true, push to future stack; if false, push to past stack
+ * @param history Pointer to History.
+ * @param data Pointer to data snapshot (caller retains ownership).
+ * @param free_fn Function to free the data (can be NULL).
+ * @param to_future If true, push to future stack; if false, push to past stack.
  */
 void HistoryPush(History* history, void* data, void (*free_fn)(void*),
                  bool to_future) {
@@ -98,9 +99,9 @@ void HistoryPush(History* history, void* data, void (*free_fn)(void*),
 
 /**
  * Pop state from history stack.
- * @param history Pointer to History
- * @param from_past If true, pop from past (undo); if false, pop from future (redo)
- * @return Data pointer (caller takes ownership), or NULL
+ * @param history Pointer to History.
+ * @param from_past If true, pop from past (undo); if false, pop from future (redo).
+ * @return Data pointer (caller takes ownership), or NULL.
  */
 void* HistoryPop(History* history, bool from_past) {
   if (!history) return NULL;
@@ -118,8 +119,8 @@ void* HistoryPop(History* history, bool from_past) {
 
 /**
  * Check if undo is available.
- * @param history Pointer to History
- * @return true if can undo
+ * @param history Pointer to History.
+ * @return true if can undo.
  */
 bool HistoryCanUndo(const History* history) {
   return history && history->past != NULL;
@@ -127,8 +128,8 @@ bool HistoryCanUndo(const History* history) {
 
 /**
  * Check if redo is available.
- * @param history Pointer to History
- * @return true if can redo
+ * @param history Pointer to History.
+ * @return true if can redo.
  */
 bool HistoryCanRedo(const History* history) {
   return history && history->future != NULL;
@@ -136,9 +137,9 @@ bool HistoryCanRedo(const History* history) {
 
 /**
  * Push a node onto a stack.
- * @param stack Pointer to the stack pointer
- * @param data Data to push
- * @param free_fn Function to free the data
+ * @param stack Pointer to the stack pointer.
+ * @param data Data to push.
+ * @param free_fn Function to free the data.
  */
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*)) {
   HistoryNode* node = (HistoryNode*)malloc(sizeof(HistoryNode));
@@ -155,8 +156,8 @@ static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*)) {
 
 /**
  * Pop a node from a stack.
- * @param stack Pointer to the stack pointer
- * @return The popped node (caller takes ownership of data), or NULL
+ * @param stack Pointer to the stack pointer.
+ * @return The popped node (caller takes ownership of data), or NULL.
  */
 static HistoryNode* popStack(HistoryNode** stack) {
   if (!*stack) return NULL;
@@ -167,8 +168,8 @@ static HistoryNode* popStack(HistoryNode** stack) {
 
 /**
  * Get the count of nodes in a stack.
- * @param stack Pointer to the stack
- * @return Number of nodes
+ * @param stack Pointer to the stack.
+ * @return Number of nodes.
  */
 static int getStackCount(const HistoryNode* stack) {
   int count = 0;

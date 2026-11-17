@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "error.h"
+#include "input.h"
 #include "log.h"
 #include "notes.h"
 #include "tomato.h"

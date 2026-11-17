@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "error.h"
+#include "input.h"
 #include "pomodoro.h"
 #include "test_helpers.h"
 #include "util.h"

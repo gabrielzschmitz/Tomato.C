@@ -6,6 +6,7 @@
 #include "anim.h"
 #include "bar.h"
 #include "config.h"
+#include "input.h"
 #include "log.h"
 #include "notify.h"
 #include "pomodoro.h"
@@ -13,12 +14,33 @@
 #include "ui.h"
 #include "util.h"
 
-/* PRIVATE UPDATE FUNCTIONS */
-/* Pomodoro */
+/* PRIVATE UPDATE.C FUNCTIONS */
+
+/**
+ * Update pomodoro timer data - decrement time, check for step end.
+ * @param app Pointer to the application data
+ * @return void
+ */
 static void updatePomodoroTime(AppData* app);
+
+/**
+ * Update pomodoro log file with current state.
+ * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
+ * @param app Pointer to the application data
+ * @return void
+ */
 static void updatePomodoroLog(AppData* app);
+
+/**
+ * Update the timer log socket with current step information.
+ * @param app Pointer to the application data
+ * @param steps Array of step types to log
+ * @param steps_count Number of steps in the array
+ * @return void
+ */
 static void updateTimerLog(AppData* app, const int* steps,
                            const size_t steps_count);
+
 static bool skip_auto_save = false;
 
 /**
@@ -31,7 +53,7 @@ static bool skip_auto_save = false;
  * Update all application variables and state.
  * Called each frame to refresh app state.
  * @param app Pointer to the application data
- * @return ErrorType NO_ERROR on success, or an error code on failure
+ * @return NO_ERROR when successful, or an error code on failure.
  */
 ErrorType UpdateApp(AppData* app) {
   ErrorType status = NO_ERROR;
@@ -94,6 +116,7 @@ ErrorType UpdateApp(AppData* app) {
 /**
  * Update MAIN_MENU scene state and menu selection.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateMainMenu(AppData* app) {
   /* Tomato Animation */
@@ -109,6 +132,7 @@ void UpdateMainMenu(AppData* app) {
 /**
  * Update WORK_TIME scene - timer countdown and animations.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateWorkTime(AppData* app) {
   /* Coffee Animation */
@@ -152,6 +176,7 @@ void UpdateWorkTime(AppData* app) {
 /**
  * Update SHORT_PAUSE scene - timer countdown and animations.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateShortPause(AppData* app) {
   /* Coffee Machine Animation */
@@ -185,6 +210,7 @@ void UpdateShortPause(AppData* app) {
 /**
  * Update LONG_PAUSE scene - timer countdown and animations.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateLongPause(AppData* app) {
   /* Beach Animation */
@@ -218,6 +244,7 @@ void UpdateLongPause(AppData* app) {
  * Update NOTES scene - note selection and editing state.
  * Handles both normal notes display and page transition animation.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateNotes(AppData* app) {
   if (app->is_paused) return;
@@ -302,6 +329,7 @@ void UpdateNotes(AppData* app) {
 /**
  * Update HELP scene - help content display.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateHelp(AppData* app) {
   /* Scroll Animation */
@@ -317,6 +345,7 @@ void UpdateHelp(AppData* app) {
 /**
  * Update CONTINUE scene - pause/resume confirmation.
  * @param app Pointer to the application data
+ * @return void
  */
 void UpdateContinue(AppData* app) {
   /* Banner Animation */
@@ -330,14 +359,9 @@ void UpdateContinue(AppData* app) {
 }
 
 /**
- * ---------------------------------------------------------------------------
- * Pomodoro
- * ---------------------------------------------------------------------------
- */
-
-/**
  * Update pomodoro timer data - decrement time, check for step end.
  * @param app Pointer to the application data
+ * @return void
  */
 static void updatePomodoroTime(AppData* app) {
   double current_time = GetCurrentTimeMS();
@@ -361,6 +385,7 @@ static void updatePomodoroTime(AppData* app) {
  * Update pomodoro log file with current state.
  * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
  * @param app Pointer to the application data
+ * @return void
  */
 static void updatePomodoroLog(AppData* app) {
   if (!HISTORY_LOG || skip_auto_save) return;
@@ -403,6 +428,7 @@ static void updatePomodoroLog(AppData* app) {
  * @param app Pointer to the application data
  * @param steps Array of step types to log
  * @param steps_count Number of steps in the array
+ * @return void
  */
 static void updateTimerLog(AppData* app, const int* steps,
                            const size_t steps_count) {

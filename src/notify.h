@@ -21,4 +21,4 @@ typedef struct {
  */
 ErrorType Notify(const Notification* notification);
 
-#endif /* NOTIFY_H */
+#endif /* NOTIFY_H_ */

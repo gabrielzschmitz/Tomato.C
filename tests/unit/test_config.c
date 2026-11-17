@@ -11,6 +11,7 @@
 #define DATADIR "/usr/share/tomato"
 
 #include "config.h"
+#include "input.h"
 #include "test_helpers.h"
 #include "tomato.h"
 

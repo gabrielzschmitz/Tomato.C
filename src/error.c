@@ -9,12 +9,16 @@
 #include "ui.h"
 #include "util.h"
 
-/* PRIVATE VARIABLES */
+/**
+ * Private variables for error management.
+ */
 static ErrorEntry error_stack[MAX_ERROR_ENTRIES] = {0};
 static int error_count = 0;
 static bool app_frozen = false;
 
-/* PRIVATE ERROR FUNCTIONS */
+/**
+ * Private helper functions for error level handling.
+ */
 static ErrorLevel getErrorLevel(ErrorType error);
 static const char* getErrorLevelMessage(ErrorLevel level);
 static int getErrorColor(ErrorLevel level);

@@ -15,7 +15,11 @@ typedef struct InputState InputState;
  * Enum representing the state of a note item.
  * Determines rendering style and behavior.
  */
-typedef enum { NOTE_UNDONE, NOTE_DONE, NOTE_PLAIN } NoteState;
+typedef enum {
+  NOTE_UNDONE, /**< Note not marked as complete */
+  NOTE_DONE,   /**< Note marked as complete */
+  NOTE_PLAIN,  /**< Plain text without state styling */
+} NoteState;
 
 #define NOTES_INITIAL_CAPACITY 8
 

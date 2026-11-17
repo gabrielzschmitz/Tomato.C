@@ -47,7 +47,7 @@ static void write_rec(FILE* f, uint16_t idx, uint8_t step, uint8_t cycle,
                       uint8_t tcycles, uint8_t work, uint8_t sp, uint8_t lp,
                       uint32_t elapsed, uint32_t step_time, uint8_t status,
                       uint32_t start) {
-  pomodoroLogRecord r = {.session_index = idx,
+  PomodoroLogRecord r = {.session_index = idx,
                          .current_step = step,
                          .current_cycle = cycle,
                          .total_cycles = tcycles,
@@ -861,7 +861,7 @@ static void test_load_corrupted_file_partial_record(void) {
   int fd = mkstemp(tmp);
   ASSERT_GT(fd, -1);
 
-  pomodoroLogRecord rec;
+  PomodoroLogRecord rec;
   memset(&rec, 0, sizeof(rec));
   rec.session_index = 1;
   rec.total_cycles = 4;

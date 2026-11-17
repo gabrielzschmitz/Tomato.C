@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "input.h"
 #include "external/toml-c.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"
@@ -48,6 +49,13 @@ static void restore_env(const char* name, char* value) {
   }
 }
 
+/* setDefaults() allocates key_bindings; free the previous copy between tests. */
+static void resetDefaults(void) {
+  free(g_config.key_bindings);
+  g_config.key_bindings = NULL;
+  setDefaults();
+}
+
 static void test_parse_error_is_queued(void) {
   TEST("unparseable config queues an error diagnostic");
   char tmp[] = "/tmp/t_cfg_load_XXXXXX";
@@ -56,7 +64,7 @@ static void test_parse_error_is_queued(void) {
   close(fd);
   write_file(tmp, "[visual\nanimations = 1\n");
 
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
 
@@ -78,7 +86,7 @@ static void test_valid_file_queues_nothing(void) {
   close(fd);
   write_file(tmp, "[visual]\nanimations = 0\n");
 
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
 
@@ -89,7 +97,7 @@ static void test_valid_file_queues_nothing(void) {
 
 static void test_sample_config_matches_defaults(void) {
   TEST("sample_config.toml loads cleanly and matches defaults");
-  setDefaults();
+  resetDefaults();
   int default_clock = g_config.visual.clock_24h;
   g_config.visual.clock_24h = -1;
   resetConfigWarnings();
@@ -107,7 +115,7 @@ static void test_invalid_icons_fall_back_to_ascii(void) {
   close(fd);
   write_file(tmp, "[visual]\nicons = \"nerdfont\"\n");
 
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
 
@@ -143,7 +151,7 @@ static void test_save_keeps_comment_and_updates_value(void) {
   read_file(tmp, buf, sizeof(buf));
   ASSERT_NOT_NULL(strstr(buf, "# my config"));
   ASSERT_NOT_NULL(strstr(buf, "animations = 0  # enable anim"));
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
   ASSERT_EQ(g_config.visual.animations, 0);
@@ -191,7 +199,7 @@ static void test_save_adds_missing_key_to_its_table(void) {
   char buf[512];
   read_file(tmp, buf, sizeof(buf));
   ASSERT_NOT_NULL(strstr(buf, "amount = 4"));
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
   ASSERT_EQ(g_config.visual.clock_24h, 1);
@@ -213,7 +221,7 @@ static void test_save_appends_missing_table(void) {
   read_file(tmp, buf, sizeof(buf));
   ASSERT_NOT_NULL(strstr(buf, "# only a comment"));
   ASSERT_NOT_NULL(strstr(buf, "[pomodoro]"));
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
   ASSERT_EQ(g_config.pomodoro.amount, 3);
@@ -248,7 +256,7 @@ static void test_save_writes_booleans(void) {
   ConfigValue v = {"notifications.enabled", "false"};
   ASSERT_EQ(SaveConfigValues(tmp, &v, 1), NO_ERROR);
 
-  setDefaults();
+  resetDefaults();
   resetConfigWarnings();
   loadTomlFile(tmp);
   ASSERT_EQ(g_config.notifications.enabled, 0);
@@ -311,7 +319,7 @@ static void test_state_and_runtime_overrides(void) {
   setenv("XDG_STATE_HOME", "/tmp/t_cfg_unused_state", 1);
   setenv("XDG_RUNTIME_DIR", "/tmp/t_cfg_unused_runtime", 1);
 
-  setDefaults();
+  resetDefaults();
   ASSERT_STR_EQ(g_config.logging.pomodoro_log, "/tmp/t_cfg_state/pomodoro.bin");
   ASSERT_STR_EQ(g_config.logging.notes_log, "/tmp/t_cfg_state/notes.log");
   ASSERT_STR_EQ(g_config.logging.error_log, "/tmp/t_cfg_state/errors.log");
@@ -360,7 +368,7 @@ static void test_empty_noise_tracks_override_previous_tracks(void) {
   close(fd);
   write_file(tmp, "[noise]\ntracks = []\n");
 
-  setDefaults();
+  resetDefaults();
   ASSERT_GT(g_config.noise.track_count, 0);
   loadTomlFile(tmp);
   ASSERT_EQ(g_config.noise.track_count, 0);
@@ -396,7 +404,7 @@ static void test_reload_replaces_owned_strings(void) {
     f);
   fclose(f);
 
-  setDefaults();
+  resetDefaults();
   for (int pass = 0; pass < 2; pass++) {
     loadTomlFile(tmp);
     ASSERT_STR_EQ(g_config.visual.icons, "emojis");
@@ -485,7 +493,7 @@ static int stepper_action_for(int key) {
 
 static void test_stepper_keys_commit_and_cancel(void) {
   TEST("stepper: Enter commits, Esc/q/Ctrl-C cancel");
-  setDefaults();
+  resetDefaults();
   ASSERT_EQ(stepper_action_for(ENTER), 1);
   ASSERT_EQ(stepper_action_for(ESC), 2);
   ASSERT_EQ(stepper_action_for('q'), 2);

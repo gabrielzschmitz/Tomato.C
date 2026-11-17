@@ -20,7 +20,6 @@ typedef struct FloatingDialog FloatingDialog;
 typedef struct SlideDef SlideDef;
 
 /* Forward declarations */
-typedef struct AppData AppData;
 typedef struct InputState InputState;
 
 /**

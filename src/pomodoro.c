@@ -11,11 +11,11 @@
 /**
  * Initialize pomodoro timer data with given configuration values.
  * Resets the state machine to the initial WORK_TIME step.
- * @param pd Pointer to the pomodoro data to initialize
- * @param total_cycles Number of work sessions before a long break
- * @param work_time Duration of each work session in minutes
- * @param short_pause_time Duration of a short pause in minutes
- * @param long_pause_time Duration of a long pause in minutes
+ * @param pd Pointer to the pomodoro data to initialize.
+ * @param total_cycles Number of work sessions before a long break.
+ * @param work_time Duration of each work session in minutes.
+ * @param short_pause_time Duration of a short pause in minutes.
+ * @param long_pause_time Duration of a long pause in minutes.
  */
 void InitPomodoroData(PomodoroData* pd, int total_cycles, int work_time,
                       int short_pause_time, int long_pause_time) {
@@ -38,8 +38,8 @@ void InitPomodoroData(PomodoroData* pd, int total_cycles, int work_time,
 /**
  * Advance the pomodoro timer by a number of seconds.
  * Increments both the current step time and the total elapsed time.
- * @param pd Pointer to the pomodoro data
- * @param seconds Number of seconds to add
+ * @param pd Pointer to the pomodoro data.
+ * @param seconds Number of seconds to add.
  */
 void TickPomodoroTime(PomodoroData* pd, int seconds) {
   pd->current_step_time += seconds;
@@ -52,10 +52,10 @@ void TickPomodoroTime(PomodoroData* pd, int seconds) {
  * Advancing by whole intervals keeps the leftover fraction for the next
  * call. Resetting the reference to the current time would drop that
  * fraction and make the timer run long.
- * @param last_ms Pointer to the last reference time in milliseconds
- * @param now_ms Current time in milliseconds
- * @param interval_ms Duration of one tick in milliseconds
- * @return Number of whole ticks elapsed, or 0 if the interval has not passed
+ * @param last_ms Pointer to the last reference time in milliseconds.
+ * @param now_ms Current time in milliseconds.
+ * @param interval_ms Duration of one tick in milliseconds.
+ * @return Number of whole ticks elapsed, or 0 if the interval has not passed.
  */
 int AdvancePomodoroClock(double* last_ms, double now_ms, double interval_ms) {
   if (!last_ms || interval_ms <= 0.0) return 0;
@@ -77,7 +77,7 @@ int AdvancePomodoroClock(double* last_ms, double now_ms, double interval_ms) {
  * - LONG_PAUSE -> MAIN_MENU (cycle resets, session marked completed and
  *   its session index released for the next session)
  *
- * @param pd Pointer to the pomodoro data
+ * @param pd Pointer to the pomodoro data.
  */
 void TransitionPomodoroStep(PomodoroData* pd) {
   pd->current_step_time = 0;
@@ -103,8 +103,8 @@ void TransitionPomodoroStep(PomodoroData* pd) {
  * Get the duration of the current pomodoro step in minutes.
  * Returns the configured work, short pause, or long pause duration
  * depending on pd->current_step.
- * @param pd Pointer to the pomodoro data
- * @return int Duration in minutes for the current step
+ * @param pd Pointer to the pomodoro data.
+ * @return int Duration in minutes for the current step.
  */
 int GetStepDurationMinutes(const PomodoroData* pd) {
   if (pd->current_step == WORK_TIME) return pd->work_time;

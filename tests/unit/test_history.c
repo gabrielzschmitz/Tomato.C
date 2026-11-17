@@ -26,7 +26,7 @@ void LogError(const char* context, ErrorType type) {
  */
 static int freed_count = 0;
 static void track_free(void* data) {
-  (void)data;
+  free(data);
   freed_count++;
 }
 

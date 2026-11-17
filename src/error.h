@@ -1,5 +1,5 @@
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef ERROR_H_
+#define ERROR_H_
 
 #include <stdbool.h>
 #include <time.h>
@@ -172,4 +172,4 @@ bool HasErrors(void);
 void TestErrorLine(AppData* app, const char* message, ErrorLevel level,
                    bool full_flow);
 
-#endif /* ERROR_H */
+#endif /* ERROR_H_ */

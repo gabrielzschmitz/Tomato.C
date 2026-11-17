@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "input.h"
 #include "external/toml-c.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"

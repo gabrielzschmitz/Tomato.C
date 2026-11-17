@@ -5,8 +5,6 @@
 
 #include "error.h"
 
-typedef struct AppData AppData;
-
 /**
  * Draw the entire screen based on the current app state.
  * Renders all visible panels, animations, and UI elements.
