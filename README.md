@@ -103,8 +103,8 @@ curl -sSL https://raw.githubusercontent.com/gabrielzschmitz/Tomato.C/main/instal
 
 ## Usage
 
-Pomodoro controls and navigation are handled via keyboard shortcuts and mouse
-input. To get help with the keybinds press `?`/`F1` at anytime!
+Use keyboard shortcuts or mouse input to navigate Tomato.C. Press `?` or
+`F1` at any time to view the available keybindings.
 
 ### Command-line reference
 
@@ -114,44 +114,12 @@ tomato [-loop true|false] -t [nerd-icons|emojis|ascii|no-icons]
 tomato -h [overview|today]
 ```
 
-- `tomato -t` streams timer status while the app runs.
-- `tomato -loop false -t` prints one timer status and exits.
-- `tomato -t ascii` streams status without requiring Nerd Fonts.
-- `tomato -h` or `tomato -h overview` prints history overview.
-- `tomato -h today` prints today's sessions.
-- `tomato --help` and `tomato --version` print command help and version.
+- `-t`: Stream timer status.
+- `-loop false -t`: Print one status and exit.
+- `-h [overview|today]`: Display session history.
+- `--help` / `--version`: Display help or version information.
 
-Timer output requires `logging.timer_log = true`. History commands require
-`logging.history_log = true`.
-
-### Keyboard overview
-
-- Main menu: use Up/Down or `j`/`k`; press Enter to choose an item.
-- Global: press `?` or F1 for in-app help. In default mode, `q`, Escape, or
-  Ctrl-C opens quit confirmation. Notes editing modes use Escape to change mode.
-- Pomodoro: `p` pauses or resumes; `s` skips a step; Ctrl-R opens reset options;
-  `m` returns to main menu.
-- Notes: `j`/`k` moves through notes; `h`/`l` navigates pages; `i` enters insert
-  mode; Escape returns to default mode; `u` undoes and Ctrl-R redoes.
-- Mouse clicks and wheel events also work in supported menus and dialogs.
-
-Keybindings are configurable. In-app help shows active bindings for current
-scene and mode.
-
-### Status-bar examples
-
-Configure status-bar modules by position in `config.toml`:
-
-```toml
-[visual.status_bar.modules]
-left = ["InputMode", "RealTime"]
-center = ["CurrentStatus", "Streak"]
-right = ["Scene", "LineColumn"]
-```
-
-Available modules: `InputMode`, `RealTime`, `Scene`, `CurrentStatus`,
-`LineColumn`, `Streak`, `Date`, `Weekday`, `TerminalSize`, and `Icons`.
-Module names are case-sensitive. The sample configuration shows default layout.
+Timer and history output require their respective logging options to be enabled.
 
 <p align="center">
   <img src="./resources/demo.gif" alt="Tomato.C demonstration" style="width: 484px; border: 3px solid #e06e6e; padding: 0;">
@@ -167,60 +135,29 @@ Module names are case-sensitive. The sample configuration shows default layout.
 
 ## Configuration
 
-Tomato.C uses a _toml_ configuration file. When installed via `install.sh`, a
-fully commented sample config is automatically created at
-`~/.config/tomato/config.toml`.
+Tomato.C uses a TOML configuration file. A fully commented sample is created at
+`~/.config/tomato/config.toml` when installed with `install.sh`.
 
-All available options are documented directly in the file, including timer
-durations, status bar modules, notifications, animations, keybindings, and
-other general settings.
-
-Configuration loads once at startup. Built-in defaults load first, then
-`/etc/tomato/config.toml`, then user configuration. User values override system
-values; omitted values keep their current defaults or lower-priority values.
-
-User configuration path precedence:
-
-1. `$TOMATO_CONFIG_DIR/config.toml` when `TOMATO_CONFIG_DIR` is absolute.
-2. `$XDG_CONFIG_HOME/tomato/config.toml`.
-3. `$HOME/.config/tomato/config.toml`.
-
-`TOMATO_STATE_DIR` selects state directory when absolute. Otherwise Tomato.C
-uses `$XDG_STATE_HOME/tomato` when `XDG_STATE_HOME` is absolute, then
-`$HOME/.local/state/tomato`. State files
-include `pomodoro.bin`, `notes.log`, and `errors.log`; `logging.*_log` options
-can override their paths. `TOMATO_RUNTIME_DIR` selects timer-socket directory;
-otherwise `XDG_RUNTIME_DIR` or state directory is used. Only absolute values
-for `TOMATO_CONFIG_DIR`, `TOMATO_STATE_DIR`, and `TOMATO_RUNTIME_DIR` are honored.
-If no home directory is available, Tomato.C falls back to a private
-`/tmp/tomato-<uid>` directory. The development shell redirects paths under
-`.tmp/`.
+For configuration paths, precedence, and persistence details, see
+[Architecture](ARCHITECTURE.md).
 
 ### Troubleshooting
 
-- **Linux desktop notifications:** install and run a notification daemon that
-  implements `org.freedesktop.Notifications`, such as `dunst`. Check that your
-  session D-Bus is active and test with `notify-send`. Set `notifications.enabled`
-  to `true`.
-- **WSL notifications:** set `misc.wsl = true` and ensure `notify-send` is
-  available through WSL's desktop integration. macOS uses `osascript`; allow
-  notifications for your terminal in System Settings.
-- **Notification sound:** set `notifications.sound = true` and check
-  `notifications.sound_volume` and system output device. Sound is disabled in
-  WSL. Desktop notifications and sound are separate settings.
-- **Missing glyphs:** `visual.icons = "nerd-icons"` requires a Nerd Font in your
-  terminal. Use `"emojis"` with a font that supports emoji, or `"ascii"` for
-  portable text symbols.
-- **Small terminal:** enlarge the terminal until the displayed minimum width
-  and height are met. The minimum depends on selected animations and icon set.
+- **Notifications:** Ensure your desktop notification service is running.
+- **Notification sound:** Check `notifications.sound` and
+  `notifications.sound_volume`.
+- **Missing glyphs:** Use a compatible Nerd Font or emoji font, or set
+  `visual.icons = "ascii"`.
+- **Small terminal:** Enlarge the terminal to meet the displayed minimum
+  dimensions.
 
 ---
 
 ## Documentation
 
-Complete API and developer documentation is generated with **Doxygen**.
-For design details, see [Architecture](ARCHITECTURE.md); for build, test, and
-contribution steps, see [Contributing](CONTRIBUTING.md).
+API documentation is generated with **Doxygen**. See
+[Architecture](ARCHITECTURE.md) for design details and
+[Contributing](CONTRIBUTE.md) for development guidelines.
 
 <p align="center">
   <img src="./resources/docs.png" alt="Tomato.C documentation" style="width: 484px; border: 3px solid #e06e6e; padding: 0;">
@@ -231,7 +168,7 @@ contribution steps, see [Contributing](CONTRIBUTING.md).
   </em>
 </p>
 
-Generate the documentation locally:
+Generate locally:
 
 ```bash
 cd docs
@@ -243,45 +180,8 @@ $BROWSER output/html/index.html
 
 ## Contribute
 
-Feel free to contribute to the project, the requirements are to follow
-[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0), follow
-[DOXYGEN](https://www.doxygen.nl/index.html) style of documenting code and use
-`.clang-format` to format the files.
-
-### Development
-
-A [Nix](https://nixos.org) package, flake, and development shell are included
-for reproducible builds and tooling.
-
-Build and run the packaged binary:
-
-```bash
-nix build .#    # builds into result/bin/tomato
-nix run   .#    # runs the binary
-nix build .#tcc # builds with TinyCC
-nix build .#zig # builds with Zig's C compiler
-nix flake check # builds and tests GCC, TinyCC, and Zig variants
-```
-
-Enter a development shell (flake or classic `nix-shell`):
-
-```bash
-nix develop # flake-based shell
-nix-shell   # classic (non-flake) shell
-```
-
-The shell provides `gcc`, `make`, `pkg-config`, `ncurses`, `libnotify`, plus
-`clang-format`, `bear`, `doxygen`, `tcc`, `zig`, and `valgrind`. It also keeps
-Tomato.C's config, state, and runtime files under `.tmp/` in the repository
-using `TOMATO_CONFIG_DIR`, `TOMATO_STATE_DIR`, and `TOMATO_RUNTIME_DIR`, so
-running the development binary never touches your real config. The shell does
-not override the `XDG_*` variables, leaving the rest of your environment
-untouched. From inside it, build and test as usual:
-
-```bash
-./build.sh
-./run_tests.sh
-```
+See [CONTRIBUTE.md](CONTRIBUTE.md) for development setup, build instructions,
+tests, and contribution guidelines.
 
 ---
 
