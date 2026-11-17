@@ -19,7 +19,7 @@ and this project adheres to
   sounds. Dispatched macOS and WSL notifications asynchronously.
 - **Documentation** — Added CLI reference, data locations, troubleshooting,
   keyboard and status-bar guidance, and Homebrew build notes. Added
-  `ARCHITECTURE.md` and `CONTRIBUTING.md`, and corrected stale source and CI
+  `ARCHITECTURE.md` and `CONTRIBUTE.md`, and corrected stale source and CI
   comments.
 - **Vendored audio library** — Updated vendored miniaudio from v0.11.21 to
   v0.11.26.
@@ -239,7 +239,7 @@ and this project adheres to
   allowing the application to continue running gracefully.
 
 - **Portable test binary discovery** — Replaced the non-portable `find
-  -executable` test with `find -perm -111`, improving compatibility with POSIX
+-executable` test with `find -perm -111`, improving compatibility with POSIX
   environments such as macOS and Alpine.
 
 - **macOS animation tests** — Replaced Linux-specific `/proc/self/fd` paths
@@ -347,7 +347,7 @@ and this project adheres to
   Notification `audio_path` and noise `sound_path` values read from TOML
   config files were stored as dangling pointers after `toml_free()`
   invalidated the parser's string table, causing `InitApp()` to read freed
-  memory and fail with `ErrorCode 8`.  Fixed by `strdup`'ing (via
+  memory and fail with `ErrorCode 8`. Fixed by `strdup`'ing (via
   `expandDatadir`) every path read from TOML before the parser is freed.
 
 ### Added
@@ -355,7 +355,7 @@ and this project adheres to
 - **`$DATADIR` token expansion for configuration paths** — TOML config
   values for `audio_path`, `sound_path`, and logging file paths now
   support the `$DATADIR` token, which is expanded at load time to the
-  compile-time `DATADIR` path (e.g. `/usr/local/share/tomato`).  This
+  compile-time `DATADIR` path (e.g. `/usr/local/share/tomato`). This
   makes configuration files portable regardless of installation prefix
   or working directory.
 
@@ -370,6 +370,7 @@ and this project adheres to
 ### Added
 
 #### Core Pomodoro Timer
+
 - Work / short break / long break cycle with fully configurable durations
 - Pause, resume, skip, and reset functionality
 - Cycle tracking with configurable pomodoros per cycle (1–8)
@@ -377,6 +378,7 @@ and this project adheres to
 - Unfinished session detection and continuation prompt
 
 #### Terminal User Interface
+
 - Dynamic multi-panel layout using ncursesw
 - ASCII sprite animation engine (`Rollfilm`) with frame-based playback, timing,
   color, and looping
@@ -391,6 +393,7 @@ and this project adheres to
   runtime or in config
 
 #### Notes / Task Editor
+
 - Vim-like modal editing: NORMAL, INSERT, and VISUAL modes
 - Gap buffer data structure for O(1) text insertion and deletion
 - Hierarchical notes and tasks with configurable nesting depth (0–3)
@@ -404,12 +407,14 @@ and this project adheres to
 - Automatic save and load on exit
 
 #### Desktop Notifications
+
 - System notifications via libnotify (Linux)
 - Configurable notifications per stage: work, short break, long break, end of
   cycle
 - Sound notifications alongside desktop alerts
 
 #### Audio / White Noise
+
 - White noise and ambient sound playback for focus sessions
 - Per-track and master volume control
 - Track types: Rain, Fire, Wind, Thunder
@@ -418,6 +423,7 @@ and this project adheres to
 - Vendored miniaudio.h — no system audio library dependency
 
 #### Session History
+
 - Binary log of all pomodoro sessions (28 bytes per record)
 - GitHub-style activity contribution graph
 - Day-by-day session detail view
@@ -426,6 +432,7 @@ and this project adheres to
 - CLI history overview (`tomato -h`)
 
 #### Configuration System
+
 - TOML-based configuration via vendored toml-c.h parser
 - System config: `/etc/tomato/config.toml`
 - User config: `~/.config/tomato/config.toml`
@@ -433,18 +440,21 @@ and this project adheres to
 - Fully commented sample configuration
 
 #### Keybinding System
+
 - Fully configurable keybindings via TOML
 - Mode-specific bindings: DEFAULT, NORMAL, INSERT, VISUAL
 - Scene-aware dispatch with different bindings per scene
 - Keybinding merging: system config + user config + built-in defaults
 
 #### Error Handling
+
 - Structured error type system with severity levels: DEBUG, INFO, WARNING,
   ERROR, CRITICAL
 - Error stack with auto-clearing by timeout
 - Critical error handling with freeze and quit confirmation
 
 #### Build System
+
 - POSIX make build with shared config.mk for compiler and linker flags
 - Build script (`build.sh`) with debug, install, and output directory options
 - Security hardening: `-fstack-protector-strong`, `-fPIE`,
@@ -452,6 +462,7 @@ and this project adheres to
 - Platform detection: Linux and macOS (Intel + ARM)
 
 #### Testing
+
 - 10 unit test suites: gap buffer, history, config, keybind, notes, util,
   error, log, anim, bar
 - 5 integration test suites: pomodoro workflow, pomodoro timer, end-to-end,
@@ -460,12 +471,14 @@ and this project adheres to
 - CI via GitHub Actions on Ubuntu, macOS Intel, and macOS ARM
 
 #### Documentation
+
 - Doxygen-generated API documentation
 - Comprehensive README with quick start, usage, and contribution guide
 - Fully commented sample configuration
 - Development roadmap (TODO.md)
 
 #### Cross-Platform Support
+
 - Linux (primary)
 - macOS (Intel and Apple Silicon)
 - WSL (Windows Subsystem for Linux) compatibility mode
