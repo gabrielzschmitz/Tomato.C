@@ -32,7 +32,9 @@ set -u
 PREFIX="/usr/local"
 DESTDIR=""
 UNINSTALL=0
-OS_ID=""; OS_NAME=""; PKG_MANAGER=""
+OS_ID=""
+OS_NAME=""
+PKG_MANAGER=""
 NOTIFY_OK=1
 
 #/**
@@ -46,9 +48,15 @@ NOTIFY_OK=1
 # *        NO_COLOR is not set.
 # */
 init_colors() {
-  RED=''; GREEN=''; YELLOW=''; MAGENTA=''; CYAN=''; BOLD=''; RESET=''
+  RED=''
+  GREEN=''
+  YELLOW=''
+  MAGENTA=''
+  CYAN=''
+  BOLD=''
+  RESET=''
   if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
-    if command -v tput >/dev/null 2>&1 && tput colors 2>/dev/null | grep -q '[0-9]'; then
+    if command -v tput > /dev/null 2>&1 && tput colors 2> /dev/null | grep -q '[0-9]'; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -100,7 +108,7 @@ parse_args() {
       --uninstall)
         UNINSTALL=1
         ;;
-      --help|-h)
+      --help | -h)
         usage
         ;;
       *)
@@ -146,12 +154,12 @@ detect_os() {
     OS_ID="$ID"
     OS_NAME="$NAME"
     case "$ID" in
-      debian|ubuntu)        PKG_MANAGER="apt"    ;;
-      rhel|fedora|centos)   PKG_MANAGER="dnf"    ;;
-      arch|manjaro|cachyos) PKG_MANAGER="pacman" ;;
-      void)                 PKG_MANAGER="xbps"   ;;
-      alpine)               PKG_MANAGER="apk"    ;;
-      opensuse*|suse)       PKG_MANAGER="zypper" ;;
+      debian | ubuntu) PKG_MANAGER="apt" ;;
+      rhel | fedora | centos) PKG_MANAGER="dnf" ;;
+      arch | manjaro | cachyos) PKG_MANAGER="pacman" ;;
+      void) PKG_MANAGER="xbps" ;;
+      alpine) PKG_MANAGER="apk" ;;
+      opensuse* | suse) PKG_MANAGER="zypper" ;;
       *)
         echo " ${RED}[ERR]${RESET}  Unsupported distribution: ${BOLD}$ID${RESET}" >&2
         echo "     Install dependencies manually, then run ./build.sh" >&2
@@ -181,13 +189,13 @@ detect_os() {
 # */
 check_dependencies() {
   case "$PKG_MANAGER" in
-    apt)    echo "build-essential pkg-config libncursesw5-dev libnotify-dev"     ;;
-    dnf)    echo "gcc make pkgconfig ncurses-devel libnotify-devel"              ;;
-    pacman) echo "gcc make pkg-config ncurses libnotify"                         ;;
-    apk)    echo "gcc make pkgconfig musl-dev ncurses-dev libnotify-dev"         ;;
-    xbps)   echo "gcc make pkg-config ncurses libnotify"                         ;;
-    zypper) echo "gcc make pkg-config ncurses-devel libnotify-devel"             ;;
-    brew)   echo "ncurses"                                                       ;;
+    apt) echo "build-essential pkg-config libncursesw5-dev libnotify-dev" ;;
+    dnf) echo "gcc make pkgconfig ncurses-devel libnotify-devel" ;;
+    pacman) echo "gcc make pkg-config ncurses libnotify" ;;
+    apk) echo "gcc make pkgconfig musl-dev ncurses-dev libnotify-dev" ;;
+    xbps) echo "gcc make pkg-config ncurses libnotify" ;;
+    zypper) echo "gcc make pkg-config ncurses-devel libnotify-devel" ;;
+    brew) echo "ncurses" ;;
   esac
 }
 
@@ -224,13 +232,13 @@ install_dependencies() {
       sudo zypper install -y $packages
       ;;
     brew)
-      if ! xcode-select -p >/dev/null 2>&1; then
+      if ! xcode-select -p > /dev/null 2>&1; then
         echo "   Xcode Command Line Tools not found."
         xcode-select --install
         echo "   Please re-run install.sh after the installation completes."
         exit 1
       fi
-      if ! command -v brew >/dev/null 2>&1; then
+      if ! command -v brew > /dev/null 2>&1; then
         echo " ${RED}[ERR]${RESET}  Homebrew is required. Install from https://brew.sh" >&2
         exit 1
       fi
@@ -264,11 +272,11 @@ notify_warning() {
   echo "   Desktop toasts won't display until you install and start one."
   echo "   Example:"
   case "$PKG_MANAGER" in
-    pacman) echo "     sudo pacman -S dunst   (then run: dunst &)"   ;;
-    apt)    echo "     sudo apt install dunst (then run: dunst &)"   ;;
-    dnf)    echo "     sudo dnf install dunst (then run: dunst &)"   ;;
-    apk)    echo "     sudo apk add dunst     (then run: dunst &)"   ;;
-    xbps)   echo "     sudo xbps-install -S dunst (then run: dunst &)" ;;
+    pacman) echo "     sudo pacman -S dunst   (then run: dunst &)" ;;
+    apt) echo "     sudo apt install dunst (then run: dunst &)" ;;
+    dnf) echo "     sudo dnf install dunst (then run: dunst &)" ;;
+    apk) echo "     sudo apk add dunst     (then run: dunst &)" ;;
+    xbps) echo "     sudo xbps-install -S dunst (then run: dunst &)" ;;
     zypper) echo "     sudo zypper install dunst (then run: dunst &)" ;;
   esac
   echo ""
@@ -294,11 +302,11 @@ check_notifications() {
   echo " ${CYAN}[NOTIFY]${RESET} Checking for a notification daemon..."
 
   local owner=""
-  if command -v dbus-send >/dev/null 2>&1; then
+  if command -v dbus-send > /dev/null 2>&1; then
     owner=$(dbus-send --session --dest=org.freedesktop.DBus \
       --type=method_call --print-reply /org/freedesktop/DBus \
       org.freedesktop.DBus.GetNameOwner \
-      string:org.freedesktop.Notifications 2>/dev/null)
+      string:org.freedesktop.Notifications 2> /dev/null)
   fi
 
   if [ -n "$owner" ]; then
@@ -363,13 +371,13 @@ install_files() {
   local data_dir="${install_dir}/share/tomato"
   sudo mkdir -p "$data_dir/sprites" "$data_dir/sounds" "$data_dir/icons" || exit 1
 
-  sudo cp resources/sprites/*.asc "$data_dir/sprites/" 2>/dev/null
-  sudo cp resources/sounds/*.mp3 "$data_dir/sounds/" 2>/dev/null
-  sudo cp resources/icons/* "$data_dir/icons/" 2>/dev/null
+  sudo cp resources/sprites/*.asc "$data_dir/sprites/" 2> /dev/null
+  sudo cp resources/sounds/*.mp3 "$data_dir/sounds/" 2> /dev/null
+  sudo cp resources/icons/* "$data_dir/icons/" 2> /dev/null
 
-  sudo chmod 644 "$data_dir/sprites/"* 2>/dev/null
-  sudo chmod 644 "$data_dir/sounds/"* 2>/dev/null
-  sudo chmod 644 "$data_dir/icons/"* 2>/dev/null
+  sudo chmod 644 "$data_dir/sprites/"* 2> /dev/null
+  sudo chmod 644 "$data_dir/sounds/"* 2> /dev/null
+  sudo chmod 644 "$data_dir/icons/"* 2> /dev/null
   echo "   ${GREEN}[OK]${RESET}  Data   → ${data_dir}"
 
   # Desktop file (Linux only)
@@ -451,7 +459,7 @@ main() {
   # If run via curl pipe (no local clone), clone the repo first
   if [ ! -f "build.sh" ]; then
     echo "Source not found — cloning repository..."
-    if ! command -v git >/dev/null 2>&1; then
+    if ! command -v git > /dev/null 2>&1; then
       echo "${RED}[ERR]${RESET}  git is required. Install git and try again." >&2
       exit 1
     fi

@@ -50,15 +50,26 @@ LIST_ONLY=0
 CLEAN=0
 SKIP_BUILD=0
 
-RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; RESET=''
+RED=''
+GREEN=''
+YELLOW=''
+CYAN=''
+BOLD=''
+RESET=''
 
 SCRIPT_DIR=""
 PROJECT_DIR=""
 TESTS_DIR=""
 
 TOTAL_ASSERTIONS=0
-UNIT_TOTAL=0; UNIT_PASS=0; UNIT_FAIL=0; UNIT_SKIP=0
-INT_TOTAL=0; INT_PASS=0; INT_FAIL=0; INT_SKIP=0
+UNIT_TOTAL=0
+UNIT_PASS=0
+UNIT_FAIL=0
+UNIT_SKIP=0
+INT_TOTAL=0
+INT_PASS=0
+INT_FAIL=0
+INT_SKIP=0
 FAILED_NAMES=""
 
 #/**
@@ -72,9 +83,15 @@ FAILED_NAMES=""
 # *        neither NO_COLOR nor CI are set.
 # */
 init_colors() {
-  RED=''; GREEN=''; YELLOW=''; MAGENTA=''; CYAN=''; BOLD=''; RESET=''
+  RED=''
+  GREEN=''
+  YELLOW=''
+  MAGENTA=''
+  CYAN=''
+  BOLD=''
+  RESET=''
   if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ] && [ "${CI:-}" = "" ]; then
-    if command -v tput >/dev/null 2>&1 && tput colors 2>/dev/null | grep -q '[0-9]'; then
+    if command -v tput > /dev/null 2>&1 && tput colors 2> /dev/null | grep -q '[0-9]'; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -100,19 +117,28 @@ init_colors() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --unit|-u) RUN_INTEGRATION=0 ;;
-      --integration|-i) RUN_UNIT=0 ;;
-      --verbose|-v) VERBOSE=1 ;;
-      --quiet|-q) QUIET=1 ;;
-      --filter) FILTER="$2"; shift ;;
+      --unit | -u) RUN_INTEGRATION=0 ;;
+      --integration | -i) RUN_UNIT=0 ;;
+      --verbose | -v) VERBOSE=1 ;;
+      --quiet | -q) QUIET=1 ;;
+      --filter)
+        FILTER="$2"
+        shift
+        ;;
       --coverage) COVERAGE=1 ;;
       --asan) ASAN=1 ;;
       --ubsan) UBSAN=1 ;;
       --list) LIST_ONLY=1 ;;
       --clean) CLEAN=1 ;;
       --no-color)
-        RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; RESET='' ;;
-      --help|-h)
+        RED=''
+        GREEN=''
+        YELLOW=''
+        CYAN=''
+        BOLD=''
+        RESET=''
+        ;;
+      --help | -h)
         echo "Tomato.C Test Runner"
         echo ""
         echo "Usage: $0 [options]"
@@ -137,7 +163,10 @@ parse_args() {
         echo "Exit codes: 0 = all pass, nonzero = failure"
         exit 0
         ;;
-      *) echo "Unknown option: $1"; exit 1 ;;
+      *)
+        echo "Unknown option: $1"
+        exit 1
+        ;;
     esac
     shift
   done
@@ -237,8 +266,8 @@ build_tests() {
 # */
 list_tests() {
   local unit_bins int_bins b
-  unit_bins=$(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 -name 'test_*' 2>/dev/null | sort)
-  int_bins=$(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 -name 'test_*' 2>/dev/null | sort)
+  unit_bins=$(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 -name 'test_*' 2> /dev/null | sort)
+  int_bins=$(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 -name 'test_*' 2> /dev/null | sort)
   echo " ${BOLD}Discovered test suites:${RESET}"
   echo ""
   for b in $unit_bins; do
@@ -262,10 +291,10 @@ discover_tests() {
   local run_unit=$1 run_int=$2
   local result=""
   if [ "$run_unit" = "1" ]; then
-    result="$result $(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 2>/dev/null | sort)"
+    result="$result $(find "$TESTS_DIR/unit" -maxdepth 1 -type f -perm -111 2> /dev/null | sort)"
   fi
   if [ "$run_int" = "1" ]; then
-    result="$result $(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 2>/dev/null | sort)"
+    result="$result $(find "$TESTS_DIR/integration" -maxdepth 1 -type f -perm -111 2> /dev/null | sort)"
   fi
 
   if [ -n "$FILTER" ]; then
@@ -371,12 +400,12 @@ run_test_binary() {
   local start_time end_time elapsed
   local output exit_code pass_count fail_count skip_count assert_count result
 
-  start_time=$(date +%s 2>/dev/null || echo 0)
+  start_time=$(date +%s 2> /dev/null || echo 0)
 
   output=$("$binary" 2>&1)
   exit_code=$?
 
-  end_time=$(date +%s 2>/dev/null || echo 0)
+  end_time=$(date +%s 2> /dev/null || echo 0)
   elapsed=$((end_time - start_time))
   [ "$elapsed" -lt 0 ] && elapsed=0
 
@@ -496,12 +525,18 @@ main() {
   all_bins=$(discover_tests "$RUN_UNIT" "$RUN_INTEGRATION")
 
   TOTAL_ASSERTIONS=0
-  UNIT_TOTAL=0; UNIT_PASS=0; UNIT_FAIL=0; UNIT_SKIP=0
-  INT_TOTAL=0; INT_PASS=0; INT_FAIL=0; INT_SKIP=0
+  UNIT_TOTAL=0
+  UNIT_PASS=0
+  UNIT_FAIL=0
+  UNIT_SKIP=0
+  INT_TOTAL=0
+  INT_PASS=0
+  INT_FAIL=0
+  INT_SKIP=0
   FAILED_NAMES=""
 
   local global_start global_end global_elapsed
-  global_start=$(date +%s 2>/dev/null || echo 0)
+  global_start=$(date +%s 2> /dev/null || echo 0)
 
   local unit_bins=""
   local int_bins=""
@@ -520,7 +555,7 @@ main() {
     run_category "$int_bins" "integration"
   fi
 
-  global_end=$(date +%s 2>/dev/null || echo 0)
+  global_end=$(date +%s 2> /dev/null || echo 0)
   global_elapsed=$((global_end - global_start))
   [ "$global_elapsed" -lt 0 ] && global_elapsed=0
 
