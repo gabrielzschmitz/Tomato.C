@@ -23,11 +23,11 @@
 static ErrorType initMenus(AppData* app);
 static ErrorType initStatusBar(AppData* app);
 static ErrorType initAnimations(AppData* app);
-static ErrorType initPomodoroData(AppData* app);
 static ErrorType initWhiteNoise(AppData* app);
 static ErrorType initNotifications(AppData* app);
-static void initPrefsData(PrefsState* state);
+static ErrorType initPomodoroData(AppData* app);
 static ErrorType debugSeedHistory(void);
+static void initPrefsData(PrefsState* state);
 
 /**
  * ---------------------------------------------------------------------------
@@ -141,123 +141,6 @@ static ErrorType initMenus(AppData* app) {
   app->menus[PREFERENCES_MENU] = preferences_menu;
 
   return NO_ERROR;
-}
-
-/**
- * End application and free all allocated resources.
- * @param app Pointer to the application data
- * @return ErrorType NO_ERROR on success, or an error code on failure
- */
-ErrorType EndApp(AppData* app) {
-  for (int t = 0; t < MAX_ICON_TYPES; t++)
-    for (int i = 0; i < MAX_ANIMATIONS; i++) {
-      FreeRollfilm(app->icon_animations[t][i]);
-      app->icon_animations[t][i] = NULL;
-    }
-  for (int i = 0; i < MAX_MENUS; i++) {
-    FreeMenu(app->menus[i]);
-    app->menus[i] = NULL;
-  }
-  ShutdownNoiseAudio();
-  FreeFloatingDialog(app->popup_dialog);
-  FreeStatusBar(app->status_bar);
-  if (NOTEPAD_LOG)
-    if (SaveNotes(NOTES_LOG, app->notes) != NO_ERROR)
-      LogError("Saving notes on exit", END_APP_ERROR);
-  if (HISTORY_LOG && app->pomodoro_data.current_step != MAIN_MENU)
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
-      LogError("Saving pomodoro data on exit", END_APP_ERROR);
-  FreeNotesData(app->notes);
-  FreeScreen(app->screen);
-  return NO_ERROR;
-}
-
-/**
- * Initialize ncurses screen and configure settings.
- * Sets up terminal for curses mode with required features.
- * @return ErrorType NO_ERROR on success, or INIT_ERROR on failure
- */
-ErrorType InitScreen(void) {
-#ifdef XCURSES
-  Xinitscr(argc, argv);
-#else
-  if (initscr() == NULL) return WINDOW_CREATION_ERROR;
-#endif
-  if (has_colors()) {
-    use_default_colors();
-    if (start_color() != ERR) {
-      for (int bg = 0; bg < PALETTE_SIZE; bg++) {
-        for (int fg = 0; fg < PALETTE_SIZE; fg++) {
-          int pair_number = (bg * PALETTE_SIZE) + fg + 1;
-          if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, bg);
-        }
-      }
-      for (int fg = 0; fg < PALETTE_SIZE; fg++) {
-        int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
-        if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, -1);
-      }
-    }
-  }
-  /* Disable echoing user input */
-  noecho();
-  /* Enable reporting mouse movement events */
-  mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-  /* Enable xterm mouse tracking so terminal sends motion events */
-  printf("\033[?1003h\n");
-  /* Set mouse input to be immediately available */
-  mouseinterval(0);
-  /* Enable raw mode to receive input character-by-character */
-  raw();
-  /* Hide cursor */
-  curs_set(0);
-  /* Set getch() to non-blocking mode */
-  nodelay(stdscr, TRUE);
-  /* Enable keypad mode for extended keyboard input */
-  keypad(stdscr, TRUE);
-  /* Discard any stale terminal events from before ncurses init */
-  flushinp();
-  return NO_ERROR;
-}
-
-/**
- * End ncurses screen and clean up default window.
- * Must be called before program exit.
- * @return ErrorType NO_ERROR on success, or an error code on failure
- */
-ErrorType EndScreen(void) {
-  /* Disable xterm mouse tracking */
-  printf("\033[?1003l\033[?1000l\033[?1006l");
-  int err = endwin();
-  if (err == ERR) return WINDOW_DELETION_ERROR;
-
-  err = delwin(stdscr);
-  if (err == ERR) return WINDOW_DELETION_ERROR;
-
-  extern SCREEN* SP;
-  delscreen(SP);
-
-  return NO_ERROR;
-}
-
-/**
- * ---------------------------------------------------------------------------
- * Components
- * ---------------------------------------------------------------------------
- */
-
-/**
- * Initialize a Border struct with configured character values.
- * @return Border struct with default border characters
- */
-Border InitBorder(void) {
-  Border border;
-  border.top_left = BORDER_CHARS[0];     /* "┏" */
-  border.top_right = BORDER_CHARS[1];    /* "┓" */
-  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
-  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
-  border.horizontal = BORDER_CHARS[4];   /* "━" */
-  border.vertical = BORDER_CHARS[5];     /* "┃" */
-  return border;
 }
 
 /**
@@ -657,4 +540,121 @@ static void initPrefsData(PrefsState* state) {
   state->edit_temp = 0;
   state->select_index = -1;
   state->scroll_row = 0;
+}
+
+/**
+ * End application and free all allocated resources.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType EndApp(AppData* app) {
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; i++) {
+      FreeRollfilm(app->icon_animations[t][i]);
+      app->icon_animations[t][i] = NULL;
+    }
+  for (int i = 0; i < MAX_MENUS; i++) {
+    FreeMenu(app->menus[i]);
+    app->menus[i] = NULL;
+  }
+  ShutdownNoiseAudio();
+  FreeFloatingDialog(app->popup_dialog);
+  FreeStatusBar(app->status_bar);
+  if (NOTEPAD_LOG)
+    if (SaveNotes(NOTES_LOG, app->notes) != NO_ERROR)
+      LogError("Saving notes on exit", END_APP_ERROR);
+  if (HISTORY_LOG && app->pomodoro_data.current_step != MAIN_MENU)
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
+      LogError("Saving pomodoro data on exit", END_APP_ERROR);
+  FreeNotesData(app->notes);
+  FreeScreen(app->screen);
+  return NO_ERROR;
+}
+
+/**
+ * Initialize ncurses screen and configure settings.
+ * Sets up terminal for curses mode with required features.
+ * @return ErrorType NO_ERROR on success, or INIT_ERROR on failure
+ */
+ErrorType InitScreen(void) {
+#ifdef XCURSES
+  Xinitscr(argc, argv);
+#else
+  if (initscr() == NULL) return WINDOW_CREATION_ERROR;
+#endif
+  if (has_colors()) {
+    use_default_colors();
+    if (start_color() != ERR) {
+      for (int bg = 0; bg < PALETTE_SIZE; bg++) {
+        for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+          int pair_number = (bg * PALETTE_SIZE) + fg + 1;
+          if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, bg);
+        }
+      }
+      for (int fg = 0; fg < PALETTE_SIZE; fg++) {
+        int pair_number = (fg + 1) + (PALETTE_SIZE * PALETTE_SIZE);
+        if (pair_number < COLOR_PAIRS) init_pair(pair_number, fg, -1);
+      }
+    }
+  }
+  /* Disable echoing user input */
+  noecho();
+  /* Enable reporting mouse movement events */
+  mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+  /* Enable xterm mouse tracking so terminal sends motion events */
+  printf("\033[?1003h\n");
+  /* Set mouse input to be immediately available */
+  mouseinterval(0);
+  /* Enable raw mode to receive input character-by-character */
+  raw();
+  /* Hide cursor */
+  curs_set(0);
+  /* Set getch() to non-blocking mode */
+  nodelay(stdscr, TRUE);
+  /* Enable keypad mode for extended keyboard input */
+  keypad(stdscr, TRUE);
+  /* Discard any stale terminal events from before ncurses init */
+  flushinp();
+  return NO_ERROR;
+}
+
+/**
+ * End ncurses screen and clean up default window.
+ * Must be called before program exit.
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType EndScreen(void) {
+  /* Disable xterm mouse tracking */
+  printf("\033[?1003l\033[?1000l\033[?1006l");
+  int err = endwin();
+  if (err == ERR) return WINDOW_DELETION_ERROR;
+
+  err = delwin(stdscr);
+  if (err == ERR) return WINDOW_DELETION_ERROR;
+
+  extern SCREEN* SP;
+  delscreen(SP);
+
+  return NO_ERROR;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Components
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Initialize a Border struct with configured character values.
+ * @return Border struct with default border characters
+ */
+Border InitBorder(void) {
+  Border border;
+  border.top_left = BORDER_CHARS[0];     /* "┏" */
+  border.top_right = BORDER_CHARS[1];    /* "┓" */
+  border.bottom_left = BORDER_CHARS[2];  /* "┗" */
+  border.bottom_right = BORDER_CHARS[3]; /* "┛" */
+  border.horizontal = BORDER_CHARS[4];   /* "━" */
+  border.vertical = BORDER_CHARS[5];     /* "┃" */
+  return border;
 }

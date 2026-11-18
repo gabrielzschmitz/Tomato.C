@@ -9,18 +9,14 @@
 #include "ui.h"
 #include "util.h"
 
-/**
- * Private variables for error management.
- */
 static ErrorEntry error_stack[MAX_ERROR_ENTRIES] = {0};
 static int error_count = 0;
 static bool app_frozen = false;
 
-/**
- * Private helper functions for error level handling.
- */
+/* PRIVATE ERROR FUNCTIONS */
 static ErrorLevel getErrorLevel(ErrorType error);
 static const char* getErrorLevelMessage(ErrorLevel level);
+static void pushErrorEntry(ErrorLevel level, const char* text);
 static int getErrorColor(ErrorLevel level);
 static int getErrorTimeout(ErrorLevel level);
 
@@ -47,6 +43,99 @@ void LogError(const char* context, ErrorType error) {
 }
 
 /**
+ * Get error level from error type.
+ * @param error The error type
+ * @return The corresponding error level
+ */
+static ErrorLevel getErrorLevel(ErrorType error) {
+  switch (error) {
+    case MALLOC_ERROR:
+    case NULL_POINTER_ERROR:
+    case FORK_ERROR:
+    case PTHREAD_CREATION_ERROR:
+    case PTHREAD_DETACH_ERROR:
+    case INVALID_CONFIG:
+    case FILE_ERROR:
+    case INIT_ERROR:
+      return ERROR_LEVEL_CRITICAL;
+
+    case WINDOW_CREATION_ERROR:
+    case ANIMATION_DESERIALIZATION_ERROR:
+    case ANIMATION_EQUAL_NULL:
+    case UPDATE_ERROR:
+    case DRAW_ERROR:
+    case INPUT_ERROR:
+    case TIMER_LOG_ERROR:
+    case SOCKET_CREATION_ERROR:
+    case SOCKET_CONNECTION_ERROR:
+    case SOCKET_BIND_ERROR:
+    case SOCKET_LISTEN_ERROR:
+    case AUDIO_PLAYBACK_ERROR:
+    case AUDIO_ENGINE_INIT_ERROR:
+    case AUDIO_INIT_ERROR:
+    case AUDIO_START_ERROR:
+      return ERROR_LEVEL_ERROR;
+
+    case INVALID_INPUT:
+    case INVALID_ARGUMENT_ERROR:
+    case NOTIFICATION_SEND_ERROR:
+    case ERROR_EXECUTING_SELECTED_ACTION:
+    case SOCKET_ACCEPT_ERROR:
+    case SOCKET_READ_ERROR:
+    case SOCKET_WRITE_ERROR:
+    case INVALID_TRACK_INDEX:
+      return ERROR_LEVEL_WARNING;
+
+    case TOO_SMALL_SCREEN:
+    case WINDOW_DELETION_ERROR:
+    case END_SCREEN_ERROR:
+    case END_APP_ERROR:
+    case SOCKET_CLOSE_ERROR:
+    case UNLINK_ERROR:
+      return ERROR_LEVEL_DEBUG;
+
+    case TEST_ERROR:
+      return ERROR_LEVEL_INFO;
+
+    default:
+      return ERROR_LEVEL_INFO; /* Default to INFO if error type is unknown */
+  }
+}
+
+/**
+ * Get a descriptive error level message.
+ * @param level The error level
+ * @return Human-readable string describing the level (e.g., "INFO", "WARNING")
+ */
+static const char* getErrorLevelMessage(ErrorLevel level) {
+  switch (level) {
+    case ERROR_LEVEL_DEBUG:
+      return "DEBUG";
+    case ERROR_LEVEL_INFO:
+      return "INFO";
+    case ERROR_LEVEL_WARNING:
+      return "WARNING";
+    case ERROR_LEVEL_ERROR:
+      return "ERROR";
+    case ERROR_LEVEL_CRITICAL:
+      return "CRITICAL";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+/**
+ * Show a message on the error line without an error code or log entry.
+ * Used for diagnostics that were already logged, such as config warnings.
+ * @param level Severity used for the color and auto-clear timeout
+ * @param message Text to display
+ */
+void SetErrorMessage(ErrorLevel level, const char* message) {
+  if (message == NULL) return;
+  pushErrorEntry(level, message);
+}
+
+/**
  * Push a message onto the top of the error line stack.
  * @param level Severity of the message
  * @param text Text to display (truncated to the entry size)
@@ -63,17 +152,6 @@ static void pushErrorEntry(ErrorLevel level, const char* text) {
 
   if (error_count < MAX_ERROR_ENTRIES) error_count++;
   if (error_count > MAX_ERROR_ENTRIES) error_count = MAX_ERROR_ENTRIES;
-}
-
-/**
- * Show a message on the error line without an error code or log entry.
- * Used for diagnostics that were already logged, such as config warnings.
- * @param level Severity used for the color and auto-clear timeout
- * @param message Text to display
- */
-void SetErrorMessage(ErrorLevel level, const char* message) {
-  if (message == NULL) return;
-  pushErrorEntry(level, message);
 }
 
 /**
@@ -210,6 +288,50 @@ void RenderErrorLine(void) {
       }
     }
     mvprintw(7, 2, "ERR_CNT: %d", error_count);
+  }
+}
+
+/**
+ * Get the ncurses color for a given error level.
+ * @param level The error level
+ * @return ncurses color index for the error level
+ */
+static int getErrorColor(ErrorLevel level) {
+  switch (level) {
+    case ERROR_LEVEL_DEBUG:
+      return COLOR_GREEN;
+    case ERROR_LEVEL_INFO:
+      return COLOR_WHITE;
+    case ERROR_LEVEL_WARNING:
+      return COLOR_YELLOW;
+    case ERROR_LEVEL_ERROR:
+      return COLOR_RED;
+    case ERROR_LEVEL_CRITICAL:
+      return COLOR_BLACK;
+    default:
+      return COLOR_WHITE;
+  }
+}
+
+/**
+ * Get the display timeout in seconds for a given error level.
+ * @param level The error level
+ * @return Timeout in seconds (0 means never auto-clear)
+ */
+static int getErrorTimeout(ErrorLevel level) {
+  switch (level) {
+    case ERROR_LEVEL_DEBUG:
+      return 30;
+    case ERROR_LEVEL_INFO:
+      return 5;
+    case ERROR_LEVEL_WARNING:
+      return 15;
+    case ERROR_LEVEL_ERROR:
+      return 30;
+    case ERROR_LEVEL_CRITICAL:
+      return 0;
+    default:
+      return 0;
   }
 }
 
@@ -383,131 +505,5 @@ const char* GetErrorMessage(ErrorType error) {
 
     default:
       return "Unknown error";
-  }
-}
-
-/**
- * Get error level from error type.
- * @param error The error type
- * @return The corresponding error level
- */
-static ErrorLevel getErrorLevel(ErrorType error) {
-  switch (error) {
-    case MALLOC_ERROR:
-    case NULL_POINTER_ERROR:
-    case FORK_ERROR:
-    case PTHREAD_CREATION_ERROR:
-    case PTHREAD_DETACH_ERROR:
-    case INVALID_CONFIG:
-    case FILE_ERROR:
-    case INIT_ERROR:
-      return ERROR_LEVEL_CRITICAL;
-
-    case WINDOW_CREATION_ERROR:
-    case ANIMATION_DESERIALIZATION_ERROR:
-    case ANIMATION_EQUAL_NULL:
-    case UPDATE_ERROR:
-    case DRAW_ERROR:
-    case INPUT_ERROR:
-    case TIMER_LOG_ERROR:
-    case SOCKET_CREATION_ERROR:
-    case SOCKET_CONNECTION_ERROR:
-    case SOCKET_BIND_ERROR:
-    case SOCKET_LISTEN_ERROR:
-    case AUDIO_PLAYBACK_ERROR:
-    case AUDIO_ENGINE_INIT_ERROR:
-    case AUDIO_INIT_ERROR:
-    case AUDIO_START_ERROR:
-      return ERROR_LEVEL_ERROR;
-
-    case INVALID_INPUT:
-    case INVALID_ARGUMENT_ERROR:
-    case NOTIFICATION_SEND_ERROR:
-    case ERROR_EXECUTING_SELECTED_ACTION:
-    case SOCKET_ACCEPT_ERROR:
-    case SOCKET_READ_ERROR:
-    case SOCKET_WRITE_ERROR:
-    case INVALID_TRACK_INDEX:
-      return ERROR_LEVEL_WARNING;
-
-    case TOO_SMALL_SCREEN:
-    case WINDOW_DELETION_ERROR:
-    case END_SCREEN_ERROR:
-    case END_APP_ERROR:
-    case SOCKET_CLOSE_ERROR:
-    case UNLINK_ERROR:
-      return ERROR_LEVEL_DEBUG;
-
-    case TEST_ERROR:
-      return ERROR_LEVEL_INFO;
-
-    default:
-      return ERROR_LEVEL_INFO; /* Default to INFO if error type is unknown */
-  }
-}
-
-/**
- * Get a descriptive error level message.
- * @param level The error level
- * @return Human-readable string describing the level (e.g., "INFO", "WARNING")
- */
-static const char* getErrorLevelMessage(ErrorLevel level) {
-  switch (level) {
-    case ERROR_LEVEL_DEBUG:
-      return "DEBUG";
-    case ERROR_LEVEL_INFO:
-      return "INFO";
-    case ERROR_LEVEL_WARNING:
-      return "WARNING";
-    case ERROR_LEVEL_ERROR:
-      return "ERROR";
-    case ERROR_LEVEL_CRITICAL:
-      return "CRITICAL";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-/**
- * Get the ncurses color for a given error level.
- * @param level The error level
- * @return ncurses color index for the error level
- */
-static int getErrorColor(ErrorLevel level) {
-  switch (level) {
-    case ERROR_LEVEL_DEBUG:
-      return COLOR_GREEN;
-    case ERROR_LEVEL_INFO:
-      return COLOR_WHITE;
-    case ERROR_LEVEL_WARNING:
-      return COLOR_YELLOW;
-    case ERROR_LEVEL_ERROR:
-      return COLOR_RED;
-    case ERROR_LEVEL_CRITICAL:
-      return COLOR_BLACK;
-    default:
-      return COLOR_WHITE;
-  }
-}
-
-/**
- * Get the display timeout in seconds for a given error level.
- * @param level The error level
- * @return Timeout in seconds (0 means never auto-clear)
- */
-static int getErrorTimeout(ErrorLevel level) {
-  switch (level) {
-    case ERROR_LEVEL_DEBUG:
-      return 30;
-    case ERROR_LEVEL_INFO:
-      return 5;
-    case ERROR_LEVEL_WARNING:
-      return 15;
-    case ERROR_LEVEL_ERROR:
-      return 30;
-    case ERROR_LEVEL_CRITICAL:
-      return 0;
-    default:
-      return 0;
   }
 }

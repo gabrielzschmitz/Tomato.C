@@ -15,15 +15,28 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "error.h"
+#include "tomato.h"
 
 /* O_NOFOLLOW is not exposed by all macOS SDK configurations. */
 #ifndef O_NOFOLLOW
 #define O_NOFOLLOW 0x0100
 #endif
 
-#include "config.h"
-#include "error.h"
-#include "tomato.h"
+/**
+ * Clock used for timer and animation timestamps.
+ *
+ * CLOCK_MONOTONIC deliberately stops while the machine is suspended: a
+ * pomodoro session should not expire while the user's laptop is asleep.
+ * Define TOMATO_TIMER_CLOCK as CLOCK_BOOTTIME at build time to count
+ * suspend time instead (Linux only).
+ */
+#ifndef TOMATO_TIMER_CLOCK
+#define TOMATO_TIMER_CLOCK CLOCK_MONOTONIC
+#endif
+
+/* PRIVATE UTIL FUNCTIONS */
+static size_t utf8CharLen(const unsigned char* s, size_t remaining);
 
 /**
  * ---------------------------------------------------------------------------
@@ -72,18 +85,6 @@ void GetCurrentTime(char* buffer, size_t buffer_size) {
   struct tm* tm_info = localtime(&now);
   strftime(buffer, buffer_size, "%H:%M", tm_info);
 }
-
-/**
- * Clock used for timer and animation timestamps.
- *
- * CLOCK_MONOTONIC deliberately stops while the machine is suspended: a
- * pomodoro session should not expire while the user's laptop is asleep.
- * Define TOMATO_TIMER_CLOCK as CLOCK_BOOTTIME at build time to count
- * suspend time instead (Linux only).
- */
-#ifndef TOMATO_TIMER_CLOCK
-#define TOMATO_TIMER_CLOCK CLOCK_MONOTONIC
-#endif
 
 /**
  * Return the clock used by GetCurrentTimeMS.
@@ -178,6 +179,27 @@ IconType GetConfigIconType(void) {
 }
 
 /**
+ * Count UTF-16 characters in a string.
+ * @param str UTF-8 string to count
+ * @return Number of UTF-16 code units
+ */
+int UTF16CharCount(const char* str) {
+  int count = 0;
+  const unsigned char* s = (const unsigned char*)str;
+  size_t remaining = strlen(str);
+
+  while (remaining > 0) {
+    size_t len = utf8CharLen(s, remaining);
+    if (len == 4 && GetConfigIconType() == EMOJIS) count++;
+    s += len;
+    remaining -= len;
+    count++;
+  }
+
+  return count;
+}
+
+/**
  * ---------------------------------------------------------------------------
  * UTF-8 String Utilities
  * ---------------------------------------------------------------------------
@@ -211,27 +233,6 @@ static size_t utf8CharLen(const unsigned char* s, size_t remaining) {
   for (size_t i = 1; i < len; i++)
     if ((s[i] & 0xC0) != 0x80) return 1;
   return len;
-}
-
-/**
- * Count UTF-16 characters in a string.
- * @param str UTF-8 string to count
- * @return Number of UTF-16 code units
- */
-int UTF16CharCount(const char* str) {
-  int count = 0;
-  const unsigned char* s = (const unsigned char*)str;
-  size_t remaining = strlen(str);
-
-  while (remaining > 0) {
-    size_t len = utf8CharLen(s, remaining);
-    if (len == 4 && GetConfigIconType() == EMOJIS) count++;
-    s += len;
-    remaining -= len;
-    count++;
-  }
-
-  return count;
 }
 
 /**

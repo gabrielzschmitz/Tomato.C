@@ -14,34 +14,13 @@
 #include "ui.h"
 #include "util.h"
 
-/* PRIVATE UPDATE.C FUNCTIONS */
+static bool skip_auto_save = false;
 
-/**
- * Update pomodoro timer data - decrement time, check for step end.
- * @param app Pointer to the application data
- * @return void
- */
-static void updatePomodoroTime(AppData* app);
-
-/**
- * Update pomodoro log file with current state.
- * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
- * @param app Pointer to the application data
- * @return void
- */
-static void updatePomodoroLog(AppData* app);
-
-/**
- * Update the timer log socket with current step information.
- * @param app Pointer to the application data
- * @param steps Array of step types to log
- * @param steps_count Number of steps in the array
- * @return void
- */
+/* PRIVATE UPDATE FUNCTIONS */
 static void updateTimerLog(AppData* app, const int* steps,
                            const size_t steps_count);
-
-static bool skip_auto_save = false;
+static void updatePomodoroLog(AppData* app);
+static void updatePomodoroTime(AppData* app);
 
 /**
  * ---------------------------------------------------------------------------
@@ -172,6 +151,29 @@ static void updatePomodoroLog(AppData* app) {
 }
 
 /**
+ * Update pomodoro timer data - decrement time, check for step end.
+ * @param app Pointer to the application data
+ * @return void
+ */
+static void updatePomodoroTime(AppData* app) {
+  double current_time = GetCurrentTimeMS();
+
+  int speed_multiplier = 1;
+  if (DEBUG) speed_multiplier = 100;
+  double interval_ms = 1000.0 / speed_multiplier;
+
+  int ticks = AdvancePomodoroClock(&app->pomodoro_data.delta_time_ms,
+                                   current_time, interval_ms);
+  if (ticks <= 0) return;
+
+  TickPomodoroTime(&app->pomodoro_data, ticks);
+
+  if (app->pomodoro_data.current_step_time >=
+      app->pomodoro_data.last_step_time + 10)
+    app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
+}
+
+/**
  * ---------------------------------------------------------------------------
  * Scene Updates
  * ---------------------------------------------------------------------------
@@ -235,29 +237,6 @@ void UpdateWorkTime(AppData* app) {
                  NOTIFICATION_SEND_ERROR);
     }
   }
-}
-
-/**
- * Update pomodoro timer data - decrement time, check for step end.
- * @param app Pointer to the application data
- * @return void
- */
-static void updatePomodoroTime(AppData* app) {
-  double current_time = GetCurrentTimeMS();
-
-  int speed_multiplier = 1;
-  if (DEBUG) speed_multiplier = 100;
-  double interval_ms = 1000.0 / speed_multiplier;
-
-  int ticks = AdvancePomodoroClock(&app->pomodoro_data.delta_time_ms,
-                                   current_time, interval_ms);
-  if (ticks <= 0) return;
-
-  TickPomodoroTime(&app->pomodoro_data, ticks);
-
-  if (app->pomodoro_data.current_step_time >=
-      app->pomodoro_data.last_step_time + 10)
-    app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
 }
 
 /**

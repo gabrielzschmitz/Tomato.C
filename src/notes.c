@@ -17,11 +17,11 @@ static bool growItems(NotesData* notes);
 static int getNextID(NotesData* notes);
 static NoteItem* findByID(NotesData* notes, int id);
 static int getIndexByID(NotesData* notes, int id);
+static void getSubtreeRange(NotesData* notes, int idx, int* start, int* end);
 /* Move mode */
 static int getPrevSiblingIndex(NotesData* notes, int idx);
-static int getNextSiblingIndex(NotesData* notes, int idx);
-static void getSubtreeRange(NotesData* notes, int idx, int* start, int* end);
 static void reinsertNoteAt(NotesData* notes, int from_idx, int to_idx);
+static int getNextSiblingIndex(NotesData* notes, int idx);
 static int findRootAncestorIndex(NotesData* notes, int idx);
 
 /**
@@ -166,30 +166,6 @@ static int getNextID(NotesData* notes) {
 }
 
 /**
- * Find a note by its ID.
- * @param notes Pointer to the NotesData
- * @param id ID of the note to find
- * @return Pointer to the NoteItem, or NULL if not found
- */
-static NoteItem* findByID(NotesData* notes, int id) {
-  for (int i = 0; i < notes->count; i++)
-    if (notes->items[i]->id == id) return notes->items[i];
-  return NULL;
-}
-
-/**
- * Get the array index of a note by its ID.
- * @param notes Pointer to the NotesData
- * @param id ID of the note to find
- * @return Index in the items array, or -1 if not found
- */
-static int getIndexByID(NotesData* notes, int id) {
-  for (int i = 0; i < notes->count; i++)
-    if (notes->items[i]->id == id) return i;
-  return -1;
-}
-
-/**
  * Add a child note under a parent note.
  * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
@@ -258,6 +234,30 @@ void AddChildNote(AppData* app, NotesData* notes, int parent_id,
 
   notes->current_id = item->id;
   notes->total_lines += new_note_lines;
+}
+
+/**
+ * Find a note by its ID.
+ * @param notes Pointer to the NotesData
+ * @param id ID of the note to find
+ * @return Pointer to the NoteItem, or NULL if not found
+ */
+static NoteItem* findByID(NotesData* notes, int id) {
+  for (int i = 0; i < notes->count; i++)
+    if (notes->items[i]->id == id) return notes->items[i];
+  return NULL;
+}
+
+/**
+ * Get the array index of a note by its ID.
+ * @param notes Pointer to the NotesData
+ * @param id ID of the note to find
+ * @return Index in the items array, or -1 if not found
+ */
+static int getIndexByID(NotesData* notes, int id) {
+  for (int i = 0; i < notes->count; i++)
+    if (notes->items[i]->id == id) return i;
+  return -1;
 }
 
 /**

@@ -5,9 +5,7 @@
 
 #include "error.h"
 
-/**
- * Private helper functions for gap buffer operations.
- */
+/* PRIVATE GAP_BUFFER FUNCTIONS */
 static bool ensureCapacity(GapBuffer* gb, size_t needed);
 
 /**

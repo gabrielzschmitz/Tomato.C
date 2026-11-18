@@ -12,13 +12,13 @@
 #include "tomato.h"
 
 /* PRIVATE BAR FUNCTIONS */
+static void freeStatusBarModule(StatusBarModule* widget);
+static void freeStatusBarModules(StatusBarModule* module);
 /* StatusBar Lifecycle */
 static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
                                               char* content, int fg_color,
                                               int bg_color,
                                               ModuleUpdate update);
-static void freeStatusBarModule(StatusBarModule* widget);
-static void freeStatusBarModules(StatusBarModule* module);
 /* Rendering/Updating */
 static void renderStatusBarModule(const StatusBarModule* module, int start_y,
                                   int start_x, int max_width);
@@ -63,6 +63,31 @@ void FreeStatusBar(StatusBar* bar) {
   freeStatusBarModules(bar->right_modules);
 
   free(bar);
+}
+
+/**
+ * Free a single StatusBarModule and its content.
+ * @param widget Pointer to the module to free
+ */
+static void freeStatusBarModule(StatusBarModule* widget) {
+  if (widget == NULL) return;
+  if (widget->content != NULL) free(widget->content);
+  free(widget);
+}
+
+/**
+ * Free a linked list of StatusBarModule modules.
+ * @param module Pointer to the first module in the list
+ */
+static void freeStatusBarModules(StatusBarModule* module) {
+  StatusBarModule* current = module;
+  StatusBarModule* next;
+
+  while (current) {
+    next = current->next;
+    freeStatusBarModule(current);
+    current = next;
+  }
 }
 
 /**
@@ -165,59 +190,6 @@ static StatusBarModule* createStatusBarModule(StatusBarModulePosition position,
 }
 
 /**
- * Free a single StatusBarModule and its content.
- * @param widget Pointer to the module to free
- */
-static void freeStatusBarModule(StatusBarModule* widget) {
-  if (widget == NULL) return;
-  if (widget->content != NULL) free(widget->content);
-  free(widget);
-}
-
-/**
- * Free a linked list of StatusBarModule modules.
- * @param module Pointer to the first module in the list
- */
-static void freeStatusBarModules(StatusBarModule* module) {
-  StatusBarModule* current = module;
-  StatusBarModule* next;
-
-  while (current) {
-    next = current->next;
-    freeStatusBarModule(current);
-    current = next;
-  }
-}
-
-/**
- * Render a single status bar module at the specified coordinates.
- * @param module Pointer to the module to render
- * @param start_y Starting y coordinate
- * @param start_x Starting x coordinate
- * @param max_width Maximum width for the module
- */
-static void renderStatusBarModule(const StatusBarModule* module, int start_y,
-                                  int start_x, int max_width) {
-  if (module == NULL || module->content == NULL) return;
-
-  {
-    int byte_count = 0;
-    UTF16CharFitWidth(module->content, max_width, &byte_count);
-    int alloc = byte_count + 1;
-    char* buffer = (char*)malloc(alloc > 0 ? (size_t)alloc : 1);
-    if (buffer) {
-      strncpy(buffer, module->content, byte_count);
-      buffer[byte_count] = '\0';
-      SetColor(module->fg_color, module->bg_color, A_BOLD);
-      if (DEBUG && GetConfigIconType() == NERD_ICONS)
-        mvprintw(start_y - 1, start_x, "%d", module->id);
-      mvprintw(start_y, start_x, "%s", buffer);
-      free(buffer);
-    }
-  }
-}
-
-/**
  * ---------------------------------------------------------------------------
  * Rendering/Updating
  * ---------------------------------------------------------------------------
@@ -287,6 +259,34 @@ void RenderStatusBar(const StatusBar* status_bar, const Screen* screen,
                           bar_width - x_offset + STATUS_BAR_SPACING);
     x_offset += current->content_length + STATUS_BAR_SPACING;
     current = current->next;
+  }
+}
+
+/**
+ * Render a single status bar module at the specified coordinates.
+ * @param module Pointer to the module to render
+ * @param start_y Starting y coordinate
+ * @param start_x Starting x coordinate
+ * @param max_width Maximum width for the module
+ */
+static void renderStatusBarModule(const StatusBarModule* module, int start_y,
+                                  int start_x, int max_width) {
+  if (module == NULL || module->content == NULL) return;
+
+  {
+    int byte_count = 0;
+    UTF16CharFitWidth(module->content, max_width, &byte_count);
+    int alloc = byte_count + 1;
+    char* buffer = (char*)malloc(alloc > 0 ? (size_t)alloc : 1);
+    if (buffer) {
+      strncpy(buffer, module->content, byte_count);
+      buffer[byte_count] = '\0';
+      SetColor(module->fg_color, module->bg_color, A_BOLD);
+      if (DEBUG && GetConfigIconType() == NERD_ICONS)
+        mvprintw(start_y - 1, start_x, "%d", module->id);
+      mvprintw(start_y, start_x, "%s", buffer);
+      free(buffer);
+    }
   }
 }
 

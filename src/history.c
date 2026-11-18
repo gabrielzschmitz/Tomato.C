@@ -4,12 +4,10 @@
 
 #include "error.h"
 
-/**
- * Private helper functions for history operations.
- */
+/* PRIVATE HISTORY FUNCTIONS */
+static int getStackCount(const HistoryNode* stack);
 static void pushStack(HistoryNode** stack, void* data, void (*free_fn)(void*));
 static HistoryNode* popStack(HistoryNode** stack);
-static int getStackCount(const HistoryNode* stack);
 
 /**
  * ---------------------------------------------------------------------------

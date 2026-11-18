@@ -12,19 +12,23 @@
 #include "tomato.h"
 #include "util.h"
 
+static const char* ICON_NAMES[] = {"nerd-icons", "emojis", "ascii"};
+
 /* PRIVATE ANIM FUNCTIONS */
+static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
+/* Animation callbacks */
+static void updateAnimation(Rollfilm* rollfilm);
+static void freeFrame(struct Frame* frame);
+static void freeFrames(struct Frame* frames);
+static void freeRows(struct FrameRow* rows);
+static void freeToken(struct FrameToken* token);
+static void freeTokens(struct FrameToken* tokens);
 /* Rollfilm Lifecycle */
 static struct Frame* createFrame(void);
 static void linkNewFrame(struct Frame** current_frame,
                          struct FrameRow* head_row, int frame_id);
-static void freeFrame(struct Frame* frame);
-static void freeFrames(struct Frame* frames);
 static struct FrameRow* createRow(void);
-static void freeRows(struct FrameRow* rows);
 static struct FrameToken* createToken(void);
-static void freeToken(struct FrameToken* token);
-static void freeTokens(struct FrameToken* tokens);
-static const char* ICON_NAMES[] = {"nerd-icons", "emojis", "ascii"};
 /* Rollfilm Deserialization */
 static struct FrameToken* deserializeFrameLine(const char* src, int* color);
 static Rollfilm* cleanupAndReturn(FILE* file, Rollfilm* rollfilm,
@@ -49,9 +53,6 @@ static int handleUnicode(const char* src, char** dest, size_t dest_len);
 static int handleColor(const char* src, int* dest);
 /* Utility */
 static int getWidestFrame(Rollfilm* rollfilm);
-/* Animation callbacks */
-static void updateAnimation(Rollfilm* rollfilm);
-static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
 
 /**
  * ---------------------------------------------------------------------------
@@ -87,6 +88,72 @@ Rollfilm* CreateRollfilm(int frame_count, int frame_height) {
 }
 
 /**
+ * ---------------------------------------------------------------------------
+ * Animation callbacks
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render the current frame of the Rollfilm at the specified coordinates.
+ * @param rollfilm Pointer to the rollfilm to render
+ * @param start_y Starting y coordinate on screen
+ * @param start_x Starting x coordinate on screen
+ */
+static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) {
+    LogError("renderCurrentFrame", NULL_POINTER_ERROR);
+    return;
+  }
+
+  struct Frame* current_frame = rollfilm->frames;
+  struct FrameRow* current_row = current_frame->rows;
+  int y = start_y;
+  int color = NO_COLOR;
+
+  while (current_row != NULL) {
+    struct FrameToken* current_token = current_row->tokens;
+    int x = start_x;
+
+    while (current_token != NULL) {
+      if (color != current_token->color && current_token->color != NO_COLOR) {
+        color = current_token->color;
+        SetColor(color, NO_COLOR, A_BOLD);
+      }
+
+      if (!current_token->is_blank) mvprintw(y, x, "%s", current_token->token);
+      x += current_token->length;
+      current_token = current_token->next;
+    }
+
+    current_row = current_row->next;
+    y++;
+  }
+}
+
+/**
+ * Advance the Rollfilm to the next frame.
+ * Handles timing, looping, and frame index wrapping.
+ * @param rollfilm Pointer to the rollfilm to update
+ */
+static void updateAnimation(Rollfilm* rollfilm) {
+  if (rollfilm == NULL || rollfilm->frames == NULL) {
+    LogError("updateAnimation", NULL_POINTER_ERROR);
+    return;
+  }
+  if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
+    return;
+  double current_time = GetCurrentTimeMS();
+  double delta_time = current_time - rollfilm->delta_frame_ms;
+
+  if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
+    rollfilm->delta_frame_ms = current_time;
+    rollfilm->frames = rollfilm->frames->next;
+    rollfilm->current_frame =
+      (rollfilm->current_frame + 1) % rollfilm->frame_count;
+  }
+}
+
+/**
  * Set the loop variable for a list of Rollfilms.
  * @param app Pointer to application data (used for SetError on alloc failure)
  * @param film Pointer to array of rollfilm pointers
@@ -117,52 +184,6 @@ void FreeRollfilm(Rollfilm* rollfilm) {
 }
 
 /**
- * Create a new empty Frame.
- * @return Pointer to the created Frame, or NULL on allocation failure
- */
-static struct Frame* createFrame(void) {
-  struct Frame* newFrame = (struct Frame*)malloc(sizeof(struct Frame));
-  if (newFrame == NULL) {
-    LogError("createFrame", MALLOC_ERROR);
-    return NULL;
-  }
-  newFrame->next = NULL;
-  newFrame->rows = NULL;
-  newFrame->width = 0;
-  newFrame->id = 0;
-
-  return newFrame;
-}
-
-/**
- * Link a new frame to the current frame, maintaining circular list.
- * Initializes the new frame and connects it to the existing chain.
- * @param current_frame Pointer to current frame pointer (updated)
- * @param head_row Row to attach as the first row of the new frame
- * @param frame_id ID to assign to the new frame
- */
-static void linkNewFrame(struct Frame** current_frame,
-                         struct FrameRow* head_row, int frame_id) {
-  struct Frame* new_frame = createFrame();
-  if (new_frame == NULL) {
-    LogError("linkNewFrame", MALLOC_ERROR);
-    return;
-  }
-  (*current_frame)->rows = head_row;
-  new_frame->id = frame_id;
-
-  if ((*current_frame)->next == NULL) {
-    new_frame->next = *current_frame;
-    (*current_frame)->next = new_frame;
-  } else {
-    new_frame->next = (*current_frame)->next;
-    (*current_frame)->next = new_frame;
-  }
-
-  *current_frame = new_frame;
-}
-
-/**
  * Free all memory associated with a single Frame.
  * @param frame Pointer to the Frame to free
  */
@@ -188,21 +209,6 @@ static void freeFrames(struct Frame* frames) {
 }
 
 /**
- * Create a new empty FrameRow.
- * @return Pointer to the created FrameRow, or NULL on allocation failure
- */
-static struct FrameRow* createRow(void) {
-  struct FrameRow* newRow = (struct FrameRow*)malloc(sizeof(struct FrameRow));
-  if (newRow == NULL) {
-    LogError("createRow", MALLOC_ERROR);
-    return NULL;
-  }
-  newRow->next = NULL;
-  newRow->tokens = NULL;
-  return newRow;
-}
-
-/**
  * Free all rows in a linked list starting from the given row.
  * @param rows Pointer to the first row to free
  */
@@ -214,30 +220,6 @@ static void freeRows(struct FrameRow* rows) {
     free(current);
     current = next;
   }
-}
-
-/**
- * Create a new empty FrameToken.
- * @return Pointer to the created FrameToken, or NULL on allocation failure
- */
-static struct FrameToken* createToken(void) {
-  struct FrameToken* newToken =
-    (struct FrameToken*)malloc(sizeof(struct FrameToken));
-  if (newToken == NULL) {
-    LogError("createToken", MALLOC_ERROR);
-    return NULL;
-  }
-  newToken->next = NULL;
-  newToken->token = (char*)calloc(MAX_FRAME_WIDTH, sizeof(char));
-  if (newToken->token == NULL) {
-    LogError("createToken", MALLOC_ERROR);
-    free(newToken);
-    return NULL;
-  }
-  newToken->length = 0;
-  newToken->color = NO_COLOR;
-  newToken->is_blank = false;
-  return newToken;
 }
 
 /**
@@ -355,6 +337,91 @@ Rollfilm* DeserializeSprites(const char* filename, int icon_type) {
 
   return cleanupAndReturn(file, rollfilm, head_frame, current_frame, head_row,
                           line_width);
+}
+
+/**
+ * Create a new empty Frame.
+ * @return Pointer to the created Frame, or NULL on allocation failure
+ */
+static struct Frame* createFrame(void) {
+  struct Frame* newFrame = (struct Frame*)malloc(sizeof(struct Frame));
+  if (newFrame == NULL) {
+    LogError("createFrame", MALLOC_ERROR);
+    return NULL;
+  }
+  newFrame->next = NULL;
+  newFrame->rows = NULL;
+  newFrame->width = 0;
+  newFrame->id = 0;
+
+  return newFrame;
+}
+
+/**
+ * Link a new frame to the current frame, maintaining circular list.
+ * Initializes the new frame and connects it to the existing chain.
+ * @param current_frame Pointer to current frame pointer (updated)
+ * @param head_row Row to attach as the first row of the new frame
+ * @param frame_id ID to assign to the new frame
+ */
+static void linkNewFrame(struct Frame** current_frame,
+                         struct FrameRow* head_row, int frame_id) {
+  struct Frame* new_frame = createFrame();
+  if (new_frame == NULL) {
+    LogError("linkNewFrame", MALLOC_ERROR);
+    return;
+  }
+  (*current_frame)->rows = head_row;
+  new_frame->id = frame_id;
+
+  if ((*current_frame)->next == NULL) {
+    new_frame->next = *current_frame;
+    (*current_frame)->next = new_frame;
+  } else {
+    new_frame->next = (*current_frame)->next;
+    (*current_frame)->next = new_frame;
+  }
+
+  *current_frame = new_frame;
+}
+
+/**
+ * Create a new empty FrameRow.
+ * @return Pointer to the created FrameRow, or NULL on allocation failure
+ */
+static struct FrameRow* createRow(void) {
+  struct FrameRow* newRow = (struct FrameRow*)malloc(sizeof(struct FrameRow));
+  if (newRow == NULL) {
+    LogError("createRow", MALLOC_ERROR);
+    return NULL;
+  }
+  newRow->next = NULL;
+  newRow->tokens = NULL;
+  return newRow;
+}
+
+/**
+ * Create a new empty FrameToken.
+ * @return Pointer to the created FrameToken, or NULL on allocation failure
+ */
+static struct FrameToken* createToken(void) {
+  struct FrameToken* newToken =
+    (struct FrameToken*)malloc(sizeof(struct FrameToken));
+  if (newToken == NULL) {
+    LogError("createToken", MALLOC_ERROR);
+    return NULL;
+  }
+  newToken->next = NULL;
+  newToken->token = (char*)calloc(MAX_FRAME_WIDTH, sizeof(char));
+  if (newToken->token == NULL) {
+    LogError("createToken", MALLOC_ERROR);
+    free(newToken);
+    return NULL;
+  }
+  newToken->length = 0;
+  newToken->color = NO_COLOR;
+  newToken->is_blank = false;
+  return newToken;
 }
 
 /**
@@ -817,72 +884,6 @@ bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y) {
   }
 
   return false;
-}
-
-/**
- * ---------------------------------------------------------------------------
- * Animation callbacks
- * ---------------------------------------------------------------------------
- */
-
-/**
- * Render the current frame of the Rollfilm at the specified coordinates.
- * @param rollfilm Pointer to the rollfilm to render
- * @param start_y Starting y coordinate on screen
- * @param start_x Starting x coordinate on screen
- */
-static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) {
-    LogError("renderCurrentFrame", NULL_POINTER_ERROR);
-    return;
-  }
-
-  struct Frame* current_frame = rollfilm->frames;
-  struct FrameRow* current_row = current_frame->rows;
-  int y = start_y;
-  int color = NO_COLOR;
-
-  while (current_row != NULL) {
-    struct FrameToken* current_token = current_row->tokens;
-    int x = start_x;
-
-    while (current_token != NULL) {
-      if (color != current_token->color && current_token->color != NO_COLOR) {
-        color = current_token->color;
-        SetColor(color, NO_COLOR, A_BOLD);
-      }
-
-      if (!current_token->is_blank) mvprintw(y, x, "%s", current_token->token);
-      x += current_token->length;
-      current_token = current_token->next;
-    }
-
-    current_row = current_row->next;
-    y++;
-  }
-}
-
-/**
- * Advance the Rollfilm to the next frame.
- * Handles timing, looping, and frame index wrapping.
- * @param rollfilm Pointer to the rollfilm to update
- */
-static void updateAnimation(Rollfilm* rollfilm) {
-  if (rollfilm == NULL || rollfilm->frames == NULL) {
-    LogError("updateAnimation", NULL_POINTER_ERROR);
-    return;
-  }
-  if (!rollfilm->loop && rollfilm->current_frame >= rollfilm->frame_count - 1)
-    return;
-  double current_time = GetCurrentTimeMS();
-  double delta_time = current_time - rollfilm->delta_frame_ms;
-
-  if (delta_time >= 1000.0 * rollfilm->frames->seconds_multiplier) {
-    rollfilm->delta_frame_ms = current_time;
-    rollfilm->frames = rollfilm->frames->next;
-    rollfilm->current_frame =
-      (rollfilm->current_frame + 1) % rollfilm->frame_count;
-  }
 }
 
 /**

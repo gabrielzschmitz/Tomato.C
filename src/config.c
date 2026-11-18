@@ -1,10 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
-
 #include "config.h"
-
-#ifndef DATADIR
-#define DATADIR "./resources"
-#endif
 
 #include <errno.h>
 #include <fcntl.h>
@@ -22,12 +16,14 @@
 #include "input.h"
 #include "util.h"
 
-/* toml-c.h poisons strdup — restore the system declaration for our use */
-#undef strdup
+#define _POSIX_C_SOURCE 200809L
 
-/* PRIVATE CONFIG FUNCTIONS */
-/* Config */
-static char* expandDatadir(const char* input);
+#ifndef DATADIR
+#define DATADIR "./resources"
+#endif
+
+/* toml-c.h poisons strdup, restore the system declaration for our use */
+#undef strdup
 
 /*
  * Built-in defaults are string literals, while strings loaded from TOML are
@@ -37,55 +33,6 @@ static char* expandDatadir(const char* input);
 static char** owned_strings = NULL;
 static size_t owned_count = 0;
 static size_t owned_capacity = 0;
-
-static bool configStringOwned(const char* value) {
-  for (size_t i = 0; i < owned_count; i++)
-    if (owned_strings[i] == value) return true;
-  return false;
-}
-
-static void configStringForget(const char* value) {
-  for (size_t i = 0; i < owned_count; i++) {
-    if (owned_strings[i] == value) {
-      owned_strings[i] = owned_strings[--owned_count];
-      return;
-    }
-  }
-}
-
-/** @brief Register a heap string that config owns; returns the same pointer. */
-static const char* configStringAdopt(char* value) {
-  if (!value) return NULL;
-  if (owned_count == owned_capacity) {
-    size_t capacity = owned_capacity ? owned_capacity * 2 : 64;
-    char** grown = realloc(owned_strings, capacity * sizeof(*grown));
-    if (!grown) {
-      free(value);
-      return NULL;
-    }
-    owned_strings = grown;
-    owned_capacity = capacity;
-  }
-  owned_strings[owned_count++] = value;
-  return value;
-}
-
-/** @brief Free slot when it holds an owned string; leave literals alone. */
-static void configStringRelease(const char** slot) {
-  if (!slot || !*slot || !configStringOwned(*slot)) return;
-  configStringForget(*slot);
-  free((char*)*slot);
-  *slot = NULL;
-}
-
-/** @brief Adopt replacement before releasing old value, preserving it on OOM. */
-static bool configStringReplace(const char** slot, char* value) {
-  const char* adopted = configStringAdopt(value);
-  if (!adopted) return false;
-  configStringRelease(slot);
-  *slot = adopted;
-  return true;
-}
 
 /** Path to the system-wide TOML configuration file. */
 const char* SYSTEM_CONFIG_PATH = "/etc/tomato/config.toml";
@@ -673,6 +620,541 @@ static const struct {
   {"POMODORO_SCENES", POMODORO_SCENES},
 };
 
+#define MAX_CONFIG_WARNINGS 8
+#define CONFIG_WARNING_LEN 256
+
+/**
+ * Queued configuration diagnostic.
+ */
+typedef struct {
+  ErrorLevel level;                 /**< Severity of the diagnostic */
+  char message[CONFIG_WARNING_LEN]; /**< Text shown on the error line */
+} configWarning;
+
+static configWarning config_warnings[MAX_CONFIG_WARNINGS];
+static int config_warning_count = 0;
+
+/** Path of the user config file, set by LoadConfig(); empty if unknown. */
+static char user_config_path[1024] = "";
+
+/**
+ * Growable list of owned lines used when rewriting a config file.
+ */
+typedef struct {
+  char** items; /**< Owned line strings */
+  int count;    /**< Number of stored lines */
+  int cap;      /**< Allocated slot count */
+} lineList;
+
+/* PRIVATE CONFIG FUNCTIONS */
+static bool configStringOwned(const char* value);
+static void configStringForget(const char* value);
+static void configStringRelease(const char** slot);
+static bool lineListInsert(lineList* list, int index, char* line);
+static void lineListFree(lineList* list);
+static char* copyText(const char* s, size_t len);
+static const char* skipBlank(const char* s);
+static char* tableHeaderName(const char* line);
+static bool isTableHeader(const char* line);
+static const char* findComment(const char* s);
+static bool findTableRange(const lineList* list, const char* table, int* start,
+                           int* end);
+static int findKeyLine(const lineList* list, const char* key, int start,
+                       int end);
+static char* rebuildValueLine(const char* line, const char* value);
+static const char* configStringAdopt(char* value);
+static bool configStringReplace(const char** slot, char* value);
+static int keycodeFromString(const char* s);
+static void (*actionFromString(const char* s))(AppData*);
+static int modeFromString(const char* s);
+static int sceneFromString(const char* s);
+static bool ensurePrivateDir(const char* dir, uid_t uid);
+static void resolveStateDir(char* out, size_t size);
+static void setDefaults(void);
+static toml_table_t* tableAtPath(toml_table_t* root, const char* dotted);
+static void readInt(toml_table_t* root, const char* path, int* out);
+static void readBool(toml_table_t* root, const char* path, int* out);
+static void readFloat(toml_table_t* root, const char* path, float* out);
+static void readString(toml_table_t* root, const char* path, const char** out);
+static void readPathString(toml_table_t* root, const char* path,
+                           const char** out);
+/* Config */
+static char* expandDatadir(const char* input);
+static void readIconArray(toml_table_t* root, const char* path,
+                          const char* out[3]);
+static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
+                                     const char* out[], int* count, int max);
+static void readKeybindings(toml_table_t* root);
+static void readNotificationConfig(toml_table_t* root, const char* prefix,
+                                   NotificationConfig* cfg);
+static void releaseNoiseTrack(ConfigNoiseTrack* track);
+static void readNoiseTracks(toml_table_t* root);
+static void addConfigWarning(ErrorLevel level, const char* message);
+static void resetConfigWarnings(void);
+static void loadTomlFile(const char* path);
+static bool resolveUserConfigPath(char* path, size_t size);
+
+/**
+ * Sync g_config.visual.icons from icons_index (0=nerd-icons, 1=emojis, 2=ascii).
+ * Called after any preference dialog commit that changes icons_index.
+ */
+void SyncIconsFromIndex(void) {
+  configStringRelease(&g_config.visual.icons);
+  switch (g_config.visual.icons_index) {
+    case 0:
+      g_config.visual.icons = "nerd-icons";
+      break;
+    case 1:
+      g_config.visual.icons = "emojis";
+      break;
+    case 2:
+      g_config.visual.icons = "ascii";
+      break;
+    default:
+      g_config.visual.icons = "nerd-icons";
+      break;
+  }
+}
+
+static bool configStringOwned(const char* value) {
+  for (size_t i = 0; i < owned_count; i++)
+    if (owned_strings[i] == value) return true;
+  return false;
+}
+
+static void configStringForget(const char* value) {
+  for (size_t i = 0; i < owned_count; i++) {
+    if (owned_strings[i] == value) {
+      owned_strings[i] = owned_strings[--owned_count];
+      return;
+    }
+  }
+}
+
+/** @brief Free slot when it holds an owned string; leave literals alone. */
+static void configStringRelease(const char** slot) {
+  if (!slot || !*slot || !configStringOwned(*slot)) return;
+  configStringForget(*slot);
+  free((char*)*slot);
+  *slot = NULL;
+}
+
+int GetConfigWarningCount(void) { return config_warning_count; }
+
+const char* GetConfigWarning(int index, ErrorLevel* level) {
+  if (index < 0 || index >= config_warning_count) return NULL;
+  if (level) *level = config_warnings[index].level;
+  return config_warnings[index].message;
+}
+
+const char* GetUserConfigPath(void) { return user_config_path; }
+
+/**
+ * Write values into a TOML config file, changing only the keys given.
+ * Comments and the layout of the rest of the file are preserved. Missing
+ * keys are added to their table, and missing tables are appended. The file
+ * must already parse; the rewritten file is checked before it replaces the
+ * original, so a failed save leaves the previous contents in place.
+ * @param path Config file to update (created if missing)
+ * @param values Table paths and TOML-formatted values to write
+ * @param count Number of entries in values
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
+                           int count) {
+  if (!path || !values) return INVALID_ARGUMENT_ERROR;
+
+  bool missing = false;
+  FILE* in = fopen(path, "rb");
+  if (!in) {
+    if (errno != ENOENT) return FILE_ERROR;
+    missing = true;
+  }
+  size_t size = 0;
+  char* text = NULL;
+  if (in) {
+    fseek(in, 0, SEEK_END);
+    long len = ftell(in);
+    fseek(in, 0, SEEK_SET);
+    if (len < 0) {
+      fclose(in);
+      return FILE_ERROR;
+    }
+    size = (size_t)len;
+    text = malloc(size + 1);
+    if (!text || fread(text, 1, size, in) != size) {
+      free(text);
+      fclose(in);
+      return FILE_ERROR;
+    }
+    fclose(in);
+    text[size] = '\0';
+  } else {
+    text = copyText("", 0);
+  }
+  if (!text) return MALLOC_ERROR;
+
+  if (!missing && size > 0) {
+    char errbuf[200];
+    char* check = copyText(text, size);
+    toml_table_t* root =
+      check ? toml_parse(check, errbuf, sizeof(errbuf)) : NULL;
+    free(check);
+    if (!root) {
+      free(text);
+      return INVALID_CONFIG;
+    }
+    toml_free(root);
+  }
+
+  lineList list = {0};
+  char* cursor = text;
+  while (*cursor) {
+    char* nl = strchr(cursor, '\n');
+    size_t len = nl ? (size_t)(nl - cursor) : strlen(cursor);
+    char* line = copyText(cursor, len);
+    if (!line || !lineListInsert(&list, list.count, line)) {
+      free(line);
+      lineListFree(&list);
+      free(text);
+      return MALLOC_ERROR;
+    }
+    cursor = nl ? nl + 1 : cursor + len;
+  }
+  free(text);
+
+  for (int v = 0; v < count; v++) {
+    const char* dot = strrchr(values[v].path, '.');
+    const char* key = dot ? dot + 1 : values[v].path;
+    size_t table_len = dot ? (size_t)(dot - values[v].path) : 0;
+    char* table = copyText(values[v].path, table_len);
+    if (!table) {
+      lineListFree(&list);
+      return MALLOC_ERROR;
+    }
+
+    int start = 0, end = 0;
+    if (!findTableRange(&list, table, &start, &end)) {
+      char* blank = copyText("", 0);
+      char* header = malloc(table_len + 3);
+      char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
+      if (!blank || !header || !line) {
+        free(blank);
+        free(header);
+        free(line);
+        free(table);
+        lineListFree(&list);
+        return MALLOC_ERROR;
+      }
+      snprintf(header, table_len + 3, "[%s]", table);
+      sprintf(line, "%s = %s", key, values[v].value);
+      lineListInsert(&list, list.count, blank);
+      lineListInsert(&list, list.count, header);
+      lineListInsert(&list, list.count, line);
+    } else {
+      int idx = findKeyLine(&list, key, start, end);
+      if (idx >= 0) {
+        char* line = rebuildValueLine(list.items[idx], values[v].value);
+        if (!line) {
+          free(table);
+          lineListFree(&list);
+          return MALLOC_ERROR;
+        }
+        free(list.items[idx]);
+        list.items[idx] = line;
+      } else {
+        int at = start;
+        for (int i = start; i < end; i++)
+          if (*skipBlank(list.items[i]) != '\0') at = i + 1;
+        char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
+        if (!line) {
+          free(table);
+          lineListFree(&list);
+          return MALLOC_ERROR;
+        }
+        sprintf(line, "%s = %s", key, values[v].value);
+        lineListInsert(&list, at, line);
+      }
+    }
+    free(table);
+  }
+
+  size_t out_len = 1;
+  for (int i = 0; i < list.count; i++) out_len += strlen(list.items[i]) + 1;
+  char* out = malloc(out_len);
+  if (!out) {
+    lineListFree(&list);
+    return MALLOC_ERROR;
+  }
+  out[0] = '\0';
+  for (int i = 0; i < list.count; i++) {
+    strcat(out, list.items[i]);
+    strcat(out, "\n");
+  }
+  lineListFree(&list);
+
+  char temp_path[1100];
+  if (snprintf(temp_path, sizeof(temp_path), "%s.tmp", path) >=
+      (int)sizeof(temp_path)) {
+    free(out);
+    return FILE_ERROR;
+  }
+  FILE* tmp = FOpenNoFollow(temp_path, "w");
+  if (!tmp) {
+    free(out);
+    return FILE_ERROR;
+  }
+  bool write_failed = fputs(out, tmp) == EOF;
+  free(out);
+  if (fflush(tmp) != 0) write_failed = true;
+  if (fsync(fileno(tmp)) != 0) write_failed = true;
+  if (fclose(tmp) != 0) write_failed = true;
+  if (write_failed) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
+
+  FILE* check = fopen(temp_path, "r");
+  char errbuf[200];
+  toml_table_t* reparsed =
+    check ? toml_parse_file(check, errbuf, sizeof(errbuf)) : NULL;
+  if (check) fclose(check);
+  if (!reparsed) {
+    remove(temp_path);
+    return INVALID_CONFIG;
+  }
+  toml_free(reparsed);
+
+  if (rename(temp_path, path) != 0) {
+    remove(temp_path);
+    return FILE_ERROR;
+  }
+  return NO_ERROR;
+}
+
+static bool lineListInsert(lineList* list, int index, char* line) {
+  if (list->count == list->cap) {
+    int cap = list->cap ? list->cap * 2 : 64;
+    char** grown = realloc(list->items, sizeof(char*) * cap);
+    if (!grown) return false;
+    list->items = grown;
+    list->cap = cap;
+  }
+  memmove(&list->items[index + 1], &list->items[index],
+          sizeof(char*) * (list->count - index));
+  list->items[index] = line;
+  list->count++;
+  return true;
+}
+
+static void lineListFree(lineList* list) {
+  for (int i = 0; i < list->count; i++) free(list->items[i]);
+  free(list->items);
+  list->items = NULL;
+  list->count = 0;
+  list->cap = 0;
+}
+
+static char* copyText(const char* s, size_t len) {
+  char* out = malloc(len + 1);
+  if (!out) return NULL;
+  memcpy(out, s, len);
+  out[len] = '\0';
+  return out;
+}
+
+/** Return the first non-blank character of a line (or the terminator). */
+static const char* skipBlank(const char* s) {
+  while (*s == ' ' || *s == '\t') s++;
+  return s;
+}
+
+/**
+ * Return the table name of a "[name]" header line, or NULL if the line is
+ * not a single-bracket table header. Trailing comments are ignored.
+ */
+static char* tableHeaderName(const char* line) {
+  const char* s = skipBlank(line);
+  if (*s != '[' || s[1] == '[') return NULL;
+  const char* close = strchr(s, ']');
+  if (!close) return NULL;
+  const char* name = s + 1;
+  while (name < close && (*name == ' ' || *name == '\t')) name++;
+  const char* end = close;
+  while (end > name && (end[-1] == ' ' || end[-1] == '\t')) end--;
+  return copyText(name, (size_t)(end - name));
+}
+
+/** True if the line starts a table or array-of-tables header. */
+static bool isTableHeader(const char* line) { return *skipBlank(line) == '['; }
+
+/** Find the position of a '#' that starts a comment, outside quotes. */
+static const char* findComment(const char* s) {
+  bool in_quotes = false;
+  for (; *s; s++) {
+    if (*s == '"') {
+      in_quotes = !in_quotes;
+    } else if (*s == '#' && !in_quotes) {
+      return s;
+    }
+  }
+  return NULL;
+}
+
+/**
+ * Locate the line range of a table: lines strictly after its header up to
+ * the next header. The empty name denotes the top level before any header.
+ */
+static bool findTableRange(const lineList* list, const char* table, int* start,
+                           int* end) {
+  int first_header = list->count;
+  for (int i = 0; i < list->count; i++) {
+    if (!isTableHeader(list->items[i])) continue;
+    if (first_header == list->count) first_header = i;
+    if (table[0] == '\0') continue;
+    char* name = tableHeaderName(list->items[i]);
+    bool match = name && strcmp(name, table) == 0;
+    free(name);
+    if (match) {
+      int j = i + 1;
+      while (j < list->count && !isTableHeader(list->items[j])) j++;
+      *start = i + 1;
+      *end = j;
+      return true;
+    }
+  }
+  if (table[0] == '\0') {
+    *start = 0;
+    *end = first_header;
+    return true;
+  }
+  return false;
+}
+
+/** Find a "key = value" line for key within [start, end); -1 if absent. */
+static int findKeyLine(const lineList* list, const char* key, int start,
+                       int end) {
+  size_t klen = strlen(key);
+  for (int i = start; i < end; i++) {
+    const char* s = skipBlank(list->items[i]);
+    if (strncmp(s, key, klen) != 0) continue;
+    const char* after = skipBlank(s + klen);
+    if (*after == '=') return i;
+  }
+  return -1;
+}
+
+/**
+ * Replace the value in a "key = value" line, keeping the original indent,
+ * padding, and trailing comment.
+ */
+static char* rebuildValueLine(const char* line, const char* value) {
+  const char* eq = strchr(skipBlank(line), '=');
+  if (!eq) return NULL;
+
+  const char* value_start = eq + 1;
+  while (*value_start == ' ' || *value_start == '\t') value_start++;
+  const char* comment = findComment(value_start);
+  const char* end = comment ? comment : value_start + strlen(value_start);
+
+  /* Trim trailing blanks so they can be reused as padding. */
+  const char* value_end = end;
+  while (value_end > value_start &&
+         (value_end[-1] == ' ' || value_end[-1] == '\t'))
+    value_end--;
+
+  size_t value_len = strlen(value);
+  size_t old_value_len = (size_t)(value_end - value_start);
+  size_t gap_len = (size_t)(end - value_end);
+  size_t old_gap_len = gap_len;
+
+  /* Keep the comment in its original column when the new value changes
+   * width, as long as the existing gap provides enough padding. */
+  if (comment) {
+    if (value_len < old_value_len) {
+      gap_len += old_value_len - value_len;
+    } else if (value_len > old_value_len) {
+      size_t grown = value_len - old_value_len;
+      if (grown < gap_len)
+        gap_len -= grown;
+      else if (gap_len > 0)
+        gap_len = 1;
+    }
+  }
+
+  size_t prefix_len = (size_t)(value_start - line);
+  size_t suffix_len = strlen(end);
+  size_t copy_gap = gap_len < old_gap_len ? gap_len : old_gap_len;
+  size_t total = prefix_len + value_len + gap_len + suffix_len + 1;
+  char* out = malloc(total);
+  if (!out) return NULL;
+
+  char* p = out;
+  memcpy(p, line, prefix_len);
+  p += prefix_len;
+  memcpy(p, value, value_len);
+  p += value_len;
+  memcpy(p, value_end, copy_gap);
+  p += copy_gap;
+  for (size_t i = copy_gap; i < gap_len; i++) *p++ = ' ';
+  memcpy(p, end, suffix_len + 1);
+  return out;
+}
+
+/**
+ * Load configuration from TOML files.
+ *
+ * Order of precedence (later overrides earlier):
+ *   1. Built-in defaults (setDefaults)
+ *   2. System-wide /etc/tomato/config.toml
+ *   3. User $TOMATO_CONFIG_DIR/config.toml,
+ *   $XDG_CONFIG_HOME/tomato/config.toml, or
+ *   $HOME/.config/tomato/config.toml
+ *
+ * This function is idempotent — it only runs once (guarded by a static flag).
+ */
+void LoadConfig(void) {
+  static bool loaded = false;
+  if (loaded) return;
+  loaded = true;
+
+  resetConfigWarnings();
+  setDefaults();
+
+  loadTomlFile(SYSTEM_CONFIG_PATH);
+
+  char path[1024];
+  if (!resolveUserConfigPath(path, sizeof(path))) return;
+  snprintf(user_config_path, sizeof(user_config_path), "%s", path);
+  loadTomlFile(path);
+}
+
+/** @brief Register a heap string that config owns; returns the same pointer. */
+static const char* configStringAdopt(char* value) {
+  if (!value) return NULL;
+  if (owned_count == owned_capacity) {
+    size_t capacity = owned_capacity ? owned_capacity * 2 : 64;
+    char** grown = realloc(owned_strings, capacity * sizeof(*grown));
+    if (!grown) {
+      free(value);
+      return NULL;
+    }
+    owned_strings = grown;
+    owned_capacity = capacity;
+  }
+  owned_strings[owned_count++] = value;
+  return value;
+}
+
+/** @brief Adopt replacement before releasing old value, preserving it on OOM. */
+static bool configStringReplace(const char** slot, char* value) {
+  const char* adopted = configStringAdopt(value);
+  if (!adopted) return false;
+  configStringRelease(slot);
+  *slot = adopted;
+  return true;
+}
+
 /**
  * Convert a TOML key name string to an ncurses keycode.
  * Single printable characters map to their ASCII value; named constants
@@ -1021,28 +1503,6 @@ static void setDefaults(void) {
   memcpy(g_config.key_bindings, DEFAULT_KEYS,
          DEFAULT_KEYS_COUNT * sizeof(KeyFunction));
   g_config.num_keys = DEFAULT_KEYS_COUNT;
-}
-
-/**
- * Sync g_config.visual.icons from icons_index (0=nerd-icons, 1=emojis, 2=ascii).
- * Called after any preference dialog commit that changes icons_index.
- */
-void SyncIconsFromIndex(void) {
-  configStringRelease(&g_config.visual.icons);
-  switch (g_config.visual.icons_index) {
-    case 0:
-      g_config.visual.icons = "nerd-icons";
-      break;
-    case 1:
-      g_config.visual.icons = "emojis";
-      break;
-    case 2:
-      g_config.visual.icons = "ascii";
-      break;
-    default:
-      g_config.visual.icons = "nerd-icons";
-      break;
-  }
 }
 
 /**
@@ -1709,20 +2169,6 @@ static void readNoiseTracks(toml_table_t* root) {
   }
 }
 
-#define MAX_CONFIG_WARNINGS 8
-#define CONFIG_WARNING_LEN 256
-
-/**
- * Queued configuration diagnostic.
- */
-typedef struct {
-  ErrorLevel level;                 /**< Severity of the diagnostic */
-  char message[CONFIG_WARNING_LEN]; /**< Text shown on the error line */
-} configWarning;
-
-static configWarning config_warnings[MAX_CONFIG_WARNINGS];
-static int config_warning_count = 0;
-
 /**
  * Queue a configuration diagnostic for display once the UI is running.
  * Messages beyond MAX_CONFIG_WARNINGS are dropped.
@@ -1738,14 +2184,6 @@ static void addConfigWarning(ErrorLevel level, const char* message) {
 
 /** Clear the configuration diagnostics queue. */
 static void resetConfigWarnings(void) { config_warning_count = 0; }
-
-int GetConfigWarningCount(void) { return config_warning_count; }
-
-const char* GetConfigWarning(int index, ErrorLevel* level) {
-  if (index < 0 || index >= config_warning_count) return NULL;
-  if (level) *level = config_warnings[index].level;
-  return config_warnings[index].message;
-}
 
 /**
  * Parse a single TOML file and overlay its values onto g_config.
@@ -1940,372 +2378,6 @@ static void loadTomlFile(const char* path) {
   toml_free(root);
 }
 
-/** Path of the user config file, set by LoadConfig(); empty if unknown. */
-static char user_config_path[1024] = "";
-
-const char* GetUserConfigPath(void) { return user_config_path; }
-
-/**
- * Growable list of owned lines used when rewriting a config file.
- */
-typedef struct {
-  char** items; /**< Owned line strings */
-  int count;    /**< Number of stored lines */
-  int cap;      /**< Allocated slot count */
-} lineList;
-
-static bool lineListInsert(lineList* list, int index, char* line) {
-  if (list->count == list->cap) {
-    int cap = list->cap ? list->cap * 2 : 64;
-    char** grown = realloc(list->items, sizeof(char*) * cap);
-    if (!grown) return false;
-    list->items = grown;
-    list->cap = cap;
-  }
-  memmove(&list->items[index + 1], &list->items[index],
-          sizeof(char*) * (list->count - index));
-  list->items[index] = line;
-  list->count++;
-  return true;
-}
-
-static void lineListFree(lineList* list) {
-  for (int i = 0; i < list->count; i++) free(list->items[i]);
-  free(list->items);
-  list->items = NULL;
-  list->count = 0;
-  list->cap = 0;
-}
-
-static char* copyText(const char* s, size_t len) {
-  char* out = malloc(len + 1);
-  if (!out) return NULL;
-  memcpy(out, s, len);
-  out[len] = '\0';
-  return out;
-}
-
-/** Return the first non-blank character of a line (or the terminator). */
-static const char* skipBlank(const char* s) {
-  while (*s == ' ' || *s == '\t') s++;
-  return s;
-}
-
-/**
- * Return the table name of a "[name]" header line, or NULL if the line is
- * not a single-bracket table header. Trailing comments are ignored.
- */
-static char* tableHeaderName(const char* line) {
-  const char* s = skipBlank(line);
-  if (*s != '[' || s[1] == '[') return NULL;
-  const char* close = strchr(s, ']');
-  if (!close) return NULL;
-  const char* name = s + 1;
-  while (name < close && (*name == ' ' || *name == '\t')) name++;
-  const char* end = close;
-  while (end > name && (end[-1] == ' ' || end[-1] == '\t')) end--;
-  return copyText(name, (size_t)(end - name));
-}
-
-/** True if the line starts a table or array-of-tables header. */
-static bool isTableHeader(const char* line) { return *skipBlank(line) == '['; }
-
-/** Find the position of a '#' that starts a comment, outside quotes. */
-static const char* findComment(const char* s) {
-  bool in_quotes = false;
-  for (; *s; s++) {
-    if (*s == '"') {
-      in_quotes = !in_quotes;
-    } else if (*s == '#' && !in_quotes) {
-      return s;
-    }
-  }
-  return NULL;
-}
-
-/**
- * Locate the line range of a table: lines strictly after its header up to
- * the next header. The empty name denotes the top level before any header.
- */
-static bool findTableRange(const lineList* list, const char* table, int* start,
-                           int* end) {
-  int first_header = list->count;
-  for (int i = 0; i < list->count; i++) {
-    if (!isTableHeader(list->items[i])) continue;
-    if (first_header == list->count) first_header = i;
-    if (table[0] == '\0') continue;
-    char* name = tableHeaderName(list->items[i]);
-    bool match = name && strcmp(name, table) == 0;
-    free(name);
-    if (match) {
-      int j = i + 1;
-      while (j < list->count && !isTableHeader(list->items[j])) j++;
-      *start = i + 1;
-      *end = j;
-      return true;
-    }
-  }
-  if (table[0] == '\0') {
-    *start = 0;
-    *end = first_header;
-    return true;
-  }
-  return false;
-}
-
-/** Find a "key = value" line for key within [start, end); -1 if absent. */
-static int findKeyLine(const lineList* list, const char* key, int start,
-                       int end) {
-  size_t klen = strlen(key);
-  for (int i = start; i < end; i++) {
-    const char* s = skipBlank(list->items[i]);
-    if (strncmp(s, key, klen) != 0) continue;
-    const char* after = skipBlank(s + klen);
-    if (*after == '=') return i;
-  }
-  return -1;
-}
-
-/**
- * Replace the value in a "key = value" line, keeping the original indent,
- * padding, and trailing comment.
- */
-static char* rebuildValueLine(const char* line, const char* value) {
-  const char* eq = strchr(skipBlank(line), '=');
-  if (!eq) return NULL;
-
-  const char* value_start = eq + 1;
-  while (*value_start == ' ' || *value_start == '\t') value_start++;
-  const char* comment = findComment(value_start);
-  const char* end = comment ? comment : value_start + strlen(value_start);
-
-  /* Trim trailing blanks so they can be reused as padding. */
-  const char* value_end = end;
-  while (value_end > value_start &&
-         (value_end[-1] == ' ' || value_end[-1] == '\t'))
-    value_end--;
-
-  size_t value_len = strlen(value);
-  size_t old_value_len = (size_t)(value_end - value_start);
-  size_t gap_len = (size_t)(end - value_end);
-  size_t old_gap_len = gap_len;
-
-  /* Keep the comment in its original column when the new value changes
-   * width, as long as the existing gap provides enough padding. */
-  if (comment) {
-    if (value_len < old_value_len) {
-      gap_len += old_value_len - value_len;
-    } else if (value_len > old_value_len) {
-      size_t grown = value_len - old_value_len;
-      if (grown < gap_len)
-        gap_len -= grown;
-      else if (gap_len > 0)
-        gap_len = 1;
-    }
-  }
-
-  size_t prefix_len = (size_t)(value_start - line);
-  size_t suffix_len = strlen(end);
-  size_t copy_gap = gap_len < old_gap_len ? gap_len : old_gap_len;
-  size_t total = prefix_len + value_len + gap_len + suffix_len + 1;
-  char* out = malloc(total);
-  if (!out) return NULL;
-
-  char* p = out;
-  memcpy(p, line, prefix_len);
-  p += prefix_len;
-  memcpy(p, value, value_len);
-  p += value_len;
-  memcpy(p, value_end, copy_gap);
-  p += copy_gap;
-  for (size_t i = copy_gap; i < gap_len; i++) *p++ = ' ';
-  memcpy(p, end, suffix_len + 1);
-  return out;
-}
-
-/**
- * Write values into a TOML config file, changing only the keys given.
- * Comments and the layout of the rest of the file are preserved. Missing
- * keys are added to their table, and missing tables are appended. The file
- * must already parse; the rewritten file is checked before it replaces the
- * original, so a failed save leaves the previous contents in place.
- * @param path Config file to update (created if missing)
- * @param values Table paths and TOML-formatted values to write
- * @param count Number of entries in values
- * @return ErrorType NO_ERROR on success, or an error code on failure
- */
-ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
-                           int count) {
-  if (!path || !values) return INVALID_ARGUMENT_ERROR;
-
-  bool missing = false;
-  FILE* in = fopen(path, "rb");
-  if (!in) {
-    if (errno != ENOENT) return FILE_ERROR;
-    missing = true;
-  }
-  size_t size = 0;
-  char* text = NULL;
-  if (in) {
-    fseek(in, 0, SEEK_END);
-    long len = ftell(in);
-    fseek(in, 0, SEEK_SET);
-    if (len < 0) {
-      fclose(in);
-      return FILE_ERROR;
-    }
-    size = (size_t)len;
-    text = malloc(size + 1);
-    if (!text || fread(text, 1, size, in) != size) {
-      free(text);
-      fclose(in);
-      return FILE_ERROR;
-    }
-    fclose(in);
-    text[size] = '\0';
-  } else {
-    text = copyText("", 0);
-  }
-  if (!text) return MALLOC_ERROR;
-
-  if (!missing && size > 0) {
-    char errbuf[200];
-    char* check = copyText(text, size);
-    toml_table_t* root =
-      check ? toml_parse(check, errbuf, sizeof(errbuf)) : NULL;
-    free(check);
-    if (!root) {
-      free(text);
-      return INVALID_CONFIG;
-    }
-    toml_free(root);
-  }
-
-  lineList list = {0};
-  char* cursor = text;
-  while (*cursor) {
-    char* nl = strchr(cursor, '\n');
-    size_t len = nl ? (size_t)(nl - cursor) : strlen(cursor);
-    char* line = copyText(cursor, len);
-    if (!line || !lineListInsert(&list, list.count, line)) {
-      free(line);
-      lineListFree(&list);
-      free(text);
-      return MALLOC_ERROR;
-    }
-    cursor = nl ? nl + 1 : cursor + len;
-  }
-  free(text);
-
-  for (int v = 0; v < count; v++) {
-    const char* dot = strrchr(values[v].path, '.');
-    const char* key = dot ? dot + 1 : values[v].path;
-    size_t table_len = dot ? (size_t)(dot - values[v].path) : 0;
-    char* table = copyText(values[v].path, table_len);
-    if (!table) {
-      lineListFree(&list);
-      return MALLOC_ERROR;
-    }
-
-    int start = 0, end = 0;
-    if (!findTableRange(&list, table, &start, &end)) {
-      char* blank = copyText("", 0);
-      char* header = malloc(table_len + 3);
-      char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
-      if (!blank || !header || !line) {
-        free(blank);
-        free(header);
-        free(line);
-        free(table);
-        lineListFree(&list);
-        return MALLOC_ERROR;
-      }
-      snprintf(header, table_len + 3, "[%s]", table);
-      sprintf(line, "%s = %s", key, values[v].value);
-      lineListInsert(&list, list.count, blank);
-      lineListInsert(&list, list.count, header);
-      lineListInsert(&list, list.count, line);
-    } else {
-      int idx = findKeyLine(&list, key, start, end);
-      if (idx >= 0) {
-        char* line = rebuildValueLine(list.items[idx], values[v].value);
-        if (!line) {
-          free(table);
-          lineListFree(&list);
-          return MALLOC_ERROR;
-        }
-        free(list.items[idx]);
-        list.items[idx] = line;
-      } else {
-        int at = start;
-        for (int i = start; i < end; i++)
-          if (*skipBlank(list.items[i]) != '\0') at = i + 1;
-        char* line = malloc(strlen(key) + strlen(values[v].value) + 4);
-        if (!line) {
-          free(table);
-          lineListFree(&list);
-          return MALLOC_ERROR;
-        }
-        sprintf(line, "%s = %s", key, values[v].value);
-        lineListInsert(&list, at, line);
-      }
-    }
-    free(table);
-  }
-
-  size_t out_len = 1;
-  for (int i = 0; i < list.count; i++) out_len += strlen(list.items[i]) + 1;
-  char* out = malloc(out_len);
-  if (!out) {
-    lineListFree(&list);
-    return MALLOC_ERROR;
-  }
-  out[0] = '\0';
-  for (int i = 0; i < list.count; i++) {
-    strcat(out, list.items[i]);
-    strcat(out, "\n");
-  }
-  lineListFree(&list);
-
-  char temp_path[1100];
-  if (snprintf(temp_path, sizeof(temp_path), "%s.tmp", path) >=
-      (int)sizeof(temp_path)) {
-    free(out);
-    return FILE_ERROR;
-  }
-  FILE* tmp = FOpenNoFollow(temp_path, "w");
-  if (!tmp) {
-    free(out);
-    return FILE_ERROR;
-  }
-  bool write_failed = fputs(out, tmp) == EOF;
-  free(out);
-  if (fflush(tmp) != 0) write_failed = true;
-  if (fsync(fileno(tmp)) != 0) write_failed = true;
-  if (fclose(tmp) != 0) write_failed = true;
-  if (write_failed) {
-    remove(temp_path);
-    return FILE_ERROR;
-  }
-
-  FILE* check = fopen(temp_path, "r");
-  char errbuf[200];
-  toml_table_t* reparsed =
-    check ? toml_parse_file(check, errbuf, sizeof(errbuf)) : NULL;
-  if (check) fclose(check);
-  if (!reparsed) {
-    remove(temp_path);
-    return INVALID_CONFIG;
-  }
-  toml_free(reparsed);
-
-  if (rename(temp_path, path) != 0) {
-    remove(temp_path);
-    return FILE_ERROR;
-  }
-  return NO_ERROR;
-}
-
 /**
  * Resolve the user configuration file path.
  *
@@ -2331,32 +2403,4 @@ static bool resolveUserConfigPath(char* path, size_t size) {
     return false;
   }
   return true;
-}
-
-/**
- * Load configuration from TOML files.
- *
- * Order of precedence (later overrides earlier):
- *   1. Built-in defaults (setDefaults)
- *   2. System-wide /etc/tomato/config.toml
- *   3. User $TOMATO_CONFIG_DIR/config.toml,
- *   $XDG_CONFIG_HOME/tomato/config.toml, or
- *   $HOME/.config/tomato/config.toml
- *
- * This function is idempotent — it only runs once (guarded by a static flag).
- */
-void LoadConfig(void) {
-  static bool loaded = false;
-  if (loaded) return;
-  loaded = true;
-
-  resetConfigWarnings();
-  setDefaults();
-
-  loadTomlFile(SYSTEM_CONFIG_PATH);
-
-  char path[1024];
-  if (!resolveUserConfigPath(path, sizeof(path))) return;
-  snprintf(user_config_path, sizeof(user_config_path), "%s", path);
-  loadTomlFile(path);
 }

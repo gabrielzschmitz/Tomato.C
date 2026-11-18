@@ -4,7 +4,11 @@
 #include <pthread.h>
 #include <spawn.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #ifndef __APPLE__
 #if !defined(__GNUC__) && !defined(__clang__)
 #define __attribute__(x)
@@ -14,21 +18,10 @@
 #include <libnotify/notify.h>
 #endif
 #endif
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 #include "audio.h"
 #include "config.h"
 #include "error.h"
-
-/**
- * Private helper functions for notification handling.
- */
-static ErrorType sendNotification(const char* title, const char* description);
-static bool shouldDispatchAsync(void);
-static ErrorType queueNotification(const char* title, const char* description);
-static void* notificationThread(void* arg);
 
 /**
  * Queued notification payload for the background dispatch thread.
@@ -37,8 +30,13 @@ typedef struct {
   char* title;       /**< Notification title */
   char* description; /**< Notification description */
 } notificationRequest;
-
 extern char** environ;
+
+/* PRIVATE NOTIFY FUNCTIONS */
+static bool shouldDispatchAsync(void);
+static ErrorType queueNotification(const char* title, const char* description);
+static void* notificationThread(void* arg);
+static ErrorType sendNotification(const char* title, const char* description);
 
 /**
  * Send a notification with sound using a Notification struct.

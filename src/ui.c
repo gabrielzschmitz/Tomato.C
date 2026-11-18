@@ -23,42 +23,6 @@
 #define BUTTON5_PRESSED 0000020L
 #endif
 
-/* PRIVATE UI FUNCTIONS */
-/* Slides */
-static int strDisplayWidth(const char* s);
-static int utf8DisplayWidth(const char* s);
-static SlideToken* parseSlideText(const char* text, int icon_type);
-static SlideDef* buildSlideFromText(const char* text, int w, int h,
-                                    int icon_type);
-static void welcomeRender(AppData* app, SlideDef* def);
-static void welcomeUpdate(AppData* app, SlideDef* def);
-static void continueProgressRender(AppData* app, int x, int y, int w,
-                                   SlideDef* def, SlideProgress* params);
-static void continueAndClose(AppData* app);
-static void abandonAndClose(AppData* app);
-static void noiseSlideRender(AppData* app, SlideDef* def);
-static void noiseSlideUpdate(AppData* app, SlideDef* def);
-static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
-static SlideProgress* slideProgressDup(const SlideProgress* p);
-static SlideControls* slideControlsDup(const ControlButton* btns, int count);
-/* History */
-static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
-                              int* monthStartWeek, int* monthDays,
-                              int* monthStartDow);
-static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
-                        int* monthWeeks, int* monthStartWeek, int* monthDays,
-                        int* monthStartDow, int* outYear, int* outMonth);
-static void historyOverviewRender(AppData* app, SlideDef* def);
-static void historyOverviewUpdate(AppData* app, SlideDef* def);
-static int computeMonthWeeks(int year, int month, int startDow);
-/* Preferences */
-static void setPrefInt(AppData* app, int idx, int val);
-static int selectablePrefCount(AppData* app);
-static void prefsSlideRender(AppData* app, SlideDef* def);
-static void prefsSlideUpdate(AppData* app, SlideDef* def);
-static void prefsStepperRender(AppData* app, SlideDef* def);
-static void prefsSelectRender(AppData* app, SlideDef* def);
-static void prefsSelectUpdate(AppData* app, SlideDef* def);
 /* Help */
 /** Help dialog content row - one keybinding entry or section anchor */
 typedef struct {
@@ -68,13 +32,8 @@ typedef struct {
   int modes;                /**< Mode mask (NORMAL/INSERT/VISUAL) */
   char key_str[96];         /**< Display name(s) of bound key(s) */
 } helpRow;
-static bool resolveHelpGroup(const KeyFunction* kf, const char** out_grp,
-                             const char** out_dsc);
-static int renderModeLabel(int y, int x, int modes);
-static const char* keyDisplayName(int key);
-static int totalHelpContentRows(helpRow* rows, int count);
-static void helpSlideRender(AppData* app, SlideDef* def);
-static void helpSlideUpdate(AppData* app, SlideDef* def);
+
+/* PRIVATE UI FUNCTIONS */
 /* Screen / Panel */
 static Panel createPanel(Dimensions size, Vector2D position);
 static void freePanel(Panel* panel);
@@ -86,6 +45,50 @@ static void printMenuSideBySide(AppData* app, Menu* menu, Vector2D offset,
                                 int spacing, int container_width);
 /* Floating Dialog */
 static void renderFloatingDialogBorder(FloatingDialog* dialog);
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type);
+static void welcomeRender(AppData* app, SlideDef* def);
+static void welcomeUpdate(AppData* app, SlideDef* def);
+static int utf8DisplayWidth(const char* s);
+static SlideToken* parseSlideText(const char* text, int icon_type);
+/* Slides */
+static int strDisplayWidth(const char* s);
+static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
+static SlideProgress* slideProgressDup(const SlideProgress* p);
+static SlideControls* slideControlsDup(const ControlButton* btns, int count);
+static void continueProgressRender(AppData* app, int x, int y, int w,
+                                   SlideDef* def, SlideProgress* params);
+static void continueAndClose(AppData* app);
+static void abandonAndClose(AppData* app);
+static void noiseSlideRender(AppData* app, SlideDef* def);
+static void noiseSlideUpdate(AppData* app, SlideDef* def);
+static int computeMonthWeeks(int year, int month, int startDow);
+/* History */
+static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
+                              int* monthStartWeek, int* monthDays,
+                              int* monthStartDow);
+static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
+                        int* monthWeeks, int* monthStartWeek, int* monthDays,
+                        int* monthStartDow, int* outYear, int* outMonth);
+static void historyOverviewRender(AppData* app, SlideDef* def);
+static void historyOverviewUpdate(AppData* app, SlideDef* def);
+static int selectablePrefCount(AppData* app);
+static void renderPrefValue(AppData* app, char* buf, int len, int idx);
+static int displayWidth(const char* s);
+static void prefsSlideRender(AppData* app, SlideDef* def);
+static void prefsSlideUpdate(AppData* app, SlideDef* def);
+static void prefsStepperRender(AppData* app, SlideDef* def);
+static void prefsSelectUpdate(AppData* app, SlideDef* def);
+static void prefsSelectRender(AppData* app, SlideDef* def);
+/* Preferences */
+static void setPrefInt(AppData* app, int idx, int val);
+static bool resolveHelpGroup(const KeyFunction* kf, const char** out_grp,
+                             const char** out_dsc);
+static int renderModeLabel(int y, int x, int modes);
+static const char* keyDisplayName(int key);
+static int totalHelpContentRows(helpRow* rows, int count);
+static void helpSlideRender(AppData* app, SlideDef* def);
+static void helpSlideUpdate(AppData* app, SlideDef* def);
 
 /**
  * ---------------------------------------------------------------------------
@@ -128,6 +131,26 @@ Screen* CreateScreen(void) {
 }
 
 /**
+ * Create a panel struct with the specified size and position.
+ * Initializes history and sets default mode.
+ * @param size Dimensions of the new panel
+ * @param position Position of the panel on screen
+ * @return New Panel struct (not a pointer)
+ */
+static Panel createPanel(Dimensions size, Vector2D position) {
+  Panel panel;
+
+  panel.mode = DEFAULT;
+  panel.size = size;
+  panel.visible = true;
+  panel.position = position;
+  panel.scene_history = CreateHistory();
+  if (panel.scene_history == NULL) LogError("createPanel", MALLOC_ERROR);
+
+  return panel;
+}
+
+/**
  * Free all memory associated with a Screen struct.
  * @param screen Pointer to the screen to free
  */
@@ -137,6 +160,15 @@ void FreeScreen(Screen* screen) {
   for (int i = 0; i < MAX_PANELS; i++) freePanel(&screen->panels[i]);
 
   free(screen);
+}
+
+/**
+ * Free the memory of a panel (history).
+ * @param panel Pointer to the panel to free
+ */
+static void freePanel(Panel* panel) {
+  if (panel == NULL) return;
+  FreeHistory(panel->scene_history, NULL);
 }
 
 /**
@@ -189,6 +221,17 @@ void UpdateScreen(Screen* screen, bool has_error_line) {
                   panel_position);
     }
   }
+}
+
+/**
+ * Update a single panel's dimensions and position.
+ * @param panel Pointer to the panel to update
+ * @param size New dimensions
+ * @param position New position
+ */
+static void updatePanel(Panel* panel, Dimensions size, Vector2D position) {
+  panel->size = size;
+  panel->position = position;
 }
 
 /**
@@ -289,46 +332,6 @@ void RenderScreenSizeError(Screen* screen) {
 }
 
 /**
- * Create a panel struct with the specified size and position.
- * Initializes history and sets default mode.
- * @param size Dimensions of the new panel
- * @param position Position of the panel on screen
- * @return New Panel struct (not a pointer)
- */
-static Panel createPanel(Dimensions size, Vector2D position) {
-  Panel panel;
-
-  panel.mode = DEFAULT;
-  panel.size = size;
-  panel.visible = true;
-  panel.position = position;
-  panel.scene_history = CreateHistory();
-  if (panel.scene_history == NULL) LogError("createPanel", MALLOC_ERROR);
-
-  return panel;
-}
-
-/**
- * Free the memory of a panel (history).
- * @param panel Pointer to the panel to free
- */
-static void freePanel(Panel* panel) {
-  if (panel == NULL) return;
-  FreeHistory(panel->scene_history, NULL);
-}
-
-/**
- * Update a single panel's dimensions and position.
- * @param panel Pointer to the panel to update
- * @param size New dimensions
- * @param position New position
- */
-static void updatePanel(Panel* panel, Dimensions size, Vector2D position) {
-  panel->size = size;
-  panel->position = position;
-}
-
-/**
  * ---------------------------------------------------------------------------
  * Click Regions
  * ---------------------------------------------------------------------------
@@ -367,23 +370,6 @@ void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
   r->menu_index = menu_index;
   r->item_index = item_index;
   r->note_id = note_id;
-}
-
-/**
- * Render content string at the center of a panel.
- * @param panel Pointer to the panel
- * @param content String to render
- * @param offset Offset from the center position
- */
-static void renderAtPanelCenter(Panel* panel, const char* content,
-                                Vector2D offset) {
-  int panel_center_x = panel->position.x + panel->size.width / 2;
-  int panel_center_y = panel->position.y + panel->size.height / 2;
-
-  int content_x = panel_center_x - strlen(content) / 2 + offset.x;
-  int content_y = panel_center_y + offset.y;
-
-  mvprintw(content_y, content_x, "%s", content);
 }
 
 /* ---------------------------------------------------------------------------
@@ -593,6 +579,23 @@ void PrintMenuAtCenter(AppData* app, Panel* panel, Menu* menu, Vector2D offset,
 }
 
 /**
+ * Render content string at the center of a panel.
+ * @param panel Pointer to the panel
+ * @param content String to render
+ * @param offset Offset from the center position
+ */
+static void renderAtPanelCenter(Panel* panel, const char* content,
+                                Vector2D offset) {
+  int panel_center_x = panel->position.x + panel->size.width / 2;
+  int panel_center_y = panel->position.y + panel->size.height / 2;
+
+  int content_x = panel_center_x - strlen(content) / 2 + offset.x;
+  int content_y = panel_center_y + offset.y;
+
+  mvprintw(content_y, content_x, "%s", content);
+}
+
+/**
  * Change the selected item in the menu.
  * @param menu Pointer to the menu
  * @param direction 1 for next, -1 for previous
@@ -603,66 +606,6 @@ void ChangeSelectedItem(Menu* menu, int direction) {
       (menu->selected_item - 1 + menu->item_count) % menu->item_count;
   else if (direction == 1)
     menu->selected_item = (menu->selected_item + 1) % menu->item_count;
-}
-
-/**
- * Print a menu side by side (e.g., for work/pause display).
- * @param app Pointer to the application data (for click region tracking)
- * @param menu Pointer to the menu to print
- * @param offset Offset from screen top-left
- * @param spacing Space between items
- * @param container_width Total width available
- */
-static void printMenuSideBySide(AppData* app, Menu* menu, Vector2D offset,
-                                int spacing, int container_width) {
-  if (!container_width % 2 == 0) container_width += 1;
-  int total_width = 0;
-
-  /* Calculate the total width of the menu items */
-  for (int i = 0; i < menu->item_count; i++) {
-    total_width += strlen(menu->items[i].label) +
-                   strlen(menu->select_style_left) +
-                   strlen(menu->select_style_right);
-    if (i < menu->item_count - 1) total_width += spacing;
-  }
-
-  /* Adjust the initial x-offset to center the menu */
-  offset.x += (container_width - total_width) / 2;
-
-  /* Render each menu item */
-  for (int i = 0; i < menu->item_count; i++) {
-    const char* item_label = menu->items[i].label;
-    int item_x = offset.x;
-    int item_y = offset.y;
-
-    if (i == menu->selected_item) {
-      SetColor(menu->focused_color, NO_COLOR, A_BOLD);
-
-      size_t left_len = strlen(menu->select_style_left);
-      size_t item_len = strlen(item_label);
-      size_t right_len = strlen(menu->select_style_right);
-      size_t full_text_size = left_len + item_len + right_len + 1;
-
-      char* full_text = malloc(full_text_size);
-      if (full_text) {
-        snprintf(full_text, full_text_size, "%s%s%s", menu->select_style_left,
-                 item_label, menu->select_style_right);
-        mvprintw(offset.y, offset.x, "%s", full_text);
-        free(full_text);
-      } else
-        mvprintw(offset.y, offset.x, "%s", item_label);
-    } else {
-      SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
-      mvprintw(offset.y, offset.x, "%s", item_label);
-    }
-
-    RegisterClickRegion(app, item_x, item_y, strlen(item_label), 1,
-                        REGION_POPUP_ITEM, NULL, -1, i, -1);
-
-    /* Move the offset horizontally to the right for the next menu item */
-    offset.x += strlen(item_label) + strlen(menu->select_style_left) +
-                strlen(menu->select_style_right) + spacing;
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -880,6 +823,66 @@ void RenderFloatingDialog(AppData* app, FloatingDialog* dialog) {
 }
 
 /**
+ * Print a menu side by side (e.g., for work/pause display).
+ * @param app Pointer to the application data (for click region tracking)
+ * @param menu Pointer to the menu to print
+ * @param offset Offset from screen top-left
+ * @param spacing Space between items
+ * @param container_width Total width available
+ */
+static void printMenuSideBySide(AppData* app, Menu* menu, Vector2D offset,
+                                int spacing, int container_width) {
+  if (!container_width % 2 == 0) container_width += 1;
+  int total_width = 0;
+
+  /* Calculate the total width of the menu items */
+  for (int i = 0; i < menu->item_count; i++) {
+    total_width += strlen(menu->items[i].label) +
+                   strlen(menu->select_style_left) +
+                   strlen(menu->select_style_right);
+    if (i < menu->item_count - 1) total_width += spacing;
+  }
+
+  /* Adjust the initial x-offset to center the menu */
+  offset.x += (container_width - total_width) / 2;
+
+  /* Render each menu item */
+  for (int i = 0; i < menu->item_count; i++) {
+    const char* item_label = menu->items[i].label;
+    int item_x = offset.x;
+    int item_y = offset.y;
+
+    if (i == menu->selected_item) {
+      SetColor(menu->focused_color, NO_COLOR, A_BOLD);
+
+      size_t left_len = strlen(menu->select_style_left);
+      size_t item_len = strlen(item_label);
+      size_t right_len = strlen(menu->select_style_right);
+      size_t full_text_size = left_len + item_len + right_len + 1;
+
+      char* full_text = malloc(full_text_size);
+      if (full_text) {
+        snprintf(full_text, full_text_size, "%s%s%s", menu->select_style_left,
+                 item_label, menu->select_style_right);
+        mvprintw(offset.y, offset.x, "%s", full_text);
+        free(full_text);
+      } else
+        mvprintw(offset.y, offset.x, "%s", item_label);
+    } else {
+      SetColor(menu->unfocused_color, NO_COLOR, A_NORMAL);
+      mvprintw(offset.y, offset.x, "%s", item_label);
+    }
+
+    RegisterClickRegion(app, item_x, item_y, strlen(item_label), 1,
+                        REGION_POPUP_ITEM, NULL, -1, i, -1);
+
+    /* Move the offset horizontally to the right for the next menu item */
+    offset.x += strlen(item_label) + strlen(menu->select_style_left) +
+                strlen(menu->select_style_right) + spacing;
+  }
+}
+
+/**
  * Render a border for a FloatingDialog.
  * @param dialog Pointer to the dialog to render
  */
@@ -1055,6 +1058,446 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
 }
 
 /**
+ * Build a SlideDef from a single pre-selected text string for a given
+ * icon type. Parses escape sequences via parseSlideText.
+ * @param text      Slide text with escape sequences (already resolved for icon_type)
+ * @param w         Slide width in columns
+ * @param h         Slide height in rows
+ * @param icon_type Icon type index for placeholder expansion
+ * @return Pointer to allocated SlideDef, or NULL on failure
+ */
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type) {
+  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+  if (!def) return NULL;
+
+  def->tokens = parseSlideText(text, icon_type);
+  if (!def->tokens) {
+    free(def);
+    return NULL;
+  }
+
+  def->size.width = w;
+  def->size.height = h;
+  def->render = welcomeRender;
+  def->update = welcomeUpdate;
+  def->hovered = -1;
+
+  return def;
+}
+
+/**
+ * Render the current welcome slide into the popup dialog.
+ * Draws the box frame, progress indicator, content tokens, and nav controls.
+ * @param app Application state (provides popup_dialog, screen)
+ * @param def Slide definition to render
+ */
+static void welcomeRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  int w = def->size.width;
+  int h = def->size.height;
+
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+
+  int x = d->position.x;
+  int y = d->position.y;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  /* Sync keyboard-hovered button index into the slide def so
+   * SlideControlsRender highlights the right button.
+   * Only override when keyboard has made a selection (>=0)
+   * so mouse hover set by welcomeUpdate is not cleared for WELCOME slides. */
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+  if (def->render_progress && def->progress)
+    def->render_progress(app, x, y + 1, w, def, def->progress);
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  renderSlideTokens(x, y, w, h, def->tokens);
+  if (def->render_controls && def->controls)
+    def->render_controls(app, x, y + h - 2, w, def, def->controls);
+}
+
+/**
+ * Track mouse hover over the nav controls (prev/next/close/start) on the
+ * current slide and update def->hovered accordingly.
+ * @param app Application state (provides click_regions, mouse coordinates)
+ * @param def Slide definition whose hovered field to update
+ */
+static void welcomeUpdate(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y + d->size.height - 2;
+  int w = def->size.width;
+  int hover_idx = -1;
+  if (def->controls) {
+    for (int i = 0; i < def->controls->count; i++) {
+      const ControlButton* btn = &def->controls->buttons[i];
+      int tw = utf8DisplayWidth(btn->text);
+      int bx;
+      switch (btn->align) {
+        case ALIGN_SLIDE_LEFT:
+          bx = x + 2;
+          break;
+        case ALIGN_SLIDE_CENTER:
+          bx = x + 1 + ((w - 2) - tw) / 2;
+          break;
+        case ALIGN_SLIDE_RIGHT:
+          bx = x + w - 2 - tw;
+          break;
+        default:
+          bx = x + 2;
+          break;
+      }
+      if (app->mouse_x >= bx && app->mouse_x < bx + tw && app->mouse_y == y) {
+        hover_idx = i;
+        break;
+      }
+    }
+  }
+  /* Update hovered_button when mouse is over a button */
+  if (hover_idx >= 0) {
+    def->hovered = hover_idx;
+    d->hovered_button = hover_idx;
+  }
+  /* When mouse is not over any button, preserve existing keyboard-set
+   * hovered values (do not reset to -1). */
+}
+
+/**
+ * Count the number of visible characters in a UTF-8 string.
+ * Each multi-byte sequence counts as a single character regardless of byte width.
+ * @param s The UTF-8 input string
+ * @return Number of visible characters
+ */
+static int utf8DisplayWidth(const char* s) {
+  int w = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      w++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      s += len;
+      w++;
+    }
+  }
+  return w;
+}
+
+/**
+ * Parse a slide text string with escape sequences into a linked list of
+ * SlideToken structs.
+ *
+ * Supported sequences:
+ *   \\cNN   – Set color (0-15; 0-7 = normal, 8-15 = bold, >= 16 = NO_COLOR)
+ *   \\aL/C/R – Set alignment (LEFT, CENTER, RIGHT)
+ *   \\xNN   – Set absolute column offset (decimal 0-99)
+ *   \\n     – Newline (flush buffer, y++, reset colour/align/x)
+ *   {W}{S}{P}{N}{M} – Uppercase pomodoro/welcome icon placeholders
+ *   {m}{p}          – Noise minus/plus volume icon placeholders
+ *   \\\\    – Literal backslash
+ *
+ * The caller owns the returned linked list and must free each token's
+ * text and the token itself.
+ *
+ * @param text      Raw slide text with escape sequences
+ * @param icon_type Icon type index (0 = nerd, 1 = emoji, 2 = ascii)
+ * @return Head of SlideToken linked list, or NULL on failure
+ */
+static SlideToken* parseSlideText(const char* text, int icon_type) {
+  if (!text || !*text) return NULL;
+
+  SlideToken head = {0, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, 0, NULL};
+  SlideToken* tail = &head;
+  int y = 0;
+  int color = NO_COLOR;
+  SlideAlign align = ALIGN_SLIDE_LEFT;
+  int x = 0;
+  char buf[1024];
+  int bufpos = 0;
+  buf[0] = '\0';
+
+  while (*text) {
+    if (*text == '\\') {
+      text++;
+      if (!*text) break;
+
+      switch (*text) {
+        case 'n': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          y++;
+          color = NO_COLOR;
+          align = ALIGN_SLIDE_LEFT;
+          x = 0;
+          text++;
+          break;
+        }
+        case 'c': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          if (*text >= '0' && *text <= '9') {
+            color = (*text - '0') * 10;
+            text++;
+            if (*text >= '0' && *text <= '9') {
+              color += (*text - '0');
+              text++;
+            }
+            if (color >= 16) color = NO_COLOR;
+          } else {
+            color = NO_COLOR;
+          }
+          break;
+        }
+        case 'a': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          if (*text == 'L')
+            align = ALIGN_SLIDE_LEFT;
+          else if (*text == 'C')
+            align = ALIGN_SLIDE_CENTER;
+          else if (*text == 'R')
+            align = ALIGN_SLIDE_RIGHT;
+          if (*text) text++;
+          break;
+        }
+        case 'x': {
+          if (bufpos > 0) {
+            buf[bufpos] = '\0';
+            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+            if (!t) return NULL;
+            t->y = y;
+            t->text = strdup(buf);
+            t->color = color;
+            t->align = align;
+            t->x = x;
+            tail->next = t;
+            tail = t;
+            bufpos = 0;
+            buf[0] = '\0';
+          }
+          text++;
+          if (*text >= '0' && *text <= '9') {
+            x = (*text - '0') * 10;
+            text++;
+            if (*text >= '0' && *text <= '9') {
+              x += (*text - '0');
+              text++;
+            }
+          }
+          break;
+        }
+        case '\\': {
+          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = '\\';
+          text++;
+          break;
+        }
+        default: {
+          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
+          text++;
+          break;
+        }
+      }
+    } else if (*text == '{') {
+      text++;
+      if (!*text) break;
+
+      const char* icon = NULL;
+      if (*text == 'W')
+        icon = WORK_ICONS[icon_type];
+      else if (*text == 'S')
+        icon = SKIP_ICONS[icon_type];
+      else if (*text == 'P')
+        icon = PAUSE_ICONS[icon_type];
+      else if (*text == 'N')
+        icon = NOTES_ICONS[icon_type];
+      else if (*text == 'M')
+        icon = DEFAULT_MODE_ICONS[icon_type];
+      else if (*text == 'm')
+        icon = MINUS_VOLUME_ICONS[icon_type];
+      else if (*text == 'p')
+        icon = PLUS_VOLUME_ICONS[icon_type];
+
+      text++;
+      if (*text == '}') text++;
+
+      if (icon) {
+        if (!*icon) {
+          if (bufpos < (int)sizeof(buf) - 2) buf[bufpos++] = ' ';
+        } else {
+          int slen = (int)strlen(icon);
+          if (bufpos + slen < (int)sizeof(buf) - 1) {
+            memcpy(buf + bufpos, icon, slen);
+            bufpos += slen;
+          }
+        }
+      }
+    } else {
+      if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
+      text++;
+    }
+  }
+
+  if (bufpos > 0) {
+    buf[bufpos] = '\0';
+    SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
+    if (!t) return NULL;
+    t->y = y;
+    t->text = strdup(buf);
+    t->color = color;
+    t->align = align;
+    t->x = x;
+    t->next = NULL;
+    tail->next = t;
+  }
+
+  return head.next;
+}
+
+/**
+ * Measure the total display width of a UTF-8 string.
+ * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
+ * @param s The UTF-8 input string
+ * @return Display width in terminal columns
+ */
+static int strDisplayWidth(const char* s) {
+  int total = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      total++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      total += (c >= 0xF0) ? 2 : 1;
+      s += len;
+    }
+  }
+  return total;
+}
+
+/**
+ * Render the content-area tokens between the horizontal rules of the dialog.
+ * Fills each row with spaces and vertical-side characters, then draws each
+ * token from the linked list at its computed position.
+ * @param x      X position of the dialog
+ * @param y      Y position of the dialog
+ * @param w      Width of the dialog
+ * @param h      Height of the dialog
+ * @param tokens Head of SlideToken linked list
+ */
+static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
+  for (int row = y + 3; row <= y + h - 4; row++) {
+    mvaddch(row, x, ACS_VLINE);
+    for (int ci = 1; ci < w - 1; ci++) mvaddch(row, x + ci, ' ');
+    mvaddch(row, x + w - 1, ACS_VLINE);
+  }
+
+  for (SlideToken* t = tokens; t; t = t->next) {
+    if (!t->text || !*(t->text)) continue;
+    int display_w = strDisplayWidth(t->text);
+    int line_x;
+    if (t->x > 0)
+      line_x = x + 1 + t->x;
+    else
+      line_x =
+        x + 1 +
+        ((t->align == ALIGN_SLIDE_CENTER) ? ((w - 2) - display_w) / 2 : 0);
+
+    if (t->color < 0 || t->color >= 16)
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    else if (t->color >= 8)
+      SetColor(t->color - 8, NO_COLOR, A_BOLD);
+    else
+      SetColor(t->color, NO_COLOR, A_NORMAL);
+
+    mvprintw(y + t->y, line_x, "%s", t->text);
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  }
+}
+
+/**
+ * Duplicate a SlideProgress struct onto the heap.
+ * @param p Source progress parameters
+ * @return Heap-allocated copy, or NULL on failure
+ */
+static SlideProgress* slideProgressDup(const SlideProgress* p) {
+  SlideProgress* d = (SlideProgress*)malloc(sizeof(SlideProgress));
+  if (d) *d = *p;
+  return d;
+}
+
+/**
+ * Duplicate a SlideControls struct (including buttons array) onto the heap.
+ * @param btns Source buttons array
+ * @param count Number of buttons
+ * @return Heap-allocated SlideControls with copied buttons, or NULL on failure
+ */
+static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
+  SlideControls* c = (SlideControls*)malloc(sizeof(SlideControls));
+  if (!c) return NULL;
+  c->buttons = (ControlButton*)malloc(count * sizeof(ControlButton));
+  if (!c->buttons) {
+    free(c);
+    return NULL;
+  }
+  memcpy(c->buttons, btns, count * sizeof(ControlButton));
+  c->count = count;
+  return c;
+}
+
+/**
  * Create a continue/cancel popup dialog for unfinished sessions.
  * @param app Pointer to the application data
  * @return Pointer to the created dialog, or NULL on failure
@@ -1089,6 +1532,49 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
 }
 
 /**
+ * Continue-dialog progress renderer: shows "{W} Resume Pomodoro Session"
+ * centred in the title bar, with the icon expanded per icon type.
+ * @param app    Application state (for icon type)
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width (unused)
+ * @param def    Slide definition (unused)
+ * @param params Unused (no dots needed)
+ */
+static void continueProgressRender(AppData* app, int x, int y, int w,
+                                   SlideDef* def, SlideProgress* params) {
+  (void)app;
+  (void)def;
+  (void)params;
+  int icon_type = GetConfigIconType();
+  const char* icon = WORK_ICONS[icon_type];
+  char title[64];
+  snprintf(title, sizeof(title), "%s RESUME POMODORO SESSION",
+           (icon && icon[0]) ? icon : "");
+  int tw = utf8DisplayWidth(title);
+  SetColor(COLOR_MAGENTA, NO_COLOR, A_BOLD);
+  mvprintw(y, x + 1 + ((w - 2) - tw) / 2, "%s", title);
+}
+
+/**
+ * Continue the session then close the dialog.
+ * @param app Application state
+ */
+static void continueAndClose(AppData* app) {
+  ContinuePreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
+ * Abandon the session then close the dialog.
+ * @param app Application state
+ */
+static void abandonAndClose(AppData* app) {
+  AbandonPreviousSession(app);
+  ClosePopup(app);
+}
+
+/**
  * Create a white noise control dialog for ambient sounds.
  * @param app Pointer to the application data
  * @return Pointer to the created dialog, or NULL on failure
@@ -1120,6 +1606,276 @@ FloatingDialog* CreateNoiseDialog(AppData* app) {
     dialog->hovered_button = -1;
   }
   return dialog;
+}
+
+/**
+ * Render the white noise control slide.
+ *
+ * Builds the text string dynamically every frame from the registered
+ * track list, injecting live volume-bar and playing-indicator strings,
+ * then parses via parseSlideText, overrides token colours for selection
+ * highlighting, and draws via renderSlideTokens. Keyboard hints are drawn
+ * directly at the bottom.
+ *
+ * @param app Pointer to the application data
+ * @param def Slide definition (provides size, progress, callbacks)
+ */
+static void noiseSlideRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  int w = def->size.width;
+  int h = def->size.height;
+  d->size.width = w;
+  d->size.height = h;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+  int icon_type = GetConfigIconType();
+  WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
+
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  RenderSlideBox(x, y, w, h);
+
+  if (def->render_progress && def->progress)
+    def->render_progress(app, x, y + 1, w, def, def->progress);
+
+  char play_strs[track_count][8];
+  for (int i = 0; i < track_count; i++) {
+    if (data->playing[i]) {
+      const char* raw = PLAYING_ICONS[icon_type];
+      if (utf8DisplayWidth(raw) >= 2)
+        snprintf(play_strs[i], sizeof(play_strs[i]), "%s", raw);
+      else
+        snprintf(play_strs[i], sizeof(play_strs[i]), "%s ", raw);
+    } else
+      snprintf(play_strs[i], sizeof(play_strs[i]), "  ");
+  }
+
+  char vol_bars[track_count + 1][128];
+  for (int i = 0; i < track_count; i++) {
+    int bar_w = 19;
+    int filled = (data->volume[i] * bar_w) / 100;
+    int empty = bar_w - filled;
+    char* bp = vol_bars[i];
+    for (int j = 0; j < filled; j++) {
+      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s",
+                     ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    for (int j = 0; j < empty; j++) {
+      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s",
+                     INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    *bp = '\0';
+  }
+  {
+    int bar_w = 24;
+    int filled = (data->master_volume * bar_w) / 100;
+    int empty = bar_w - filled;
+    char* bp = vol_bars[track_count];
+    for (int j = 0; j < filled; j++) {
+      int remaining =
+        (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s",
+                     ACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    for (int j = 0; j < empty; j++) {
+      int remaining =
+        (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
+      if (remaining <= 0) break;
+      bp += snprintf(bp, (size_t)remaining, "%s",
+                     INACTIVE_VOLUME_BAR_ICONS[icon_type]);
+    }
+    *bp = '\0';
+  }
+
+  char text[4096];
+  char* tp = text;
+  int remaining = sizeof(text);
+  int n;
+
+  n = snprintf(tp, remaining,
+               "\\n\\n\\n\\n"
+               "\\aC\\c07Mix ambient sounds for focus and relaxation\\n"
+               "\\n"
+               "\\c07\\x03───────────────────────────────────────────\\n"
+               "\\n");
+  tp += n;
+  remaining -= n;
+
+  if (track_count == 0) {
+    n = snprintf(tp, remaining,
+                 "\\c15\\x03No ambient sound tracks registered.\\n"
+                 "\\n"
+                 "\\c07\\x03───────────────────────────────────────────\\n"
+                 "\\n");
+    tp += n;
+    remaining -= n;
+    goto done_text;
+  }
+
+  for (int i = 0; i < track_count; i++) {
+    const char* icon = data->tracks[i].icons[icon_type];
+    n = snprintf(tp, remaining,
+                 "\\x03%s%s %s\\x17{m} %s {p}  %3d%%\\n"
+                 "\\n",
+                 play_strs[i], icon, data->tracks[i].name, vol_bars[i],
+                 data->volume[i]);
+    tp += n;
+    remaining -= n;
+  }
+
+  n = snprintf(tp, remaining,
+               "\\c07\\x03───────────────────────────────────────────\\n"
+               "\\n");
+  tp += n;
+  remaining -= n;
+
+  n = snprintf(tp, remaining,
+               "\\x03Master\\x12{m} %s {p}  %3d%%\\n"
+               "\\n",
+               vol_bars[track_count], data->master_volume);
+
+done_text:
+
+  if (def->tokens) {
+    SlideToken* t = def->tokens;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+    def->tokens = NULL;
+  }
+
+  def->tokens = parseSlideText(text, icon_type);
+  if (def->tokens) {
+    if (track_count > 0) {
+      int sep_row = 8 + track_count * 2;
+      int master_row = 10 + track_count * 2;
+      for (SlideToken* t = def->tokens; t; t = t->next) {
+        int row = t->y;
+        if (row >= 8 && row < sep_row && (row % 2 == 0)) {
+          int ti = (row - 8) / 2;
+          t->color = (ti == data->selected) ? data->tracks[ti].sel_color : 7;
+        } else if (row == master_row)
+          t->color =
+            (data->selected == track_count) ? data->master_sel_color : 7;
+      }
+    }
+    renderSlideTokens(x, y, w, h, def->tokens);
+
+    SlideToken* t = def->tokens;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+    def->tokens = NULL;
+  }
+
+  char hint_buf[128];
+  if (track_count == 0)
+    snprintf(hint_buf, sizeof(hint_buf), "\\c15q \\c07Close");
+  else
+    snprintf(hint_buf, sizeof(hint_buf),
+             "\\c15k/j \\c07Navigate  \\c15h/l \\c07Volume  \\c15space "
+             "\\c07Toggle  \\c15q \\c07Close");
+  SlideToken* hint_toks = parseSlideText(hint_buf, icon_type);
+  if (hint_toks) {
+    int total_w = 0;
+    for (SlideToken* t = hint_toks; t; t = t->next)
+      if (t->text) total_w += strDisplayWidth(t->text);
+    int cx = x + 1 + ((w - 2) - total_w) / 2;
+    int cy = y + h - 2;
+    int cx_save = cx;
+    for (SlideToken* t = hint_toks; t; t = t->next) {
+      if (!t->text || !*t->text) continue;
+      int dw = strDisplayWidth(t->text);
+      if (t->color < 0 || t->color >= 16)
+        SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+      else if (t->color >= 8)
+        SetColor(t->color - 8, NO_COLOR, A_BOLD);
+      else
+        SetColor(t->color, NO_COLOR, A_NORMAL);
+      mvprintw(cy, cx, "%s", t->text);
+      cx += dw;
+    }
+    /* Mouse hover + click region for "q Close" (last 7 display cols) */
+    int close_x = cx_save + total_w - 7;
+    int close_w = 7;
+    bool on_close = (app->mouse_y == cy && app->mouse_x >= close_x &&
+                     app->mouse_x < close_x + close_w);
+    if (on_close) {
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+      attron(A_REVERSE);
+      mvprintw(cy, close_x, "q Close");
+      attroff(A_REVERSE);
+    }
+    RegisterClickRegion(app, close_x, cy, close_w, 1, REGION_SLIDE_NAV,
+                        (MenuAction)NoiseClose, -1, 0, 0);
+    SlideToken* t = hint_toks;
+    while (t) {
+      SlideToken* n = t->next;
+      free(t->text);
+      free(t);
+      t = n;
+    }
+  }
+}
+
+/**
+ * Update the selected noise track based on mouse position.
+ *
+ * Checks the mouse cursor against each track row (y + 8 + i*2)
+ * and the master row (y + 10 + track_count*2), updating
+ * data->selected and dialog->hovered_button on match.
+ *
+ * @param app Pointer to the application data
+ * @param def Slide definition (unused - state lives in app->noise_data)
+ */
+static void noiseSlideUpdate(AppData* app, SlideDef* def) {
+  (void)def;
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y;
+
+  WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
+  int master_row = y + 10 + track_count * 2;
+
+  int hovered = -1;
+  for (int i = 0; i < track_count; i++) {
+    int ry = y + 8 + i * 2;
+    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3) {
+      hovered = i;
+      break;
+    }
+  }
+
+  if (hovered < 0)
+    if (app->mouse_y == master_row && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3)
+      hovered = track_count;
+
+  if (hovered >= 0) {
+    data->selected = hovered;
+    d->hovered_button = hovered;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1502,144 +2258,6 @@ SlideDef** BuildWelcomeSlides(Dimensions size) {
 }
 
 /**
- * Build a SlideDef from a single pre-selected text string for a given
- * icon type. Parses escape sequences via parseSlideText.
- * @param text      Slide text with escape sequences (already resolved for icon_type)
- * @param w         Slide width in columns
- * @param h         Slide height in rows
- * @param icon_type Icon type index for placeholder expansion
- * @return Pointer to allocated SlideDef, or NULL on failure
- */
-static SlideDef* buildSlideFromText(const char* text, int w, int h,
-                                    int icon_type) {
-  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
-  if (!def) return NULL;
-
-  def->tokens = parseSlideText(text, icon_type);
-  if (!def->tokens) {
-    free(def);
-    return NULL;
-  }
-
-  def->size.width = w;
-  def->size.height = h;
-  def->render = welcomeRender;
-  def->update = welcomeUpdate;
-  def->hovered = -1;
-
-  return def;
-}
-
-/**
- * Render the current welcome slide into the popup dialog.
- * Draws the box frame, progress indicator, content tokens, and nav controls.
- * @param app Application state (provides popup_dialog, screen)
- * @param def Slide definition to render
- */
-static void welcomeRender(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  int w = def->size.width;
-  int h = def->size.height;
-
-  d->size.width = w;
-  d->size.height = h;
-  UpdateFloatingDialog(d, app->screen);
-
-  int x = d->position.x;
-  int y = d->position.y;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  for (int r = 0; r < h; r++)
-    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
-
-  /* Sync keyboard-hovered button index into the slide def so
-   * SlideControlsRender highlights the right button.
-   * Only override when keyboard has made a selection (>=0)
-   * so mouse hover set by welcomeUpdate is not cleared for WELCOME slides. */
-  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  RenderSlideBox(x, y, w, h);
-  if (def->render_progress && def->progress)
-    def->render_progress(app, x, y + 1, w, def, def->progress);
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  renderSlideTokens(x, y, w, h, def->tokens);
-  if (def->render_controls && def->controls)
-    def->render_controls(app, x, y + h - 2, w, def, def->controls);
-}
-
-/**
- * Track mouse hover over the nav controls (prev/next/close/start) on the
- * current slide and update def->hovered accordingly.
- * @param app Application state (provides click_regions, mouse coordinates)
- * @param def Slide definition whose hovered field to update
- */
-static void welcomeUpdate(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  if (!d) return;
-  int x = d->position.x;
-  int y = d->position.y + d->size.height - 2;
-  int w = def->size.width;
-  int hover_idx = -1;
-  if (def->controls) {
-    for (int i = 0; i < def->controls->count; i++) {
-      const ControlButton* btn = &def->controls->buttons[i];
-      int tw = utf8DisplayWidth(btn->text);
-      int bx;
-      switch (btn->align) {
-        case ALIGN_SLIDE_LEFT:
-          bx = x + 2;
-          break;
-        case ALIGN_SLIDE_CENTER:
-          bx = x + 1 + ((w - 2) - tw) / 2;
-          break;
-        case ALIGN_SLIDE_RIGHT:
-          bx = x + w - 2 - tw;
-          break;
-        default:
-          bx = x + 2;
-          break;
-      }
-      if (app->mouse_x >= bx && app->mouse_x < bx + tw && app->mouse_y == y) {
-        hover_idx = i;
-        break;
-      }
-    }
-  }
-  /* Update hovered_button when mouse is over a button */
-  if (hover_idx >= 0) {
-    def->hovered = hover_idx;
-    d->hovered_button = hover_idx;
-  }
-  /* When mouse is not over any button, preserve existing keyboard-set
-   * hovered values (do not reset to -1). */
-}
-
-/**
- * Count the number of visible characters in a UTF-8 string.
- * Each multi-byte sequence counts as a single character regardless of byte width.
- * @param s The UTF-8 input string
- * @return Number of visible characters
- */
-static int utf8DisplayWidth(const char* s) {
-  int w = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      w++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      s += len;
-      w++;
-    }
-  }
-  return w;
-}
-
-/**
  * Build a set of continue session slides (one per icon type).
  * Reads current session data from app->pomodoro_data and
  * formats it into token-format text with escape sequences.
@@ -1752,49 +2370,6 @@ SlideDef** BuildContinueSlides(AppData* app, Dimensions size) {
 }
 
 /**
- * Continue-dialog progress renderer: shows "{W} Resume Pomodoro Session"
- * centred in the title bar, with the icon expanded per icon type.
- * @param app    Application state (for icon type)
- * @param x      Absolute column position (slide left edge)
- * @param y      Absolute row position (progress line)
- * @param w      Slide width (unused)
- * @param def    Slide definition (unused)
- * @param params Unused (no dots needed)
- */
-static void continueProgressRender(AppData* app, int x, int y, int w,
-                                   SlideDef* def, SlideProgress* params) {
-  (void)app;
-  (void)def;
-  (void)params;
-  int icon_type = GetConfigIconType();
-  const char* icon = WORK_ICONS[icon_type];
-  char title[64];
-  snprintf(title, sizeof(title), "%s RESUME POMODORO SESSION",
-           (icon && icon[0]) ? icon : "");
-  int tw = utf8DisplayWidth(title);
-  SetColor(COLOR_MAGENTA, NO_COLOR, A_BOLD);
-  mvprintw(y, x + 1 + ((w - 2) - tw) / 2, "%s", title);
-}
-
-/**
- * Continue the session then close the dialog.
- * @param app Application state
- */
-static void continueAndClose(AppData* app) {
-  ContinuePreviousSession(app);
-  ClosePopup(app);
-}
-
-/**
- * Abandon the session then close the dialog.
- * @param app Application state
- */
-static void abandonAndClose(AppData* app) {
-  AbandonPreviousSession(app);
-  ClosePopup(app);
-}
-
-/**
  * Build an array of white noise slides (one slide).
  * Height is computed dynamically from the registered track count
  * as h = 15 + 2 * track_count (minimum 15).
@@ -1888,508 +2463,6 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click) {
       NoiseVolumeUp(app);
     else if (event->bstate & BUTTON5_PRESSED)
       NoiseVolumeDown(app);
-  }
-}
-
-/**
- * Render the white noise control slide.
- *
- * Builds the text string dynamically every frame from the registered
- * track list, injecting live volume-bar and playing-indicator strings,
- * then parses via parseSlideText, overrides token colours for selection
- * highlighting, and draws via renderSlideTokens. Keyboard hints are drawn
- * directly at the bottom.
- *
- * @param app Pointer to the application data
- * @param def Slide definition (provides size, progress, callbacks)
- */
-static void noiseSlideRender(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  int w = def->size.width;
-  int h = def->size.height;
-  d->size.width = w;
-  d->size.height = h;
-  UpdateFloatingDialog(d, app->screen);
-  int x = d->position.x;
-  int y = d->position.y;
-  int icon_type = GetConfigIconType();
-  WhiteNoiseData* data = &app->noise_data;
-  int track_count = data->track_count;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  for (int r = 0; r < h; r++)
-    for (int c = 0; c < w; c++) mvprintw(y + r, x + c, " ");
-
-  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  RenderSlideBox(x, y, w, h);
-
-  if (def->render_progress && def->progress)
-    def->render_progress(app, x, y + 1, w, def, def->progress);
-
-  char play_strs[track_count][8];
-  for (int i = 0; i < track_count; i++) {
-    if (data->playing[i]) {
-      const char* raw = PLAYING_ICONS[icon_type];
-      if (utf8DisplayWidth(raw) >= 2)
-        snprintf(play_strs[i], sizeof(play_strs[i]), "%s", raw);
-      else
-        snprintf(play_strs[i], sizeof(play_strs[i]), "%s ", raw);
-    } else
-      snprintf(play_strs[i], sizeof(play_strs[i]), "  ");
-  }
-
-  char vol_bars[track_count + 1][128];
-  for (int i = 0; i < track_count; i++) {
-    int bar_w = 19;
-    int filled = (data->volume[i] * bar_w) / 100;
-    int empty = bar_w - filled;
-    char* bp = vol_bars[i];
-    for (int j = 0; j < filled; j++) {
-      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
-      if (remaining <= 0) break;
-      bp += snprintf(bp, (size_t)remaining, "%s",
-                     ACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    }
-    for (int j = 0; j < empty; j++) {
-      int remaining = (int)(sizeof(vol_bars[i]) - (bp - vol_bars[i]) - 1);
-      if (remaining <= 0) break;
-      bp += snprintf(bp, (size_t)remaining, "%s",
-                     INACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    }
-    *bp = '\0';
-  }
-  {
-    int bar_w = 24;
-    int filled = (data->master_volume * bar_w) / 100;
-    int empty = bar_w - filled;
-    char* bp = vol_bars[track_count];
-    for (int j = 0; j < filled; j++) {
-      int remaining =
-        (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
-      if (remaining <= 0) break;
-      bp += snprintf(bp, (size_t)remaining, "%s",
-                     ACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    }
-    for (int j = 0; j < empty; j++) {
-      int remaining =
-        (int)(sizeof(vol_bars[track_count]) - (bp - vol_bars[track_count]) - 1);
-      if (remaining <= 0) break;
-      bp += snprintf(bp, (size_t)remaining, "%s",
-                     INACTIVE_VOLUME_BAR_ICONS[icon_type]);
-    }
-    *bp = '\0';
-  }
-
-  char text[4096];
-  char* tp = text;
-  int remaining = sizeof(text);
-  int n;
-
-  n = snprintf(tp, remaining,
-               "\\n\\n\\n\\n"
-               "\\aC\\c07Mix ambient sounds for focus and relaxation\\n"
-               "\\n"
-               "\\c07\\x03───────────────────────────────────────────\\n"
-               "\\n");
-  tp += n;
-  remaining -= n;
-
-  if (track_count == 0) {
-    n = snprintf(tp, remaining,
-                 "\\c15\\x03No ambient sound tracks registered.\\n"
-                 "\\n"
-                 "\\c07\\x03───────────────────────────────────────────\\n"
-                 "\\n");
-    tp += n;
-    remaining -= n;
-    goto done_text;
-  }
-
-  for (int i = 0; i < track_count; i++) {
-    const char* icon = data->tracks[i].icons[icon_type];
-    n = snprintf(tp, remaining,
-                 "\\x03%s%s %s\\x17{m} %s {p}  %3d%%\\n"
-                 "\\n",
-                 play_strs[i], icon, data->tracks[i].name, vol_bars[i],
-                 data->volume[i]);
-    tp += n;
-    remaining -= n;
-  }
-
-  n = snprintf(tp, remaining,
-               "\\c07\\x03───────────────────────────────────────────\\n"
-               "\\n");
-  tp += n;
-  remaining -= n;
-
-  n = snprintf(tp, remaining,
-               "\\x03Master\\x12{m} %s {p}  %3d%%\\n"
-               "\\n",
-               vol_bars[track_count], data->master_volume);
-
-done_text:
-
-  if (def->tokens) {
-    SlideToken* t = def->tokens;
-    while (t) {
-      SlideToken* n = t->next;
-      free(t->text);
-      free(t);
-      t = n;
-    }
-    def->tokens = NULL;
-  }
-
-  def->tokens = parseSlideText(text, icon_type);
-  if (def->tokens) {
-    if (track_count > 0) {
-      int sep_row = 8 + track_count * 2;
-      int master_row = 10 + track_count * 2;
-      for (SlideToken* t = def->tokens; t; t = t->next) {
-        int row = t->y;
-        if (row >= 8 && row < sep_row && (row % 2 == 0)) {
-          int ti = (row - 8) / 2;
-          t->color = (ti == data->selected) ? data->tracks[ti].sel_color : 7;
-        } else if (row == master_row)
-          t->color =
-            (data->selected == track_count) ? data->master_sel_color : 7;
-      }
-    }
-    renderSlideTokens(x, y, w, h, def->tokens);
-
-    SlideToken* t = def->tokens;
-    while (t) {
-      SlideToken* n = t->next;
-      free(t->text);
-      free(t);
-      t = n;
-    }
-    def->tokens = NULL;
-  }
-
-  char hint_buf[128];
-  if (track_count == 0)
-    snprintf(hint_buf, sizeof(hint_buf), "\\c15q \\c07Close");
-  else
-    snprintf(hint_buf, sizeof(hint_buf),
-             "\\c15k/j \\c07Navigate  \\c15h/l \\c07Volume  \\c15space "
-             "\\c07Toggle  \\c15q \\c07Close");
-  SlideToken* hint_toks = parseSlideText(hint_buf, icon_type);
-  if (hint_toks) {
-    int total_w = 0;
-    for (SlideToken* t = hint_toks; t; t = t->next)
-      if (t->text) total_w += strDisplayWidth(t->text);
-    int cx = x + 1 + ((w - 2) - total_w) / 2;
-    int cy = y + h - 2;
-    int cx_save = cx;
-    for (SlideToken* t = hint_toks; t; t = t->next) {
-      if (!t->text || !*t->text) continue;
-      int dw = strDisplayWidth(t->text);
-      if (t->color < 0 || t->color >= 16)
-        SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-      else if (t->color >= 8)
-        SetColor(t->color - 8, NO_COLOR, A_BOLD);
-      else
-        SetColor(t->color, NO_COLOR, A_NORMAL);
-      mvprintw(cy, cx, "%s", t->text);
-      cx += dw;
-    }
-    /* Mouse hover + click region for "q Close" (last 7 display cols) */
-    int close_x = cx_save + total_w - 7;
-    int close_w = 7;
-    bool on_close = (app->mouse_y == cy && app->mouse_x >= close_x &&
-                     app->mouse_x < close_x + close_w);
-    if (on_close) {
-      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-      attron(A_REVERSE);
-      mvprintw(cy, close_x, "q Close");
-      attroff(A_REVERSE);
-    }
-    RegisterClickRegion(app, close_x, cy, close_w, 1, REGION_SLIDE_NAV,
-                        (MenuAction)NoiseClose, -1, 0, 0);
-    SlideToken* t = hint_toks;
-    while (t) {
-      SlideToken* n = t->next;
-      free(t->text);
-      free(t);
-      t = n;
-    }
-  }
-}
-
-/**
- * Parse a slide text string with escape sequences into a linked list of
- * SlideToken structs.
- *
- * Supported sequences:
- *   \\cNN   – Set color (0-15; 0-7 = normal, 8-15 = bold, >= 16 = NO_COLOR)
- *   \\aL/C/R – Set alignment (LEFT, CENTER, RIGHT)
- *   \\xNN   – Set absolute column offset (decimal 0-99)
- *   \\n     – Newline (flush buffer, y++, reset colour/align/x)
- *   {W}{S}{P}{N}{M} – Uppercase pomodoro/welcome icon placeholders
- *   {m}{p}          – Noise minus/plus volume icon placeholders
- *   \\\\    – Literal backslash
- *
- * The caller owns the returned linked list and must free each token's
- * text and the token itself.
- *
- * @param text      Raw slide text with escape sequences
- * @param icon_type Icon type index (0 = nerd, 1 = emoji, 2 = ascii)
- * @return Head of SlideToken linked list, or NULL on failure
- */
-static SlideToken* parseSlideText(const char* text, int icon_type) {
-  if (!text || !*text) return NULL;
-
-  SlideToken head = {0, NULL, NO_COLOR, ALIGN_SLIDE_LEFT, 0, NULL};
-  SlideToken* tail = &head;
-  int y = 0;
-  int color = NO_COLOR;
-  SlideAlign align = ALIGN_SLIDE_LEFT;
-  int x = 0;
-  char buf[1024];
-  int bufpos = 0;
-  buf[0] = '\0';
-
-  while (*text) {
-    if (*text == '\\') {
-      text++;
-      if (!*text) break;
-
-      switch (*text) {
-        case 'n': {
-          if (bufpos > 0) {
-            buf[bufpos] = '\0';
-            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
-            if (!t) return NULL;
-            t->y = y;
-            t->text = strdup(buf);
-            t->color = color;
-            t->align = align;
-            t->x = x;
-            tail->next = t;
-            tail = t;
-            bufpos = 0;
-            buf[0] = '\0';
-          }
-          y++;
-          color = NO_COLOR;
-          align = ALIGN_SLIDE_LEFT;
-          x = 0;
-          text++;
-          break;
-        }
-        case 'c': {
-          if (bufpos > 0) {
-            buf[bufpos] = '\0';
-            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
-            if (!t) return NULL;
-            t->y = y;
-            t->text = strdup(buf);
-            t->color = color;
-            t->align = align;
-            t->x = x;
-            tail->next = t;
-            tail = t;
-            bufpos = 0;
-            buf[0] = '\0';
-          }
-          text++;
-          if (*text >= '0' && *text <= '9') {
-            color = (*text - '0') * 10;
-            text++;
-            if (*text >= '0' && *text <= '9') {
-              color += (*text - '0');
-              text++;
-            }
-            if (color >= 16) color = NO_COLOR;
-          } else {
-            color = NO_COLOR;
-          }
-          break;
-        }
-        case 'a': {
-          if (bufpos > 0) {
-            buf[bufpos] = '\0';
-            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
-            if (!t) return NULL;
-            t->y = y;
-            t->text = strdup(buf);
-            t->color = color;
-            t->align = align;
-            t->x = x;
-            tail->next = t;
-            tail = t;
-            bufpos = 0;
-            buf[0] = '\0';
-          }
-          text++;
-          if (*text == 'L')
-            align = ALIGN_SLIDE_LEFT;
-          else if (*text == 'C')
-            align = ALIGN_SLIDE_CENTER;
-          else if (*text == 'R')
-            align = ALIGN_SLIDE_RIGHT;
-          if (*text) text++;
-          break;
-        }
-        case 'x': {
-          if (bufpos > 0) {
-            buf[bufpos] = '\0';
-            SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
-            if (!t) return NULL;
-            t->y = y;
-            t->text = strdup(buf);
-            t->color = color;
-            t->align = align;
-            t->x = x;
-            tail->next = t;
-            tail = t;
-            bufpos = 0;
-            buf[0] = '\0';
-          }
-          text++;
-          if (*text >= '0' && *text <= '9') {
-            x = (*text - '0') * 10;
-            text++;
-            if (*text >= '0' && *text <= '9') {
-              x += (*text - '0');
-              text++;
-            }
-          }
-          break;
-        }
-        case '\\': {
-          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = '\\';
-          text++;
-          break;
-        }
-        default: {
-          if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
-          text++;
-          break;
-        }
-      }
-    } else if (*text == '{') {
-      text++;
-      if (!*text) break;
-
-      const char* icon = NULL;
-      if (*text == 'W')
-        icon = WORK_ICONS[icon_type];
-      else if (*text == 'S')
-        icon = SKIP_ICONS[icon_type];
-      else if (*text == 'P')
-        icon = PAUSE_ICONS[icon_type];
-      else if (*text == 'N')
-        icon = NOTES_ICONS[icon_type];
-      else if (*text == 'M')
-        icon = DEFAULT_MODE_ICONS[icon_type];
-      else if (*text == 'm')
-        icon = MINUS_VOLUME_ICONS[icon_type];
-      else if (*text == 'p')
-        icon = PLUS_VOLUME_ICONS[icon_type];
-
-      text++;
-      if (*text == '}') text++;
-
-      if (icon) {
-        if (!*icon) {
-          if (bufpos < (int)sizeof(buf) - 2) buf[bufpos++] = ' ';
-        } else {
-          int slen = (int)strlen(icon);
-          if (bufpos + slen < (int)sizeof(buf) - 1) {
-            memcpy(buf + bufpos, icon, slen);
-            bufpos += slen;
-          }
-        }
-      }
-    } else {
-      if (bufpos < (int)sizeof(buf) - 4) buf[bufpos++] = *text;
-      text++;
-    }
-  }
-
-  if (bufpos > 0) {
-    buf[bufpos] = '\0';
-    SlideToken* t = (SlideToken*)calloc(1, sizeof(SlideToken));
-    if (!t) return NULL;
-    t->y = y;
-    t->text = strdup(buf);
-    t->color = color;
-    t->align = align;
-    t->x = x;
-    t->next = NULL;
-    tail->next = t;
-  }
-
-  return head.next;
-}
-
-/**
- * Measure the total display width of a UTF-8 string.
- * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
- * @param s The UTF-8 input string
- * @return Display width in terminal columns
- */
-static int strDisplayWidth(const char* s) {
-  int total = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      total++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      total += (c >= 0xF0) ? 2 : 1;
-      s += len;
-    }
-  }
-  return total;
-}
-
-/**
- * Update the selected noise track based on mouse position.
- *
- * Checks the mouse cursor against each track row (y + 8 + i*2)
- * and the master row (y + 10 + track_count*2), updating
- * data->selected and dialog->hovered_button on match.
- *
- * @param app Pointer to the application data
- * @param def Slide definition (unused - state lives in app->noise_data)
- */
-static void noiseSlideUpdate(AppData* app, SlideDef* def) {
-  (void)def;
-  FloatingDialog* d = app->popup_dialog;
-  if (!d) return;
-  int x = d->position.x;
-  int y = d->position.y;
-
-  WhiteNoiseData* data = &app->noise_data;
-  int track_count = data->track_count;
-  int master_row = y + 10 + track_count * 2;
-
-  int hovered = -1;
-  for (int i = 0; i < track_count; i++) {
-    int ry = y + 8 + i * 2;
-    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
-        app->mouse_x <= x + d->size.width - 3) {
-      hovered = i;
-      break;
-    }
-  }
-
-  if (hovered < 0)
-    if (app->mouse_y == master_row && app->mouse_x >= x + 2 &&
-        app->mouse_x <= x + d->size.width - 3)
-      hovered = track_count;
-
-  if (hovered >= 0) {
-    data->selected = hovered;
-    d->hovered_button = hovered;
   }
 }
 
@@ -2520,76 +2593,6 @@ void RenderSlideBox(int x, int y, int w, int h) {
 }
 
 /**
- * Render the content-area tokens between the horizontal rules of the dialog.
- * Fills each row with spaces and vertical-side characters, then draws each
- * token from the linked list at its computed position.
- * @param x      X position of the dialog
- * @param y      Y position of the dialog
- * @param w      Width of the dialog
- * @param h      Height of the dialog
- * @param tokens Head of SlideToken linked list
- */
-static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens) {
-  for (int row = y + 3; row <= y + h - 4; row++) {
-    mvaddch(row, x, ACS_VLINE);
-    for (int ci = 1; ci < w - 1; ci++) mvaddch(row, x + ci, ' ');
-    mvaddch(row, x + w - 1, ACS_VLINE);
-  }
-
-  for (SlideToken* t = tokens; t; t = t->next) {
-    if (!t->text || !*(t->text)) continue;
-    int display_w = strDisplayWidth(t->text);
-    int line_x;
-    if (t->x > 0)
-      line_x = x + 1 + t->x;
-    else
-      line_x =
-        x + 1 +
-        ((t->align == ALIGN_SLIDE_CENTER) ? ((w - 2) - display_w) / 2 : 0);
-
-    if (t->color < 0 || t->color >= 16)
-      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-    else if (t->color >= 8)
-      SetColor(t->color - 8, NO_COLOR, A_BOLD);
-    else
-      SetColor(t->color, NO_COLOR, A_NORMAL);
-
-    mvprintw(y + t->y, line_x, "%s", t->text);
-    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  }
-}
-
-/**
- * Duplicate a SlideProgress struct onto the heap.
- * @param p Source progress parameters
- * @return Heap-allocated copy, or NULL on failure
- */
-static SlideProgress* slideProgressDup(const SlideProgress* p) {
-  SlideProgress* d = (SlideProgress*)malloc(sizeof(SlideProgress));
-  if (d) *d = *p;
-  return d;
-}
-
-/**
- * Duplicate a SlideControls struct (including buttons array) onto the heap.
- * @param btns Source buttons array
- * @param count Number of buttons
- * @return Heap-allocated SlideControls with copied buttons, or NULL on failure
- */
-static SlideControls* slideControlsDup(const ControlButton* btns, int count) {
-  SlideControls* c = (SlideControls*)malloc(sizeof(SlideControls));
-  if (!c) return NULL;
-  c->buttons = (ControlButton*)malloc(count * sizeof(ControlButton));
-  if (!c->buttons) {
-    free(c);
-    return NULL;
-  }
-  memcpy(c->buttons, btns, count * sizeof(ControlButton));
-  c->count = count;
-  return c;
-}
-
-/**
  * ---------------------------------------------------------------------------
  * History Popup 
  * ---------------------------------------------------------------------------
@@ -2683,6 +2686,89 @@ void HistoryResolveCursor(AppData* app) {
 }
 
 /**
+ * Compute the number of 7-day week columns a month spans.
+ * Accounts for the starting day-of-week offset.
+ * @param year Gregorian year
+ * @param month Month (1-12)
+ * @param startDow Day-of-week of the 1st of the month (0=Sunday)
+ * @return Number of week columns
+ */
+static int computeMonthWeeks(int year, int month, int startDow) {
+  int dim = HistDaysInMonth(year, month);
+  int totalCells = startDow + dim;
+  return (totalCells + 6) / 7; /* ceiling division */
+}
+
+/**
+ * Dynamically compute the contribution graph dimensions and the list
+ * of month boundaries.
+ * @param first_year First visible year
+ * @param first_month First visible month (1-12)
+ * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] - weeks per month
+ * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] - starting week column per month
+ * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] - days per month
+ * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] - starting day-of-week per month
+ * @return Total week columns across all 5 months
+ */
+static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
+                              int* monthStartWeek, int* monthDays,
+                              int* monthStartDow) {
+  int totalWeeks = 0;
+  int y = first_year, m = first_month;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    monthDays[i] = HistDaysInMonth(y, m);
+    monthStartDow[i] = HistDayOfWeek(y, m, 1);
+    monthWeeks[i] = computeMonthWeeks(y, m, monthStartDow[i]);
+    monthStartWeek[i] = totalWeeks;
+    totalWeeks += monthWeeks[i];
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return totalWeeks;
+}
+
+/**
+ * Given a week column and day-of-week, resolve to a date.
+ * Returns the date (1-31) within a specific month, or 0 if out of range.
+ * @param weekCol Week column index
+ * @param dow Day-of-week row (0=Sunday)
+ * @param first_year First visible year
+ * @param first_month First visible month
+ * @param monthWeeks Weeks-per-month array
+ * @param monthStartWeek Starting week column per month
+ * @param monthDays Days-per-month array
+ * @param monthStartDow Starting day-of-week per month
+ * @param outYear Output - resolved year
+ * @param outMonth Output - resolved month
+ * @return Day of month (1-31), or 0 if out of range
+ */
+static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
+                        int* monthWeeks, int* monthStartWeek, int* monthDays,
+                        int* monthStartDow, int* outYear, int* outMonth) {
+  /* Find which month this week falls in */
+  int y = first_year, m = first_month;
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    if (weekCol < monthStartWeek[i] + monthWeeks[i]) {
+      int localWeek = weekCol - monthStartWeek[i];
+      int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
+      if (dayNum >= 1 && dayNum <= monthDays[i]) {
+        *outYear = y;
+        *outMonth = m;
+        return dayNum;
+      }
+      return 0;
+    }
+    if (++m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+  return 0;
+}
+
+/**
  * Create the History Overview popup (contribution graph).
  * @param app Application state
  */
@@ -2736,6 +2822,348 @@ void CreateHistoryOverviewDialog(AppData* app) {
   dialog->hovered_button = -1;
 
   app->popup_dialog = dialog;
+}
+
+/**
+ * Render the History Overview contribution graph slide.
+ * Draws the month headers, day grid with contribution icons, streak info,
+ * selected-day sidebar, session summary, and navigation hints.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void historyOverviewRender(AppData* app, SlideDef* def) {
+  FloatingDialog* d = app->popup_dialog;
+  HistoryData* h = &app->history_data;
+
+  /* Dimension computation */
+  int monthWeeks[HISTORY_VISIBLE_MONTHS];
+  int monthStartWeek[HISTORY_VISIBLE_MONTHS];
+  int monthDays[HISTORY_VISIBLE_MONTHS];
+  int monthStartDow[HISTORY_VISIBLE_MONTHS];
+  int totalWeeks = computeGraphLayout(h->first_year, h->first_month, monthWeeks,
+                                      monthStartWeek, monthDays, monthStartDow);
+
+  /* Center dialog */
+  d->size = def->size;
+  UpdateFloatingDialog(d, app->screen);
+  int x = d->position.x;
+  int y = d->position.y;
+  int w = d->size.width;
+
+  /* Clear dialog area and draw box */
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  for (int r = 0; r < d->size.height; r++)
+    for (int c = 0; c < d->size.width; c++) mvprintw(y + r, x + c, " ");
+
+  /* Hover sync */
+  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
+
+  /* Draw box */
+  RenderSlideBox(x, y, w, d->size.height);
+
+  /* Title */
+  mvprintw(y + 1, x + (w - 7) / 2, "HISTORY");
+
+  /* Month headers (y+3) - only show months that have data */
+  int yMonths = y + 3;
+  int iconType = GetConfigIconType();
+  int gridStartX = x + 2; /* after border + space */
+  int dayLabelW = 3;      /* "Su " */
+
+  /* Compute day counts for each month */
+  int dailyCounts[HISTORY_VISIBLE_MONTHS][31];
+  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+    int yr = h->first_year, mo = h->first_month + i;
+    while (mo > 12) {
+      mo -= 12;
+      yr++;
+    }
+    HistDailyCounts(POMODORO_LOG, yr, mo, dailyCounts[i]);
+  }
+
+  /* Month headers */
+  {
+    int ey = h->first_year, em = h->first_month;
+    for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+      int mw = monthWeeks[i];
+      int headerX = gridStartX + dayLabelW + monthStartWeek[i] * 3 +
+                    (mw * 3 - 3) / 2; /* approximate center */
+      char buf[8];
+      snprintf(buf, sizeof(buf), "%s", "");
+      if (mw >= 2) {
+        struct tm tm = {0};
+        tm.tm_year = ey - 1900;
+        tm.tm_mon = em - 1;
+        tm.tm_mday = 1;
+        mktime(&tm);
+        strftime(buf, sizeof(buf), "%b", &tm);
+      }
+      SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+      mvprintw(yMonths, x + 2 + dayLabelW + monthStartWeek[i] * 3, "%s", buf);
+      /* Update ey/em for next month */
+      if (++em > 12) {
+        em = 1;
+        ey++;
+      }
+    }
+  }
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+
+  /* Grid: 7 rows (Sun=0 through Sat=6), totalWeeks columns */
+  int gridY = y + 4;
+  const char* dowNames[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+
+  for (int dow = 0; dow < 7; dow++) {
+    int rowY = gridY + dow;
+
+    /* Day label */
+    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+    mvprintw(rowY, gridStartX, "%s ", dowNames[dow]);
+
+    for (int wc = 0; wc < totalWeeks; wc++) {
+      int cellX = gridStartX + dayLabelW + 1 + wc * 3;
+
+      /* Find which month this week belongs to */
+      int cyear = h->first_year, cmonth = h->first_month;
+      int found = 0;
+      for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+        if (wc >= monthStartWeek[i] && wc < monthStartWeek[i] + monthWeeks[i]) {
+          found = 1;
+          int localWeek = wc - monthStartWeek[i];
+          int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
+          if (dayNum >= 1 && dayNum <= monthDays[i]) {
+            int level = HistLevelForCount(dailyCounts[i][dayNum - 1]);
+            const char* icon = HISTORY_ICONS[level];
+
+            /* Check if this is the selected or hovered day */
+            bool isSel = (h->sel_year == cyear && h->sel_month == cmonth &&
+                          h->sel_day == dayNum);
+            bool isHov = (h->hover_week >= 0 && h->hover_week == wc &&
+                          h->hover_dow == dow && !isSel);
+
+            if (isSel || isHov) {
+              SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+              mvprintw(rowY, cellX - 1, "<");
+              mvprintw(rowY, cellX, "%s", icon);
+              mvprintw(rowY, cellX + 2, ">");
+            } else {
+              SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+              mvprintw(rowY, cellX, "%s", icon);
+              mvprintw(rowY, cellX + 2, " ");
+            }
+          } else {
+            mvprintw(rowY, cellX, "   ");
+          }
+          break;
+        }
+        if (++cmonth > 12) {
+          cmonth = 1;
+          cyear++;
+        }
+      }
+      if (!found) mvprintw(rowY, cellX, "   ");
+    }
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+  }
+
+  /* Streak line + sidebar box (y+11 area) */
+  {
+    int streakY = y + 11;
+    int currentStreak = 0, longestStreak = 0;
+    HistStreak(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+               &currentStreak, &longestStreak);
+
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    mvprintw(streakY + 1, x + 2, "Current Streak: %d day%s", currentStreak,
+             currentStreak == 1 ? "" : "s");
+
+    /* Sidebar: selected day info box */
+    if (h->sel_day > 0) {
+      int boxW = 16; /* outer width: left + 14 content + right */
+      int boxX = x + w - 1 - boxW;
+      int level = 0;
+      int cc = 0;
+      for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
+        int yr = h->first_year, mo = h->first_month + i;
+        while (mo > 12) {
+          mo -= 12;
+          yr++;
+        }
+        if (yr == h->sel_year && mo == h->sel_month) {
+          cc = dailyCounts[i][h->sel_day - 1];
+          break;
+        }
+      }
+      level = HistLevelForCount(cc);
+
+      /* Box top */
+      mvaddch(streakY, boxX, ACS_ULCORNER);
+      for (int ci = 1; ci < boxW - 1; ci++)
+        mvaddch(streakY, boxX + ci, ACS_HLINE);
+      mvaddch(streakY, boxX + boxW - 1, ACS_URCORNER);
+
+      /* Box middle: icon + date */
+      static const char* monNames[] = {"Jan", "Feb", "Mar", "Apr",
+                                       "May", "Jun", "Jul", "Aug",
+                                       "Sep", "Oct", "Nov", "Dec"};
+      char dateBuf[20];
+      snprintf(dateBuf, sizeof(dateBuf), "%d %s %d", h->sel_day,
+               monNames[h->sel_month - 1], h->sel_year);
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      mvprintw(streakY + 1, boxX + 1, "%s", HISTORY_ICONS[level]);
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+      mvprintw(streakY + 1, boxX + 4, "%s", dateBuf);
+
+      /* Box bottom */
+      mvaddch(streakY + 1, boxX, ACS_VLINE);
+      mvaddch(streakY + 1, boxX + boxW - 1, ACS_VLINE);
+      mvaddch(streakY + 2, boxX, ACS_LLCORNER);
+      for (int ci = 1; ci < boxW - 1; ci++)
+        mvaddch(streakY + 2, boxX + ci, ACS_HLINE);
+      mvaddch(streakY + 2, boxX + boxW - 1, ACS_LRCORNER);
+    }
+  }
+
+  /* Session summary separator */
+  int sepY = y + 11 + 2 + 1; /* y+14 = after streak + sidebar box */
+  {
+    mvaddch(sepY, x, ACS_LTEE);
+    for (int ci = 1; ci < w - 1; ci++) mvaddch(sepY, x + ci, ACS_HLINE);
+    mvaddch(sepY, x + w - 1, ACS_RTEE);
+  }
+
+  {
+    int infoY = sepY + 1;
+    if (h->sel_day > 0) {
+      int sIndices[100];
+      time_t sTimes[100];
+      int sDurations[100];
+      int sStatuses[100];
+      int scount =
+        HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+                           sIndices, sTimes, NULL, sDurations, sStatuses, 100);
+
+      static const char* dows[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
+                                   "Thursday", "Friday", "Saturday"};
+      struct tm tm = {0};
+      tm.tm_year = h->sel_year - 1900;
+      tm.tm_mon = h->sel_month - 1;
+      tm.tm_mday = h->sel_day;
+      mktime(&tm);
+      int dw = tm.tm_wday;
+
+      SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
+      mvprintw(infoY, x + 2, "%04d-%02d-%02d • %s", h->sel_year, h->sel_month,
+               h->sel_day, dows[dw]);
+
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      int totalMins = 0;
+      for (int i = 0; i < scount; i++) totalMins += sDurations[i] / 60;
+      mvprintw(infoY + 1, x + 2, "%d session%s • %d minute%s focused", scount,
+               scount == 1 ? "" : "s", totalMins, totalMins == 1 ? "" : "s");
+    } else {
+      mvprintw(infoY, x + 2, "No day selected");
+    }
+  }
+
+  /* Navigation hints - key (15/bold) + description (07/normal), clickable */
+  {
+    int hintY = y + d->size.height - 2;
+    static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
+    static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
+    static MenuAction actions[] = {NULL, (MenuAction)HistoryOpenDayDetail,
+                                   (MenuAction)HistoryOpenStatistics,
+                                   (MenuAction)ClosePopup};
+    int nSeg = 4;
+    int keyW[4], descW[4], segW[4], totalW = 0;
+    for (int i = 0; i < nSeg; i++) {
+      keyW[i] = utf8DisplayWidth(hint_keys[i]);
+      descW[i] = utf8DisplayWidth(descs[i]);
+      segW[i] = keyW[i] + descW[i];
+      totalW += segW[i];
+    }
+    int gapW = (w - 2 - totalW) / (nSeg - 1);
+    if (gapW < 2) gapW = 2;
+
+    int cx = x + 1;
+    for (int i = 0; i < nSeg; i++) {
+      int hover = (def->hovered == i);
+      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+      if (hover) attron(A_REVERSE);
+      mvprintw(hintY, cx, "%s", hint_keys[i]);
+      if (hover) attroff(A_REVERSE);
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      if (hover) attron(A_REVERSE);
+      mvprintw(hintY, cx + keyW[i], "%s", descs[i]);
+      if (hover) attroff(A_REVERSE);
+      if (actions[i])
+        RegisterClickRegion(app, cx, hintY, segW[i], 1, REGION_SLIDE_NAV,
+                            actions[i], -1, i, 0);
+      cx += segW[i] + gapW;
+    }
+  }
+
+  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+}
+
+/**
+ * Mouse update for the overview - tracks hover on grid cells
+ * and nav hint segments.
+ * @param app Application state
+ * @param def Slide definition
+ */
+static void historyOverviewUpdate(AppData* app, SlideDef* def) {
+  HistoryData* h = &app->history_data;
+  FloatingDialog* d = app->popup_dialog;
+  if (!d || !def) return;
+
+  int x = d->position.x;
+  int y = d->position.y;
+  int w = def->size.width;
+
+  /* Check nav hint segments first */
+  static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
+  static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
+  int nSeg = 4;
+  int keyW[4], descW[4], segW[4], totalW = 0;
+  for (int i = 0; i < nSeg; i++) {
+    keyW[i] = utf8DisplayWidth(hint_keys[i]);
+    descW[i] = utf8DisplayWidth(descs[i]);
+    segW[i] = keyW[i] + descW[i];
+    totalW += segW[i];
+  }
+  int gapW = (w - 2 - totalW) / (nSeg - 1);
+  if (gapW < 2) gapW = 2;
+
+  int hintY = y + d->size.height - 2;
+  int cx = x + 1;
+  def->hovered = -1;
+  d->hovered_button = -1;
+  for (int i = 0; i < nSeg; i++) {
+    if (app->mouse_y == hintY && app->mouse_x >= cx &&
+        app->mouse_x < cx + segW[i]) {
+      def->hovered = i;
+      d->hovered_button = i;
+      break;
+    }
+    cx += segW[i] + gapW;
+  }
+
+  /* Check grid area for hover */
+  int gridX = x + 2 + 3 + 1; /* border + dayLabelW + space */
+  int gridY = y + 4;
+
+  if (app->mouse_y >= gridY && app->mouse_y < gridY + 7 &&
+      app->mouse_x >= gridX) {
+    int col = (app->mouse_x - gridX) / 3;
+    int row = app->mouse_y - gridY;
+    if (col >= 0 && row >= 0 && row < 7) {
+      h->hover_week = col;
+      h->hover_dow = row;
+      return;
+    }
+  }
+  h->hover_week = -1;
 }
 
 /**
@@ -3115,431 +3543,6 @@ void CreateHistoryStatsDialog(AppData* app) {
 }
 
 /**
- * Compute the number of 7-day week columns a month spans.
- * Accounts for the starting day-of-week offset.
- * @param year Gregorian year
- * @param month Month (1-12)
- * @param startDow Day-of-week of the 1st of the month (0=Sunday)
- * @return Number of week columns
- */
-static int computeMonthWeeks(int year, int month, int startDow) {
-  int dim = HistDaysInMonth(year, month);
-  int totalCells = startDow + dim;
-  return (totalCells + 6) / 7; /* ceiling division */
-}
-
-/**
- * Dynamically compute the contribution graph dimensions and the list
- * of month boundaries.
- * @param first_year First visible year
- * @param first_month First visible month (1-12)
- * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] - weeks per month
- * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] - starting week column per month
- * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] - days per month
- * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] - starting day-of-week per month
- * @return Total week columns across all 5 months
- */
-static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
-                              int* monthStartWeek, int* monthDays,
-                              int* monthStartDow) {
-  int totalWeeks = 0;
-  int y = first_year, m = first_month;
-  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    monthDays[i] = HistDaysInMonth(y, m);
-    monthStartDow[i] = HistDayOfWeek(y, m, 1);
-    monthWeeks[i] = computeMonthWeeks(y, m, monthStartDow[i]);
-    monthStartWeek[i] = totalWeeks;
-    totalWeeks += monthWeeks[i];
-    if (++m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return totalWeeks;
-}
-
-/**
- * Given a week column and day-of-week, resolve to a date.
- * Returns the date (1-31) within a specific month, or 0 if out of range.
- * @param weekCol Week column index
- * @param dow Day-of-week row (0=Sunday)
- * @param first_year First visible year
- * @param first_month First visible month
- * @param monthWeeks Weeks-per-month array
- * @param monthStartWeek Starting week column per month
- * @param monthDays Days-per-month array
- * @param monthStartDow Starting day-of-week per month
- * @param outYear Output - resolved year
- * @param outMonth Output - resolved month
- * @return Day of month (1-31), or 0 if out of range
- */
-static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
-                        int* monthWeeks, int* monthStartWeek, int* monthDays,
-                        int* monthStartDow, int* outYear, int* outMonth) {
-  /* Find which month this week falls in */
-  int y = first_year, m = first_month;
-  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    if (weekCol < monthStartWeek[i] + monthWeeks[i]) {
-      int localWeek = weekCol - monthStartWeek[i];
-      int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
-      if (dayNum >= 1 && dayNum <= monthDays[i]) {
-        *outYear = y;
-        *outMonth = m;
-        return dayNum;
-      }
-      return 0;
-    }
-    if (++m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return 0;
-}
-
-/**
- * Render the History Overview contribution graph slide.
- * Draws the month headers, day grid with contribution icons, streak info,
- * selected-day sidebar, session summary, and navigation hints.
- * @param app Application state
- * @param def Slide definition
- */
-static void historyOverviewRender(AppData* app, SlideDef* def) {
-  FloatingDialog* d = app->popup_dialog;
-  HistoryData* h = &app->history_data;
-
-  /* Dimension computation */
-  int monthWeeks[HISTORY_VISIBLE_MONTHS];
-  int monthStartWeek[HISTORY_VISIBLE_MONTHS];
-  int monthDays[HISTORY_VISIBLE_MONTHS];
-  int monthStartDow[HISTORY_VISIBLE_MONTHS];
-  int totalWeeks = computeGraphLayout(h->first_year, h->first_month, monthWeeks,
-                                      monthStartWeek, monthDays, monthStartDow);
-
-  /* Center dialog */
-  d->size = def->size;
-  UpdateFloatingDialog(d, app->screen);
-  int x = d->position.x;
-  int y = d->position.y;
-  int w = d->size.width;
-
-  /* Clear dialog area and draw box */
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  for (int r = 0; r < d->size.height; r++)
-    for (int c = 0; c < d->size.width; c++) mvprintw(y + r, x + c, " ");
-
-  /* Hover sync */
-  if (d->hovered_button >= 0) def->hovered = d->hovered_button;
-
-  /* Draw box */
-  RenderSlideBox(x, y, w, d->size.height);
-
-  /* Title */
-  mvprintw(y + 1, x + (w - 7) / 2, "HISTORY");
-
-  /* Month headers (y+3) - only show months that have data */
-  int yMonths = y + 3;
-  int iconType = GetConfigIconType();
-  int gridStartX = x + 2; /* after border + space */
-  int dayLabelW = 3;      /* "Su " */
-
-  /* Compute day counts for each month */
-  int dailyCounts[HISTORY_VISIBLE_MONTHS][31];
-  for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    int yr = h->first_year, mo = h->first_month + i;
-    while (mo > 12) {
-      mo -= 12;
-      yr++;
-    }
-    HistDailyCounts(POMODORO_LOG, yr, mo, dailyCounts[i]);
-  }
-
-  /* Month headers */
-  {
-    int ey = h->first_year, em = h->first_month;
-    for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-      int mw = monthWeeks[i];
-      int headerX = gridStartX + dayLabelW + monthStartWeek[i] * 3 +
-                    (mw * 3 - 3) / 2; /* approximate center */
-      char buf[8];
-      snprintf(buf, sizeof(buf), "%s", "");
-      if (mw >= 2) {
-        struct tm tm = {0};
-        tm.tm_year = ey - 1900;
-        tm.tm_mon = em - 1;
-        tm.tm_mday = 1;
-        mktime(&tm);
-        strftime(buf, sizeof(buf), "%b", &tm);
-      }
-      SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
-      mvprintw(yMonths, x + 2 + dayLabelW + monthStartWeek[i] * 3, "%s", buf);
-      /* Update ey/em for next month */
-      if (++em > 12) {
-        em = 1;
-        ey++;
-      }
-    }
-  }
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-
-  /* Grid: 7 rows (Sun=0 through Sat=6), totalWeeks columns */
-  int gridY = y + 4;
-  const char* dowNames[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-
-  for (int dow = 0; dow < 7; dow++) {
-    int rowY = gridY + dow;
-
-    /* Day label */
-    SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-    mvprintw(rowY, gridStartX, "%s ", dowNames[dow]);
-
-    for (int wc = 0; wc < totalWeeks; wc++) {
-      int cellX = gridStartX + dayLabelW + 1 + wc * 3;
-
-      /* Find which month this week belongs to */
-      int cyear = h->first_year, cmonth = h->first_month;
-      int found = 0;
-      for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-        if (wc >= monthStartWeek[i] && wc < monthStartWeek[i] + monthWeeks[i]) {
-          found = 1;
-          int localWeek = wc - monthStartWeek[i];
-          int dayNum = localWeek * 7 + dow - monthStartDow[i] + 1;
-          if (dayNum >= 1 && dayNum <= monthDays[i]) {
-            int level = HistLevelForCount(dailyCounts[i][dayNum - 1]);
-            const char* icon = HISTORY_ICONS[level];
-
-            /* Check if this is the selected or hovered day */
-            bool isSel = (h->sel_year == cyear && h->sel_month == cmonth &&
-                          h->sel_day == dayNum);
-            bool isHov = (h->hover_week >= 0 && h->hover_week == wc &&
-                          h->hover_dow == dow && !isSel);
-
-            if (isSel || isHov) {
-              SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
-              mvprintw(rowY, cellX - 1, "<");
-              mvprintw(rowY, cellX, "%s", icon);
-              mvprintw(rowY, cellX + 2, ">");
-            } else {
-              SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-              mvprintw(rowY, cellX, "%s", icon);
-              mvprintw(rowY, cellX + 2, " ");
-            }
-          } else {
-            mvprintw(rowY, cellX, "   ");
-          }
-          break;
-        }
-        if (++cmonth > 12) {
-          cmonth = 1;
-          cyear++;
-        }
-      }
-      if (!found) mvprintw(rowY, cellX, "   ");
-    }
-    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-  }
-
-  /* Streak line + sidebar box (y+11 area) */
-  {
-    int streakY = y + 11;
-    int currentStreak = 0, longestStreak = 0;
-    HistStreak(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
-               &currentStreak, &longestStreak);
-
-    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-    mvprintw(streakY + 1, x + 2, "Current Streak: %d day%s", currentStreak,
-             currentStreak == 1 ? "" : "s");
-
-    /* Sidebar: selected day info box */
-    if (h->sel_day > 0) {
-      int boxW = 16; /* outer width: left + 14 content + right */
-      int boxX = x + w - 1 - boxW;
-      int level = 0;
-      int cc = 0;
-      for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-        int yr = h->first_year, mo = h->first_month + i;
-        while (mo > 12) {
-          mo -= 12;
-          yr++;
-        }
-        if (yr == h->sel_year && mo == h->sel_month) {
-          cc = dailyCounts[i][h->sel_day - 1];
-          break;
-        }
-      }
-      level = HistLevelForCount(cc);
-
-      /* Box top */
-      mvaddch(streakY, boxX, ACS_ULCORNER);
-      for (int ci = 1; ci < boxW - 1; ci++)
-        mvaddch(streakY, boxX + ci, ACS_HLINE);
-      mvaddch(streakY, boxX + boxW - 1, ACS_URCORNER);
-
-      /* Box middle: icon + date */
-      static const char* monNames[] = {"Jan", "Feb", "Mar", "Apr",
-                                       "May", "Jun", "Jul", "Aug",
-                                       "Sep", "Oct", "Nov", "Dec"};
-      char dateBuf[20];
-      snprintf(dateBuf, sizeof(dateBuf), "%d %s %d", h->sel_day,
-               monNames[h->sel_month - 1], h->sel_year);
-      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-      mvprintw(streakY + 1, boxX + 1, "%s", HISTORY_ICONS[level]);
-      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-      mvprintw(streakY + 1, boxX + 4, "%s", dateBuf);
-
-      /* Box bottom */
-      mvaddch(streakY + 1, boxX, ACS_VLINE);
-      mvaddch(streakY + 1, boxX + boxW - 1, ACS_VLINE);
-      mvaddch(streakY + 2, boxX, ACS_LLCORNER);
-      for (int ci = 1; ci < boxW - 1; ci++)
-        mvaddch(streakY + 2, boxX + ci, ACS_HLINE);
-      mvaddch(streakY + 2, boxX + boxW - 1, ACS_LRCORNER);
-    }
-  }
-
-  /* Session summary separator */
-  int sepY = y + 11 + 2 + 1; /* y+14 = after streak + sidebar box */
-  {
-    mvaddch(sepY, x, ACS_LTEE);
-    for (int ci = 1; ci < w - 1; ci++) mvaddch(sepY, x + ci, ACS_HLINE);
-    mvaddch(sepY, x + w - 1, ACS_RTEE);
-  }
-
-  {
-    int infoY = sepY + 1;
-    if (h->sel_day > 0) {
-      int sIndices[100];
-      time_t sTimes[100];
-      int sDurations[100];
-      int sStatuses[100];
-      int scount =
-        HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
-                           sIndices, sTimes, NULL, sDurations, sStatuses, 100);
-
-      static const char* dows[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
-                                   "Thursday", "Friday", "Saturday"};
-      struct tm tm = {0};
-      tm.tm_year = h->sel_year - 1900;
-      tm.tm_mon = h->sel_month - 1;
-      tm.tm_mday = h->sel_day;
-      mktime(&tm);
-      int dw = tm.tm_wday;
-
-      SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
-      mvprintw(infoY, x + 2, "%04d-%02d-%02d • %s", h->sel_year, h->sel_month,
-               h->sel_day, dows[dw]);
-
-      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-      int totalMins = 0;
-      for (int i = 0; i < scount; i++) totalMins += sDurations[i] / 60;
-      mvprintw(infoY + 1, x + 2, "%d session%s • %d minute%s focused", scount,
-               scount == 1 ? "" : "s", totalMins, totalMins == 1 ? "" : "s");
-    } else {
-      mvprintw(infoY, x + 2, "No day selected");
-    }
-  }
-
-  /* Navigation hints - key (15/bold) + description (07/normal), clickable */
-  {
-    int hintY = y + d->size.height - 2;
-    static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
-    static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
-    static MenuAction actions[] = {NULL, (MenuAction)HistoryOpenDayDetail,
-                                   (MenuAction)HistoryOpenStatistics,
-                                   (MenuAction)ClosePopup};
-    int nSeg = 4;
-    int keyW[4], descW[4], segW[4], totalW = 0;
-    for (int i = 0; i < nSeg; i++) {
-      keyW[i] = utf8DisplayWidth(hint_keys[i]);
-      descW[i] = utf8DisplayWidth(descs[i]);
-      segW[i] = keyW[i] + descW[i];
-      totalW += segW[i];
-    }
-    int gapW = (w - 2 - totalW) / (nSeg - 1);
-    if (gapW < 2) gapW = 2;
-
-    int cx = x + 1;
-    for (int i = 0; i < nSeg; i++) {
-      int hover = (def->hovered == i);
-      SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-      if (hover) attron(A_REVERSE);
-      mvprintw(hintY, cx, "%s", hint_keys[i]);
-      if (hover) attroff(A_REVERSE);
-      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-      if (hover) attron(A_REVERSE);
-      mvprintw(hintY, cx + keyW[i], "%s", descs[i]);
-      if (hover) attroff(A_REVERSE);
-      if (actions[i])
-        RegisterClickRegion(app, cx, hintY, segW[i], 1, REGION_SLIDE_NAV,
-                            actions[i], -1, i, 0);
-      cx += segW[i] + gapW;
-    }
-  }
-
-  SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-}
-
-/**
- * Mouse update for the overview - tracks hover on grid cells
- * and nav hint segments.
- * @param app Application state
- * @param def Slide definition
- */
-static void historyOverviewUpdate(AppData* app, SlideDef* def) {
-  HistoryData* h = &app->history_data;
-  FloatingDialog* d = app->popup_dialog;
-  if (!d || !def) return;
-
-  int x = d->position.x;
-  int y = d->position.y;
-  int w = def->size.width;
-
-  /* Check nav hint segments first */
-  static const char* hint_keys[] = {"h/j/k/l", "Enter", "Tab", "q"};
-  static const char* descs[] = {" Navigate", " Day", " Stats", " Close"};
-  int nSeg = 4;
-  int keyW[4], descW[4], segW[4], totalW = 0;
-  for (int i = 0; i < nSeg; i++) {
-    keyW[i] = utf8DisplayWidth(hint_keys[i]);
-    descW[i] = utf8DisplayWidth(descs[i]);
-    segW[i] = keyW[i] + descW[i];
-    totalW += segW[i];
-  }
-  int gapW = (w - 2 - totalW) / (nSeg - 1);
-  if (gapW < 2) gapW = 2;
-
-  int hintY = y + d->size.height - 2;
-  int cx = x + 1;
-  def->hovered = -1;
-  d->hovered_button = -1;
-  for (int i = 0; i < nSeg; i++) {
-    if (app->mouse_y == hintY && app->mouse_x >= cx &&
-        app->mouse_x < cx + segW[i]) {
-      def->hovered = i;
-      d->hovered_button = i;
-      break;
-    }
-    cx += segW[i] + gapW;
-  }
-
-  /* Check grid area for hover */
-  int gridX = x + 2 + 3 + 1; /* border + dayLabelW + space */
-  int gridY = y + 4;
-
-  if (app->mouse_y >= gridY && app->mouse_y < gridY + 7 &&
-      app->mouse_x >= gridX) {
-    int col = (app->mouse_x - gridX) / 3;
-    int row = app->mouse_y - gridY;
-    if (col >= 0 && row >= 0 && row < 7) {
-      h->hover_week = col;
-      h->hover_dow = row;
-      return;
-    }
-  }
-  h->hover_week = -1;
-}
-
-/**
  * ---------------------------------------------------------------------------
  * Preferences
  * ---------------------------------------------------------------------------
@@ -3591,261 +3594,6 @@ FloatingDialog* CreatePreferencesDialog(AppData* app) {
     dialog->hovered_button = 0;
   }
   return dialog;
-}
-
-/**
- * Open a stepper sub-dialog for editing a single integer, float, or toggle
- * preference field.  Stores the field index in app->prefs.edit_index and a
- * snapshot of the current value in app->prefs.edit_temp for Cancel restore.
- * @param app Application state
- * @param idx Preference field index to edit
- * @return Pointer to the created dialog, or NULL on allocation failure
- */
-FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx) {
-  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
-                      app->prefs.fields[idx].preview != NULL);
-  Dimensions size = {.width = has_preview ? 56 : 44, .height = 8};
-  Vector2D pos = {.x = 0, .y = 0};
-  MenuItem mi[] = {{"Save", StepperClose}, {"Cancel", StepperCancel}};
-  Menu menu = {.items = mi,
-               .selected_item = 0,
-               .focused_color = COLOR_WHITE,
-               .unfocused_color = COLOR_WHITE,
-               .select_style_left = "",
-               .select_style_right = "",
-               .item_count = 2};
-  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
-  if (d) {
-    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
-    if (!slides) {
-      FreeFloatingDialog(d);
-      return NULL;
-    }
-    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
-    if (!def) {
-      free(slides);
-      FreeFloatingDialog(d);
-      return NULL;
-    }
-    def->size.width = size.width;
-    def->size.height = size.height;
-    def->render = prefsStepperRender;
-    def->slide_type = SLIDE_TYPE_PREFS_STEPPER;
-    slides[0] = def;
-    d->slides = slides;
-    d->slide_count = 1;
-    d->current_slide = 0;
-    d->slide_type = SLIDE_TYPE_PREFS_STEPPER;
-    d->hovered_button = idx;
-    app->prefs.edit_index = idx;
-    app->prefs.edit_temp = GetPrefInt(app, idx);
-  }
-  return d;
-}
-
-/**
- * Open a select sub-dialog for picking from a list of named options.
- * Stores the field index in app->prefs.select_index.
- * @param app Application state
- * @param idx Preference field index to edit
- * @return Pointer to the created dialog, or NULL on allocation failure
- */
-FloatingDialog* CreatePrefsSelectDialog(AppData* app, int idx) {
-  int cnt = app->prefs.fields[idx].option_count;
-  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
-                      app->prefs.fields[idx].preview != NULL);
-  int nw = has_preview ? 56 : 44;
-  int nh = cnt + 6;
-  if (nh < 9) nh = 9;
-  if (nh > 20) nh = 20;
-  Dimensions size = {.width = nw, .height = nh};
-  Vector2D pos = {.x = 0, .y = 0};
-  MenuItem mi[] = {{"Apply", ClosePrefsSelect}, {"Cancel", ClosePrefsSelect}};
-  Menu menu = {.items = mi,
-               .selected_item = 0,
-               .focused_color = COLOR_WHITE,
-               .unfocused_color = COLOR_WHITE,
-               .select_style_left = "",
-               .select_style_right = "",
-               .item_count = 2};
-  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
-  if (d) {
-    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
-    if (!slides) {
-      FreeFloatingDialog(d);
-      return NULL;
-    }
-    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
-    if (!def) {
-      free(slides);
-      FreeFloatingDialog(d);
-      return NULL;
-    }
-    def->size.width = size.width;
-    def->size.height = size.height;
-    def->render = prefsSelectRender;
-    def->update = prefsSelectUpdate;
-    def->slide_type = SLIDE_TYPE_PREFS_SELECT;
-    def->hovered = *app->prefs.fields[idx].int_value;
-    slides[0] = def;
-    d->slides = slides;
-    d->slide_count = 1;
-    d->current_slide = 0;
-    d->slide_type = SLIDE_TYPE_PREFS_SELECT;
-    d->hovered_button = *app->prefs.fields[idx].int_value;
-    app->prefs.select_index = idx;
-  }
-  return d;
-}
-
-/**
- * Read the current value of a preference field as an integer.
- * For PREF_STEPPER_FLOAT the stored float is multiplied by 100 and rounded.
- * @param app Application state
- * @param idx Preference field index
- * @return Current integer representation of the field value
- */
-int GetPrefInt(AppData* app, int idx) {
-  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
-    return (int)(*app->prefs.fields[idx].float_value * 100.0f + 0.5f);
-  return *app->prefs.fields[idx].int_value;
-}
-
-/**
- * Close the stepper sub-dialog, restoring the original value saved in
- * app->prefs.edit_temp, and return to the main preferences list.
- * @param app Application state
- */
-void ClosePrefsEdit(AppData* app) {
-  if (app->prefs.edit_index >= 0) {
-    setPrefInt(app, app->prefs.edit_index, app->prefs.edit_temp);
-    app->prefs.edit_index = -1;
-  }
-  SyncIconsFromIndex();
-  FreeFloatingDialog(app->popup_dialog);
-  app->popup_dialog = CreatePreferencesDialog(app);
-}
-
-/**
- * Close the select sub-dialog and return to the main preferences list.
- * The option value is already committed by SelectApply() before this runs.
- * @param app Application state
- */
-void ClosePrefsSelect(AppData* app) {
-  app->prefs.select_index = -1;
-  SyncIconsFromIndex();
-  app->animations = app->icon_animations[GetConfigIconType()];
-  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
-  FreeFloatingDialog(app->popup_dialog);
-  app->popup_dialog = CreatePreferencesDialog(app);
-}
-
-void PrefsTakeSnapshot(AppData* app) {
-  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
-    PrefField* f = &app->prefs.fields[i];
-    if (f->int_value) app->prefs.snapshot[i].i = *f->int_value;
-    if (f->float_value) app->prefs.snapshot[i].f = *f->float_value;
-  }
-}
-
-bool PrefsHaveChanges(const AppData* app) {
-  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
-    const PrefField* f = &app->prefs.fields[i];
-    if (f->int_value && *f->int_value != app->prefs.snapshot[i].i) return true;
-    if (f->float_value && *f->float_value != app->prefs.snapshot[i].f)
-      return true;
-  }
-  return false;
-}
-
-void PrefsRestoreSnapshot(AppData* app) {
-  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
-    PrefField* f = &app->prefs.fields[i];
-    if (f->int_value) *f->int_value = app->prefs.snapshot[i].i;
-    if (f->float_value) *f->float_value = app->prefs.snapshot[i].f;
-  }
-  SyncIconsFromIndex();
-  app->animations = app->icon_animations[GetConfigIconType()];
-  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
-}
-
-ErrorType PrefsSaveChanges(AppData* app) {
-  const char* path = GetUserConfigPath();
-  if (path[0] == '\0') return FILE_ERROR;
-
-  ConfigValue values[PREFS_MAX_FIELDS];
-  char buffers[PREFS_MAX_FIELDS][128];
-  int n = 0;
-  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
-    PrefField* f = &app->prefs.fields[i];
-    if (!f->toml_path) continue;
-    bool changed =
-      (f->int_value && *f->int_value != app->prefs.snapshot[i].i) ||
-      (f->float_value && *f->float_value != app->prefs.snapshot[i].f);
-    if (!changed) continue;
-
-    char* buf = buffers[n];
-    switch (f->toml_kind) {
-      case PREF_TOML_BOOL:
-        snprintf(buf, sizeof(buffers[n]), "%s",
-                 *f->int_value ? "true" : "false");
-        break;
-      case PREF_TOML_FLOAT:
-        snprintf(buf, sizeof(buffers[n]), "%.2f", *f->float_value);
-        break;
-      case PREF_TOML_OPTION:
-        snprintf(buf, sizeof(buffers[n]), "\"%s\"", f->options[*f->int_value]);
-        break;
-      case PREF_TOML_INT:
-      default:
-        snprintf(buf, sizeof(buffers[n]), "%d", *f->int_value);
-        break;
-    }
-    values[n].path = f->toml_path;
-    values[n].value = buf;
-    n++;
-  }
-  if (n == 0) return NO_ERROR;
-
-  ErrorType err = SaveConfigValues(path, values, n);
-  if (err == NO_ERROR) PrefsTakeSnapshot(app);
-  return err;
-}
-
-/**
- * Preview callback for "Desktop Notifications" - sends a test notification.
- * @param app Application state
- */
-void PrefsPreviewDesktop(AppData* app) {
-  (void)app;
-  Notification notif = {"Test Notification",
-                        "This is a test notification from settings.", NULL};
-  Notify(&notif);
-}
-
-/**
- * Preview callback for "Sound" toggle and "Sound Volume" stepper -
- * plays the default notification sound at the configured volume.
- * @param app Application state
- */
-void PrefsPreviewSound(AppData* app) {
-  (void)app;
-  PlayAudio(DATADIR "/sounds/dfltnotify.mp3", NOTIFICATIONS_SOUND_VOLUME,
-            false);
-}
-
-/**
- * Write an integer value back to a preference field, converting to float
- * for PREF_STEPPER_FLOAT fields.
- * @param app Application state
- * @param idx Preference field index
- * @param val Integer value to store
- */
-static void setPrefInt(AppData* app, int idx, int val) {
-  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
-    *app->prefs.fields[idx].float_value = val / 100.0f;
-  else
-    *app->prefs.fields[idx].int_value = val;
 }
 
 /**
@@ -4182,6 +3930,56 @@ static void prefsSlideUpdate(AppData* app, SlideDef* def) {
 }
 
 /**
+ * Open a stepper sub-dialog for editing a single integer, float, or toggle
+ * preference field.  Stores the field index in app->prefs.edit_index and a
+ * snapshot of the current value in app->prefs.edit_temp for Cancel restore.
+ * @param app Application state
+ * @param idx Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx) {
+  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
+                      app->prefs.fields[idx].preview != NULL);
+  Dimensions size = {.width = has_preview ? 56 : 44, .height = 8};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem mi[] = {{"Save", StepperClose}, {"Cancel", StepperCancel}};
+  Menu menu = {.items = mi,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 2};
+  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (d) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = prefsStepperRender;
+    def->slide_type = SLIDE_TYPE_PREFS_STEPPER;
+    slides[0] = def;
+    d->slides = slides;
+    d->slide_count = 1;
+    d->current_slide = 0;
+    d->slide_type = SLIDE_TYPE_PREFS_STEPPER;
+    d->hovered_button = idx;
+    app->prefs.edit_index = idx;
+    app->prefs.edit_temp = GetPrefInt(app, idx);
+  }
+  return d;
+}
+
+/**
  * Render the stepper sub-dialog for editing a numeric or toggle field.
  * Shows [-] value [+] controls, a range string, and footer with
  * ←/→ Change, conditional p Preview, Enter Save, and Esc Cancel.
@@ -4330,6 +4128,61 @@ static void prefsStepperRender(AppData* app, SlideDef* def) {
 }
 
 /**
+ * Open a select sub-dialog for picking from a list of named options.
+ * Stores the field index in app->prefs.select_index.
+ * @param app Application state
+ * @param idx Preference field index to edit
+ * @return Pointer to the created dialog, or NULL on allocation failure
+ */
+FloatingDialog* CreatePrefsSelectDialog(AppData* app, int idx) {
+  int cnt = app->prefs.fields[idx].option_count;
+  bool has_preview = (idx >= 0 && idx < app->prefs.count &&
+                      app->prefs.fields[idx].preview != NULL);
+  int nw = has_preview ? 56 : 44;
+  int nh = cnt + 6;
+  if (nh < 9) nh = 9;
+  if (nh > 20) nh = 20;
+  Dimensions size = {.width = nw, .height = nh};
+  Vector2D pos = {.x = 0, .y = 0};
+  MenuItem mi[] = {{"Apply", ClosePrefsSelect}, {"Cancel", ClosePrefsSelect}};
+  Menu menu = {.items = mi,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "",
+               .select_style_right = "",
+               .item_count = 2};
+  FloatingDialog* d = CreateFloatingDialog(pos, size, InitBorder(), menu, "");
+  if (d) {
+    SlideDef** slides = (SlideDef**)calloc(1, sizeof(SlideDef*));
+    if (!slides) {
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+    if (!def) {
+      free(slides);
+      FreeFloatingDialog(d);
+      return NULL;
+    }
+    def->size.width = size.width;
+    def->size.height = size.height;
+    def->render = prefsSelectRender;
+    def->update = prefsSelectUpdate;
+    def->slide_type = SLIDE_TYPE_PREFS_SELECT;
+    def->hovered = *app->prefs.fields[idx].int_value;
+    slides[0] = def;
+    d->slides = slides;
+    d->slide_count = 1;
+    d->current_slide = 0;
+    d->slide_type = SLIDE_TYPE_PREFS_SELECT;
+    d->hovered_button = *app->prefs.fields[idx].int_value;
+    app->prefs.select_index = idx;
+  }
+  return d;
+}
+
+/**
  * Update mouse hover state for the select sub-dialog.
  * Maps the mouse row to an option index and stores it in d->hovered_button
  * and def->hovered.
@@ -4469,6 +4322,156 @@ static void prefsSelectRender(AppData* app, SlideDef* def) {
   if (on_esc) attroff(A_REVERSE);
   RegisterClickRegion(app, s3, fy, w3, 1, REGION_SLIDE_NAV,
                       (MenuAction)ClosePrefsSelect, -1, 0, 0);
+}
+
+/**
+ * Read the current value of a preference field as an integer.
+ * For PREF_STEPPER_FLOAT the stored float is multiplied by 100 and rounded.
+ * @param app Application state
+ * @param idx Preference field index
+ * @return Current integer representation of the field value
+ */
+int GetPrefInt(AppData* app, int idx) {
+  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
+    return (int)(*app->prefs.fields[idx].float_value * 100.0f + 0.5f);
+  return *app->prefs.fields[idx].int_value;
+}
+
+/**
+ * Close the stepper sub-dialog, restoring the original value saved in
+ * app->prefs.edit_temp, and return to the main preferences list.
+ * @param app Application state
+ */
+void ClosePrefsEdit(AppData* app) {
+  if (app->prefs.edit_index >= 0) {
+    setPrefInt(app, app->prefs.edit_index, app->prefs.edit_temp);
+    app->prefs.edit_index = -1;
+  }
+  SyncIconsFromIndex();
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Write an integer value back to a preference field, converting to float
+ * for PREF_STEPPER_FLOAT fields.
+ * @param app Application state
+ * @param idx Preference field index
+ * @param val Integer value to store
+ */
+static void setPrefInt(AppData* app, int idx, int val) {
+  if (app->prefs.fields[idx].type == PREF_STEPPER_FLOAT)
+    *app->prefs.fields[idx].float_value = val / 100.0f;
+  else
+    *app->prefs.fields[idx].int_value = val;
+}
+
+/**
+ * Close the select sub-dialog and return to the main preferences list.
+ * The option value is already committed by SelectApply() before this runs.
+ * @param app Application state
+ */
+void ClosePrefsSelect(AppData* app) {
+  app->prefs.select_index = -1;
+  SyncIconsFromIndex();
+  app->animations = app->icon_animations[GetConfigIconType()];
+  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+void PrefsTakeSnapshot(AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (f->int_value) app->prefs.snapshot[i].i = *f->int_value;
+    if (f->float_value) app->prefs.snapshot[i].f = *f->float_value;
+  }
+}
+
+bool PrefsHaveChanges(const AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    const PrefField* f = &app->prefs.fields[i];
+    if (f->int_value && *f->int_value != app->prefs.snapshot[i].i) return true;
+    if (f->float_value && *f->float_value != app->prefs.snapshot[i].f)
+      return true;
+  }
+  return false;
+}
+
+void PrefsRestoreSnapshot(AppData* app) {
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (f->int_value) *f->int_value = app->prefs.snapshot[i].i;
+    if (f->float_value) *f->float_value = app->prefs.snapshot[i].f;
+  }
+  SyncIconsFromIndex();
+  app->animations = app->icon_animations[GetConfigIconType()];
+  app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
+}
+
+ErrorType PrefsSaveChanges(AppData* app) {
+  const char* path = GetUserConfigPath();
+  if (path[0] == '\0') return FILE_ERROR;
+
+  ConfigValue values[PREFS_MAX_FIELDS];
+  char buffers[PREFS_MAX_FIELDS][128];
+  int n = 0;
+  for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
+    PrefField* f = &app->prefs.fields[i];
+    if (!f->toml_path) continue;
+    bool changed =
+      (f->int_value && *f->int_value != app->prefs.snapshot[i].i) ||
+      (f->float_value && *f->float_value != app->prefs.snapshot[i].f);
+    if (!changed) continue;
+
+    char* buf = buffers[n];
+    switch (f->toml_kind) {
+      case PREF_TOML_BOOL:
+        snprintf(buf, sizeof(buffers[n]), "%s",
+                 *f->int_value ? "true" : "false");
+        break;
+      case PREF_TOML_FLOAT:
+        snprintf(buf, sizeof(buffers[n]), "%.2f", *f->float_value);
+        break;
+      case PREF_TOML_OPTION:
+        snprintf(buf, sizeof(buffers[n]), "\"%s\"", f->options[*f->int_value]);
+        break;
+      case PREF_TOML_INT:
+      default:
+        snprintf(buf, sizeof(buffers[n]), "%d", *f->int_value);
+        break;
+    }
+    values[n].path = f->toml_path;
+    values[n].value = buf;
+    n++;
+  }
+  if (n == 0) return NO_ERROR;
+
+  ErrorType err = SaveConfigValues(path, values, n);
+  if (err == NO_ERROR) PrefsTakeSnapshot(app);
+  return err;
+}
+
+/**
+ * Preview callback for "Desktop Notifications" - sends a test notification.
+ * @param app Application state
+ */
+void PrefsPreviewDesktop(AppData* app) {
+  (void)app;
+  Notification notif = {"Test Notification",
+                        "This is a test notification from settings.", NULL};
+  Notify(&notif);
+}
+
+/**
+ * Preview callback for "Sound" toggle and "Sound Volume" stepper -
+ * plays the default notification sound at the configured volume.
+ * @param app Application state
+ */
+void PrefsPreviewSound(AppData* app) {
+  (void)app;
+  PlayAudio(DATADIR "/sounds/dfltnotify.mp3", NOTIFICATIONS_SOUND_VOLUME,
+            false);
 }
 
 /**

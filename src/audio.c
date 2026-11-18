@@ -10,6 +10,7 @@
 #define MA_NO_RUNTIME_LINKING
 #endif
 #define MINIAUDIO_IMPLEMENTATION
+
 /**
  * The 'keys' macro in config.h conflicts with parameter names in Apple's
  * CoreFoundation headers (included transitively by miniaudio on macOS).
@@ -31,7 +32,6 @@ typedef struct loopingPlayback {
   struct loopingPlayback* next; /**< Next active playback, or NULL */
 } loopingPlayback;
 
-static ErrorType playLoopingAudio(const char* audio_path, float volume);
 /* Noise Audio */
 static ma_engine noise_engine;
 static ma_sound_group notification_group;
@@ -39,6 +39,9 @@ static ma_sound* noise_sounds = NULL;
 static loopingPlayback* looping_playbacks = NULL;
 static int noise_sound_count = 0;
 static bool noise_engine_initialized = false;
+
+/* PRIVATE AUDIO FUNCTIONS */
+static ErrorType playLoopingAudio(const char* audio_path, float volume);
 
 /**
  * ---------------------------------------------------------------------------

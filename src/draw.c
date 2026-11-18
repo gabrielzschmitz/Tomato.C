@@ -59,24 +59,6 @@ ErrorType DrawScreen(AppData* app) {
 }
 
 /**
- * Check if the screen size is sufficient and render the error screen.
- * Returns false if screen is too small, true otherwise.
- * @param app Pointer to the application data
- * @return true if screen is large enough, false otherwise
- */
-bool ValidateAndRenderScreenSize(AppData* app) {
-  if (app->screen->size.width < app->screen->min_panel_size.width ||
-      app->screen->size.height < app->screen->min_panel_size.height) {
-    app->block_input = true;
-    RenderScreenSizeError(app->screen);
-    refresh();
-    return false;
-  }
-  app->block_input = false;
-  return true;
-}
-
-/**
  * Render all visible panels.
  * Also handles scene-specific rendering and panel debug info.
  * @param app Pointer to the application data
@@ -442,4 +424,22 @@ static void renderDebugInfo(AppData* app) {
   mvprintw(current_panel->position.y, current_panel->position.x + 20, "%dx%d",
            app->screen->min_panel_size.width,
            app->screen->min_panel_size.height);
+}
+
+/**
+ * Check if the screen size is sufficient and render the error screen.
+ * Returns false if screen is too small, true otherwise.
+ * @param app Pointer to the application data
+ * @return true if screen is large enough, false otherwise
+ */
+bool ValidateAndRenderScreenSize(AppData* app) {
+  if (app->screen->size.width < app->screen->min_panel_size.width ||
+      app->screen->size.height < app->screen->min_panel_size.height) {
+    app->block_input = true;
+    RenderScreenSizeError(app->screen);
+    refresh();
+    return false;
+  }
+  app->block_input = false;
+  return true;
 }

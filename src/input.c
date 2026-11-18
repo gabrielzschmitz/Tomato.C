@@ -5,14 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* macOS ncurses does not define BUTTON4/5_PRESSED (mouse wheel buttons). */
-#ifndef BUTTON4_PRESSED
-#define BUTTON4_PRESSED 0000010L
-#endif
-#ifndef BUTTON5_PRESSED
-#define BUTTON5_PRESSED 0000020L
-#endif
-
 #include "anim.h"
 #include "audio.h"
 #include "config.h"
@@ -26,80 +18,38 @@
 #include "ui.h"
 #include "util.h"
 
-/* ---------------------------------------------------------------------------
- * Public History Navigation Functions
- * --------------------------------------------------------------------------- */
+/* macOS ncurses does not define BUTTON4/5_PRESSED (mouse wheel buttons). */
+#ifndef BUTTON4_PRESSED
+#define BUTTON4_PRESSED 0000010L
+#endif
+#ifndef BUTTON5_PRESSED
+#define BUTTON5_PRESSED 0000020L
+#endif
 
 /* PRIVATE INPUT FUNCTIONS */
+/* Text input */
+static bool isTextInputByte(int key);
+static bool isConfirmationDialog(const FloatingDialog* dialog);
+static void handleMouseCancelEdit(AppData* app, MEVENT* event);
+static void handleMousePopup(AppData* app, MEVENT* event);
+static void handleMousePanelSwitch(AppData* app, MEVENT* event);
+static void handleMouseNotes(AppData* app, MEVENT* event);
 /* Mouse Handlers */
 static void handleMousePanel(AppData* app, MEVENT* event);
-static void handleMouseNotes(AppData* app, MEVENT* event);
-static void handleMousePanelSwitch(AppData* app, MEVENT* event);
-static void handleMousePopup(AppData* app, MEVENT* event);
-static void handleMouseCancelEdit(AppData* app, MEVENT* event);
+static void showPrefsSavePrompt(AppData* app);
+static void cancelPrefsPrompt(AppData* app);
+static void prefsRequestClose(AppData* app);
+static int contentRowForField(AppData* app, int field_idx);
+static int totalPrefContentRows(AppData* app);
+static void clampSelectionToView(AppData* app);
+/* Preferences */
+static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
+static bool inputEnsureCapacity(InputState* input, int needed);
+static bool pageHasNotes(NotesData* notes, int page);
 /* History */
 static void historyRebuildOverview(AppData* app);
 static void historyMoveCursorByDays(AppData* app, int dayDelta);
-/* Preferences */
-static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
-static void prefsRequestClose(AppData* app);
-/* Text input */
-static bool isTextInputByte(int key);
-static bool inputEnsureCapacity(InputState* input, int needed);
-static bool isConfirmationDialog(const FloatingDialog* dialog);
-
-/**
- * ---------------------------------------------------------------------------
- * Input Dispatching
- * ---------------------------------------------------------------------------
- */
-
-/**
- * Check whether a key value is a printable text byte.
- * Accepts ASCII printable characters and raw UTF-8 bytes (0x80-0xFF).
- * @param key Key value returned by getch()
- * @return true if the key should be inserted as text
- */
-static bool isTextInputByte(int key) {
-  return (key >= ' ' && key <= '~') || (key >= 0x80 && key <= 0xFF);
-}
-
-/**
- * Check whether a dialog is one of the confirmation popups.
- * @param dialog Dialog to inspect
- * @return true for quit, skip, and reset confirmations
- */
-static bool isConfirmationDialog(const FloatingDialog* dialog) {
-  if (!dialog) return false;
-  MenuAction first = dialog->menu.items[0].action;
-  return first == ForcefullyQuitApp || first == ForcefullySkipPomodoroStep ||
-         first == ResetPomodoroStep || first == ResetPomodoroCycle;
-}
-
-/**
- * Ensure the input buffer can hold at least needed text bytes.
- * Grows the allocation geometrically and updates max_len.
- * @param input Input state to resize
- * @param needed Number of text bytes required (excluding the null terminator)
- * @return true on success, false on allocation failure
- */
-static bool inputEnsureCapacity(InputState* input, int needed) {
-  if (!input) return false;
-  if (needed <= input->max_len) return true;
-
-  int capacity = input->max_len + 1;
-  if (capacity < 256) capacity = 256;
-  while (capacity <= needed) capacity *= 2;
-
-  char* grown = realloc(input->buffer, (size_t)capacity);
-  if (!grown) {
-    LogError("inputEnsureCapacity", MALLOC_ERROR);
-    return false;
-  }
-  input->buffer = grown;
-  input->max_len = capacity - 1;
-  return true;
-}
+static void ensurePrefVisible(AppData* app);
 
 /**
  * Process a single key input and dispatch to appropriate handler.
@@ -137,6 +87,22 @@ void ProcessKeyInput(AppData* app, int key) {
       return;
     }
   }
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Input Dispatching
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Check whether a key value is a printable text byte.
+ * Accepts ASCII printable characters and raw UTF-8 bytes (0x80-0xFF).
+ * @param key Key value returned by getch()
+ * @return true if the key should be inserted as text
+ */
+static bool isTextInputByte(int key) {
+  return (key >= ' ' && key <= '~') || (key >= 0x80 && key <= 0xFF);
 }
 
 /**
@@ -264,34 +230,15 @@ ErrorType HandleInputs(AppData* app) {
 }
 
 /**
- * ---------------------------------------------------------------------------
- * Mouse Handlers
- * ---------------------------------------------------------------------------
+ * Check whether a dialog is one of the confirmation popups.
+ * @param dialog Dialog to inspect
+ * @return true for quit, skip, and reset confirmations
  */
-
-/**
- * Handle mouse events. In DEFAULT mode: hover updates menu selection +
- * switches panel focus on REQUEST_MOUSE_POSITION, clicks execute actions or
- * switch panels. In non-DEFAULT mode: movement is ignored, first click goes
- * directly to DEFAULT mode.
- * @param app Pointer to the application data
- * @param event Pointer to the ncurses mouse event
- * @return ErrorType NO_ERROR on success, or an error code on failure
- */
-ErrorType HandleMouseEvent(AppData* app, MEVENT* event) {
-  ErrorType status = NO_ERROR;
-  if (app->screen->panels[app->screen->current_panel].mode != DEFAULT) {
-    handleMouseCancelEdit(app, event);
-    return status;
-  }
-  if (app->popup_dialog) {
-    handleMousePopup(app, event);
-    return status;
-  }
-  handleMousePanelSwitch(app, event);
-  handleMouseNotes(app, event);
-  handleMousePanel(app, event);
-  return status;
+static bool isConfirmationDialog(const FloatingDialog* dialog) {
+  if (!dialog) return false;
+  MenuAction first = dialog->menu.items[0].action;
+  return first == ForcefullyQuitApp || first == ForcefullySkipPomodoroStep ||
+         first == ResetPomodoroStep || first == ResetPomodoroCycle;
 }
 
 /**
@@ -687,6 +634,176 @@ static void handleMousePanel(AppData* app, MEVENT* event) {
       break;
     }
   }
+}
+
+/**
+ * Show the save/discard confirmation for pending preference changes.
+ * Replaces the preferences dialog with a centered confirmation menu.
+ * @param app Application state
+ */
+static void showPrefsSavePrompt(AppData* app) {
+  const char* message =
+    "Changes were applied on current session,\nsave into config.toml?";
+  MenuItem menu_items[] = {{"Save", PrefsSaveAndClose},
+                           {"Discard", PrefsDiscardAndClose}};
+  Menu menu = {.items = menu_items,
+               .selected_item = 0,
+               .focused_color = COLOR_WHITE,
+               .unfocused_color = COLOR_WHITE,
+               .select_style_left = "<",
+               .select_style_right = ">",
+               .item_count = sizeof(menu_items) / sizeof(MenuItem)};
+  Border border = InitBorder();
+
+  FloatingDialog* dialog =
+    CreateCenterFloatingDialog(app->screen, menu, message, border);
+  if (!dialog) return;
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = dialog;
+}
+
+/**
+ * Reopen the preferences list, cancelling a pending close.
+ * @param app Application state
+ */
+static void cancelPrefsPrompt(AppData* app) {
+  FreeFloatingDialog(app->popup_dialog);
+  app->popup_dialog = CreatePreferencesDialog(app);
+}
+
+/**
+ * Close the current popup. If the preferences list has unsaved changes,
+ * ask whether to save them instead of closing directly.
+ * @param app Application state
+ */
+static void prefsRequestClose(AppData* app) {
+  if (!app->popup_dialog) return;
+  if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
+    cancelPrefsPrompt(app);
+    return;
+  }
+  if (app->popup_dialog->slide_type != SLIDE_TYPE_PREFERENCES ||
+      !PrefsHaveChanges(app)) {
+    ClosePopup(app);
+    return;
+  }
+  showPrefsSavePrompt(app);
+}
+
+/**
+ * After a scroll, clamp the selection so it stays inside the visible field
+ * area (between the More indicators).
+ */
+static int contentRowForField(AppData* app, int field_idx) {
+  int r = 0;
+  for (int i = 0; i < field_idx; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION) {
+      if (i > 0)
+        r += 2;
+      else
+        r++;
+    } else {
+      r++;
+    }
+  }
+  return r;
+}
+
+static int totalPrefContentRows(AppData* app) {
+  int r = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
+      r += 2;
+    } else {
+      r++;
+    }
+  }
+  return r;
+}
+
+static void clampSelectionToView(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  int idx = prefFieldIndexBySelectOffset(app, sel);
+  if (idx < 0) return;
+  int h = app->popup_dialog->size.height;
+  int max_visible = h - 6;
+  int sr = app->prefs.scroll_row;
+  int total_cr = totalPrefContentRows(app);
+  int end_cr = sr + max_visible;
+  if (end_cr > total_cr) end_cr = total_cr;
+  bool show_down = (end_cr < total_cr);
+  bool show_up = (sr > 0);
+  int field_cap = max_visible - (show_up ? 1 : 0) - (show_down ? 1 : 0);
+  if (field_cap < 1) field_cap = 1;
+  int sel_cr = contentRowForField(app, idx);
+  if (sel_cr < sr) {
+    while (sel_cr < sr && sel < app->prefs.count) {
+      sel++;
+      int nidx = prefFieldIndexBySelectOffset(app, sel);
+      if (nidx < 0) break;
+      sel_cr = contentRowForField(app, nidx);
+    }
+    app->popup_dialog->hovered_button = sel;
+  }
+  if (sel_cr >= sr + field_cap) {
+    while (sel_cr >= sr + field_cap && sel > 0) {
+      sel--;
+      int nidx = prefFieldIndexBySelectOffset(app, sel);
+      if (nidx < 0) break;
+      sel_cr = contentRowForField(app, nidx);
+    }
+    app->popup_dialog->hovered_button = sel;
+  }
+}
+
+/**
+ * Convert a selectable offset to a preference field index.
+ * Walks through app->prefs.fields and skips PREF_SECTION entries.
+ * Selectable offset: 0 for first non-section preference, 1 for second, etc.
+ * @param app Application state
+ * @param sel_off Selectable offset (0-based after skipping sections)
+ * @return Preference field index, or -1 if out of range
+ */
+static int prefFieldIndexBySelectOffset(AppData* app, int sel_off) {
+  int n = 0;
+  for (int i = 0; i < app->prefs.count; i++) {
+    if (app->prefs.fields[i].type == PREF_SECTION) continue;
+    if (n == sel_off) return i;
+    n++;
+  }
+  return -1;
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * Mouse Handlers
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Handle mouse events. In DEFAULT mode: hover updates menu selection +
+ * switches panel focus on REQUEST_MOUSE_POSITION, clicks execute actions or
+ * switch panels. In non-DEFAULT mode: movement is ignored, first click goes
+ * directly to DEFAULT mode.
+ * @param app Pointer to the application data
+ * @param event Pointer to the ncurses mouse event
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+ErrorType HandleMouseEvent(AppData* app, MEVENT* event) {
+  ErrorType status = NO_ERROR;
+  if (app->screen->panels[app->screen->current_panel].mode != DEFAULT) {
+    handleMouseCancelEdit(app, event);
+    return status;
+  }
+  if (app->popup_dialog) {
+    handleMousePopup(app, event);
+    return status;
+  }
+  handleMousePanelSwitch(app, event);
+  handleMouseNotes(app, event);
+  handleMousePanel(app, event);
+  return status;
 }
 
 /**
@@ -1398,6 +1515,31 @@ void InputInsertChar(AppData* app) {
   input->cursor++;
   input->len++;
   input->buffer[input->len] = '\0';
+}
+
+/**
+ * Ensure the input buffer can hold at least needed text bytes.
+ * Grows the allocation geometrically and updates max_len.
+ * @param input Input state to resize
+ * @param needed Number of text bytes required (excluding the null terminator)
+ * @return true on success, false on allocation failure
+ */
+static bool inputEnsureCapacity(InputState* input, int needed) {
+  if (!input) return false;
+  if (needed <= input->max_len) return true;
+
+  int capacity = input->max_len + 1;
+  if (capacity < 256) capacity = 256;
+  while (capacity <= needed) capacity *= 2;
+
+  char* grown = realloc(input->buffer, (size_t)capacity);
+  if (!grown) {
+    LogError("inputEnsureCapacity", MALLOC_ERROR);
+    return false;
+  }
+  input->buffer = grown;
+  input->max_len = capacity - 1;
+  return true;
 }
 
 /**
@@ -2451,19 +2593,6 @@ void DemoteNoteWrapper(AppData* app) {
 }
 
 /**
- * Check if the given page has any notes.
- * @param notes Pointer to NotesData
- * @param page Page index to check
- * @return true if the page contains at least one note
- */
-static bool pageHasNotes(NotesData* notes, int page) {
-  for (int i = 0; i < notes->count; i++) {
-    if (notes->items[i]->page_id == page) return true;
-  }
-  return false;
-}
-
-/**
  * Navigate to the previous page of notes.
  * Delegates to PromoteNoteWrapper in move mode.
  * @param app Pointer to the application data
@@ -2518,6 +2647,19 @@ void NotesNextPage(AppData* app) {
   app->notes->transitioning = true;
   app->notes->transition_target = target;
   RollfilmSeekFrame(app->animations[NOTES_TRANSITION], 0);
+}
+
+/**
+ * Check if the given page has any notes.
+ * @param notes Pointer to NotesData
+ * @param page Page index to check
+ * @return true if the page contains at least one note
+ */
+static bool pageHasNotes(NotesData* notes, int page) {
+  for (int i = 0; i < notes->count; i++) {
+    if (notes->items[i]->page_id == page) return true;
+  }
+  return false;
 }
 
 /**
@@ -2650,58 +2792,6 @@ void HistoryCursorLeft(AppData* app) {
 }
 
 /**
- * Move the history cursor right.
- * When near the last week of the month (day > dim-7) moves by 1 day to
- * cross the boundary cleanly; otherwise moves by a full week (7 days).
- * @param app Application state
- */
-void HistoryCursorRight(AppData* app) {
-  if (!app) return;
-  HistoryData* h = &app->history_data;
-  int dim = (h->sel_day > 0) ? HistDaysInMonth(h->sel_year, h->sel_month) : 31;
-  int delta = (h->sel_day > 0 && h->sel_day > dim - 7) ? 1 : 7;
-  historyMoveCursorByDays(app, delta);
-}
-
-/**
- * Move the history cursor up by one calendar day.
- * @param app Application state
- */
-void HistoryCursorUp(AppData* app) { historyMoveCursorByDays(app, -1); }
-
-/**
- * Move the history cursor down by one calendar day.
- * @param app Application state
- */
-void HistoryCursorDown(AppData* app) { historyMoveCursorByDays(app, 1); }
-
-/**
- * Scroll the day-detail session list up.
- * @param app Application state
- */
-void HistoryScrollUp(AppData* app) {
-  if (!app || !app->popup_dialog) return;
-  HistoryData* h = &app->history_data;
-  if (h->day_scroll > 0) h->day_scroll--;
-}
-
-/**
- * Scroll the day-detail session list down.
- * @param app Application state
- */
-void HistoryScrollDown(AppData* app) {
-  if (!app || !app->popup_dialog) return;
-  HistoryData* h = &app->history_data;
-  int indices[100];
-  time_t times[100];
-  int dur[100], st[100];
-  int total =
-    HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
-                       indices, times, NULL, dur, st, 100);
-  if (h->day_scroll < total - 1) h->day_scroll++;
-}
-
-/**
  * Rebuild the history overview popup in-place.
  * Closes the current dialog and re-creates it.
  * @param app Application state
@@ -2814,6 +2904,58 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
 }
 
 /**
+ * Move the history cursor right.
+ * When near the last week of the month (day > dim-7) moves by 1 day to
+ * cross the boundary cleanly; otherwise moves by a full week (7 days).
+ * @param app Application state
+ */
+void HistoryCursorRight(AppData* app) {
+  if (!app) return;
+  HistoryData* h = &app->history_data;
+  int dim = (h->sel_day > 0) ? HistDaysInMonth(h->sel_year, h->sel_month) : 31;
+  int delta = (h->sel_day > 0 && h->sel_day > dim - 7) ? 1 : 7;
+  historyMoveCursorByDays(app, delta);
+}
+
+/**
+ * Move the history cursor up by one calendar day.
+ * @param app Application state
+ */
+void HistoryCursorUp(AppData* app) { historyMoveCursorByDays(app, -1); }
+
+/**
+ * Move the history cursor down by one calendar day.
+ * @param app Application state
+ */
+void HistoryCursorDown(AppData* app) { historyMoveCursorByDays(app, 1); }
+
+/**
+ * Scroll the day-detail session list up.
+ * @param app Application state
+ */
+void HistoryScrollUp(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  if (h->day_scroll > 0) h->day_scroll--;
+}
+
+/**
+ * Scroll the day-detail session list down.
+ * @param app Application state
+ */
+void HistoryScrollDown(AppData* app) {
+  if (!app || !app->popup_dialog) return;
+  HistoryData* h = &app->history_data;
+  int indices[100];
+  time_t times[100];
+  int dur[100], st[100];
+  int total =
+    HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+                       indices, times, NULL, dur, st, 100);
+  if (h->day_scroll < total - 1) h->day_scroll++;
+}
+
+/**
  * ---------------------------------------------------------------------------
  * Preferences Actions
  * ---------------------------------------------------------------------------
@@ -2884,11 +3026,16 @@ void HelpScrollUp(AppData* app) {
 void HelpScrollDown(AppData* app) { app->help_scroll_row++; }
 
 /**
- * After a selection change, ensure the selected field is visible by adjusting
- * scroll_row.
+ * Select the previous setting in the preferences dialog.
+ * @param app Application state
  */
-static int contentRowForField(AppData* app, int field_idx);
-static int totalPrefContentRows(AppData* app);
+void PrefsSelectPrev(AppData* app) {
+  if (!app->popup_dialog) return;
+  int sel = app->popup_dialog->hovered_button;
+  if (sel > 0) sel--;
+  app->popup_dialog->hovered_button = sel;
+  ensurePrefVisible(app);
+}
 
 static void ensurePrefVisible(AppData* app) {
   if (!app->popup_dialog) return;
@@ -2914,18 +3061,6 @@ static void ensurePrefVisible(AppData* app) {
     app->prefs.scroll_row = row;
   else if (row >= sr + field_cap)
     app->prefs.scroll_row = row - field_cap + 1;
-}
-
-/**
- * Select the previous setting in the preferences dialog.
- * @param app Application state
- */
-void PrefsSelectPrev(AppData* app) {
-  if (!app->popup_dialog) return;
-  int sel = app->popup_dialog->hovered_button;
-  if (sel > 0) sel--;
-  app->popup_dialog->hovered_button = sel;
-  ensurePrefVisible(app);
 }
 
 /**
@@ -3066,60 +3201,6 @@ void PrefsEdit(AppData* app) {
   }
 }
 
-/**
- * Show the save/discard confirmation for pending preference changes.
- * Replaces the preferences dialog with a centered confirmation menu.
- * @param app Application state
- */
-static void showPrefsSavePrompt(AppData* app) {
-  const char* message =
-    "Changes were applied on current session,\nsave into config.toml?";
-  MenuItem menu_items[] = {{"Save", PrefsSaveAndClose},
-                           {"Discard", PrefsDiscardAndClose}};
-  Menu menu = {.items = menu_items,
-               .selected_item = 0,
-               .focused_color = COLOR_WHITE,
-               .unfocused_color = COLOR_WHITE,
-               .select_style_left = "<",
-               .select_style_right = ">",
-               .item_count = sizeof(menu_items) / sizeof(MenuItem)};
-  Border border = InitBorder();
-
-  FloatingDialog* dialog =
-    CreateCenterFloatingDialog(app->screen, menu, message, border);
-  if (!dialog) return;
-  FreeFloatingDialog(app->popup_dialog);
-  app->popup_dialog = dialog;
-}
-
-/**
- * Reopen the preferences list, cancelling a pending close.
- * @param app Application state
- */
-static void cancelPrefsPrompt(AppData* app) {
-  FreeFloatingDialog(app->popup_dialog);
-  app->popup_dialog = CreatePreferencesDialog(app);
-}
-
-/**
- * Close the current popup. If the preferences list has unsaved changes,
- * ask whether to save them instead of closing directly.
- * @param app Application state
- */
-static void prefsRequestClose(AppData* app) {
-  if (!app->popup_dialog) return;
-  if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
-    cancelPrefsPrompt(app);
-    return;
-  }
-  if (app->popup_dialog->slide_type != SLIDE_TYPE_PREFERENCES ||
-      !PrefsHaveChanges(app)) {
-    ClosePopup(app);
-    return;
-  }
-  showPrefsSavePrompt(app);
-}
-
 void PrefsBack(AppData* app) { prefsRequestClose(app); }
 
 void PrefsSaveAndClose(AppData* app) {
@@ -3140,73 +3221,6 @@ void PrefsDiscardAndClose(AppData* app) {
   app->prefs.edit_index = -1;
   app->prefs.select_index = -1;
   ClosePopup(app);
-}
-
-/**
- * After a scroll, clamp the selection so it stays inside the visible field
- * area (between the More indicators).
- */
-static int contentRowForField(AppData* app, int field_idx) {
-  int r = 0;
-  for (int i = 0; i < field_idx; i++) {
-    if (app->prefs.fields[i].type == PREF_SECTION) {
-      if (i > 0)
-        r += 2;
-      else
-        r++;
-    } else {
-      r++;
-    }
-  }
-  return r;
-}
-
-static int totalPrefContentRows(AppData* app) {
-  int r = 0;
-  for (int i = 0; i < app->prefs.count; i++) {
-    if (app->prefs.fields[i].type == PREF_SECTION && i > 0) {
-      r += 2;
-    } else {
-      r++;
-    }
-  }
-  return r;
-}
-
-static void clampSelectionToView(AppData* app) {
-  if (!app->popup_dialog) return;
-  int sel = app->popup_dialog->hovered_button;
-  int idx = prefFieldIndexBySelectOffset(app, sel);
-  if (idx < 0) return;
-  int h = app->popup_dialog->size.height;
-  int max_visible = h - 6;
-  int sr = app->prefs.scroll_row;
-  int total_cr = totalPrefContentRows(app);
-  int end_cr = sr + max_visible;
-  if (end_cr > total_cr) end_cr = total_cr;
-  bool show_down = (end_cr < total_cr);
-  bool show_up = (sr > 0);
-  int field_cap = max_visible - (show_up ? 1 : 0) - (show_down ? 1 : 0);
-  if (field_cap < 1) field_cap = 1;
-  int sel_cr = contentRowForField(app, idx);
-  if (sel_cr < sr) {
-    while (sel_cr < sr && sel < app->prefs.count) {
-      sel++;
-      int nidx = prefFieldIndexBySelectOffset(app, sel);
-      if (nidx < 0) break;
-      sel_cr = contentRowForField(app, nidx);
-    }
-    app->popup_dialog->hovered_button = sel;
-  }
-  if (sel_cr >= sr + field_cap) {
-    while (sel_cr >= sr + field_cap && sel > 0) {
-      sel--;
-      int nidx = prefFieldIndexBySelectOffset(app, sel);
-      if (nidx < 0) break;
-      sel_cr = contentRowForField(app, nidx);
-    }
-    app->popup_dialog->hovered_button = sel;
-  }
 }
 
 /**
@@ -3355,22 +3369,4 @@ void SelectNextOption(AppData* app) {
   if (idx < 0) return;
   PrefField* f = &app->prefs.fields[idx];
   if (d->hovered_button < f->option_count - 1) d->hovered_button++;
-}
-
-/**
- * Convert a selectable offset to a preference field index.
- * Walks through app->prefs.fields and skips PREF_SECTION entries.
- * Selectable offset: 0 for first non-section preference, 1 for second, etc.
- * @param app Application state
- * @param sel_off Selectable offset (0-based after skipping sections)
- * @return Preference field index, or -1 if out of range
- */
-static int prefFieldIndexBySelectOffset(AppData* app, int sel_off) {
-  int n = 0;
-  for (int i = 0; i < app->prefs.count; i++) {
-    if (app->prefs.fields[i].type == PREF_SECTION) continue;
-    if (n == sel_off) return i;
-    n++;
-  }
-  return -1;
 }
