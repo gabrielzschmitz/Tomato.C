@@ -97,8 +97,9 @@ Keep functions and types file-local when they are only used within their own
 - Declare private functions as `static`.
 - Place private function declarations below the `/* PRIVATE FILENAME FUNCTIONS */`
   comment.
-- Place private function implementations immediately below the function that
-  calls them.
+- Place each private function implementation immediately after the first public
+  function that calls it.
+- Keep private declarations and private implementations in the same order.
 - Public functions must have external linkage and be declared in their
   corresponding header.
 - Apply the same private/public naming distinction to structs and enums.
