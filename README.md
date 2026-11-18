@@ -55,6 +55,9 @@ CC="zig cc" ./build.sh
 CC="zig cc" ./install.sh
 ```
 
+When [bear](https://github.com/rizsotto/Bear) is available, `./build.sh` writes
+`compile_commands.json` to the project root for gcc, tcc, and zig builds.
+
 Alternatively for a more permanent change, edit `CC = gcc` in `build/config.mk`.
 
 </details>

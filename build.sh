@@ -4,7 +4,8 @@
 # * @brief Tomato.C Build Script.
 # *
 # * Compiles the Tomato.C Pomodoro timer from source using GNU Make.
-# * Optionally generates compile_commands.json via bear for LSP support.
+# * Optionally generates compile_commands.json via bear for LSP support,
+# * including tcc and zig builds.
 # *
 # * Usage: ./build.sh [--debug] [--no-move] [--verbose] [--output-dir=<dir>]
 # *
@@ -16,7 +17,7 @@
 # *   --help|-h            Show this help
 # *
 # * Environment:
-# *   DATAPREFIX           Override embedded data directory path (set by install.sh)
+# * DATAPREFIX Override embedded data directory path (set by install.sh)
 # *
 # * Exit codes: 0 = success, nonzero = failure
 # */
@@ -45,9 +46,15 @@ OUTPUT_DIR="."
 # *        NO_COLOR is not set.
 # */
 init_colors() {
-  RED=''; GREEN=''; YELLOW=''; MAGENTA=''; CYAN=''; BOLD=''; RESET=''
+  RED=''
+  GREEN=''
+  YELLOW=''
+  MAGENTA=''
+  CYAN=''
+  BOLD=''
+  RESET=''
   if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
-    if command -v tput >/dev/null 2>&1 && tput colors 2>/dev/null | grep -q '[0-9]'; then
+    if command -v tput > /dev/null 2>&1 && tput colors 2> /dev/null | grep -q '[0-9]'; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -105,7 +112,7 @@ parse_args() {
       --output-dir=*)
         OUTPUT_DIR="${1#*=}"
         ;;
-      --help|-h)
+      --help | -h)
         usage
         ;;
       *)
@@ -154,31 +161,64 @@ build() {
     exit 1
   fi
 
-  # Detect bear
-  local bear_prefix=""
-  if command -v bear >/dev/null 2>&1; then
-    bear_prefix="bear --"
+  # Detect bear and add compiler hints for gcc-compatible drivers that bear does
+  # not recognize by default.
+  local bear_available=0
+  local bear_config=""
+  local compiler_program="gcc"
+  local compiler_name="gcc"
+  local compiler_path=""
+  if command -v bear > /dev/null 2>&1; then
+    bear_available=1
+
+    set -f
+    set -- ${CC:-gcc}
+    set +f
+    compiler_program=$1
+    compiler_name=${compiler_program##*/}
+
+    if [ "$compiler_name" = "tcc" ] || [ "$compiler_name" = "zig" ]; then
+      compiler_path=$(command -v "$compiler_program" 2> /dev/null || true)
+      if [ -z "$compiler_path" ]; then
+        compiler_path="$compiler_program"
+      fi
+      if ! bear_config=$(mktemp "${TMPDIR:-/tmp}/tomato-bear-XXXXXX"); then
+        echo " ${RED}[ERR]${RESET}  Could not create bear compiler config" >&2
+        cd ..
+        exit 1
+      fi
+      printf 'schema: "4.2"\ncompilers:\n  - path: "%s"\n    as: gcc\n' \
+        "$compiler_path" > "$bear_config"
+    fi
+
     echo " ${GREEN}[OK]${RESET}  bear detected — compile_commands.json will be generated"
   fi
 
   # Build command
-  local make_cmd="$bear_prefix make"
-  [ "$DEBUG" -eq 1 ] && make_cmd="$make_cmd DEBUG=$DEBUG"
-  [ -n "$VERBOSE" ] && make_cmd="$make_cmd V=1"
-  [ -n "${DATAPREFIX:-}" ] && make_cmd="$make_cmd DATAPREFIX=$DATAPREFIX"
+  set -- make
+  [ "$DEBUG" -eq 1 ] && set -- "$@" "DEBUG=$DEBUG"
+  [ -n "$VERBOSE" ] && set -- "$@" "V=1"
+  [ -n "${DATAPREFIX:-}" ] && set -- "$@" "DATAPREFIX=$DATAPREFIX"
+  set -- "$@" "$make_target"
 
-  echo " ${CYAN}[MAKE]${RESET} Running: ${BOLD}$make_cmd $make_target${RESET}"
-  echo ""
-
-  local build_exit=0
-  if [ -n "$bear_prefix" ]; then
-    $make_cmd $make_target
-    build_exit=$?
-  else
-    $make_cmd $make_target
-    build_exit=$?
+  if [ "$bear_available" -eq 1 ]; then
+    if [ -n "$bear_config" ]; then
+      set -- bear --config "$bear_config" -- "$@"
+    else
+      set -- bear -- "$@"
+    fi
   fi
+
+  echo " ${CYAN}[MAKE]${RESET} Running: ${BOLD}$*${RESET}"
   echo ""
+
+  "$@"
+  build_exit=$?
+  echo ""
+
+  if [ -n "$bear_config" ]; then
+    rm -f "$bear_config"
+  fi
 
   if [ "$build_exit" -ne 0 ]; then
     echo " ${RED}[ERR]${RESET}  Build failed (exit code $build_exit)" >&2
@@ -186,7 +226,26 @@ build() {
     exit 1
   fi
 
-  if [ -n "$bear_prefix" ] && [ -f "compile_commands.json" ]; then
+  if [ "$bear_available" -eq 1 ] && [ -f "compile_commands.json" ]; then
+    # Bear drops the "cc" subcommand when it treats "zig" as a compiler path.
+    # Restore it so clangd and other consumers invoke the Zig C driver.
+    if [ "$compiler_name" = "zig" ] && [ -n "$compiler_path" ]; then
+      awk -v compiler="$compiler_path" '
+        {
+          needle = "\"" compiler "\","
+          pos = index($0, needle)
+          if (pos == 0) {
+            print
+            next
+          }
+          print substr($0, 1, pos + length(needle) - 1)
+          print "      \"cc\","
+          print substr($0, pos + length(needle))
+        }
+      ' compile_commands.json > compile_commands.json.tmp
+      mv compile_commands.json.tmp compile_commands.json
+    fi
+
     mv compile_commands.json ..
     echo " ${GREEN}[OK]${RESET}  compile_commands.json moved to project root"
   fi
