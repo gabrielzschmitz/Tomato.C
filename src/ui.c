@@ -4380,6 +4380,10 @@ void ClosePrefsSelect(AppData* app) {
   app->popup_dialog = CreatePreferencesDialog(app);
 }
 
+/**
+ * Record the current value of every preference row as the saved baseline.
+ * @param app Application state
+ */
 void PrefsTakeSnapshot(AppData* app) {
   for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
     PrefField* f = &app->prefs.fields[i];
@@ -4388,6 +4392,11 @@ void PrefsTakeSnapshot(AppData* app) {
   }
 }
 
+/**
+ * Check whether any preference differs from the saved baseline.
+ * @param app Application state
+ * @return true if at least one value changed since the baseline was taken
+ */
 bool PrefsHaveChanges(const AppData* app) {
   for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
     const PrefField* f = &app->prefs.fields[i];
@@ -4398,6 +4407,11 @@ bool PrefsHaveChanges(const AppData* app) {
   return false;
 }
 
+/**
+ * Restore every preference to the saved baseline and re-apply dependent
+ * settings (icons, animations, panel size).
+ * @param app Application state
+ */
 void PrefsRestoreSnapshot(AppData* app) {
   for (int i = 0; i < app->prefs.count && i < PREFS_MAX_FIELDS; i++) {
     PrefField* f = &app->prefs.fields[i];
@@ -4409,6 +4423,13 @@ void PrefsRestoreSnapshot(AppData* app) {
   app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
 }
 
+/**
+ * Write changed preferences into the user config file.
+ * Takes a new baseline when the write succeeds.
+ * @param app Application state
+ * @return NO_ERROR on success, FILE_ERROR when no path is configured, or the
+ *         error code reported by the save operation
+ */
 ErrorType PrefsSaveChanges(AppData* app) {
   const char* path = GetUserConfigPath();
   if (path[0] == '\0') return FILE_ERROR;

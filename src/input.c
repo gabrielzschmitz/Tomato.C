@@ -709,6 +709,12 @@ static int contentRowForField(AppData* app, int field_idx) {
   return r;
 }
 
+/**
+ * Count content rows occupied by all preference fields.
+ * Section fields after the first occupy two rows.
+ * @param app Application state
+ * @return Total number of content rows
+ */
 static int totalPrefContentRows(AppData* app) {
   int r = 0;
   for (int i = 0; i < app->prefs.count; i++) {
@@ -721,6 +727,11 @@ static int totalPrefContentRows(AppData* app) {
   return r;
 }
 
+/**
+ * Clamp the selected preference so it stays inside the visible field area.
+ * Accounts for the More indicators above and below the visible range.
+ * @param app Application state
+ */
 static void clampSelectionToView(AppData* app) {
   if (!app->popup_dialog) return;
   int sel = app->popup_dialog->hovered_button;
@@ -2971,6 +2982,11 @@ void OpenPreferencesMenu(AppData* app) {
   app->popup_dialog = CreatePreferencesDialog(app);
 }
 
+/**
+ * Open the help popup filtered by the current context scene.
+ * Saves the active popup before opening help, and restores it on close.
+ * @param app Application state
+ */
 void OpenHelp(AppData* app) {
   if (app->popup_dialog && app->popup_dialog->slide_type == SLIDE_TYPE_HELP)
     return;
@@ -3011,6 +3027,10 @@ void OpenHelp(AppData* app) {
   app->popup_dialog = CreateHelpDialog(app);
 }
 
+/**
+ * Open the help popup showing all keybindings (full reference).
+ * @param app Application state
+ */
 void OpenHelpMenu(AppData* app) {
   if (app->popup_dialog) return;
   app->saved_popup = NULL;
@@ -3019,10 +3039,18 @@ void OpenHelpMenu(AppData* app) {
   app->popup_dialog = CreateHelpDialog(app);
 }
 
+/**
+ * Scroll the help content up by one row.
+ * @param app Application state
+ */
 void HelpScrollUp(AppData* app) {
   if (app->help_scroll_row > 0) app->help_scroll_row--;
 }
 
+/**
+ * Scroll the help content down by one row.
+ * @param app Application state
+ */
 void HelpScrollDown(AppData* app) { app->help_scroll_row++; }
 
 /**
@@ -3037,6 +3065,10 @@ void PrefsSelectPrev(AppData* app) {
   ensurePrefVisible(app);
 }
 
+/**
+ * Scroll the preferences list so the selected field stays visible.
+ * @param app Application state
+ */
 static void ensurePrefVisible(AppData* app) {
   if (!app->popup_dialog) return;
   int sel = app->popup_dialog->hovered_button;
@@ -3201,8 +3233,17 @@ void PrefsEdit(AppData* app) {
   }
 }
 
+/**
+ * Go back from the preferences dialog, asking to save pending changes.
+ * @param app Application state
+ */
 void PrefsBack(AppData* app) { prefsRequestClose(app); }
 
+/**
+ * Save pending preference changes and close the dialog.
+ * Keeps the prompt open on failure so the user can retry or discard.
+ * @param app Application state
+ */
 void PrefsSaveAndClose(AppData* app) {
   ErrorType status = PrefsSaveChanges(app);
   if (status != NO_ERROR) {
@@ -3216,6 +3257,10 @@ void PrefsSaveAndClose(AppData* app) {
   ClosePopup(app);
 }
 
+/**
+ * Discard pending preference changes and close the dialog.
+ * @param app Application state
+ */
 void PrefsDiscardAndClose(AppData* app) {
   PrefsRestoreSnapshot(app);
   app->prefs.edit_index = -1;

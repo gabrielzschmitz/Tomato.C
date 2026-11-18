@@ -716,12 +716,21 @@ void SyncIconsFromIndex(void) {
   }
 }
 
+/**
+ * Check whether a string pointer is tracked as an owned heap string.
+ * @param value Pointer to compare against the owned string list
+ * @return true if value is owned by the configuration
+ */
 static bool configStringOwned(const char* value) {
   for (size_t i = 0; i < owned_count; i++)
     if (owned_strings[i] == value) return true;
   return false;
 }
 
+/**
+ * Remove a pointer from the owned string list without freeing it.
+ * @param value Pointer to forget; no effect when the pointer is not owned
+ */
 static void configStringForget(const char* value) {
   for (size_t i = 0; i < owned_count; i++) {
     if (owned_strings[i] == value) {
@@ -739,14 +748,30 @@ static void configStringRelease(const char** slot) {
   *slot = NULL;
 }
 
+/**
+ * Number of diagnostics queued while loading the configuration.
+ * @return Count of queued warnings and errors
+ */
 int GetConfigWarningCount(void) { return config_warning_count; }
 
+/**
+ * Get one queued configuration diagnostic.
+ * @param index Zero-based diagnostic index
+ * @param level Output severity of the diagnostic (may be NULL)
+ * @return Message text owned by the configuration, or NULL if index is out of
+ *         range
+ */
 const char* GetConfigWarning(int index, ErrorLevel* level) {
   if (index < 0 || index >= config_warning_count) return NULL;
   if (level) *level = config_warnings[index].level;
   return config_warnings[index].message;
 }
 
+/**
+ * Path of the user config file that preferences are saved into.
+ * @return Absolute path owned by the configuration, or an empty string if it
+ *         could not be determined
+ */
 const char* GetUserConfigPath(void) { return user_config_path; }
 
 /**
@@ -932,6 +957,14 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
   return NO_ERROR;
 }
 
+/**
+ * Insert a line pointer into a line list, growing the list when full.
+ * Takes ownership of line on success; the caller must not free it.
+ * @param list Line list to modify
+ * @param index Insertion position within the list
+ * @param line Heap-allocated line to insert
+ * @return true on success, false when growth allocation fails
+ */
 static bool lineListInsert(lineList* list, int index, char* line) {
   if (list->count == list->cap) {
     int cap = list->cap ? list->cap * 2 : 64;
@@ -947,6 +980,10 @@ static bool lineListInsert(lineList* list, int index, char* line) {
   return true;
 }
 
+/**
+ * Free every line in a list and reset the list to empty.
+ * @param list Line list to clear
+ */
 static void lineListFree(lineList* list) {
   for (int i = 0; i < list->count; i++) free(list->items[i]);
   free(list->items);
@@ -955,6 +992,12 @@ static void lineListFree(lineList* list) {
   list->cap = 0;
 }
 
+/**
+ * Copy len bytes from s into a new NUL-terminated heap string.
+ * @param s Source bytes; need not be NUL-terminated
+ * @param len Number of bytes to copy
+ * @return Newly allocated string owned by the caller, or NULL on failure
+ */
 static char* copyText(const char* s, size_t len) {
   char* out = malloc(len + 1);
   if (!out) return NULL;
