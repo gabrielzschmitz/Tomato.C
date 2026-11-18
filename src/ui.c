@@ -42,10 +42,10 @@ static void renderSlideTokens(int x, int y, int w, int h, SlideToken* tokens);
 static SlideProgress* slideProgressDup(const SlideProgress* p);
 static SlideControls* slideControlsDup(const ControlButton* btns, int count);
 /* History */
-static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
+static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
                               int* monthStartWeek, int* monthDays,
                               int* monthStartDow);
-static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
+static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
                         int* monthWeeks, int* monthStartWeek, int* monthDays,
                         int* monthStartDow, int* outYear, int* outMonth);
 static void historyOverviewRender(AppData* app, SlideDef* def);
@@ -742,8 +742,8 @@ FloatingDialog* CreateFloatingDialog(Vector2D position, Dimensions size,
   }
   dialog->visible = true;
   dialog->slides = NULL;
-  dialog->slideCount = 0;
-  dialog->currentSlide = 0;
+  dialog->slide_count = 0;
+  dialog->current_slide = 0;
   dialog->slide_type = SLIDE_TYPE_NONE;
   dialog->hovered_button = -1;
 
@@ -814,7 +814,7 @@ void FreeFloatingDialog(FloatingDialog* dialog) {
 
   /* Free welcome slides if present */
   if (dialog->slides) {
-    FreeWelcomeSlides(dialog->slides, dialog->slideCount);
+    FreeWelcomeSlides(dialog->slides, dialog->slide_count);
     dialog->slides = NULL;
   }
 
@@ -1046,8 +1046,8 @@ FloatingDialog* CreateWelcomeDialog(AppData* app) {
   if (dialog != NULL) {
     dialog->slide_type = SLIDE_TYPE_WELCOME;
     dialog->slides = BuildWelcomeSlides(size);
-    dialog->slideCount = 3 * WELCOME_SLIDE_COUNT;
-    dialog->currentSlide = 0;
+    dialog->slide_count = 3 * WELCOME_SLIDE_COUNT;
+    dialog->current_slide = 0;
     /* "Next  >" is always at index 1 on the first slide */
     dialog->hovered_button = 1;
   }
@@ -1082,8 +1082,8 @@ FloatingDialog* CreateContinueDialog(AppData* app) {
       FreeFloatingDialog(dialog);
       return NULL;
     }
-    dialog->slideCount = 3;
-    dialog->currentSlide = 0;
+    dialog->slide_count = 3;
+    dialog->current_slide = 0;
   }
   return dialog;
 }
@@ -1114,8 +1114,8 @@ FloatingDialog* CreateNoiseDialog(AppData* app) {
       FreeFloatingDialog(dialog);
       return NULL;
     }
-    dialog->slideCount = 1;
-    dialog->currentSlide = 0;
+    dialog->slide_count = 1;
+    dialog->current_slide = 0;
     dialog->slide_type = SLIDE_TYPE_NOISE;
     dialog->hovered_button = -1;
   }
@@ -1502,6 +1502,35 @@ SlideDef** BuildWelcomeSlides(Dimensions size) {
 }
 
 /**
+ * Build a SlideDef from a single pre-selected text string for a given
+ * icon type. Parses escape sequences via parseSlideText.
+ * @param text      Slide text with escape sequences (already resolved for icon_type)
+ * @param w         Slide width in columns
+ * @param h         Slide height in rows
+ * @param icon_type Icon type index for placeholder expansion
+ * @return Pointer to allocated SlideDef, or NULL on failure
+ */
+static SlideDef* buildSlideFromText(const char* text, int w, int h,
+                                    int icon_type) {
+  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
+  if (!def) return NULL;
+
+  def->tokens = parseSlideText(text, icon_type);
+  if (!def->tokens) {
+    free(def);
+    return NULL;
+  }
+
+  def->size.width = w;
+  def->size.height = h;
+  def->render = welcomeRender;
+  def->update = welcomeUpdate;
+  def->hovered = -1;
+
+  return def;
+}
+
+/**
  * Render the current welcome slide into the popup dialog.
  * Draws the box frame, progress indicator, content tokens, and nav controls.
  * @param app Application state (provides popup_dialog, screen)
@@ -1584,6 +1613,30 @@ static void welcomeUpdate(AppData* app, SlideDef* def) {
   }
   /* When mouse is not over any button, preserve existing keyboard-set
    * hovered values (do not reset to -1). */
+}
+
+/**
+ * Count the number of visible characters in a UTF-8 string.
+ * Each multi-byte sequence counts as a single character regardless of byte width.
+ * @param s The UTF-8 input string
+ * @return Number of visible characters
+ */
+static int utf8DisplayWidth(const char* s) {
+  int w = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      w++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      s += len;
+      w++;
+    }
+  }
+  return w;
 }
 
 /**
@@ -2067,174 +2120,6 @@ done_text:
 }
 
 /**
- * Update the selected noise track based on mouse position.
- *
- * Checks the mouse cursor against each track row (y + 8 + i*2)
- * and the master row (y + 10 + track_count*2), updating
- * data->selected and dialog->hovered_button on match.
- *
- * @param app Pointer to the application data
- * @param def Slide definition (unused - state lives in app->noise_data)
- */
-static void noiseSlideUpdate(AppData* app, SlideDef* def) {
-  (void)def;
-  FloatingDialog* d = app->popup_dialog;
-  if (!d) return;
-  int x = d->position.x;
-  int y = d->position.y;
-
-  WhiteNoiseData* data = &app->noise_data;
-  int track_count = data->track_count;
-  int master_row = y + 10 + track_count * 2;
-
-  int hovered = -1;
-  for (int i = 0; i < track_count; i++) {
-    int ry = y + 8 + i * 2;
-    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
-        app->mouse_x <= x + d->size.width - 3) {
-      hovered = i;
-      break;
-    }
-  }
-
-  if (hovered < 0)
-    if (app->mouse_y == master_row && app->mouse_x >= x + 2 &&
-        app->mouse_x <= x + d->size.width - 3)
-      hovered = track_count;
-
-  if (hovered >= 0) {
-    data->selected = hovered;
-    d->hovered_button = hovered;
-  }
-}
-
-/**
- * Default progress renderer for slides.
- * Draws the title with filled/empty dots ("Welcome ●●○○○") in
- * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
- * Current slide index is obtained from app->popup_dialog->currentSlide.
- * @param app    Application state
- * @param x      Absolute column position (slide left edge)
- * @param y      Absolute row position (progress line)
- * @param w      Slide width
- * @param def    Slide definition (unused)
- * @param params Progress parameters (title, icons, total)
- */
-void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
-                         SlideProgress* params) {
-  (void)def;
-  (void)w;
-  int slide_idx = app->popup_dialog->currentSlide;
-  int icon_type = GetConfigIconType();
-  char buf[64];
-
-  if (icon_type == ASCII || !params->icon_on[0] || !params->icon_off[0])
-    snprintf(buf, sizeof(buf), "%s %d/%d", params->title, slide_idx + 1,
-             params->total);
-  else {
-    char* p = buf;
-    int remaining = (int)(sizeof(buf) - (p - buf) - 1);
-    int n = snprintf(p, (size_t)remaining, "%s ", params->title);
-    p += n;
-    remaining -= n;
-    for (int i = 0; i < params->total && remaining > 0; i++) {
-      n = snprintf(p, (size_t)remaining, "%s",
-                   i <= slide_idx ? params->icon_on : params->icon_off);
-      p += n;
-      remaining -= n;
-    }
-    *p = '\0';
-  }
-  int dot_w = utf8DisplayWidth(buf);
-  mvprintw(y, x + 1 + ((w - 2) - dot_w) / 2, "%s", buf);
-}
-
-/**
- * Default controls renderer for slides.
- * Positions each button by its align field:
- *   LEFT   → x + 2
- *   CENTER → centered within (w - 2)
- *   RIGHT  → x + w - 2 - text_width
- * Draws with A_REVERSE when def->hovered matches the button index,
- * and registers a REGION_SLIDE_NAV click region with the action.
- * @param app    Application state
- * @param x      Absolute column position (slide left edge)
- * @param y      Absolute row position (controls line)
- * @param w      Slide width
- * @param def    Slide definition (provides hovered index)
- * @param params Controls parameters (button array + count)
- */
-void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
-                         SlideControls* params) {
-  for (int i = 0; i < params->count; i++) {
-    const ControlButton* btn = &params->buttons[i];
-    int tw = utf8DisplayWidth(btn->text);
-    int bx;
-    switch (btn->align) {
-      case ALIGN_SLIDE_LEFT:
-        bx = x + 2;
-        break;
-      case ALIGN_SLIDE_CENTER:
-        bx = x + 1 + ((w - 2) - tw) / 2;
-        break;
-      case ALIGN_SLIDE_RIGHT:
-        bx = x + w - 2 - tw;
-        break;
-      default:
-        bx = x + 2;
-        break;
-    }
-    int hover = (def->hovered == i);
-    const char* space = strchr(btn->text, ' ');
-    int keyW = space ? (int)(space - btn->text) : tw;
-    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
-    if (hover) attron(A_REVERSE);
-    mvprintw(y, bx, "%.*s", keyW, btn->text);
-    if (hover) attroff(A_REVERSE);
-    if (space) {
-      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
-      if (hover) attron(A_REVERSE);
-      mvprintw(y, bx + keyW, "%s", space);
-      if (hover) attroff(A_REVERSE);
-    }
-    RegisterClickRegion(app, bx, y, tw, 1, REGION_SLIDE_NAV,
-                        (MenuAction)btn->action, -1, i, 0);
-  }
-}
-
-/**
- * Draw the dialog frame with ACS line-drawing characters.
- * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
- * @param x X position of the dialog
- * @param y Y position of the dialog
- * @param w Width of the dialog
- * @param h Height of the dialog
- */
-void RenderSlideBox(int x, int y, int w, int h) {
-  mvaddch(y, x, ACS_ULCORNER);
-  for (int i = 1; i < w - 1; i++) mvaddch(y, x + i, ACS_HLINE);
-  mvaddch(y, x + w - 1, ACS_URCORNER);
-
-  mvaddch(y + h - 3, x, ACS_LTEE);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 3, x + i, ACS_HLINE);
-  mvaddch(y + h - 3, x + w - 1, ACS_RTEE);
-
-  mvaddch(y + h - 1, x, ACS_LLCORNER);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 1, x + i, ACS_HLINE);
-  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
-
-  mvaddch(y + 2, x, ACS_LTEE);
-  for (int i = 1; i < w - 1; i++) mvaddch(y + 2, x + i, ACS_HLINE);
-  mvaddch(y + 2, x + w - 1, ACS_RTEE);
-
-  for (int i = 0; i < h; i++) {
-    if (i == 0 || i == 2 || i == h - 3 || i == h - 1) continue;
-    mvaddch(y + i, x, ACS_VLINE);
-    mvaddch(y + i, x + w - 1, ACS_VLINE);
-  }
-}
-
-/**
  * Parse a slide text string with escape sequences into a linked list of
  * SlideToken structs.
  *
@@ -2443,32 +2328,195 @@ static SlideToken* parseSlideText(const char* text, int icon_type) {
 }
 
 /**
- * Build a SlideDef from a single pre-selected text string for a given
- * icon type. Parses escape sequences via parseSlideText.
- * @param text      Slide text with escape sequences (already resolved for icon_type)
- * @param w         Slide width in columns
- * @param h         Slide height in rows
- * @param icon_type Icon type index for placeholder expansion
- * @return Pointer to allocated SlideDef, or NULL on failure
+ * Measure the total display width of a UTF-8 string.
+ * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
+ * @param s The UTF-8 input string
+ * @return Display width in terminal columns
  */
-static SlideDef* buildSlideFromText(const char* text, int w, int h,
-                                    int icon_type) {
-  SlideDef* def = (SlideDef*)calloc(1, sizeof(SlideDef));
-  if (!def) return NULL;
+static int strDisplayWidth(const char* s) {
+  int total = 0;
+  while (*s) {
+    unsigned char c = (unsigned char)*s;
+    if (c < 0x80) {
+      s++;
+      total++;
+    } else if (c < 0xC0) {
+      s++;
+    } else {
+      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+      total += (c >= 0xF0) ? 2 : 1;
+      s += len;
+    }
+  }
+  return total;
+}
 
-  def->tokens = parseSlideText(text, icon_type);
-  if (!def->tokens) {
-    free(def);
-    return NULL;
+/**
+ * Update the selected noise track based on mouse position.
+ *
+ * Checks the mouse cursor against each track row (y + 8 + i*2)
+ * and the master row (y + 10 + track_count*2), updating
+ * data->selected and dialog->hovered_button on match.
+ *
+ * @param app Pointer to the application data
+ * @param def Slide definition (unused - state lives in app->noise_data)
+ */
+static void noiseSlideUpdate(AppData* app, SlideDef* def) {
+  (void)def;
+  FloatingDialog* d = app->popup_dialog;
+  if (!d) return;
+  int x = d->position.x;
+  int y = d->position.y;
+
+  WhiteNoiseData* data = &app->noise_data;
+  int track_count = data->track_count;
+  int master_row = y + 10 + track_count * 2;
+
+  int hovered = -1;
+  for (int i = 0; i < track_count; i++) {
+    int ry = y + 8 + i * 2;
+    if (app->mouse_y == ry && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3) {
+      hovered = i;
+      break;
+    }
   }
 
-  def->size.width = w;
-  def->size.height = h;
-  def->render = welcomeRender;
-  def->update = welcomeUpdate;
-  def->hovered = -1;
+  if (hovered < 0)
+    if (app->mouse_y == master_row && app->mouse_x >= x + 2 &&
+        app->mouse_x <= x + d->size.width - 3)
+      hovered = track_count;
 
-  return def;
+  if (hovered >= 0) {
+    data->selected = hovered;
+    d->hovered_button = hovered;
+  }
+}
+
+/**
+ * Default progress renderer for slides.
+ * Draws the title with filled/empty dots ("Welcome ●●○○○") in
+ * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
+ * Current slide index is obtained from app->popup_dialog->current_slide.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (progress line)
+ * @param w      Slide width
+ * @param def    Slide definition (unused)
+ * @param params Progress parameters (title, icons, total)
+ */
+void SlideProgressRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideProgress* params) {
+  (void)def;
+  (void)w;
+  int slide_idx = app->popup_dialog->current_slide;
+  int icon_type = GetConfigIconType();
+  char buf[64];
+
+  if (icon_type == ASCII || !params->icon_on[0] || !params->icon_off[0])
+    snprintf(buf, sizeof(buf), "%s %d/%d", params->title, slide_idx + 1,
+             params->total);
+  else {
+    char* p = buf;
+    int remaining = (int)(sizeof(buf) - (p - buf) - 1);
+    int n = snprintf(p, (size_t)remaining, "%s ", params->title);
+    p += n;
+    remaining -= n;
+    for (int i = 0; i < params->total && remaining > 0; i++) {
+      n = snprintf(p, (size_t)remaining, "%s",
+                   i <= slide_idx ? params->icon_on : params->icon_off);
+      p += n;
+      remaining -= n;
+    }
+    *p = '\0';
+  }
+  int dot_w = utf8DisplayWidth(buf);
+  mvprintw(y, x + 1 + ((w - 2) - dot_w) / 2, "%s", buf);
+}
+
+/**
+ * Default controls renderer for slides.
+ * Positions each button by its align field:
+ *   LEFT   → x + 2
+ *   CENTER → centered within (w - 2)
+ *   RIGHT  → x + w - 2 - text_width
+ * Draws with A_REVERSE when def->hovered matches the button index,
+ * and registers a REGION_SLIDE_NAV click region with the action.
+ * @param app    Application state
+ * @param x      Absolute column position (slide left edge)
+ * @param y      Absolute row position (controls line)
+ * @param w      Slide width
+ * @param def    Slide definition (provides hovered index)
+ * @param params Controls parameters (button array + count)
+ */
+void SlideControlsRender(AppData* app, int x, int y, int w, SlideDef* def,
+                         SlideControls* params) {
+  for (int i = 0; i < params->count; i++) {
+    const ControlButton* btn = &params->buttons[i];
+    int tw = utf8DisplayWidth(btn->text);
+    int bx;
+    switch (btn->align) {
+      case ALIGN_SLIDE_LEFT:
+        bx = x + 2;
+        break;
+      case ALIGN_SLIDE_CENTER:
+        bx = x + 1 + ((w - 2) - tw) / 2;
+        break;
+      case ALIGN_SLIDE_RIGHT:
+        bx = x + w - 2 - tw;
+        break;
+      default:
+        bx = x + 2;
+        break;
+    }
+    int hover = (def->hovered == i);
+    const char* space = strchr(btn->text, ' ');
+    int keyW = space ? (int)(space - btn->text) : tw;
+    SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
+    if (hover) attron(A_REVERSE);
+    mvprintw(y, bx, "%.*s", keyW, btn->text);
+    if (hover) attroff(A_REVERSE);
+    if (space) {
+      SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
+      if (hover) attron(A_REVERSE);
+      mvprintw(y, bx + keyW, "%s", space);
+      if (hover) attroff(A_REVERSE);
+    }
+    RegisterClickRegion(app, bx, y, tw, 1, REGION_SLIDE_NAV,
+                        (MenuAction)btn->action, -1, i, 0);
+  }
+}
+
+/**
+ * Draw the dialog frame with ACS line-drawing characters.
+ * The frame has a top rule, middle rule (at y+2), bottom rule, and vertical sides.
+ * @param x X position of the dialog
+ * @param y Y position of the dialog
+ * @param w Width of the dialog
+ * @param h Height of the dialog
+ */
+void RenderSlideBox(int x, int y, int w, int h) {
+  mvaddch(y, x, ACS_ULCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y, x + i, ACS_HLINE);
+  mvaddch(y, x + w - 1, ACS_URCORNER);
+
+  mvaddch(y + h - 3, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 3, x + i, ACS_HLINE);
+  mvaddch(y + h - 3, x + w - 1, ACS_RTEE);
+
+  mvaddch(y + h - 1, x, ACS_LLCORNER);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + h - 1, x + i, ACS_HLINE);
+  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
+
+  mvaddch(y + 2, x, ACS_LTEE);
+  for (int i = 1; i < w - 1; i++) mvaddch(y + 2, x + i, ACS_HLINE);
+  mvaddch(y + 2, x + w - 1, ACS_RTEE);
+
+  for (int i = 0; i < h; i++) {
+    if (i == 0 || i == 2 || i == h - 3 || i == h - 1) continue;
+    mvaddch(y + i, x, ACS_VLINE);
+    mvaddch(y + i, x + w - 1, ACS_VLINE);
+  }
 }
 
 /**
@@ -2605,8 +2653,8 @@ SlideDef** BuildHistoryTextSlide(const char* text, Dimensions size,
 }
 
 /**
- * Resolve cursor position (cursorWeek, cursorDow) into a concrete date
- * stored in history_data (selYear, selMonth, selDay).
+ * Resolve cursor position (cursor_week, cursor_dow) into a concrete date
+ * stored in history_data (sel_year, sel_month, sel_day).
  * @param app Application state
  */
 void HistoryResolveCursor(AppData* app) {
@@ -2615,22 +2663,22 @@ void HistoryResolveCursor(AppData* app) {
   int monthStartWeek[HISTORY_VISIBLE_MONTHS];
   int monthDays[HISTORY_VISIBLE_MONTHS];
   int monthStartDow[HISTORY_VISIBLE_MONTHS];
-  int totalWeeks = computeGraphLayout(h->firstYear, h->firstMonth, monthWeeks,
+  int totalWeeks = computeGraphLayout(h->first_year, h->first_month, monthWeeks,
                                       monthStartWeek, monthDays, monthStartDow);
 
-  if (h->cursorWeek < 0) h->cursorWeek = 0;
-  if (h->cursorWeek >= totalWeeks) h->cursorWeek = totalWeeks - 1;
-  if (h->cursorDow < 0) h->cursorDow = 0;
-  if (h->cursorDow > 6) h->cursorDow = 6;
+  if (h->cursor_week < 0) h->cursor_week = 0;
+  if (h->cursor_week >= totalWeeks) h->cursor_week = totalWeeks - 1;
+  if (h->cursor_dow < 0) h->cursor_dow = 0;
+  if (h->cursor_dow > 6) h->cursor_dow = 6;
 
   int y = 0, m = 0;
   int d =
-    weekDowToDay(h->cursorWeek, h->cursorDow, h->firstYear, h->firstMonth,
+    weekDowToDay(h->cursor_week, h->cursor_dow, h->first_year, h->first_month,
                  monthWeeks, monthStartWeek, monthDays, monthStartDow, &y, &m);
   if (d > 0) {
-    h->selYear = y;
-    h->selMonth = m;
-    h->selDay = d;
+    h->sel_year = y;
+    h->sel_month = m;
+    h->sel_day = d;
   }
 }
 
@@ -2646,7 +2694,7 @@ void CreateHistoryOverviewDialog(AppData* app) {
   int monthStartWeek[HISTORY_VISIBLE_MONTHS];
   int monthDays[HISTORY_VISIBLE_MONTHS];
   int monthStartDow[HISTORY_VISIBLE_MONTHS];
-  int totalWeeks = computeGraphLayout(h->firstYear, h->firstMonth, monthWeeks,
+  int totalWeeks = computeGraphLayout(h->first_year, h->first_month, monthWeeks,
                                       monthStartWeek, monthDays, monthStartDow);
 
   /* Resolve cursor → date */
@@ -2682,8 +2730,8 @@ void CreateHistoryOverviewDialog(AppData* app) {
   }
 
   dialog->slides = slides;
-  dialog->slideCount = 1;
-  dialog->currentSlide = 0;
+  dialog->slide_count = 1;
+  dialog->current_slide = 0;
   dialog->slide_type = SLIDE_TYPE_HISTORY_OVERVIEW;
   dialog->hovered_button = -1;
 
@@ -2703,13 +2751,13 @@ void CreateHistoryDayDialog(AppData* app) {
   int durations[100];
   int statuses[100];
   int scount =
-    HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
+    HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
                        indices, startTimes, endTimes, durations, statuses, 100);
 
-  if (h->dayScroll < 0) h->dayScroll = 0;
+  if (h->day_scroll < 0) h->day_scroll = 0;
   int maxVisible = 10;
-  if (h->dayScroll > scount - maxVisible) h->dayScroll = scount - maxVisible;
-  if (h->dayScroll < 0) h->dayScroll = 0;
+  if (h->day_scroll > scount - maxVisible) h->day_scroll = scount - maxVisible;
+  if (h->day_scroll < 0) h->day_scroll = 0;
 
   int visible = (scount < maxVisible) ? scount : maxVisible;
   int hdr =
@@ -2726,8 +2774,8 @@ void CreateHistoryDayDialog(AppData* app) {
   int n;
 
   /* Title at y=1 (title bar), \\n\\n skips separator row to y=3 */
-  n = snprintf(tp, remaining, "\\n\\c13\\aC%04d-%02d-%02d\\n\\n", h->selYear,
-               h->selMonth, h->selDay);
+  n = snprintf(tp, remaining, "\\n\\c13\\aC%04d-%02d-%02d\\n\\n", h->sel_year,
+               h->sel_month, h->sel_day);
   tp += n;
   remaining = (int)(sizeof(text) - (tp - text));
 
@@ -2753,7 +2801,7 @@ void CreateHistoryDayDialog(AppData* app) {
   remaining = (int)(sizeof(text) - (tp - text));
 
   /* Session rows */
-  int startRow = h->dayScroll;
+  int startRow = h->day_scroll;
   int endRow = startRow + visible;
   for (int i = startRow; i < endRow && i < scount; i++) {
     time_t endT = endTimes[i];
@@ -2813,8 +2861,8 @@ void CreateHistoryDayDialog(AppData* app) {
   }
 
   dialog->slides = slides;
-  dialog->slideCount = 1;
-  dialog->currentSlide = 0;
+  dialog->slide_count = 1;
+  dialog->current_slide = 0;
   dialog->slide_type = SLIDE_TYPE_HISTORY_DAY;
   dialog->hovered_button = -1;
 
@@ -2830,8 +2878,8 @@ void CreateHistoryStatsDialog(AppData* app) {
 
   /* Compute stats from 365 days of data */
   int currentStreak = 0, longestStreak = 0;
-  HistStreak(POMODORO_LOG, h->selYear, h->selMonth, h->selDay, &currentStreak,
-             &longestStreak);
+  HistStreak(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+             &currentStreak, &longestStreak);
 
   /* Total stats for last 365 days */
   time_t now = time(NULL);
@@ -3058,8 +3106,8 @@ void CreateHistoryStatsDialog(AppData* app) {
   }
 
   dialog->slides = slides;
-  dialog->slideCount = 1;
-  dialog->currentSlide = 0;
+  dialog->slide_count = 1;
+  dialog->current_slide = 0;
   dialog->slide_type = SLIDE_TYPE_HISTORY_STATS;
   dialog->hovered_button = -1;
 
@@ -3083,19 +3131,19 @@ static int computeMonthWeeks(int year, int month, int startDow) {
 /**
  * Dynamically compute the contribution graph dimensions and the list
  * of month boundaries.
- * @param firstYear First visible year
- * @param firstMonth First visible month (1-12)
+ * @param first_year First visible year
+ * @param first_month First visible month (1-12)
  * @param monthWeeks Output array[HISTORY_VISIBLE_MONTHS] - weeks per month
  * @param monthStartWeek Output array[HISTORY_VISIBLE_MONTHS] - starting week column per month
  * @param monthDays Output array[HISTORY_VISIBLE_MONTHS] - days per month
  * @param monthStartDow Output array[HISTORY_VISIBLE_MONTHS] - starting day-of-week per month
  * @return Total week columns across all 5 months
  */
-static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
+static int computeGraphLayout(int first_year, int first_month, int* monthWeeks,
                               int* monthStartWeek, int* monthDays,
                               int* monthStartDow) {
   int totalWeeks = 0;
-  int y = firstYear, m = firstMonth;
+  int y = first_year, m = first_month;
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
     monthDays[i] = HistDaysInMonth(y, m);
     monthStartDow[i] = HistDayOfWeek(y, m, 1);
@@ -3115,8 +3163,8 @@ static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
  * Returns the date (1-31) within a specific month, or 0 if out of range.
  * @param weekCol Week column index
  * @param dow Day-of-week row (0=Sunday)
- * @param firstYear First visible year
- * @param firstMonth First visible month
+ * @param first_year First visible year
+ * @param first_month First visible month
  * @param monthWeeks Weeks-per-month array
  * @param monthStartWeek Starting week column per month
  * @param monthDays Days-per-month array
@@ -3125,11 +3173,11 @@ static int computeGraphLayout(int firstYear, int firstMonth, int* monthWeeks,
  * @param outMonth Output - resolved month
  * @return Day of month (1-31), or 0 if out of range
  */
-static int weekDowToDay(int weekCol, int dow, int firstYear, int firstMonth,
+static int weekDowToDay(int weekCol, int dow, int first_year, int first_month,
                         int* monthWeeks, int* monthStartWeek, int* monthDays,
                         int* monthStartDow, int* outYear, int* outMonth) {
   /* Find which month this week falls in */
-  int y = firstYear, m = firstMonth;
+  int y = first_year, m = first_month;
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
     if (weekCol < monthStartWeek[i] + monthWeeks[i]) {
       int localWeek = weekCol - monthStartWeek[i];
@@ -3165,7 +3213,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
   int monthStartWeek[HISTORY_VISIBLE_MONTHS];
   int monthDays[HISTORY_VISIBLE_MONTHS];
   int monthStartDow[HISTORY_VISIBLE_MONTHS];
-  int totalWeeks = computeGraphLayout(h->firstYear, h->firstMonth, monthWeeks,
+  int totalWeeks = computeGraphLayout(h->first_year, h->first_month, monthWeeks,
                                       monthStartWeek, monthDays, monthStartDow);
 
   /* Center dialog */
@@ -3198,7 +3246,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
   /* Compute day counts for each month */
   int dailyCounts[HISTORY_VISIBLE_MONTHS][31];
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-    int yr = h->firstYear, mo = h->firstMonth + i;
+    int yr = h->first_year, mo = h->first_month + i;
     while (mo > 12) {
       mo -= 12;
       yr++;
@@ -3208,7 +3256,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
 
   /* Month headers */
   {
-    int ey = h->firstYear, em = h->firstMonth;
+    int ey = h->first_year, em = h->first_month;
     for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
       int mw = monthWeeks[i];
       int headerX = gridStartX + dayLabelW + monthStartWeek[i] * 3 +
@@ -3249,7 +3297,7 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
       int cellX = gridStartX + dayLabelW + 1 + wc * 3;
 
       /* Find which month this week belongs to */
-      int cyear = h->firstYear, cmonth = h->firstMonth;
+      int cyear = h->first_year, cmonth = h->first_month;
       int found = 0;
       for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
         if (wc >= monthStartWeek[i] && wc < monthStartWeek[i] + monthWeeks[i]) {
@@ -3261,10 +3309,10 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
             const char* icon = HISTORY_ICONS[level];
 
             /* Check if this is the selected or hovered day */
-            bool isSel = (h->selYear == cyear && h->selMonth == cmonth &&
-                          h->selDay == dayNum);
-            bool isHov = (h->hoverWeek >= 0 && h->hoverWeek == wc &&
-                          h->hoverDow == dow && !isSel);
+            bool isSel = (h->sel_year == cyear && h->sel_month == cmonth &&
+                          h->sel_day == dayNum);
+            bool isHov = (h->hover_week >= 0 && h->hover_week == wc &&
+                          h->hover_dow == dow && !isSel);
 
             if (isSel || isHov) {
               SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
@@ -3295,27 +3343,27 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
   {
     int streakY = y + 11;
     int currentStreak = 0, longestStreak = 0;
-    HistStreak(POMODORO_LOG, h->selYear, h->selMonth, h->selDay, &currentStreak,
-               &longestStreak);
+    HistStreak(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+               &currentStreak, &longestStreak);
 
     SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
     mvprintw(streakY + 1, x + 2, "Current Streak: %d day%s", currentStreak,
              currentStreak == 1 ? "" : "s");
 
     /* Sidebar: selected day info box */
-    if (h->selDay > 0) {
+    if (h->sel_day > 0) {
       int boxW = 16; /* outer width: left + 14 content + right */
       int boxX = x + w - 1 - boxW;
       int level = 0;
       int cc = 0;
       for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
-        int yr = h->firstYear, mo = h->firstMonth + i;
+        int yr = h->first_year, mo = h->first_month + i;
         while (mo > 12) {
           mo -= 12;
           yr++;
         }
-        if (yr == h->selYear && mo == h->selMonth) {
-          cc = dailyCounts[i][h->selDay - 1];
+        if (yr == h->sel_year && mo == h->sel_month) {
+          cc = dailyCounts[i][h->sel_day - 1];
           break;
         }
       }
@@ -3332,8 +3380,8 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
                                        "May", "Jun", "Jul", "Aug",
                                        "Sep", "Oct", "Nov", "Dec"};
       char dateBuf[20];
-      snprintf(dateBuf, sizeof(dateBuf), "%d %s %d", h->selDay,
-               monNames[h->selMonth - 1], h->selYear);
+      snprintf(dateBuf, sizeof(dateBuf), "%d %s %d", h->sel_day,
+               monNames[h->sel_month - 1], h->sel_year);
       SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
       mvprintw(streakY + 1, boxX + 1, "%s", HISTORY_ICONS[level]);
       SetColor(COLOR_WHITE, NO_COLOR, A_BOLD);
@@ -3359,27 +3407,27 @@ static void historyOverviewRender(AppData* app, SlideDef* def) {
 
   {
     int infoY = sepY + 1;
-    if (h->selDay > 0) {
+    if (h->sel_day > 0) {
       int sIndices[100];
       time_t sTimes[100];
       int sDurations[100];
       int sStatuses[100];
       int scount =
-        HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth, h->selDay,
+        HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
                            sIndices, sTimes, NULL, sDurations, sStatuses, 100);
 
       static const char* dows[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
                                    "Thursday", "Friday", "Saturday"};
       struct tm tm = {0};
-      tm.tm_year = h->selYear - 1900;
-      tm.tm_mon = h->selMonth - 1;
-      tm.tm_mday = h->selDay;
+      tm.tm_year = h->sel_year - 1900;
+      tm.tm_mon = h->sel_month - 1;
+      tm.tm_mday = h->sel_day;
       mktime(&tm);
       int dw = tm.tm_wday;
 
       SetColor(COLOR_CYAN, NO_COLOR, A_BOLD);
-      mvprintw(infoY, x + 2, "%04d-%02d-%02d • %s", h->selYear, h->selMonth,
-               h->selDay, dows[dw]);
+      mvprintw(infoY, x + 2, "%04d-%02d-%02d • %s", h->sel_year, h->sel_month,
+               h->sel_day, dows[dw]);
 
       SetColor(COLOR_WHITE, NO_COLOR, A_NORMAL);
       int totalMins = 0;
@@ -3483,60 +3531,12 @@ static void historyOverviewUpdate(AppData* app, SlideDef* def) {
     int col = (app->mouse_x - gridX) / 3;
     int row = app->mouse_y - gridY;
     if (col >= 0 && row >= 0 && row < 7) {
-      h->hoverWeek = col;
-      h->hoverDow = row;
+      h->hover_week = col;
+      h->hover_dow = row;
       return;
     }
   }
-  h->hoverWeek = -1;
-}
-
-/**
- * Measure the total display width of a UTF-8 string.
- * Icons (4-byte sequences) count as 2 columns; everything else counts as 1.
- * @param s The UTF-8 input string
- * @return Display width in terminal columns
- */
-static int strDisplayWidth(const char* s) {
-  int total = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      total++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      total += (c >= 0xF0) ? 2 : 1;
-      s += len;
-    }
-  }
-  return total;
-}
-
-/**
- * Count the number of visible characters in a UTF-8 string.
- * Each multi-byte sequence counts as a single character regardless of byte width.
- * @param s The UTF-8 input string
- * @return Number of visible characters
- */
-static int utf8DisplayWidth(const char* s) {
-  int w = 0;
-  while (*s) {
-    unsigned char c = (unsigned char)*s;
-    if (c < 0x80) {
-      s++;
-      w++;
-    } else if (c < 0xC0) {
-      s++;
-    } else {
-      int len = (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
-      s += len;
-      w++;
-    }
-  }
-  return w;
+  h->hover_week = -1;
 }
 
 /**
@@ -3585,8 +3585,8 @@ FloatingDialog* CreatePreferencesDialog(AppData* app) {
     def->hovered = 0;
     slides[0] = def;
     dialog->slides = slides;
-    dialog->slideCount = 1;
-    dialog->currentSlide = 0;
+    dialog->slide_count = 1;
+    dialog->current_slide = 0;
     dialog->slide_type = SLIDE_TYPE_PREFERENCES;
     dialog->hovered_button = 0;
   }
@@ -3633,8 +3633,8 @@ FloatingDialog* CreatePrefsStepperDialog(AppData* app, int idx) {
     def->slide_type = SLIDE_TYPE_PREFS_STEPPER;
     slides[0] = def;
     d->slides = slides;
-    d->slideCount = 1;
-    d->currentSlide = 0;
+    d->slide_count = 1;
+    d->current_slide = 0;
     d->slide_type = SLIDE_TYPE_PREFS_STEPPER;
     d->hovered_button = idx;
     app->prefs.edit_index = idx;
@@ -3689,8 +3689,8 @@ FloatingDialog* CreatePrefsSelectDialog(AppData* app, int idx) {
     def->hovered = *app->prefs.fields[idx].int_value;
     slides[0] = def;
     d->slides = slides;
-    d->slideCount = 1;
-    d->currentSlide = 0;
+    d->slide_count = 1;
+    d->current_slide = 0;
     d->slide_type = SLIDE_TYPE_PREFS_SELECT;
     d->hovered_button = *app->prefs.fields[idx].int_value;
     app->prefs.select_index = idx;
@@ -4517,8 +4517,8 @@ FloatingDialog* CreateHelpDialog(AppData* app) {
     def->hovered = 0;
     slides[0] = def;
     dialog->slides = slides;
-    dialog->slideCount = 1;
-    dialog->currentSlide = 0;
+    dialog->slide_count = 1;
+    dialog->current_slide = 0;
     dialog->slide_type = SLIDE_TYPE_HELP;
     dialog->hovered_button = 0;
   }

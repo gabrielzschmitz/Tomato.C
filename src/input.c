@@ -42,11 +42,11 @@ static void historyRebuildOverview(AppData* app);
 static void historyMoveCursorByDays(AppData* app, int dayDelta);
 /* Preferences */
 static int prefFieldIndexBySelectOffset(AppData* app, int sel_off);
-static void PrefsRequestClose(AppData* app);
+static void prefsRequestClose(AppData* app);
 /* Text input */
-static bool IsTextInputByte(int key);
-static bool InputEnsureCapacity(InputState* input, int needed);
-static bool IsConfirmationDialog(const FloatingDialog* dialog);
+static bool isTextInputByte(int key);
+static bool inputEnsureCapacity(InputState* input, int needed);
+static bool isConfirmationDialog(const FloatingDialog* dialog);
 
 /**
  * ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ static bool IsConfirmationDialog(const FloatingDialog* dialog);
  * @param key Key value returned by getch()
  * @return true if the key should be inserted as text
  */
-static bool IsTextInputByte(int key) {
+static bool isTextInputByte(int key) {
   return (key >= ' ' && key <= '~') || (key >= 0x80 && key <= 0xFF);
 }
 
@@ -69,7 +69,7 @@ static bool IsTextInputByte(int key) {
  * @param dialog Dialog to inspect
  * @return true for quit, skip, and reset confirmations
  */
-static bool IsConfirmationDialog(const FloatingDialog* dialog) {
+static bool isConfirmationDialog(const FloatingDialog* dialog) {
   if (!dialog) return false;
   MenuAction first = dialog->menu.items[0].action;
   return first == ForcefullyQuitApp || first == ForcefullySkipPomodoroStep ||
@@ -83,7 +83,7 @@ static bool IsConfirmationDialog(const FloatingDialog* dialog) {
  * @param needed Number of text bytes required (excluding the null terminator)
  * @return true on success, false on allocation failure
  */
-static bool InputEnsureCapacity(InputState* input, int needed) {
+static bool inputEnsureCapacity(InputState* input, int needed) {
   if (!input) return false;
   if (needed <= input->max_len) return true;
 
@@ -93,7 +93,7 @@ static bool InputEnsureCapacity(InputState* input, int needed) {
 
   char* grown = realloc(input->buffer, (size_t)capacity);
   if (!grown) {
-    LogError("InputEnsureCapacity", MALLOC_ERROR);
+    LogError("inputEnsureCapacity", MALLOC_ERROR);
     return false;
   }
   input->buffer = grown;
@@ -119,7 +119,7 @@ void ProcessKeyInput(AppData* app, int key) {
     effective_mode = DEFAULT;
 
   /* Handle printable and UTF-8 bytes in INSERT mode via special entry */
-  if (effective_mode == INSERT && IsTextInputByte(key)) {
+  if (effective_mode == INSERT && isTextInputByte(key)) {
     for (size_t i = 0; i < numKeyFunctions; i++) {
       if (keys[i].key == -1 && (keys[i].modes & effective_mode) &&
           (keys[i].scene_types & (1 << current_scene))) {
@@ -345,7 +345,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
       app->popup_dialog->slide_type != SLIDE_TYPE_WELCOME &&
       app->popup_dialog->slide_type != SLIDE_TYPE_CONTINUE &&
       app->popup_dialog->slide_type != SLIDE_TYPE_NOISE) {
-    PrefsRequestClose(app);
+    prefsRequestClose(app);
     return;
   }
   if (inside_popup) {
@@ -404,11 +404,12 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           if (col >= 0 && dow >= 0 && dow < 7) {
             HistoryData* h = &app->history_data;
             /* If clicking same cell already selected, open day detail */
-            if (col == h->cursorWeek && dow == h->cursorDow && h->selDay > 0) {
+            if (col == h->cursor_week && dow == h->cursor_dow &&
+                h->sel_day > 0) {
               HistoryOpenDayDetail(app);
             } else {
-              h->cursorDow = dow;
-              h->cursorWeek = col;
+              h->cursor_dow = dow;
+              h->cursor_week = col;
               HistoryResolveCursor(app);
               CreateHistoryOverviewDialog(app);
             }
@@ -464,10 +465,10 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
     if (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
         app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) {
       FloatingDialog* d = app->popup_dialog;
-      int stride = d->slideCount / 3;
+      int stride = d->slide_count / 3;
       int icon_type = GetConfigIconType();
       if (!d->slides) return;
-      SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+      SlideDef* def = d->slides[icon_type * stride + d->current_slide];
       if (!def) return;
       if (event->bstate & REPORT_MOUSE_POSITION) {
         def->update(app, def);
@@ -488,7 +489,7 @@ static void handleMousePopup(AppData* app, MEVENT* event) {
           (app->popup_dialog->slide_type == SLIDE_TYPE_WELCOME ||
            app->popup_dialog->slide_type == SLIDE_TYPE_CONTINUE) &&
           (is_click || event->bstate == BUTTON1_RELEASED)) {
-        def = d->slides[icon_type * stride + d->currentSlide];
+        def = d->slides[icon_type * stride + d->current_slide];
         def->hovered = -1;
       }
       return;
@@ -784,7 +785,7 @@ bool HandlePopupInput(AppData* app, int key) {
   /* Quit / skip / reset confirmations: only menu navigation, confirm, and
    * cancel are valid here. This prevents the quit key from bypassing the
    * dialog and keeps all confirmations behaving the same way. */
-  if (IsConfirmationDialog(app->popup_dialog)) {
+  if (isConfirmationDialog(app->popup_dialog)) {
     if (IsKeyAssignedToAction(key, ExecuteMenuAction))
       ExecuteMenuAction(app);
     else if (IsKeyAssignedToAction(key, ChangeSelectedItemLeft))
@@ -801,7 +802,7 @@ bool HandlePopupInput(AppData* app, int key) {
     if (IsKeyAssignedToAction(key, ExecuteMenuAction)) {
       ExecuteMenuAction(app);
     } else if (IsKeyAssignedToAction(key, ClosePopup)) {
-      PrefsRequestClose(app);
+      prefsRequestClose(app);
     } else if (IsKeyAssignedToAction(key, ChangeSelectedItemLeft)) {
       ChangeSelectedItemLeft(app);
     } else if (IsKeyAssignedToAction(key, ChangeSelectedItemRight)) {
@@ -1388,8 +1389,8 @@ void InputInsertChar(AppData* app) {
   InputState* input = app->screen->panels[app->screen->current_panel].input;
   if (!input) return;
   int key = app->user_input;
-  if (!IsTextInputByte(key)) return;
-  if (!InputEnsureCapacity(input, input->len + 1)) return;
+  if (!isTextInputByte(key)) return;
+  if (!inputEnsureCapacity(input, input->len + 1)) return;
 
   for (int i = input->len; i > input->cursor; i--)
     input->buffer[i] = input->buffer[i - 1];
@@ -1813,18 +1814,18 @@ void ClosePopup(AppData* app) {
  */
 void GoPrevSlide(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
-  if (d && d->currentSlide > 0) {
-    int stride = d->slideCount / 3;
+  if (d && d->current_slide > 0) {
+    int stride = d->slide_count / 3;
     int icon_type = GetConfigIconType();
-    SlideDef* cur = d->slides[icon_type * stride + d->currentSlide];
+    SlideDef* cur = d->slides[icon_type * stride + d->current_slide];
     const char* btn_text = NULL;
     if (cur && cur->controls && d->hovered_button >= 0 &&
         d->hovered_button < cur->controls->count)
       btn_text = cur->controls->buttons[d->hovered_button].text;
-    d->currentSlide--;
+    d->current_slide--;
     d->hovered_button = 0;
     if (btn_text) {
-      SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+      SlideDef* def = d->slides[icon_type * stride + d->current_slide];
       if (def && def->controls) {
         for (int i = 0; i < def->controls->count; i++) {
           if (strcmp(def->controls->buttons[i].text, btn_text) == 0) {
@@ -1844,18 +1845,18 @@ void GoPrevSlide(AppData* app) {
 void GoNextSlide(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
   if (d) {
-    int stride = d->slideCount / 3;
-    if (d->currentSlide < stride - 1) {
+    int stride = d->slide_count / 3;
+    if (d->current_slide < stride - 1) {
       int icon_type = GetConfigIconType();
-      SlideDef* cur = d->slides[icon_type * stride + d->currentSlide];
+      SlideDef* cur = d->slides[icon_type * stride + d->current_slide];
       const char* btn_text = NULL;
       if (cur && cur->controls && d->hovered_button >= 0 &&
           d->hovered_button < cur->controls->count)
         btn_text = cur->controls->buttons[d->hovered_button].text;
-      d->currentSlide++;
+      d->current_slide++;
       d->hovered_button = 0;
       if (btn_text) {
-        SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+        SlideDef* def = d->slides[icon_type * stride + d->current_slide];
         if (def && def->controls) {
           for (int i = 0; i < def->controls->count; i++) {
             if (strcmp(def->controls->buttons[i].text, btn_text) == 0) {
@@ -1878,10 +1879,10 @@ void GoNextSlide(AppData* app) {
 void SelectPrevButton(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
   if (!d) return;
-  int stride = d->slideCount / 3;
+  int stride = d->slide_count / 3;
   int icon_type = GetConfigIconType();
   if (!d->slides) return;
-  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  SlideDef* def = d->slides[icon_type * stride + d->current_slide];
   if (!def) return;
   if (def->controls && d->hovered_button > 0) {
     d->hovered_button--;
@@ -1897,10 +1898,10 @@ void SelectPrevButton(AppData* app) {
 void SelectNextButton(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
   if (!d) return;
-  int stride = d->slideCount / 3;
+  int stride = d->slide_count / 3;
   int icon_type = GetConfigIconType();
   if (!d->slides) return;
-  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  SlideDef* def = d->slides[icon_type * stride + d->current_slide];
   if (!def) return;
   if (def->controls && d->hovered_button < def->controls->count - 1) {
     d->hovered_button++;
@@ -1917,10 +1918,10 @@ void SelectNextButton(AppData* app) {
 void ExecuteButtonAction(AppData* app) {
   FloatingDialog* d = app->popup_dialog;
   if (!d) return;
-  int stride = d->slideCount / 3;
+  int stride = d->slide_count / 3;
   int icon_type = GetConfigIconType();
   if (!d->slides) return;
-  SlideDef* def = d->slides[icon_type * stride + d->currentSlide];
+  SlideDef* def = d->slides[icon_type * stride + d->current_slide];
   if (!def || !def->controls) return;
   if (d->hovered_button >= 0 && d->hovered_button < def->controls->count &&
       def->controls->buttons[d->hovered_button].action)
@@ -2267,7 +2268,7 @@ void UndoNotes(AppData* app) {
       char* text = GapBufferToString(note->text);
       if (text) {
         int len = strlen(text);
-        if (InputEnsureCapacity(input, len)) {
+        if (inputEnsureCapacity(input, len)) {
           memcpy(input->buffer, text, (size_t)len);
           input->buffer[len] = '\0';
           input->len = len;
@@ -2348,7 +2349,7 @@ void RedoNotes(AppData* app) {
       char* text = GapBufferToString(note->text);
       if (text) {
         int len = strlen(text);
-        if (InputEnsureCapacity(input, len)) {
+        if (inputEnsureCapacity(input, len)) {
           memcpy(input->buffer, text, (size_t)len);
           input->buffer[len] = '\0';
           input->len = len;
@@ -2549,39 +2550,39 @@ void OpenHistoryPopup(AppData* app) {
   int curYear = tm->tm_year + 1900;
   int curMonth = tm->tm_mon + 1;
 
-  h->firstYear = curYear;
-  h->firstMonth = curMonth;
+  h->first_year = curYear;
+  h->first_month = curMonth;
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
-    if (--h->firstMonth < 1) {
-      h->firstMonth = 12;
-      h->firstYear--;
+    if (--h->first_month < 1) {
+      h->first_month = 12;
+      h->first_year--;
     }
   }
 
   /* Resolve cursor to today */
-  h->selYear = curYear;
-  h->selMonth = curMonth;
-  h->selDay = tm->tm_mday;
-  h->cursorDow = tm->tm_wday;
-  h->cursorWeek = 0; /* will be corrected by resolveCursor if needed */
-  h->dayScroll = 0;
+  h->sel_year = curYear;
+  h->sel_month = curMonth;
+  h->sel_day = tm->tm_mday;
+  h->cursor_dow = tm->tm_wday;
+  h->cursor_week = 0; /* will be corrected by resolveCursor if needed */
+  h->day_scroll = 0;
 
   /* Determine which week column today falls in */
   int mw[HISTORY_VISIBLE_MONTHS], msw[HISTORY_VISIBLE_MONTHS];
   int md[HISTORY_VISIBLE_MONTHS], msd[HISTORY_VISIBLE_MONTHS];
-  int y = h->firstYear, m = h->firstMonth;
+  int y = h->first_year, m = h->first_month;
   for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
     md[i] = HistDaysInMonth(y, m);
     msd[i] = HistDayOfWeek(y, m, 1);
     mw[i] = (msd[i] + md[i] + 6) / 7;
     msw[i] = (i == 0) ? 0 : msw[i - 1] + mw[i - 1];
     if (y == curYear && m == curMonth) {
-      int dayOffset = curMonth - h->firstMonth;
+      int dayOffset = curMonth - h->first_month;
       if (dayOffset < 0) dayOffset += 12;
       if (dayOffset < HISTORY_VISIBLE_MONTHS) {
         int localWeek =
           (tm->tm_wday < msd[i]) ? 0 : (tm->tm_mday - 1 + msd[i]) / 7;
-        h->cursorWeek = msw[i] + localWeek;
+        h->cursor_week = msw[i] + localWeek;
       }
     }
     if (++m > 12) {
@@ -2618,9 +2619,9 @@ void HistoryOpenDayDetail(AppData* app) {
   HistoryData* h = &app->history_data;
 
   /* Ensure cursor is resolved */
-  if (h->selDay == 0) HistoryResolveCursor(app);
+  if (h->sel_day == 0) HistoryResolveCursor(app);
 
-  h->dayScroll = 0;
+  h->day_scroll = 0;
   ClosePopup(app);
   CreateHistoryDayDialog(app);
 }
@@ -2644,7 +2645,7 @@ void HistoryOpenStatistics(AppData* app) {
 void HistoryCursorLeft(AppData* app) {
   if (!app) return;
   HistoryData* h = &app->history_data;
-  int delta = (h->selDay > 0 && h->selDay <= 7) ? -1 : -7;
+  int delta = (h->sel_day > 0 && h->sel_day <= 7) ? -1 : -7;
   historyMoveCursorByDays(app, delta);
 }
 
@@ -2657,8 +2658,8 @@ void HistoryCursorLeft(AppData* app) {
 void HistoryCursorRight(AppData* app) {
   if (!app) return;
   HistoryData* h = &app->history_data;
-  int dim = (h->selDay > 0) ? HistDaysInMonth(h->selYear, h->selMonth) : 31;
-  int delta = (h->selDay > 0 && h->selDay > dim - 7) ? 1 : 7;
+  int dim = (h->sel_day > 0) ? HistDaysInMonth(h->sel_year, h->sel_month) : 31;
+  int delta = (h->sel_day > 0 && h->sel_day > dim - 7) ? 1 : 7;
   historyMoveCursorByDays(app, delta);
 }
 
@@ -2681,7 +2682,7 @@ void HistoryCursorDown(AppData* app) { historyMoveCursorByDays(app, 1); }
 void HistoryScrollUp(AppData* app) {
   if (!app || !app->popup_dialog) return;
   HistoryData* h = &app->history_data;
-  if (h->dayScroll > 0) h->dayScroll--;
+  if (h->day_scroll > 0) h->day_scroll--;
 }
 
 /**
@@ -2694,9 +2695,10 @@ void HistoryScrollDown(AppData* app) {
   int indices[100];
   time_t times[100];
   int dur[100], st[100];
-  int total = HistSessionsForDay(POMODORO_LOG, h->selYear, h->selMonth,
-                                 h->selDay, indices, times, NULL, dur, st, 100);
-  if (h->dayScroll < total - 1) h->dayScroll++;
+  int total =
+    HistSessionsForDay(POMODORO_LOG, h->sel_year, h->sel_month, h->sel_day,
+                       indices, times, NULL, dur, st, 100);
+  if (h->day_scroll < total - 1) h->day_scroll++;
 }
 
 /**
@@ -2721,7 +2723,7 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
   HistoryData* h = &app->history_data;
 
   /* Start from current resolved date, or today if none */
-  int y = h->selYear, m = h->selMonth, d = h->selDay;
+  int y = h->sel_year, m = h->sel_month, d = h->sel_day;
   if (d <= 0) {
     time_t now = time(NULL);
     struct tm* tm = localtime(&now);
@@ -2743,7 +2745,7 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
 
   /* Check if new date is within current 5-month window */
   {
-    int wy = h->firstYear, wm = h->firstMonth;
+    int wy = h->first_year, wm = h->first_month;
     int inWindow = 0;
     for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
       if (wy == newYear && wm == newMon) {
@@ -2757,12 +2759,12 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
     }
     if (!inWindow) {
       /* Scroll window so the new date is in the last visible month */
-      h->firstYear = newYear;
-      h->firstMonth = newMon;
+      h->first_year = newYear;
+      h->first_month = newMon;
       for (int i = 0; i < HISTORY_VISIBLE_MONTHS - 1; i++) {
-        if (--h->firstMonth < 1) {
-          h->firstMonth = 12;
-          h->firstYear--;
+        if (--h->first_month < 1) {
+          h->first_month = 12;
+          h->first_year--;
         }
       }
     }
@@ -2772,7 +2774,7 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
   int mw[HISTORY_VISIBLE_MONTHS], msw[HISTORY_VISIBLE_MONTHS];
   int md[HISTORY_VISIBLE_MONTHS], msd[HISTORY_VISIBLE_MONTHS];
   {
-    int y2 = h->firstYear, m2 = h->firstMonth;
+    int y2 = h->first_year, m2 = h->first_month;
     int acc = 0;
     for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
       md[i] = HistDaysInMonth(y2, m2);
@@ -2789,13 +2791,13 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
 
   /* Find the month index and compute grid position */
   {
-    int my = h->firstYear, mm = h->firstMonth;
+    int my = h->first_year, mm = h->first_month;
     for (int i = 0; i < HISTORY_VISIBLE_MONTHS; i++) {
       if (my == newYear && mm == newMon) {
         int localWeek = (msd[i] + newDay - 1) / 7;
         if (localWeek >= mw[i]) localWeek = mw[i] - 1;
-        h->cursorWeek = msw[i] + localWeek;
-        h->cursorDow = newDow;
+        h->cursor_week = msw[i] + localWeek;
+        h->cursor_dow = newDow;
         break;
       }
       if (++mm > 12) {
@@ -2805,9 +2807,9 @@ static void historyMoveCursorByDays(AppData* app, int dayDelta) {
     }
   }
 
-  h->selYear = newYear;
-  h->selMonth = newMon;
-  h->selDay = newDay;
+  h->sel_year = newYear;
+  h->sel_month = newMon;
+  h->sel_day = newDay;
   historyRebuildOverview(app);
 }
 
@@ -3104,7 +3106,7 @@ static void cancelPrefsPrompt(AppData* app) {
  * ask whether to save them instead of closing directly.
  * @param app Application state
  */
-static void PrefsRequestClose(AppData* app) {
+static void prefsRequestClose(AppData* app) {
   if (!app->popup_dialog) return;
   if (app->popup_dialog->menu.items[0].action == PrefsSaveAndClose) {
     cancelPrefsPrompt(app);
@@ -3118,7 +3120,7 @@ static void PrefsRequestClose(AppData* app) {
   showPrefsSavePrompt(app);
 }
 
-void PrefsBack(AppData* app) { PrefsRequestClose(app); }
+void PrefsBack(AppData* app) { prefsRequestClose(app); }
 
 void PrefsSaveAndClose(AppData* app) {
   ErrorType status = PrefsSaveChanges(app);

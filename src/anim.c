@@ -60,12 +60,12 @@ static void renderCurrentFrame(Rollfilm* rollfilm, int start_y, int start_x);
  */
 
 /**
- * Create a new Rollfilm with N frames of height M.
- * @param N Number of frames to allocate
- * @param M Height of each frame in lines
+ * Create a new Rollfilm with frame_count frames of height frame_height.
+ * @param frame_count Number of frames to allocate
+ * @param frame_height Height of each frame in lines
  * @return Pointer to the created Rollfilm, or NULL on allocation failure
  */
-Rollfilm* CreateRollfilm(int N, int M) {
+Rollfilm* CreateRollfilm(int frame_count, int frame_height) {
   Rollfilm* film = (Rollfilm*)malloc(sizeof(Rollfilm));
   if (film == NULL) {
     LogError("CreateRollfilm", MALLOC_ERROR);
@@ -74,8 +74,8 @@ Rollfilm* CreateRollfilm(int N, int M) {
 
   film->delta_frame_ms = GetCurrentTimeMS();
   film->current_frame = 0;
-  film->frame_count = N;
-  film->frame_height = M;
+  film->frame_count = frame_count;
+  film->frame_height = frame_height;
   film->frame_width = 0;
   film->default_frame = 0;
   film->loop = true;

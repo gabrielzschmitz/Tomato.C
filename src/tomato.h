@@ -3,12 +3,12 @@
 
 #include <ncurses.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "audio.h"
 #include "bar.h"
 #include "notes.h"
 #include "notify.h"
-#include "pomodoro.h"
 #include "ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
@@ -28,21 +28,42 @@
 #endif
 
 /**
+ * Pomodoro timer data structure.
+ * Tracks the current state of the pomodoro cycle.
+ */
+typedef struct PomodoroData {
+  int total_cycles;     /**< Total number of pomodoro cycles to complete */
+  int current_cycle;    /**< Current cycle number (1 to total_cycles) */
+  int work_time;        /**< Work time duration in minutes */
+  int short_pause_time; /**< Short pause duration in minutes */
+  int long_pause_time;  /**< Long pause duration in minutes */
+  int current_step; /**< Current step (0=work, 1=short pause, 2=long pause) */
+  int current_step_time;  /**< Elapsed time in current step (seconds) */
+  int last_step_time;     /**< Time from previous step for comparison */
+  int total_elapsed;      /**< Total elapsed time across all steps (seconds) */
+  double delta_time_ms;   /**< Elapsed ms since last frame update */
+  int session_index;      /**< Current session index for log entries */
+  time_t step_start_time; /**< Timestamp when current step started */
+  time_t session_start_time; /**< Timestamp when the session was started */
+  int status;                /**< 0 = completed, 1 = uncompleted */
+} PomodoroData;
+
+/**
  * Stores cursor position within the contribution graph,
  * the scroll anchor (first visible month), the resolved
  * selected date, and scroll offset for the day-detail list.
  */
 typedef struct {
-  int cursorWeek; /**< Week column index (0 .. totalWeeks-1) */
-  int cursorDow;  /**< Day-of-week row (0=Sun .. 6=Sat) */
-  int firstYear;  /**< Year of the first of 5 visible months */
-  int firstMonth; /**< Month of the first of 5 visible months (1-12) */
-  int selYear;    /**< Resolved date — year */
-  int selMonth;   /**< Resolved date — month (1-12) */
-  int selDay;     /**< Resolved date — day (1-31) */
-  int dayScroll;  /**< Scroll offset for day-detail session list */
-  int hoverWeek;  /**< Week column under mouse (-1 = none) */
-  int hoverDow;   /**< Day-of-week row under mouse */
+  int cursor_week; /**< Week column index (0 .. totalWeeks-1) */
+  int cursor_dow;  /**< Day-of-week row (0=Sun .. 6=Sat) */
+  int first_year;  /**< Year of the first of 5 visible months */
+  int first_month; /**< Month of the first of 5 visible months (1-12) */
+  int sel_year;    /**< Resolved date — year */
+  int sel_month;   /**< Resolved date — month (1-12) */
+  int sel_day;     /**< Resolved date — day (1-31) */
+  int day_scroll;  /**< Scroll offset for day-detail session list */
+  int hover_week;  /**< Week column under mouse (-1 = none) */
+  int hover_dow;   /**< Day-of-week row under mouse */
 } HistoryData;
 
 /**

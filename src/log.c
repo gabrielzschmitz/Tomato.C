@@ -32,30 +32,36 @@
 #define HISTORY_STREAK_CACHE_SIZE 16
 static time_t retry_start = 0;
 
+/**
+ * Cached daily session counts for one month.
+ */
 typedef struct {
-  bool valid;
-  int year;
-  int month;
-  int days;
-  int counts[31];
-} HistoryMonthCache;
+  bool valid;     /**< Whether the cached month is populated */
+  int year;       /**< Year of the cached month */
+  int month;      /**< Month of the cached month (1-12) */
+  int days;       /**< Number of days in the cached month */
+  int counts[31]; /**< Session count for each day of the month */
+} historyMonthCache;
 
+/**
+ * Cached streak values for one day.
+ */
 typedef struct {
-  bool valid;
-  int year;
-  int month;
-  int day;
-  int current;
-  int longest;
-} HistoryStreakCache;
+  bool valid;  /**< Whether the cached day is populated */
+  int year;    /**< Year of the cached day */
+  int month;   /**< Month of the cached day (1-12) */
+  int day;     /**< Day of the cached month (1-31) */
+  int current; /**< Current streak ending on the cached day */
+  int longest; /**< Longest streak ending on the cached day */
+} historyStreakCache;
 
 static void invalidateHistoryCache(void);
 static void refreshHistoryCache(const char* path);
 static int compareTimeValues(const void* left, const void* right);
 static void computeHistStreak(const char* path, int year, int month, int day,
                               int* current, int* longest);
-static HistoryMonthCache history_month_cache[HISTORY_MONTH_CACHE_SIZE];
-static HistoryStreakCache history_streak_cache[HISTORY_STREAK_CACHE_SIZE];
+static historyMonthCache history_month_cache[HISTORY_MONTH_CACHE_SIZE];
+static historyStreakCache history_streak_cache[HISTORY_STREAK_CACHE_SIZE];
 static char history_cache_path[HISTORY_CACHE_PATH_SIZE];
 static time_t history_cache_checked_at = 0;
 static time_t history_cache_mtime = 0;
@@ -67,33 +73,34 @@ static int history_streak_cache_next = 0;
  * Summary of a single recent pomodoro session for history display.
  */
 typedef struct {
-  int sessionIndex; /**< Session index from the binary log */
-  int cycle;        /**< Current cycle number (1-based) */
-  int totalCycles;  /**< Total pomodoro cycles configured */
-  int workTime;     /**< Work time duration in minutes */
-  int shortPause;   /**< Short pause duration in minutes */
-  int longPause;    /**< Long pause duration in minutes */
-  int totalElapsed; /**< Total elapsed time across steps (seconds) */
+  int session_index; /**< Session index from the binary log */
+  int cycle;         /**< Current cycle number (1-based) */
+  int total_cycles;  /**< Total pomodoro cycles configured */
+  int work_time;     /**< Work time duration in minutes */
+  int short_pause;   /**< Short pause duration in minutes */
+  int long_pause;    /**< Long pause duration in minutes */
+  int total_elapsed; /**< Total elapsed time across steps (seconds) */
   int
     step; /**< Current step at last record (0=work, 1=short pause, 2=long pause) */
-  int status;      /**< 0 = completed, 1 = uncompleted */
-  int sessionMins; /**< Total session time in minutes (completed only) */
+  int status;       /**< 0 = completed, 1 = uncompleted */
+  int session_mins; /**< Total session time in minutes (completed only) */
 } recentSessionInfo;
 
 /**
  * Aggregated pomodoro history statistics for the CLI report.
  */
 typedef struct {
-  int totalSessions;       /**< Total unique sessions */
-  int completedSessions;   /**< Count of completed sessions */
-  int totalWorkMinutes;    /**< Total work time in minutes */
-  int workHours;           /**< Work hours (totalWorkMinutes / 60) */
-  int workMins;            /**< Work minutes remainder */
-  int totalSessionMinutes; /**< Total session time including pauses (minutes) */
-  int sessionHours;        /**< Session hours (totalSessionMinutes / 60) */
-  int sessionMins;         /**< Session minutes remainder */
-  int numRecent;           /**< Number of recent session entries populated */
-  recentSessionInfo recentSessions
+  int total_sessions;     /**< Total unique sessions */
+  int completed_sessions; /**< Count of completed sessions */
+  int total_work_minutes; /**< Total work time in minutes */
+  int work_hours;         /**< Work hours (total_work_minutes / 60) */
+  int work_mins;          /**< Work minutes remainder */
+  int
+    total_session_minutes; /**< Total session time including pauses (minutes) */
+  int session_hours;       /**< Session hours (total_session_minutes / 60) */
+  int session_mins;        /**< Session minutes remainder */
+  int num_recent;          /**< Number of recent session entries populated */
+  recentSessionInfo recent_sessions
     [MAX_RECENT_SESSIONS]; /**< Array of recent session summaries */
 } pomodoroHistoryStats;
 
@@ -808,7 +815,7 @@ static NoteState charToNoteState(char c) {
  * @param path File path for the pomodoro log
  * @return The next session index (last index + 1, or 1 if no log exists)
  */
-static int GetLastLogIndex(const char* path) {
+static int getLastLogIndex(const char* path) {
   FILE* file = fopen(path, "rb");
   if (!file) return 1;
 
@@ -879,7 +886,7 @@ ErrorType SavePomodoro(const char* path, const PomodoroData* data) {
   if (!path || !data) return NO_ERROR;
 
   int index =
-    data->session_index > 0 ? data->session_index : GetLastLogIndex(path);
+    data->session_index > 0 ? data->session_index : getLastLogIndex(path);
 
   PomodoroLogRecord record = {
     .session_index = (uint16_t)index,
@@ -967,7 +974,7 @@ void GetPomodoroHistory(const char* path) {
   pomodoroHistoryStats stats =
     createPomodoroHistoryStats(path, MAX_RECENT_SESSIONS);
 
-  if (stats.totalSessions == 0) {
+  if (stats.total_sessions == 0) {
     printf("No pomodoro history found.\n");
     return;
   }
@@ -980,10 +987,10 @@ void GetPomodoroHistory(const char* path) {
   int curDay = lt->tm_mday;
 
   /* Compute 5-month window ending with current month */
-  int firstYear = curYear, firstMonth = curMonth - 4;
-  while (firstMonth < 1) {
-    firstMonth += 12;
-    firstYear--;
+  int first_year = curYear, first_month = curMonth - 4;
+  while (first_month < 1) {
+    first_month += 12;
+    first_year--;
   }
 
   /* Graph layout arrays */
@@ -991,7 +998,7 @@ void GetPomodoroHistory(const char* path) {
   int dailyCounts[5][31];
   int totalWeeks = 0;
 
-  int y = firstYear, m = firstMonth;
+  int y = first_year, m = first_month;
   for (int i = 0; i < 5; i++) {
     monthDays[i] = HistDaysInMonth(y, m);
     monthStartDow[i] = HistDayOfWeek(y, m, 1);
@@ -1043,7 +1050,7 @@ void GetPomodoroHistory(const char* path) {
   {
     char row[4096];
     memset(row, ' ', innerW);
-    int em = firstMonth;
+    int em = first_month;
     for (int i = 0; i < 5; i++) {
       if (monthWeeks[i] >= 2) {
         const char* name = monNames[em - 1];
@@ -1096,13 +1103,13 @@ void GetPomodoroHistory(const char* path) {
     char c1s[64], c2s[64], c3s[64];
     char c1c[64], c2c[64];
 
-    snprintf(c1s, sizeof(c1s), "Total sessions: %d", stats.totalSessions);
-    snprintf(c2s, sizeof(c2s), "Completed: %d", stats.completedSessions);
-    if (stats.workHours > 0)
-      snprintf(c3s, sizeof(c3s), "Work: %dh %dm", stats.workHours,
-               stats.workMins);
+    snprintf(c1s, sizeof(c1s), "Total sessions: %d", stats.total_sessions);
+    snprintf(c2s, sizeof(c2s), "Completed: %d", stats.completed_sessions);
+    if (stats.work_hours > 0)
+      snprintf(c3s, sizeof(c3s), "Work: %dh %dm", stats.work_hours,
+               stats.work_mins);
     else
-      snprintf(c3s, sizeof(c3s), "Work: %d min", stats.totalWorkMinutes);
+      snprintf(c3s, sizeof(c3s), "Work: %d min", stats.total_work_minutes);
 
     snprintf(c1c, sizeof(c1c), "Current streak: %dd", currentStreak);
     snprintf(c2c, sizeof(c2c), "Longest streak: %dd", longestStreak);
@@ -1435,7 +1442,7 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
       }
     }
   }
-  stats.completedSessions = nCompleted;
+  stats.completed_sessions = nCompleted;
 
   int uniqueSessions = 0;
   for (int i = 0; i < count; i++) {
@@ -1452,42 +1459,42 @@ static pomodoroHistoryStats createPomodoroHistoryStats(const char* path,
     }
   }
 
-  stats.totalSessions = uniqueSessions;
-  stats.numRecent = uniqueSessions > maxRecent ? maxRecent : uniqueSessions;
+  stats.total_sessions = uniqueSessions;
+  stats.num_recent = uniqueSessions > maxRecent ? maxRecent : uniqueSessions;
   int startIdx = uniqueSessions > maxRecent ? uniqueSessions - maxRecent : 0;
 
-  stats.totalWorkMinutes = totalWorkSeconds / 60;
-  stats.workHours = stats.totalWorkMinutes / 60;
-  stats.workMins = stats.totalWorkMinutes % 60;
+  stats.total_work_minutes = totalWorkSeconds / 60;
+  stats.work_hours = stats.total_work_minutes / 60;
+  stats.work_mins = stats.total_work_minutes % 60;
 
   totalSessionSeconds /= 60;
-  stats.totalSessionMinutes = totalSessionSeconds;
-  stats.sessionHours = totalSessionSeconds / 60;
-  stats.sessionMins = totalSessionSeconds % 60;
+  stats.total_session_minutes = totalSessionSeconds;
+  stats.session_hours = totalSessionSeconds / 60;
+  stats.session_mins = totalSessionSeconds % 60;
 
-  for (int i = 0; i < stats.numRecent; i++) {
+  for (int i = 0; i < stats.num_recent; i++) {
     int idx = startIdx + i;
     int sess = sessionIndices[idx];
-    recentSessionInfo* rs = &stats.recentSessions[i];
-    rs->sessionIndex = sess;
+    recentSessionInfo* rs = &stats.recent_sessions[i];
+    rs->session_index = sess;
 
     for (int j = 0; j < count; j++) {
       if (records[j].session_index == sess) {
-        rs->totalElapsed += records[j].current_step_time;
+        rs->total_elapsed += records[j].current_step_time;
         rs->step = records[j].current_step;
         rs->cycle = records[j].current_cycle;
-        rs->totalCycles = records[j].total_cycles;
-        rs->workTime = records[j].work_time;
+        rs->total_cycles = records[j].total_cycles;
+        rs->work_time = records[j].work_time;
         rs->status = records[j].status;
-        rs->shortPause = records[j].short_pause_time;
-        rs->longPause = records[j].long_pause_time;
+        rs->short_pause = records[j].short_pause_time;
+        rs->long_pause = records[j].long_pause_time;
       }
     }
 
     if (rs->status == 0) {
-      rs->sessionMins =
-        (rs->cycle * rs->workTime * 60 + (rs->cycle - 1) * rs->shortPause * 60 +
-         rs->longPause * 60) /
+      rs->session_mins =
+        (rs->cycle * rs->work_time * 60 +
+         (rs->cycle - 1) * rs->short_pause * 60 + rs->long_pause * 60) /
         60;
     }
   }
@@ -1626,7 +1633,7 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
 
   refreshHistoryCache(path);
   for (int i = 0; i < HISTORY_MONTH_CACHE_SIZE; i++) {
-    HistoryMonthCache* cache = &history_month_cache[i];
+    historyMonthCache* cache = &history_month_cache[i];
     if (cache->valid && cache->year == year && cache->month == month) {
       memcpy(counts, cache->counts, sizeof(cache->counts));
       return cache->days;
@@ -1637,7 +1644,7 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
   if (!file) {
     history_month_cache_next =
       (history_month_cache_next + 1) % HISTORY_MONTH_CACHE_SIZE;
-    HistoryMonthCache* cache = &history_month_cache[history_month_cache_next];
+    historyMonthCache* cache = &history_month_cache[history_month_cache_next];
     cache->valid = true;
     cache->year = year;
     cache->month = month;
@@ -1659,7 +1666,7 @@ int HistDailyCounts(const char* path, int year, int month, int* counts) {
 
   history_month_cache_next =
     (history_month_cache_next + 1) % HISTORY_MONTH_CACHE_SIZE;
-  HistoryMonthCache* cache = &history_month_cache[history_month_cache_next];
+  historyMonthCache* cache = &history_month_cache[history_month_cache_next];
   cache->valid = true;
   cache->year = year;
   cache->month = month;
@@ -1876,7 +1883,7 @@ void HistStreak(const char* path, int year, int month, int day, int* current,
 
   refreshHistoryCache(path);
   for (int i = 0; i < HISTORY_STREAK_CACHE_SIZE; i++) {
-    HistoryStreakCache* cache = &history_streak_cache[i];
+    historyStreakCache* cache = &history_streak_cache[i];
     if (cache->valid && cache->year == year && cache->month == month &&
         cache->day == day) {
       *current = cache->current;
@@ -1888,7 +1895,7 @@ void HistStreak(const char* path, int year, int month, int day, int* current,
   computeHistStreak(path, year, month, day, current, longest);
   history_streak_cache_next =
     (history_streak_cache_next + 1) % HISTORY_STREAK_CACHE_SIZE;
-  HistoryStreakCache* cache = &history_streak_cache[history_streak_cache_next];
+  historyStreakCache* cache = &history_streak_cache[history_streak_cache_next];
   cache->valid = true;
   cache->year = year;
   cache->month = month;

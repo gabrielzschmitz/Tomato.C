@@ -72,6 +72,30 @@ bool GapBufferSetText(GapBuffer* gb, const char* text) {
 }
 
 /**
+ * Ensure the buffer has enough capacity for the needed bytes.
+ * Grows buffer exponentially if necessary.
+ * @param gb Pointer to the gap buffer.
+ * @param needed Number of bytes needed.
+ * @return true if capacity is sufficient or growth succeeds, false otherwise.
+ */
+static bool ensureCapacity(GapBuffer* gb, size_t needed) {
+  if (gb->capacity >= needed) return true;
+
+  size_t new_cap = gb->capacity * 2;
+  while (new_cap < needed) new_cap *= 2;
+
+  char* new_buf = (char*)realloc(gb->buffer, new_cap);
+  if (new_buf) {
+    gb->buffer = new_buf;
+    gb->capacity = new_cap;
+    return true;
+  }
+
+  LogError("ensureCapacity", MALLOC_ERROR);
+  return false;
+}
+
+/**
  * Insert a character at the specified position.
  * Moves the gap to the position and inserts the character.
  * @param gb Pointer to the gap buffer.
@@ -156,29 +180,6 @@ char* GapBufferToString(const GapBuffer* gb) {
   result[gb->len] = '\0';
 
   return result;
-}
-
-/**
- * Ensure the buffer has enough capacity for the needed bytes.
- * Grows buffer exponentially if necessary.
- * @param gb Pointer to the gap buffer.
- * @param needed Number of bytes needed.
- */
-static bool ensureCapacity(GapBuffer* gb, size_t needed) {
-  if (gb->capacity >= needed) return true;
-
-  size_t new_cap = gb->capacity * 2;
-  while (new_cap < needed) new_cap *= 2;
-
-  char* new_buf = (char*)realloc(gb->buffer, new_cap);
-  if (new_buf) {
-    gb->buffer = new_buf;
-    gb->capacity = new_cap;
-    return true;
-  }
-
-  LogError("ensureCapacity", MALLOC_ERROR);
-  return false;
 }
 
 /**

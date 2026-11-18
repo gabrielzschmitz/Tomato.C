@@ -18,24 +18,25 @@
 #undef keys
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include "external/miniaudio.h"
 #pragma GCC diagnostic pop
 #define keys (g_config.key_bindings)
 
 /**
- * Private helper functions and state for audio playback.
+ * Node in the linked list of active looping sounds.
  */
-typedef struct LoopingPlayback {
-  ma_sound sound;
-  struct LoopingPlayback* next;
-} LoopingPlayback;
+typedef struct loopingPlayback {
+  ma_sound sound;               /**< Sound instance for this playback */
+  struct loopingPlayback* next; /**< Next active playback, or NULL */
+} loopingPlayback;
 
 static ErrorType playLoopingAudio(const char* audio_path, float volume);
 /* Noise Audio */
 static ma_engine noise_engine;
 static ma_sound_group notification_group;
 static ma_sound* noise_sounds = NULL;
-static LoopingPlayback* looping_playbacks = NULL;
+static loopingPlayback* looping_playbacks = NULL;
 static int noise_sound_count = 0;
 static bool noise_engine_initialized = false;
 
@@ -85,7 +86,7 @@ ErrorType PlayAudio(const char* audio_path, const float volume,
  * @return NO_ERROR on success or an audio error on failure.
  */
 static ErrorType playLoopingAudio(const char* audio_path, float volume) {
-  LoopingPlayback* playback = calloc(1, sizeof(*playback));
+  loopingPlayback* playback = calloc(1, sizeof(*playback));
   if (!playback) return MALLOC_ERROR;
 
   ma_result result = ma_sound_init_from_file(&noise_engine, audio_path, 0, NULL,
@@ -219,7 +220,7 @@ void ShutdownNoiseAudio(void) {
   }
 
   while (looping_playbacks) {
-    LoopingPlayback* playback = looping_playbacks;
+    loopingPlayback* playback = looping_playbacks;
     looping_playbacks = playback->next;
     ma_sound_stop(&playback->sound);
     ma_sound_uninit(&playback->sound);

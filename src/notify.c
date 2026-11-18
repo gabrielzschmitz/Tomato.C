@@ -30,10 +30,13 @@ static bool shouldDispatchAsync(void);
 static ErrorType queueNotification(const char* title, const char* description);
 static void* notificationThread(void* arg);
 
+/**
+ * Queued notification payload for the background dispatch thread.
+ */
 typedef struct {
-  char* title;
-  char* description;
-} NotificationRequest;
+  char* title;       /**< Notification title */
+  char* description; /**< Notification description */
+} notificationRequest;
 
 extern char** environ;
 
@@ -91,7 +94,7 @@ static bool shouldDispatchAsync(void) {
  * @return NO_ERROR when queued, or an allocation/thread error.
  */
 static ErrorType queueNotification(const char* title, const char* description) {
-  NotificationRequest* request = calloc(1, sizeof(*request));
+  notificationRequest* request = calloc(1, sizeof(*request));
   if (!request) return MALLOC_ERROR;
 
   size_t title_size = strlen(title) + 1;
@@ -123,11 +126,11 @@ static ErrorType queueNotification(const char* title, const char* description) {
 
 /**
  * Send one queued notification and release its copied strings.
- * @param arg NotificationRequest pointer.
+ * @param arg notificationRequest pointer.
  * @return Always NULL.
  */
 static void* notificationThread(void* arg) {
-  NotificationRequest* request = (NotificationRequest*)arg;
+  notificationRequest* request = (notificationRequest*)arg;
   ErrorType status = sendNotification(request->title, request->description);
   if (status != NO_ERROR) LogError("Notification worker", status);
   free(request->title);

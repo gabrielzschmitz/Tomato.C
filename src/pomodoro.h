@@ -1,28 +1,7 @@
 #ifndef POMODORO_H_
 #define POMODORO_H_
 
-#include <time.h>
-
-/**
- * Pomodoro timer data structure.
- * Tracks the current state of the pomodoro cycle.
- */
-typedef struct PomodoroData {
-  int total_cycles;     /**< Total number of pomodoro cycles to complete */
-  int current_cycle;    /**< Current cycle number (1 to total_cycles) */
-  int work_time;        /**< Work time duration in minutes */
-  int short_pause_time; /**< Short pause duration in minutes */
-  int long_pause_time;  /**< Long pause duration in minutes */
-  int current_step; /**< Current step (0=work, 1=short pause, 2=long pause) */
-  int current_step_time;  /**< Elapsed time in current step (seconds) */
-  int last_step_time;     /**< Time from previous step for comparison */
-  int total_elapsed;      /**< Total elapsed time across all steps (seconds) */
-  double delta_time_ms;   /**< Elapsed ms since last frame update */
-  int session_index;      /**< Current session index for log entries */
-  time_t step_start_time; /**< Timestamp when current step started */
-  time_t session_start_time; /**< Timestamp when the session was started */
-  int status;                /**< 0 = completed, 1 = uncompleted */
-} PomodoroData;
+#include "tomato.h"
 
 /**
  * ---------------------------------------------------------------------------

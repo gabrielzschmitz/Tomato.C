@@ -108,6 +108,70 @@ ErrorType UpdateApp(AppData* app) {
 }
 
 /**
+ * Update the timer log socket with current step information.
+ * @param app Pointer to the application data
+ * @param steps Array of step types to log
+ * @param steps_count Number of steps in the array
+ * @return void
+ */
+static void updateTimerLog(AppData* app, const int* steps,
+                           const size_t steps_count) {
+  if (IsCurrentStepInList(steps, steps_count,
+                          app->pomodoro_data.current_step)) {
+    char* time_string = FormatTimerLog(app->pomodoro_data, app->is_paused);
+    if (time_string != NULL) {
+      if (SetTimerLog(TIMER_FILE, time_string) != NO_ERROR)
+        SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
+      free(time_string);
+    } else {
+      SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
+    }
+  }
+}
+
+/**
+ * Update pomodoro log file with current state.
+ * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
+ * @param app Pointer to the application data
+ * @return void
+ */
+static void updatePomodoroLog(AppData* app) {
+  if (!HISTORY_LOG || skip_auto_save) return;
+
+  static int last_logged_step = -1;
+  static int last_logged_minute = -1;
+
+  int speed_multiplier = 1;
+  if (DEBUG) speed_multiplier = 100;
+
+  int current_step = app->pomodoro_data.current_step;
+  int step_time = app->pomodoro_data.current_step_time;
+  int current_minute = step_time / (60 * speed_multiplier);
+
+  if (current_step == MAIN_MENU) {
+    last_logged_step = -1;
+    last_logged_minute = -1;
+    return;
+  }
+
+  if (current_step != WORK_TIME && current_step != SHORT_PAUSE &&
+      current_step != LONG_PAUSE) {
+    return;
+  }
+
+  if (last_logged_step == -1 || last_logged_step != current_step) {
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
+      SetError(app, "Logging pomodoro step change", TIMER_LOG_ERROR);
+    last_logged_step = current_step;
+    last_logged_minute = current_minute;
+  } else if (current_minute != last_logged_minute && current_minute > 0) {
+    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
+      SetError(app, "Logging pomodoro minute", TIMER_LOG_ERROR);
+    last_logged_minute = current_minute;
+  }
+}
+
+/**
  * ---------------------------------------------------------------------------
  * Scene Updates
  * ---------------------------------------------------------------------------
@@ -171,6 +235,29 @@ void UpdateWorkTime(AppData* app) {
                  NOTIFICATION_SEND_ERROR);
     }
   }
+}
+
+/**
+ * Update pomodoro timer data - decrement time, check for step end.
+ * @param app Pointer to the application data
+ * @return void
+ */
+static void updatePomodoroTime(AppData* app) {
+  double current_time = GetCurrentTimeMS();
+
+  int speed_multiplier = 1;
+  if (DEBUG) speed_multiplier = 100;
+  double interval_ms = 1000.0 / speed_multiplier;
+
+  int ticks = AdvancePomodoroClock(&app->pomodoro_data.delta_time_ms,
+                                   current_time, interval_ms);
+  if (ticks <= 0) return;
+
+  TickPomodoroTime(&app->pomodoro_data, ticks);
+
+  if (app->pomodoro_data.current_step_time >=
+      app->pomodoro_data.last_step_time + 10)
+    app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
 }
 
 /**
@@ -355,92 +442,5 @@ void UpdateContinue(AppData* app) {
       SetError(app, "UpdateContinue", ANIMATION_EQUAL_NULL);
     else
       animation->update(animation);
-  }
-}
-
-/**
- * Update pomodoro timer data - decrement time, check for step end.
- * @param app Pointer to the application data
- * @return void
- */
-static void updatePomodoroTime(AppData* app) {
-  double current_time = GetCurrentTimeMS();
-
-  int speed_multiplier = 1;
-  if (DEBUG) speed_multiplier = 100;
-  double interval_ms = 1000.0 / speed_multiplier;
-
-  int ticks = AdvancePomodoroClock(&app->pomodoro_data.delta_time_ms,
-                                   current_time, interval_ms);
-  if (ticks <= 0) return;
-
-  TickPomodoroTime(&app->pomodoro_data, ticks);
-
-  if (app->pomodoro_data.current_step_time >=
-      app->pomodoro_data.last_step_time + 10)
-    app->pomodoro_data.last_step_time = app->pomodoro_data.current_step_time;
-}
-
-/**
- * Update pomodoro log file with current state.
- * Triggers on step change and every 60 seconds (or 60 timer seconds in DEBUG mode).
- * @param app Pointer to the application data
- * @return void
- */
-static void updatePomodoroLog(AppData* app) {
-  if (!HISTORY_LOG || skip_auto_save) return;
-
-  static int last_logged_step = -1;
-  static int last_logged_minute = -1;
-
-  int speed_multiplier = 1;
-  if (DEBUG) speed_multiplier = 100;
-
-  int current_step = app->pomodoro_data.current_step;
-  int step_time = app->pomodoro_data.current_step_time;
-  int current_minute = step_time / (60 * speed_multiplier);
-
-  if (current_step == MAIN_MENU) {
-    last_logged_step = -1;
-    last_logged_minute = -1;
-    return;
-  }
-
-  if (current_step != WORK_TIME && current_step != SHORT_PAUSE &&
-      current_step != LONG_PAUSE) {
-    return;
-  }
-
-  if (last_logged_step == -1 || last_logged_step != current_step) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
-      SetError(app, "Logging pomodoro step change", TIMER_LOG_ERROR);
-    last_logged_step = current_step;
-    last_logged_minute = current_minute;
-  } else if (current_minute != last_logged_minute && current_minute > 0) {
-    if (SavePomodoro(POMODORO_LOG, &app->pomodoro_data) != NO_ERROR)
-      SetError(app, "Logging pomodoro minute", TIMER_LOG_ERROR);
-    last_logged_minute = current_minute;
-  }
-}
-
-/**
- * Update the timer log socket with current step information.
- * @param app Pointer to the application data
- * @param steps Array of step types to log
- * @param steps_count Number of steps in the array
- * @return void
- */
-static void updateTimerLog(AppData* app, const int* steps,
-                           const size_t steps_count) {
-  if (IsCurrentStepInList(steps, steps_count,
-                          app->pomodoro_data.current_step)) {
-    char* time_string = FormatTimerLog(app->pomodoro_data, app->is_paused);
-    if (time_string != NULL) {
-      if (SetTimerLog(TIMER_FILE, time_string) != NO_ERROR)
-        SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
-      free(time_string);
-    } else {
-      SetError(app, "updateTimerLog", TIMER_LOG_ERROR);
-    }
   }
 }

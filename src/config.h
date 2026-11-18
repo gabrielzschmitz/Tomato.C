@@ -3,10 +3,11 @@
 
 #include <ncurses.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "error.h"
+#include "input.h"
 
-typedef struct KeyFunction KeyFunction;
 typedef struct InputState InputState;
 typedef struct NoteItem NoteItem;
 typedef struct TaskItem TaskItem;
@@ -448,5 +449,10 @@ extern const char* default_user_config_dir;
 
 /** Shorthand for g_config.key_bindings. */
 #define keys (g_config.key_bindings)
+
+/** Compile-time default keybinding array. Used as fallback when no TOML override is present. */
+extern const KeyFunction default_keys[];
+/** Number of entries in default_keys[]. */
+extern const size_t default_keys_count;
 
 #endif /* CONFIG_H_ */

@@ -109,6 +109,41 @@ ErrorType InitApp(AppData* app) {
 }
 
 /**
+ * Initialize the application menus with menu items and actions.
+ * @param app Pointer to the application data
+ * @return ErrorType NO_ERROR on success, or an error code on failure
+ */
+static ErrorType initMenus(AppData* app) {
+  /* MAIN_MENU */
+  const int n_mainmenu = 5;
+  MenuItem main_menu_items[5] = {{"start", StartPomodoro},
+                                 {"preferences", OpenPreferencesMenu},
+                                 {"help menu", OpenHelpMenu},
+                                 {"history", OpenHistoryPopup},
+                                 {"leave", ForcefullyQuitApp}};
+
+  Menu* main_menu_menu =
+    CreateMenu(main_menu_items, 5, COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
+  if (main_menu_menu == NULL) return MALLOC_ERROR;
+  app->menus[MAIN_MENU_MENU] = main_menu_menu;
+  app->current_menu = MAIN_MENU_MENU;
+
+  /* PREFERENCES */
+  const int n_preferences = 4;
+  MenuItem preferences_items[4] = {{"pomodoros", NULL},
+                                   {"work time", NULL},
+                                   {"short pause", NULL},
+                                   {"long pause", NULL}};
+
+  Menu* preferences_menu = CreateMenu(preferences_items, n_preferences,
+                                      COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
+  if (preferences_menu == NULL) return MALLOC_ERROR;
+  app->menus[PREFERENCES_MENU] = preferences_menu;
+
+  return NO_ERROR;
+}
+
+/**
  * End application and free all allocated resources.
  * @param app Pointer to the application data
  * @return ErrorType NO_ERROR on success, or an error code on failure
@@ -223,41 +258,6 @@ Border InitBorder(void) {
   border.horizontal = BORDER_CHARS[4];   /* "━" */
   border.vertical = BORDER_CHARS[5];     /* "┃" */
   return border;
-}
-
-/**
- * Initialize the application menus with menu items and actions.
- * @param app Pointer to the application data
- * @return ErrorType NO_ERROR on success, or an error code on failure
- */
-static ErrorType initMenus(AppData* app) {
-  /* MAIN_MENU */
-  const int n_mainmenu = 5;
-  MenuItem main_menu_items[5] = {{"start", StartPomodoro},
-                                 {"preferences", OpenPreferencesMenu},
-                                 {"help menu", OpenHelpMenu},
-                                 {"history", OpenHistoryPopup},
-                                 {"leave", ForcefullyQuitApp}};
-
-  Menu* main_menu_menu =
-    CreateMenu(main_menu_items, 5, COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
-  if (main_menu_menu == NULL) return MALLOC_ERROR;
-  app->menus[MAIN_MENU_MENU] = main_menu_menu;
-  app->current_menu = MAIN_MENU_MENU;
-
-  /* PREFERENCES */
-  const int n_preferences = 4;
-  MenuItem preferences_items[4] = {{"pomodoros", NULL},
-                                   {"work time", NULL},
-                                   {"short pause", NULL},
-                                   {"long pause", NULL}};
-
-  Menu* preferences_menu = CreateMenu(preferences_items, n_preferences,
-                                      COLOR_WHITE, COLOR_WHITE, "-> ", " <-");
-  if (preferences_menu == NULL) return MALLOC_ERROR;
-  app->menus[PREFERENCES_MENU] = preferences_menu;
-
-  return NO_ERROR;
 }
 
 /**

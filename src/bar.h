@@ -66,6 +66,7 @@ void FreeStatusBar(StatusBar* bar);
  * @param status_bar Pointer to the status bar
  * @param position Position for the new module
  * @param update Function pointer for the module update logic
+ * @return NO_ERROR when added, or an error code on validation or allocation failure.
  */
 ErrorType AddStatusBarModule(StatusBar* status_bar,
                              StatusBarModulePosition position,

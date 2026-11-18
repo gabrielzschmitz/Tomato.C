@@ -277,8 +277,8 @@ struct FloatingDialog {
   char* message;     /**< Message text displayed in the dialog */
   bool visible;      /**< Whether the dialog is currently shown */
   SlideDef** slides; /**< Pre-built slides [iconType * stride + slideIdx] */
-  int slideCount;    /**< Total slides in array (3 * stride) */
-  int currentSlide;  /**< Currently displayed slide index (0 to stride-1) */
+  int slide_count;   /**< Total slides in array (3 * stride) */
+  int current_slide; /**< Currently displayed slide index (0 to stride-1) */
   SlideType
     slide_type; /**< Determines input dispatch (welcome vs continue etc.) */
   int hovered_button; /**< Currently hovered control button index (-1 = none) */
@@ -637,7 +637,7 @@ void NoiseSlideMouseAction(AppData* app, MEVENT* event, bool is_click);
  * Default progress renderer for slides.
  * Draws the title with filled/empty dots ("Welcome ●●○○○") in
  * UTF-8/nerd mode, or as a counter ("Welcome 3/5") in ASCII mode.
- * Current slide index is obtained from app->popup_dialog->currentSlide.
+ * Current slide index is obtained from app->popup_dialog->current_slide.
  * @param app    Application state
  * @param x      Absolute column position (slide left edge)
  * @param y      Absolute row position (progress line)
@@ -699,8 +699,8 @@ void CreateHistoryDayDialog(AppData* app);
 void CreateHistoryStatsDialog(AppData* app);
 
 /**
- * Resolve cursor position (cursorWeek, cursorDow) into a concrete date
- * stored in history_data (selYear, selMonth, selDay).
+ * Resolve cursor position (cursor_week, cursor_dow) into a concrete date
+ * stored in history_data (sel_year, sel_month, sel_day).
  * @param app Application state
  */
 void HistoryResolveCursor(AppData* app);

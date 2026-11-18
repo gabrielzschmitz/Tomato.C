@@ -16,7 +16,6 @@
 #include "init.h"
 #include "input.h"
 #include "log.h"
-#include "ui.h"
 #include "update.h"
 #include "util.h"
 
@@ -24,64 +23,12 @@
 #define TOMATO_VERSION "unknown"
 #endif
 
-/* Helper function to handle errors and cleanup */
+/* PRIVATE TOMATO FUNCTIONS */
 static void handleErrorAndExit(const char* context, ErrorType error,
                                AppData* app, pid_t pid);
-
-/**
- * Print the command-line usage.
- * @param stream Output stream, stdout for --help and stderr for errors.
- */
-static void printUsage(FILE* stream) {
-  fprintf(stream,
-          "usage: tomato [--help] [--version]\n"
-          "       tomato [-loop true|false] -t [iconset]\n"
-          "       tomato -h [overview|today]\n"
-          "\n"
-          "  -t                stream the timer status\n"
-          "  -loop true|false  stream the timer status (default: true);\n"
-          "                    false prints once and exits\n"
-          "  -h                show pomodoro history\n"
-          "  --help            show this help\n"
-          "  --version         show the version\n"
-          "  iconset           nerd-icons, emojis, ascii, or no-icons\n");
-}
-
-/**
- * Parse a true/false option value.
- * @param arg Option value.
- * @param value Receives the parsed boolean.
- * @return true on success, false on an invalid value.
- */
-static bool parseBool(const char* arg, bool* value) {
-  if (strcmp(arg, "true") == 0)
-    *value = true;
-  else if (strcmp(arg, "false") == 0)
-    *value = false;
-  else
-    return false;
-  return true;
-}
-
-/**
- * Parse the optional icon-set argument of a timer command.
- * @param arg Icon-set name.
- * @param icon_type Receives the selected icon set.
- * @return true on success, false on an unknown icon set.
- */
-static bool parseIconSet(const char* arg, IconType* icon_type) {
-  if (strcmp(arg, "nerd-icons") == 0)
-    *icon_type = NERD_ICONS;
-  else if (strcmp(arg, "emojis") == 0)
-    *icon_type = EMOJIS;
-  else if (strcmp(arg, "ascii") == 0)
-    *icon_type = ASCII;
-  else if (strcmp(arg, "no-icons") == 0)
-    *icon_type = NO_ICONS;
-  else
-    return false;
-  return true;
-}
+static void printUsage(FILE* stream);
+static bool parseBool(const char* arg, bool* value);
+static bool parseIconSet(const char* arg, IconType* icon_type);
 
 int main(int argc, char* argv[]) {
   LoadConfig();
@@ -272,4 +219,59 @@ static void handleErrorAndExit(const char* context, ErrorType error,
   fprintf(stderr, "Tomato.C [ErrorCode %d]: %s\n", error,
           GetErrorMessage(error));
   exit(error);
+}
+
+/**
+ * Print the command-line usage.
+ * @param stream Output stream, stdout for --help and stderr for errors.
+ */
+static void printUsage(FILE* stream) {
+  fprintf(stream,
+          "usage: tomato [--help] [--version]\n"
+          "       tomato [-loop true|false] -t [iconset]\n"
+          "       tomato -h [overview|today]\n"
+          "\n"
+          "  -t                stream the timer status\n"
+          "  -loop true|false  stream the timer status (default: true);\n"
+          "                    false prints once and exits\n"
+          "  -h                show pomodoro history\n"
+          "  --help            show this help\n"
+          "  --version         show the version\n"
+          "  iconset           nerd-icons, emojis, ascii, or no-icons\n");
+}
+
+/**
+ * Parse a true/false option value.
+ * @param arg Option value.
+ * @param value Receives the parsed boolean.
+ * @return true on success, false on an invalid value.
+ */
+static bool parseBool(const char* arg, bool* value) {
+  if (strcmp(arg, "true") == 0)
+    *value = true;
+  else if (strcmp(arg, "false") == 0)
+    *value = false;
+  else
+    return false;
+  return true;
+}
+
+/**
+ * Parse the optional icon-set argument of a timer command.
+ * @param arg Icon-set name.
+ * @param icon_type Receives the selected icon set.
+ * @return true on success, false on an unknown icon set.
+ */
+static bool parseIconSet(const char* arg, IconType* icon_type) {
+  if (strcmp(arg, "nerd-icons") == 0)
+    *icon_type = NERD_ICONS;
+  else if (strcmp(arg, "emojis") == 0)
+    *icon_type = EMOJIS;
+  else if (strcmp(arg, "ascii") == 0)
+    *icon_type = ASCII;
+  else if (strcmp(arg, "no-icons") == 0)
+    *icon_type = NO_ICONS;
+  else
+    return false;
+  return true;
 }

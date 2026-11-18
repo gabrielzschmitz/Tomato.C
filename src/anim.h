@@ -69,12 +69,12 @@ struct Rollfilm {
  */
 
 /**
- * Create a new Rollfilm with N frames of height M.
- * @param N Number of frames to allocate
- * @param M Height of each frame in lines
+ * Create a new Rollfilm with frame_count frames of height frame_height.
+ * @param frame_count Number of frames to allocate
+ * @param frame_height Height of each frame in lines
  * @return Pointer to the created Rollfilm, or NULL on allocation failure
  */
-Rollfilm* CreateRollfilm(int N, int M);
+Rollfilm* CreateRollfilm(int frame_count, int frame_height);
 
 /**
  * Set the loop variable for a list of Rollfilms.

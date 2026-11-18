@@ -139,6 +139,57 @@ void AddNote(AppData* app, NotesData* notes, const char* text,
 }
 
 /**
+ * Double the capacity of the items array to accommodate more notes.
+ * @param notes Pointer to the NotesData
+ * @return true if capacity was increased, false on allocation failure
+ */
+static bool growItems(NotesData* notes) {
+  int new_capacity = notes->capacity * 2;
+  NoteItem** new_items =
+    (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
+  if (!new_items) return false;
+  notes->items = new_items;
+  notes->capacity = new_capacity;
+  return true;
+}
+
+/**
+ * Generate a unique ID for a new note.
+ * @param notes Pointer to the NotesData
+ * @return A unique integer ID for the next note
+ */
+static int getNextID(NotesData* notes) {
+  int max_id = 0;
+  for (int i = 0; i < notes->count; i++)
+    if (notes->items[i]->id > max_id) max_id = notes->items[i]->id;
+  return max_id + 1;
+}
+
+/**
+ * Find a note by its ID.
+ * @param notes Pointer to the NotesData
+ * @param id ID of the note to find
+ * @return Pointer to the NoteItem, or NULL if not found
+ */
+static NoteItem* findByID(NotesData* notes, int id) {
+  for (int i = 0; i < notes->count; i++)
+    if (notes->items[i]->id == id) return notes->items[i];
+  return NULL;
+}
+
+/**
+ * Get the array index of a note by its ID.
+ * @param notes Pointer to the NotesData
+ * @param id ID of the note to find
+ * @return Index in the items array, or -1 if not found
+ */
+static int getIndexByID(NotesData* notes, int id) {
+  for (int i = 0; i < notes->count; i++)
+    if (notes->items[i]->id == id) return i;
+  return -1;
+}
+
+/**
  * Add a child note under a parent note.
  * @param app Pointer to application data (used for SetError on alloc failure)
  * @param notes Pointer to the NotesData
@@ -283,6 +334,26 @@ void AddNoteAfter(AppData* app, NotesData* notes, int after_id,
 
   notes->current_id = item->id;
   notes->total_lines += new_note_lines;
+}
+
+/**
+ * Get the range of indices covering a note and all its descendants.
+ * @param notes Pointer to the NotesData
+ * @param idx Index of the note to get range for
+ * @param start Pointer to store the starting index of the subtree
+ * @param end Pointer to store the ending index of the subtree
+ */
+static void getSubtreeRange(NotesData* notes, int idx, int* start, int* end) {
+  *start = idx;
+  *end = idx;
+  if (!notes || idx < 0 || idx >= notes->count) return;
+  int parent_depth = notes->items[idx]->depth;
+  for (int i = idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->depth > parent_depth)
+      *end = i;
+    else
+      break;
+  }
 }
 
 /**
@@ -480,6 +551,22 @@ int GetSelectedNoteIndex(NotesData* notes) {
  */
 
 /**
+ * Move the selected note up one position in the list.
+ * @param notes Pointer to the NotesData
+ */
+void MoveNoteUp(NotesData* notes) {
+  if (!notes || notes->count == 0 || notes->current_id < 0) return;
+
+  SaveNotesToHistory(notes, -1);
+
+  int idx = getIndexByID(notes, notes->current_id);
+  if (idx < 0) return;
+  int prev_sibling = getPrevSiblingIndex(notes, idx);
+  if (prev_sibling < 0) return;
+  reinsertNoteAt(notes, idx, prev_sibling);
+}
+
+/**
  * Get the index of the previous sibling of the note at the given index.
  * A sibling is a note at the same depth with the same parent.
  * @param notes Pointer to the NotesData
@@ -497,46 +584,6 @@ static int getPrevSiblingIndex(NotesData* notes, int idx) {
     if (notes->items[i]->depth < current_depth) break;
   }
   return -1;
-}
-
-/**
- * Get the index of the next sibling of the note at the given index.
- * A sibling is a note at the same depth with the same parent.
- * @param notes Pointer to the NotesData
- * @param idx Index of the note to find next sibling for
- * @return Index of next sibling, or -1 if none exists
- */
-static int getNextSiblingIndex(NotesData* notes, int idx) {
-  if (!notes || idx >= notes->count - 1) return -1;
-  int parent_id = notes->items[idx]->parent_id;
-  int current_depth = notes->items[idx]->depth;
-  for (int i = idx + 1; i < notes->count; i++) {
-    if (notes->items[i]->parent_id == parent_id &&
-        notes->items[i]->depth == current_depth)
-      return i;
-    if (notes->items[i]->depth < current_depth) break;
-  }
-  return -1;
-}
-
-/**
- * Get the range of indices covering a note and all its descendants.
- * @param notes Pointer to the NotesData
- * @param idx Index of the note to get range for
- * @param start Pointer to store the starting index of the subtree
- * @param end Pointer to store the ending index of the subtree
- */
-static void getSubtreeRange(NotesData* notes, int idx, int* start, int* end) {
-  *start = idx;
-  *end = idx;
-  if (!notes || idx < 0 || idx >= notes->count) return;
-  int parent_depth = notes->items[idx]->depth;
-  for (int i = idx + 1; i < notes->count; i++) {
-    if (notes->items[i]->depth > parent_depth)
-      *end = i;
-    else
-      break;
-  }
 }
 
 /**
@@ -582,40 +629,6 @@ static void reinsertNoteAt(NotesData* notes, int from_idx, int to_idx) {
 }
 
 /**
- * Find the index of the root ancestor of the note at the given index.
- * A root ancestor is a top-level note (depth 0) or the highest-level parent.
- * @param notes Pointer to the NotesData
- * @param idx Index of the note to find root ancestor for
- * @return Index of the root ancestor, or -1 if not found
- */
-static int findRootAncestorIndex(NotesData* notes, int idx) {
-  if (!notes || idx < 0 || idx >= notes->count) return -1;
-  NoteItem* note = notes->items[idx];
-  if (note->parent_id < 0) return idx;
-  int parent_idx = getIndexByID(notes, note->parent_id);
-  if (parent_idx < 0) return idx;
-  NoteItem* parent = notes->items[parent_idx];
-  if (parent->depth == 0) return parent_idx;
-  return findRootAncestorIndex(notes, parent_idx);
-}
-
-/**
- * Move the selected note up one position in the list.
- * @param notes Pointer to the NotesData
- */
-void MoveNoteUp(NotesData* notes) {
-  if (!notes || notes->count == 0 || notes->current_id < 0) return;
-
-  SaveNotesToHistory(notes, -1);
-
-  int idx = getIndexByID(notes, notes->current_id);
-  if (idx < 0) return;
-  int prev_sibling = getPrevSiblingIndex(notes, idx);
-  if (prev_sibling < 0) return;
-  reinsertNoteAt(notes, idx, prev_sibling);
-}
-
-/**
  * Move the selected note down one position in the list.
  * @param notes Pointer to the NotesData
  */
@@ -640,6 +653,26 @@ void MoveNoteDown(NotesData* notes) {
   }
   if (to_idx <= idx) return;
   reinsertNoteAt(notes, idx, to_idx);
+}
+
+/**
+ * Get the index of the next sibling of the note at the given index.
+ * A sibling is a note at the same depth with the same parent.
+ * @param notes Pointer to the NotesData
+ * @param idx Index of the note to find next sibling for
+ * @return Index of next sibling, or -1 if none exists
+ */
+static int getNextSiblingIndex(NotesData* notes, int idx) {
+  if (!notes || idx >= notes->count - 1) return -1;
+  int parent_id = notes->items[idx]->parent_id;
+  int current_depth = notes->items[idx]->depth;
+  for (int i = idx + 1; i < notes->count; i++) {
+    if (notes->items[i]->parent_id == parent_id &&
+        notes->items[i]->depth == current_depth)
+      return i;
+    if (notes->items[i]->depth < current_depth) break;
+  }
+  return -1;
 }
 
 /**
@@ -674,6 +707,24 @@ void PromoteNote(NotesData* notes) {
     notes->items[i]->parent_id = note->id;
     notes->items[i]->depth = notes->items[i]->depth - 1;
   }
+}
+
+/**
+ * Find the index of the root ancestor of the note at the given index.
+ * A root ancestor is a top-level note (depth 0) or the highest-level parent.
+ * @param notes Pointer to the NotesData
+ * @param idx Index of the note to find root ancestor for
+ * @return Index of the root ancestor, or -1 if not found
+ */
+static int findRootAncestorIndex(NotesData* notes, int idx) {
+  if (!notes || idx < 0 || idx >= notes->count) return -1;
+  NoteItem* note = notes->items[idx];
+  if (note->parent_id < 0) return idx;
+  int parent_idx = getIndexByID(notes, note->parent_id);
+  if (parent_idx < 0) return idx;
+  NoteItem* parent = notes->items[parent_idx];
+  if (parent->depth == 0) return parent_idx;
+  return findRootAncestorIndex(notes, parent_idx);
 }
 
 /**
@@ -1682,55 +1733,4 @@ int GetNoteLinesFromText(const char* text, int render_width) {
     free(lines);
   }
   return count;
-}
-
-/**
- * Double the capacity of the items array to accommodate more notes.
- * @param app Pointer to application data (used for SetError on alloc failure)
- * @param notes Pointer to the NotesData
- */
-static bool growItems(NotesData* notes) {
-  int new_capacity = notes->capacity * 2;
-  NoteItem** new_items =
-    (NoteItem**)realloc(notes->items, sizeof(NoteItem*) * new_capacity);
-  if (!new_items) return false;
-  notes->items = new_items;
-  notes->capacity = new_capacity;
-  return true;
-}
-
-/**
- * Generate a unique ID for a new note.
- * @param notes Pointer to the NotesData
- * @return A unique integer ID for the next note
- */
-static int getNextID(NotesData* notes) {
-  int max_id = 0;
-  for (int i = 0; i < notes->count; i++)
-    if (notes->items[i]->id > max_id) max_id = notes->items[i]->id;
-  return max_id + 1;
-}
-
-/**
- * Find a note by its ID.
- * @param notes Pointer to the NotesData
- * @param id ID of the note to find
- * @return Pointer to the NoteItem, or NULL if not found
- */
-static NoteItem* findByID(NotesData* notes, int id) {
-  for (int i = 0; i < notes->count; i++)
-    if (notes->items[i]->id == id) return notes->items[i];
-  return NULL;
-}
-
-/**
- * Get the array index of a note by its ID.
- * @param notes Pointer to the NotesData
- * @param id ID of the note to find
- * @return Index in the items array, or -1 if not found
- */
-static int getIndexByID(NotesData* notes, int id) {
-  for (int i = 0; i < notes->count; i++)
-    if (notes->items[i]->id == id) return i;
-  return -1;
 }

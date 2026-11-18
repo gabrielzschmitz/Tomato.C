@@ -65,6 +65,12 @@ static void pushErrorEntry(ErrorLevel level, const char* text) {
   if (error_count > MAX_ERROR_ENTRIES) error_count = MAX_ERROR_ENTRIES;
 }
 
+/**
+ * Show a message on the error line without an error code or log entry.
+ * Used for diagnostics that were already logged, such as config warnings.
+ * @param level Severity used for the color and auto-clear timeout
+ * @param message Text to display
+ */
 void SetErrorMessage(ErrorLevel level, const char* message) {
   if (message == NULL) return;
   pushErrorEntry(level, message);

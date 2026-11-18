@@ -29,6 +29,9 @@ typedef struct __attribute__((packed)) {
   uint32_t session_start_time; /**< Unix timestamp when session started */
 } PomodoroLogRecord;
 
+/** Backward-compatible alias for the former public type name. */
+typedef PomodoroLogRecord pomodoroLogRecord;
+
 /**
  * ---------------------------------------------------------------------------
  * Timer

@@ -1192,6 +1192,36 @@ static void readPathString(toml_table_t* root, const char* path,
 }
 
 /**
+ * Expand $DATADIR tokens in a config-file path to the compile-time
+ * DATADIR value (e.g. "/usr/local/share/tomato").
+ *
+ * Shared by readPathString, readNotificationConfig, and readNoiseTracks.
+ * When the token is absent the input is simply strdup'd so callers can
+ * always free the result.  Returns NULL only on allocation failure.
+ *
+ * @param input  Path string that may contain "$DATADIR".
+ * @return A malloc'd copy with $DATADIR expanded, or NULL on ENOMEM.
+ */
+static char* expandDatadir(const char* input) {
+  if (!input) return NULL;
+  const char* marker = "$DATADIR";
+  size_t mlen = strlen(marker);
+  const char* pos = strstr(input, marker);
+  if (!pos) return strdup(input);
+
+  size_t prefix_len = pos - input;
+  const char* datadir = DATADIR;
+  size_t dlen = strlen(datadir);
+  size_t suffix_len = strlen(pos + mlen);
+  char* result = malloc(prefix_len + dlen + suffix_len + 1);
+  if (!result) return NULL;
+  memcpy(result, input, prefix_len);
+  memcpy(result + prefix_len, datadir, dlen);
+  memcpy(result + prefix_len + dlen, pos + mlen, suffix_len + 1);
+  return result;
+}
+
+/**
  * Read a three-element string array from a dotted TOML path into out[].
  * The array must be at least 3 elements long (nerd, emoji, ascii).
  * Silently no-ops if the key is absent or the table segment is missing.
@@ -1682,12 +1712,15 @@ static void readNoiseTracks(toml_table_t* root) {
 #define MAX_CONFIG_WARNINGS 8
 #define CONFIG_WARNING_LEN 256
 
+/**
+ * Queued configuration diagnostic.
+ */
 typedef struct {
-  ErrorLevel level;
-  char message[CONFIG_WARNING_LEN];
-} ConfigWarning;
+  ErrorLevel level;                 /**< Severity of the diagnostic */
+  char message[CONFIG_WARNING_LEN]; /**< Text shown on the error line */
+} configWarning;
 
-static ConfigWarning config_warnings[MAX_CONFIG_WARNINGS];
+static configWarning config_warnings[MAX_CONFIG_WARNINGS];
 static int config_warning_count = 0;
 
 /**
@@ -1698,7 +1731,7 @@ static int config_warning_count = 0;
  */
 static void addConfigWarning(ErrorLevel level, const char* message) {
   if (config_warning_count >= MAX_CONFIG_WARNINGS) return;
-  ConfigWarning* w = &config_warnings[config_warning_count++];
+  configWarning* w = &config_warnings[config_warning_count++];
   w->level = level;
   snprintf(w->message, sizeof(w->message), "%s", message);
 }
@@ -1912,14 +1945,16 @@ static char user_config_path[1024] = "";
 
 const char* GetUserConfigPath(void) { return user_config_path; }
 
-/** Growable list of owned lines used when rewriting a config file. */
+/**
+ * Growable list of owned lines used when rewriting a config file.
+ */
 typedef struct {
-  char** items;
-  int count;
-  int cap;
-} LineList;
+  char** items; /**< Owned line strings */
+  int count;    /**< Number of stored lines */
+  int cap;      /**< Allocated slot count */
+} lineList;
 
-static bool lineListInsert(LineList* list, int index, char* line) {
+static bool lineListInsert(lineList* list, int index, char* line) {
   if (list->count == list->cap) {
     int cap = list->cap ? list->cap * 2 : 64;
     char** grown = realloc(list->items, sizeof(char*) * cap);
@@ -1934,7 +1969,7 @@ static bool lineListInsert(LineList* list, int index, char* line) {
   return true;
 }
 
-static void lineListFree(LineList* list) {
+static void lineListFree(lineList* list) {
   for (int i = 0; i < list->count; i++) free(list->items[i]);
   free(list->items);
   list->items = NULL;
@@ -1992,7 +2027,7 @@ static const char* findComment(const char* s) {
  * Locate the line range of a table: lines strictly after its header up to
  * the next header. The empty name denotes the top level before any header.
  */
-static bool findTableRange(const LineList* list, const char* table, int* start,
+static bool findTableRange(const lineList* list, const char* table, int* start,
                            int* end) {
   int first_header = list->count;
   for (int i = 0; i < list->count; i++) {
@@ -2019,7 +2054,7 @@ static bool findTableRange(const LineList* list, const char* table, int* start,
 }
 
 /** Find a "key = value" line for key within [start, end); -1 if absent. */
-static int findKeyLine(const LineList* list, const char* key, int start,
+static int findKeyLine(const lineList* list, const char* key, int start,
                        int end) {
   size_t klen = strlen(key);
   for (int i = start; i < end; i++) {
@@ -2146,7 +2181,7 @@ ErrorType SaveConfigValues(const char* path, const ConfigValue* values,
     toml_free(root);
   }
 
-  LineList list = {0};
+  lineList list = {0};
   char* cursor = text;
   while (*cursor) {
     char* nl = strchr(cursor, '\n');
@@ -2324,33 +2359,4 @@ void LoadConfig(void) {
   if (!resolveUserConfigPath(path, sizeof(path))) return;
   snprintf(user_config_path, sizeof(user_config_path), "%s", path);
   loadTomlFile(path);
-}
-
-/**
- * Expand $DATADIR tokens in a config-file path to the compile-time
- * DATADIR value (e.g. "/usr/local/share/tomato").
- *
- * When the token is absent the input is simply strdup'd so callers can
- * always free the result.  Returns NULL only on allocation failure.
- *
- * @param input  Path string that may contain "$DATADIR".
- * @return A malloc'd copy with $DATADIR expanded, or NULL on ENOMEM.
- */
-static char* expandDatadir(const char* input) {
-  if (!input) return NULL;
-  const char* marker = "$DATADIR";
-  size_t mlen = strlen(marker);
-  const char* pos = strstr(input, marker);
-  if (!pos) return strdup(input);
-
-  size_t prefix_len = pos - input;
-  const char* datadir = DATADIR;
-  size_t dlen = strlen(datadir);
-  size_t suffix_len = strlen(pos + mlen);
-  char* result = malloc(prefix_len + dlen + suffix_len + 1);
-  if (!result) return NULL;
-  memcpy(result, input, prefix_len);
-  memcpy(result + prefix_len, datadir, dlen);
-  memcpy(result + prefix_len + dlen, pos + mlen, suffix_len + 1);
-  return result;
 }
