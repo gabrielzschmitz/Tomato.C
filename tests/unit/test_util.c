@@ -13,6 +13,7 @@
 #include "core/config.h"
 #include "core/error.h"
 #include "core/util.h"
+#include "test_anim_stubs.h"
 #include "test_helpers.h"
 
 /* Stub — util.c may call LogError on allocation failures */

@@ -81,16 +81,14 @@ static void renderPanel(AppData* app, Border border) {
       SetError(app, "renderPanel", NULL_POINTER_ERROR);
       return;
     }
-    Dimensions size = {.width = app->animations[largest_index]->frame_width,
-                       .height = app->animations[largest_index]->frame_height};
-    Vector2D position = {.x = current_panel->position.x +
-                              (current_panel->size.width -
-                               app->animations[largest_index]->frame_width) /
-                                2,
-                         .y = current_panel->position.y +
-                              (current_panel->size.height -
-                               app->animations[largest_index]->frame_height) /
-                                2};
+    int largest_width = RollfilmWidth(app->animations[largest_index]);
+    int largest_height = RollfilmHeight(app->animations[largest_index]);
+    Dimensions size = {.width = largest_width, .height = largest_height};
+    Vector2D position = {
+      .x = current_panel->position.x +
+           (current_panel->size.width - largest_width) / 2,
+      .y = current_panel->position.y +
+           (current_panel->size.height - largest_height) / 2};
 
     renderPanelScene(app, current_panel, animation, size, position);
 
@@ -129,16 +127,17 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
       } else {
         animation = app->animations[MAIN_MENU];
         if (animation) {
-          RollfilmSeekFrame(animation, animation->default_frame);
+          RollfilmSeekDefault(animation);
           RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
         }
       }
+      int menu_height = RollfilmHeight(animation);
       if (DEBUG)
         PrintMenuAtCenter(app, panel, app->menus[0],
-                          (Vector2D){0, animation->frame_height / 2 + 3}, 0);
+                          (Vector2D){0, menu_height / 2 + 3}, 0);
       else
         PrintMenuAtCenter(app, panel, app->menus[0],
-                          (Vector2D){0, animation->frame_height / 2 + 2}, 0);
+                          (Vector2D){0, menu_height / 2 + 2}, 0);
       break;
     case WORK_TIME:
     case SHORT_PAUSE:
@@ -150,7 +149,7 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
       } else {
         animation = app->animations[scene];
         if (animation) {
-          RollfilmSeekFrame(animation, animation->default_frame);
+          RollfilmSeekDefault(animation);
           RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
         }
       }
@@ -178,7 +177,7 @@ static void renderPanelScene(AppData* app, Panel* panel, Rollfilm* animation,
         animation = app->animations[NOTES];
         renderNotesScene(app, panel, animation);
         if (animation) {
-          RollfilmSeekFrame(animation, animation->default_frame);
+          RollfilmSeekDefault(animation);
           RenderAnimationAtPanelCenter(panel, animation, (Vector2D){0, 0});
         }
         renderNotesPageIndicator(app, panel, animation);
@@ -232,22 +231,24 @@ static void renderNotesScene(AppData* app, Panel* panel, Rollfilm* animation) {
   if (animation != NULL) {
     int panel_center_x = panel->position.x + panel->size.width / 2;
     int panel_center_y = panel->position.y + panel->size.height / 2;
-    int anim_x = panel_center_x - animation->frame_width / 2;
-    int anim_y = panel_center_y - animation->frame_height / 2;
+    int anim_width = RollfilmWidth(animation);
+    int anim_height = RollfilmHeight(animation);
+    int anim_x = panel_center_x - anim_width / 2;
+    int anim_y = panel_center_y - anim_height / 2;
     int blank_x, blank_y;
     if (RollfilmFirstBlank(animation, &blank_x, &blank_y)) {
       start_x = anim_x + blank_x;
       start_y = anim_y + blank_y;
     } else {
       start_x = anim_x;
-      start_y = anim_y + animation->frame_height;
+      start_y = anim_y + anim_height;
     }
     if (RollfilmLastBlank(animation, &blank_x, &blank_y)) {
       end_x = anim_x + blank_x;
       end_y = anim_y + blank_y + 1;
     } else {
-      end_x = anim_x + animation->frame_width;
-      end_y = anim_y + animation->frame_height;
+      end_x = anim_x + anim_width;
+      end_y = anim_y + anim_height;
     }
   } else {
     start_x = panel->position.x + 1;
@@ -286,8 +287,9 @@ static void renderNotesPageIndicator(AppData* app, Panel* panel,
 
   if (animation) {
     int panel_center_y = panel->position.y + panel->size.height / 2;
-    int frame_y = panel_center_y - animation->frame_height / 2;
-    indicator_y = frame_y + animation->frame_height;
+    int anim_height = RollfilmHeight(animation);
+    int frame_y = panel_center_y - anim_height / 2;
+    indicator_y = frame_y + anim_height;
   } else {
     indicator_y = panel->position.y + panel->size.height - 2;
   }
@@ -383,7 +385,7 @@ static void renderDialogPopups(AppData* app) {
 
 /**
  * Debug overlay for animation rendering.
- * Shows frame count, width, seconds multiplier, and frame ID.
+ * Shows frame count, width, duration, and frame index.
  * @param panel Pointer to the panel to render in
  * @param animation Pointer to the animation to render
  * @param offset Offset from the panel position
@@ -396,17 +398,21 @@ static void renderAnimationDebug(Panel* panel, Rollfilm* animation,
   int panel_center_x = panel->position.x + panel->size.width / 2;
   int panel_center_y = panel->position.y + panel->size.height / 2;
 
-  int frame_x = panel_center_x - animation->frame_width / 2 + offset.x;
-  int frame_y = panel_center_y - animation->frame_height / 2 + offset.y;
+  int frame_width = RollfilmFrameWidth(animation);
+  int frame_height = RollfilmFrameHeight(animation);
+  int frame_x = panel_center_x - frame_width / 2 + offset.x;
+  int frame_y = panel_center_y - frame_height / 2 + offset.y;
 
-  int debug_y = frame_y + animation->frame_height;
-  int debug_x = frame_x + (animation->frame_width - DEBUG_INFO_WIDTH) / 2;
+  int debug_y = frame_y + frame_height;
+  int debug_x = frame_x + (frame_width - DEBUG_INFO_WIDTH) / 2;
 
   SetColor(COLOR_WHITE, COLOR_BLACK, A_BOLD);
   mvprintw(debug_y, debug_x, "%dC - %dW - %1.3lfS - %dID",
-           animation->frame_count, animation->frame_width,
-           animation->frames->seconds_multiplier, animation->frames->id);
-  mvprintw(debug_y + 1, debug_x + 5, "%lf", animation->delta_frame_ms);
+           RollfilmFrameCount(animation), frame_width,
+           RollfilmFrameDurationMS(animation) / 1000.0,
+           RollfilmFrameIndex(animation));
+  mvprintw(debug_y + 1, debug_x + 5, "%.3lf",
+           RollfilmFrameDurationMS(animation) / 1000.0);
 }
 
 /**

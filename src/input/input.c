@@ -2400,9 +2400,10 @@ void UndoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    int start_frame = (prev_page < app->notes->current_page)
-                        ? 0
-                        : app->animations[NOTES_TRANSITION]->frame_count - 1;
+    int start_frame =
+      (prev_page < app->notes->current_page)
+        ? 0
+        : RollfilmFrameCount(app->animations[NOTES_TRANSITION]) - 1;
     RollfilmSeekFrame(app->animations[NOTES_TRANSITION], start_frame);
   }
 
@@ -2481,9 +2482,10 @@ void RedoNotes(AppData* app) {
   if (prev_page != app->notes->current_page && !app->notes->transitioning) {
     app->notes->transitioning = true;
     app->notes->transition_target = app->notes->current_page;
-    int start_frame = (prev_page < app->notes->current_page)
-                        ? 0
-                        : app->animations[NOTES_TRANSITION]->frame_count - 1;
+    int start_frame =
+      (prev_page < app->notes->current_page)
+        ? 0
+        : RollfilmFrameCount(app->animations[NOTES_TRANSITION]) - 1;
     RollfilmSeekFrame(app->animations[NOTES_TRANSITION], start_frame);
   }
 
@@ -2621,7 +2623,7 @@ void NotesPrevPage(AppData* app) {
   app->notes->transitioning = true;
   app->notes->transition_target = app->notes->current_page - 1;
   RollfilmSeekFrame(app->animations[NOTES_TRANSITION],
-                    app->animations[NOTES_TRANSITION]->frame_count - 1);
+                    RollfilmFrameCount(app->animations[NOTES_TRANSITION]) - 1);
 }
 
 /**

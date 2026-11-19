@@ -13,6 +13,7 @@
 #include "core/log.h"
 #include "core/util.h"
 #include "features/animation/anim.h"
+#include "features/animation/sprite.h"
 #include "features/audio/audio.h"
 #include "features/bar/bar.h"
 #include "features/notes/notes.h"
@@ -22,6 +23,9 @@
 /* Components */
 static ErrorType initMenus(AppData* app);
 static ErrorType initStatusBar(AppData* app);
+static void freeRollfilms(AppData* app);
+static ErrorType createRollfilms(AppData* app,
+                                 const AnimationDefinition* definitions);
 static ErrorType initAnimations(AppData* app);
 static ErrorType initWhiteNoise(AppData* app);
 static ErrorType initNotifications(AppData* app);
@@ -115,7 +119,6 @@ ErrorType InitApp(AppData* app) {
  */
 static ErrorType initMenus(AppData* app) {
   /* MAIN_MENU */
-  const int n_mainmenu = 5;
   MenuItem main_menu_items[5] = {{"start", StartPomodoro},
                                  {"preferences", OpenPreferencesMenu},
                                  {"help menu", OpenHelpMenu},
@@ -191,32 +194,87 @@ static ErrorType initStatusBar(AppData* app) {
 }
 
 /**
+ * Release all rollfilm playback state and clear the pointers.
+ * @param app Pointer to the application data.
+ */
+static void freeRollfilms(AppData* app) {
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; i++) {
+      FreeRollfilm(app->icon_animations[t][i]);
+      app->icon_animations[t][i] = NULL;
+    }
+  app->animations = NULL;
+}
+
+/**
+ * Create rollfilms for every animation definition and icon type.
+ * @param app Pointer to the application data.
+ * @param definitions Static animation definitions.
+ * @return NO_ERROR on success, or ANIMATION_DESERIALIZATION_ERROR on failure.
+ */
+static ErrorType createRollfilms(AppData* app,
+                                 const AnimationDefinition* definitions) {
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; i++) {
+      Rollfilm* film =
+        CreateRollfilm(app->sprite_library, definitions[i].name, t);
+      if (film == NULL) {
+        freeRollfilms(app);
+        FreeSpriteLibrary(app->sprite_library);
+        app->sprite_library = NULL;
+        return ANIMATION_DESERIALIZATION_ERROR;
+      }
+      app->icon_animations[t][i] = film;
+      RollfilmSetDefaultFrame(film, definitions[i].default_frame);
+    }
+  return NO_ERROR;
+}
+
+/**
  * Initialize animations by loading sprites from files.
  * @param app Pointer to the application data
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 static ErrorType initAnimations(AppData* app) {
-  const char* animation_files[MAX_ANIMATIONS] = {
-    DATADIR "/sprites/mainmenu.asc",   DATADIR "/sprites/worktime.asc",
-    DATADIR "/sprites/shortpause.asc", DATADIR "/sprites/longpause.asc",
-    DATADIR "/sprites/notes.asc",      DATADIR "/sprites/notes_transition.asc",
-    DATADIR "/sprites/help.asc",       DATADIR "/sprites/continue.asc"};
+  static const AnimationDefinition animations[MAX_ANIMATIONS] = {
+    {.name = "mainmenu",
+     .filename = DATADIR "/sprites/mainmenu.asc",
+     .default_frame = 5},
+    {.name = "worktime",
+     .filename = DATADIR "/sprites/worktime.asc",
+     .default_frame = 0},
+    {.name = "shortpause",
+     .filename = DATADIR "/sprites/shortpause.asc",
+     .default_frame = 0},
+    {.name = "longpause",
+     .filename = DATADIR "/sprites/longpause.asc",
+     .default_frame = 0},
+    {.name = "notes",
+     .filename = DATADIR "/sprites/notes.asc",
+     .default_frame = 6},
+    {.name = "notes_transition",
+     .filename = DATADIR "/sprites/notes_transition.asc",
+     .default_frame = 5},
+    {.name = "help",
+     .filename = DATADIR "/sprites/help.asc",
+     .default_frame = 4},
+    {.name = "continue",
+     .filename = DATADIR "/sprites/continue.asc",
+     .default_frame = 3}};
 
-  for (int t = 0; t < MAX_ICON_TYPES; t++)
-    for (int i = 0; i < MAX_ANIMATIONS; ++i) {
-      app->icon_animations[t][i] = DeserializeSprites(animation_files[i], t);
-      if (app->icon_animations[t][i] == NULL)
-        return ANIMATION_DESERIALIZATION_ERROR;
-    }
+  const char* filenames[MAX_ANIMATIONS];
+  for (int i = 0; i < MAX_ANIMATIONS; i++)
+    filenames[i] = animations[i].filename;
+
+  ErrorType status =
+    LoadSpriteLibrary(filenames, MAX_ANIMATIONS, &app->sprite_library);
+  if (status != NO_ERROR) return status;
+
+  status = createRollfilms(app, animations);
+  if (status != NO_ERROR) return status;
 
   app->animations = app->icon_animations[GetConfigIconType()];
   app->screen->min_panel_size = GetWidestAndTallestAnimation(app);
-
-  const int dont_loop[] = {NOTES, NOTES_TRANSITION, HELP, CONTINUE};
-  size_t list_size = sizeof(dont_loop) / sizeof(dont_loop[0]);
-  for (int t = 0; t < MAX_ICON_TYPES; t++)
-    SetRollfilmLoop(app, app->icon_animations[t], dont_loop, list_size, false);
-
   return NO_ERROR;
 }
 
@@ -553,6 +611,8 @@ ErrorType EndApp(AppData* app) {
       FreeRollfilm(app->icon_animations[t][i]);
       app->icon_animations[t][i] = NULL;
     }
+  FreeSpriteLibrary(app->sprite_library);
+  app->sprite_library = NULL;
   for (int i = 0; i < MAX_MENUS; i++) {
     FreeMenu(app->menus[i]);
     app->menus[i] = NULL;

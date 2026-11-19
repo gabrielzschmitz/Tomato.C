@@ -1,66 +1,19 @@
+/**
+ * @file anim.h
+ * @brief Public rollfilm playback API.
+ */
+
 #ifndef ANIM_H_
 #define ANIM_H_
 
 #include <stdbool.h>
-#include <stdio.h>
+#include <stddef.h>
 
-#define MAX_FRAME_WIDTH 120
-
-typedef struct AppData AppData;
+/** Opaque mutable playback state for one sprite animation. */
 typedef struct Rollfilm Rollfilm;
-typedef void (*AnimationUpdate)(struct Rollfilm*);
-typedef void (*AnimationRender)(struct Rollfilm*, int start_y, int start_x);
 
-/**
- * Structure for storing frame tokens with color information.
- * Tokens are linked in a list for a single row of text output.
- */
-struct FrameToken {
-  struct FrameToken* next; /**< Pointer to next token in list (NULL if last) */
-  char* token;             /**< String representing the token content */
-  int length;              /**< Length of the token string in bytes */
-  int color;               /**< Color for the token */
-  bool is_blank;           /**< True if this is a blank (non-printing) token */
-};
-
-/**
- * Structure for storing a row of frame tokens.
- * A frame consists of multiple rows forming the visual output.
- */
-struct FrameRow {
-  struct FrameRow* next;     /**< Pointer to next row in list (NULL if last) */
-  struct FrameToken* tokens; /**< Pointer to list of tokens in this row */
-};
-
-/**
- * Structure for storing an animation frame.
- * A frame is a single image in the animation sequence.
- */
-struct Frame {
-  struct Frame* next;        /**< Pointer to the next frame (circular list) */
-  struct FrameRow* rows;     /**< Pointer to the linked list of rows */
-  double seconds_multiplier; /**< Time multiplier for frame duration */
-  int width;                 /**< Width of the widest row in the frame */
-  int id;                    /**< Unique identifier for this frame */
-};
-
-/**
- * Structure for storing an animation (Rollfilm).
- * Contains a circular linked list of frames and playback state.
- */
-struct Rollfilm {
-  struct Frame* frames; /**< Pointer to the circular linked list of frames */
-  bool loop;            /**< true to loop the animation, false to stop at end */
-  double delta_frame_ms; /**< Elapsed time in milliseconds since last frame */
-  int current_frame;     /**< Index of the currently displayed frame */
-  int frame_count;       /**< Total number of frames in the rollfilm */
-  int frame_height;      /**< Height of each frame in lines */
-  int frame_width;       /**< Width of the widest frame */
-  int
-    default_frame; /**< Default frame index for static (non-animated) display */
-  AnimationUpdate update; /**< Function pointer for custom update logic */
-  AnimationRender render; /**< Function pointer for custom render logic */
-};
+/** Owning collection of immutable sprite animation data. */
+typedef struct SpriteLibrary SpriteLibrary;
 
 /**
  * ---------------------------------------------------------------------------
@@ -69,87 +22,170 @@ struct Rollfilm {
  */
 
 /**
- * Create a new Rollfilm with frame_count frames of height frame_height.
- * @param frame_count Number of frames to allocate
- * @param frame_height Height of each frame in lines
- * @return Pointer to the created Rollfilm, or NULL on allocation failure
+ * Create mutable playback state for a loaded sprite animation.
+ * The sprite library must outlive the returned rollfilm.
+ * @param library Owning sprite library.
+ * @param name Animation name.
+ * @param icon_type Icon type index (0=nerd-icons, 1=emojis, 2=ascii).
+ * @return New rollfilm, or NULL when not found or allocation fails.
  */
-Rollfilm* CreateRollfilm(int frame_count, int frame_height);
+Rollfilm* CreateRollfilm(const SpriteLibrary* library, const char* name,
+                         int icon_type);
 
 /**
- * Set the loop variable for a list of Rollfilms.
- * @param app Pointer to application data (used for SetError on alloc failure)
- * @param film Pointer to array of rollfilm pointers
- * @param list_to_update Array of indices to update
- * @param list_size Number of indices in list_to_update
- * @param loop true to enable looping, false to disable
- */
-void SetRollfilmLoop(AppData* app, Rollfilm** film, const int* list_to_update,
-                     size_t list_size, bool loop);
-
-/**
- * Free all memory associated with a Rollfilm.
- * @param rollfilm Pointer to the Rollfilm to free
+ * Free playback state. Sprite data is owned by the library.
+ * @param rollfilm Pointer to the rollfilm to free.
  */
 void FreeRollfilm(Rollfilm* rollfilm);
 
 /**
- * ---------------------------------------------------------------------------
- * Rollfilm Deserialization
- * ---------------------------------------------------------------------------
+ * Set the loop override for selected rollfilms.
+ * @param film Array of rollfilm pointers.
+ * @param indices Indices to update.
+ * @param count Number of indices.
+ * @param loop true to enable looping.
  */
-
-/**
- * Deserialize sprites from a file into a Rollfilm structure.
- * Parses sprite file format with frame size, timing, and color codes.
- * @param filename Path to the sprite file
- * @param icon_type Icon type index (0=nerd-icons, 1=emojis, 2=ascii)
- * @return Pointer to the created Rollfilm, or NULL on failure
- */
-Rollfilm* DeserializeSprites(const char* filename, int icon_type);
+void SetRollfilmLoop(Rollfilm** film, const int* indices, size_t count,
+                     bool loop);
 
 /**
  * ---------------------------------------------------------------------------
- * Utility
+ * Playback
  * ---------------------------------------------------------------------------
  */
 
 /**
- * Find the rollfilm with the largest width among specified indices.
- * Used to size panels to fit the largest animation.
- * @param animations Pointer to array of rollfilm pointers
- * @param indices Array of indices to check
- * @param indices_count Number of indices
- * @return Index of the largest rollfilm, or -1 if none found
+ * Advance a rollfilm using accumulated wall-clock time.
+ * Multiple frames are consumed when enough time has elapsed.
+ * @param rollfilm Pointer to the rollfilm to update.
  */
-int RollfilmLargest(Rollfilm* animations[], int* indices, int indices_count);
+void UpdateRollfilm(Rollfilm* rollfilm);
 
 /**
- * Find the position of the first blank token in the last frame.
- * Used for cursor positioning in text input.
- * @param rollfilm Pointer to the rollfilm
- * @param out_x Output: x coordinate of the blank
- * @param out_y Output: y coordinate of the blank
- * @return true if found, false if not found
+ * Advance one frame when the current frame duration has elapsed.
+ * Movement is clamped to the animation bounds.
+ * @param rollfilm Pointer to the rollfilm to update.
+ * @param direction Positive for forward, negative for backward.
+ * @return true when the frame changed.
  */
-bool RollfilmFirstBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
+bool RollfilmTryAdvance(Rollfilm* rollfilm, int direction);
 
 /**
- * Find the position of the last blank token in the last frame.
- * @param rollfilm Pointer to the rollfilm
- * @param out_x Output: x coordinate of the blank
- * @param out_y Output: y coordinate of the blank
- * @return true if found, false if not found
- */
-bool RollfilmLastBlank(Rollfilm* rollfilm, int* out_x, int* out_y);
-
-/**
- * Seek the rollfilm to a specific frame by index.
- * Properly updates both the frames pointer and current_frame index,
- * and resets the frame timer so the next update doesn't skip frames.
- * @param rollfilm Pointer to the rollfilm
- * @param frame_index Target frame index (0 <= frame_index < frame_count)
+ * Seek to a frame and reset the frame clock.
+ * @param rollfilm Pointer to the rollfilm.
+ * @param frame_index Target frame index.
  */
 void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index);
+
+/**
+ * Set the frame used for static display.
+ * @param rollfilm Pointer to the rollfilm.
+ * @param frame_index Target frame index.
+ */
+void RollfilmSetDefaultFrame(Rollfilm* rollfilm, int frame_index);
+
+/**
+ * Seek to the frame used for static display.
+ * @param rollfilm Pointer to the rollfilm.
+ */
+void RollfilmSeekDefault(Rollfilm* rollfilm);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Rendering
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Render the current frame at the given screen position.
+ * @param rollfilm Pointer to the rollfilm to render.
+ * @param start_y Starting terminal row.
+ * @param start_x Starting terminal column.
+ */
+void RenderRollfilm(const Rollfilm* rollfilm, int start_y, int start_x);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Queries
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Get the number of frames.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Frame count.
+ */
+int RollfilmFrameCount(const Rollfilm* rollfilm);
+
+/**
+ * Get the current frame index.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Current frame index.
+ */
+int RollfilmFrameIndex(const Rollfilm* rollfilm);
+
+/**
+ * Get the cached animation width in terminal columns.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Maximum frame width.
+ */
+int RollfilmWidth(const Rollfilm* rollfilm);
+
+/**
+ * Get the cached animation height in rows.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Maximum frame height.
+ */
+int RollfilmHeight(const Rollfilm* rollfilm);
+
+/**
+ * Get the current frame width in terminal columns.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Current frame width.
+ */
+int RollfilmFrameWidth(const Rollfilm* rollfilm);
+
+/**
+ * Get the current frame height in rows.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Current frame height.
+ */
+int RollfilmFrameHeight(const Rollfilm* rollfilm);
+
+/**
+ * Get the current frame duration in milliseconds.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Frame duration.
+ */
+double RollfilmFrameDurationMS(const Rollfilm* rollfilm);
+
+/**
+ * Find the first blank cell in the last frame.
+ * @param rollfilm Pointer to the rollfilm.
+ * @param out_x Output: terminal column relative to the frame.
+ * @param out_y Output: row relative to the frame.
+ * @return true when found.
+ */
+bool RollfilmFirstBlank(const Rollfilm* rollfilm, int* out_x, int* out_y);
+
+/**
+ * Find the end of the last blank cell run in the last frame.
+ * @param rollfilm Pointer to the rollfilm.
+ * @param out_x Output: column one past the blank run.
+ * @param out_y Output: row containing the blank run.
+ * @return true when found.
+ */
+bool RollfilmLastBlank(const Rollfilm* rollfilm, int* out_x, int* out_y);
+
+/**
+ * Find the largest rollfilm among selected indices.
+ * Height takes priority over width.
+ * @param animations Array of rollfilm pointers.
+ * @param indices Indices to compare.
+ * @param indices_count Number of indices.
+ * @return Index of the largest rollfilm, or -1 when none is valid.
+ */
+int RollfilmLargest(Rollfilm* const animations[], const int* indices,
+                    int indices_count);
 
 #endif /* ANIM_H_ */

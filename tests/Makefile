@@ -67,7 +67,7 @@ endif
 
 TEST_CFLAGS = $(BASE_CFLAGS) $(NCURSES_CFLAGS)
 
-HELPERS = helpers/test_helpers.h
+HELPERS = helpers/test_helpers.h helpers/test_anim_stubs.h
 
 #/**
 # * ---------------------------------------------------------------------------
@@ -165,8 +165,8 @@ unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) he
 unit/test_config_load: unit/test_config_load.c $(SRCDIR)/core/config.c $(SRCDIR)/core/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
 	$(TEST_CC) $(TEST_CFLAGS) -DSAMPLE_CONFIG_PATH=\"$(abspath $(SRCDIR)/../sample_config.toml)\" -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
-#/** @brief anim — links util.c and error.c */
-unit/test_anim: unit/test_anim.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/core/util.c $(SRCDIR)/core/error.c $(HELPERS)
+#/** @brief anim — test stubs replace util.c and error.c dependencies */
+unit/test_anim: unit/test_anim.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief bar — structural tests; stubs notes.c functions */
@@ -178,7 +178,7 @@ unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/fea
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim_malloc — wrapped malloc to test OOM paths in anim.c */
-unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/core/util.c $(SRCDIR)/core/error.c $(HELPERS)
+unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief init — InitBorder structural test (standalone, no init.c links) */

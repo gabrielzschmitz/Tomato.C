@@ -14,9 +14,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "app/tomato.h"
 #include "core/config.h"
 #include "core/error.h"
-#include "app/tomato.h"
+#include "features/animation/anim.h"
 
 /* O_NOFOLLOW is not exposed by all macOS SDK configurations. */
 #ifndef O_NOFOLLOW
@@ -395,10 +396,10 @@ Dimensions GetWidestAndTallestAnimation(AppData* app) {
 
   for (int i = 0; i < MAX_ANIMATIONS; i++) {
     if (app->animations[i] == NULL) continue;
-    if (app->animations[i]->frame_width > widest)
-      widest = app->animations[i]->frame_width;
-    if (app->animations[i]->frame_height > tallest)
-      tallest = app->animations[i]->frame_height;
+    int width = RollfilmWidth(app->animations[i]);
+    int height = RollfilmHeight(app->animations[i]);
+    if (width > widest) widest = width;
+    if (height > tallest) tallest = height;
   }
 
   /* Add overhead for page indicator line, status bar, and error line */

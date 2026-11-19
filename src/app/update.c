@@ -191,7 +191,7 @@ void UpdateMainMenu(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateMainMenu", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
 }
 
@@ -207,7 +207,7 @@ void UpdateWorkTime(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateWorkTime", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
@@ -251,7 +251,7 @@ void UpdateShortPause(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateShortPause", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
@@ -285,7 +285,7 @@ void UpdateLongPause(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateLongPause", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
   if (!app->is_paused) updatePomodoroTime(app);
   if (IsStepEnded(app->pomodoro_data.current_step_time,
@@ -332,22 +332,11 @@ void UpdateNotes(AppData* app) {
 
     bool forward = app->notes->transition_target > app->notes->current_page;
 
-    double current_time = GetCurrentTimeMS();
-    double delta_time = current_time - transition->delta_frame_ms;
+    RollfilmTryAdvance(transition, forward ? 1 : -1);
 
-    if (delta_time >= 1000.0 * transition->frames->seconds_multiplier) {
-      transition->delta_frame_ms = current_time;
-      if (forward) {
-        if (transition->current_frame < transition->frame_count - 1)
-          RollfilmSeekFrame(transition, transition->current_frame + 1);
-      } else {
-        if (transition->current_frame > 0)
-          RollfilmSeekFrame(transition, transition->current_frame - 1);
-      }
-    }
-
-    int end_frame = forward ? transition->frame_count - 1 : 0;
-    if (transition->current_frame == end_frame) {
+    int frame_count = RollfilmFrameCount(transition);
+    int end_frame = forward ? frame_count - 1 : 0;
+    if (RollfilmFrameIndex(transition) == end_frame) {
       int old_page = app->notes->current_page;
       int old_id = app->notes->current_id;
 
@@ -356,7 +345,7 @@ void UpdateNotes(AppData* app) {
 
       /* Reset NOTES animation to last frame */
       RollfilmSeekFrame(app->animations[NOTES],
-                        app->animations[NOTES]->frame_count - 1);
+                        RollfilmFrameCount(app->animations[NOTES]) - 1);
 
       /* Calculate index of previously selected note within old page */
       int old_idx = 0;
@@ -388,7 +377,7 @@ void UpdateNotes(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateNotes", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
 }
 
@@ -404,7 +393,7 @@ void UpdateHelp(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateHelp", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
 }
 
@@ -420,6 +409,6 @@ void UpdateContinue(AppData* app) {
     if (animation == NULL)
       SetError(app, "UpdateContinue", ANIMATION_EQUAL_NULL);
     else
-      animation->update(animation);
+      UpdateRollfilm(animation);
   }
 }

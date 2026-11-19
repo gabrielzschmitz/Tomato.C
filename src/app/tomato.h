@@ -11,6 +11,8 @@
 #include "features/notes/notes.h"
 #include "features/notifications/notify.h"
 
+typedef struct SpriteLibrary SpriteLibrary;
+
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 #define MAX_ANIMATIONS 8
 #define MAX_ICON_TYPES 3
@@ -20,6 +22,15 @@
 #define HISTORY_VISIBLE_MONTHS 5
 #define MAX_ERROR_ENTRIES 128
 #define FPMS (1000.0 / (FPS))
+
+/**
+ * Static description of one application animation.
+ */
+typedef struct {
+  const char* filename; /**< Sprite file path. */
+  const char* name;     /**< Animation name stored in the sprite file. */
+  int default_frame;    /**< Frame used for static display. */
+} AnimationDefinition;
 
 #ifdef DEBUG_FLAG
 #define DEBUG 1
@@ -88,7 +99,8 @@ struct AppData {
     [MAX_ICON_TYPES]
     [MAX_ANIMATIONS];           /**< Loaded animations for all icon types */
   struct Rollfilm** animations; /**< Pointer to active icon type's animations */
-  bool is_paused;               /**< Whether the timer is paused */
+  SpriteLibrary* sprite_library; /**< Owning sprite data shared by rollfilms */
+  bool is_paused;                /**< Whether the timer is paused */
   bool running; /**< Whether the app is running (false = exit) */
 
   PomodoroData pomodoro_data; /**< Pomodoro timer state */

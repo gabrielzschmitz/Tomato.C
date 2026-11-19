@@ -11,6 +11,7 @@
 #include "core/error.h"
 #include "core/log.h"
 #include "core/util.h"
+#include "features/animation/anim.h"
 #include "features/audio/audio.h"
 #include "features/notifications/notify.h"
 #include "input/input.h"
@@ -274,15 +275,15 @@ void RenderPanelBorder(Panel panel, Border border) {
  */
 void RenderAnimationAtPanelCenter(Panel* panel, Rollfilm* animation,
                                   Vector2D offset) {
-  if (animation->render == NULL) return;
+  if (animation == NULL) return;
 
   int panel_center_x = panel->position.x + panel->size.width / 2;
   int panel_center_y = panel->position.y + panel->size.height / 2;
 
-  int frame_x = panel_center_x - animation->frame_width / 2 + offset.x;
-  int frame_y = panel_center_y - animation->frame_height / 2 + offset.y;
+  int frame_x = panel_center_x - RollfilmWidth(animation) / 2 + offset.x;
+  int frame_y = panel_center_y - RollfilmHeight(animation) / 2 + offset.y;
 
-  animation->render(animation, frame_y, frame_x);
+  RenderRollfilm(animation, frame_y, frame_x);
 }
 
 /**

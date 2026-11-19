@@ -138,23 +138,49 @@ int IsKeyAssignedToAction(int key, void (*action)(AppData*)) {
 }
 
 /* From anim.c */
-int RollfilmLargest(Rollfilm** animations, int* indices, int count) {
+int RollfilmLargest(Rollfilm* const animations[], const int* indices,
+                    int indices_count) {
   (void)animations;
   (void)indices;
-  (void)count;
+  (void)indices_count;
   return -1;
 }
-void RollfilmSeekFrame(Rollfilm* animation, int frame) {
+void RollfilmSeekDefault(Rollfilm* animation) { (void)animation; }
+int RollfilmWidth(const Rollfilm* animation) {
   (void)animation;
-  (void)frame;
+  return 0;
 }
-bool RollfilmFirstBlank(Rollfilm* animation, int* x, int* y) {
+int RollfilmHeight(const Rollfilm* animation) {
+  (void)animation;
+  return 0;
+}
+int RollfilmFrameWidth(const Rollfilm* animation) {
+  (void)animation;
+  return 0;
+}
+int RollfilmFrameHeight(const Rollfilm* animation) {
+  (void)animation;
+  return 0;
+}
+int RollfilmFrameCount(const Rollfilm* animation) {
+  (void)animation;
+  return 0;
+}
+int RollfilmFrameIndex(const Rollfilm* animation) {
+  (void)animation;
+  return 0;
+}
+double RollfilmFrameDurationMS(const Rollfilm* animation) {
+  (void)animation;
+  return 0.0;
+}
+bool RollfilmFirstBlank(const Rollfilm* animation, int* x, int* y) {
   (void)animation;
   *x = 0;
   *y = 0;
   return false;
 }
-bool RollfilmLastBlank(Rollfilm* animation, int* x, int* y) {
+bool RollfilmLastBlank(const Rollfilm* animation, int* x, int* y) {
   (void)animation;
   *x = 0;
   *y = 0;

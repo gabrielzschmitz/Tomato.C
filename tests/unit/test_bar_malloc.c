@@ -8,12 +8,13 @@
 
 #include <stdlib.h>
 
-#include "features/bar/bar.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
+#include "features/bar/bar.h"
+#include "test_anim_stubs.h"
 #include "test_helpers.h"
 #include "test_malloc.h"
-#include "app/ui/ui.h"
 
 Config g_config;
 
@@ -21,26 +22,47 @@ Config g_config;
 void RegisterClickRegion(AppData* app, int x, int y, int width, int height,
                          RegionType type, MenuAction action, int menu_index,
                          int item_index, int group_index) {
-  (void)app;(void)x;(void)y;(void)width;(void)height;
-  (void)type;(void)action;(void)menu_index;(void)item_index;(void)group_index;
+  (void)app;
+  (void)x;
+  (void)y;
+  (void)width;
+  (void)height;
+  (void)type;
+  (void)action;
+  (void)menu_index;
+  (void)item_index;
+  (void)group_index;
 }
 void LogError(const char* context, ErrorType error) {
-  (void)context;(void)error;
+  (void)context;
+  (void)error;
 }
 
-void HistStreak(const char* path, int year, int month, int day,
-                int* current, int* longest) {
-  (void)path;(void)year;(void)month;(void)day;
-  *current = 0; *longest = 0;
+void HistStreak(const char* path, int year, int month, int day, int* current,
+                int* longest) {
+  (void)path;
+  (void)year;
+  (void)month;
+  (void)day;
+  *current = 0;
+  *longest = 0;
 }
 void RenderCriticalQuitConfirmation(AppData* app) { (void)app; }
 int GetNoteLines(int start_line, int max_lines, int* cursor_line) {
-  (void)start_line;(void)max_lines;(void)cursor_line; return 1;
+  (void)start_line;
+  (void)max_lines;
+  (void)cursor_line;
+  return 1;
 }
-int GetNoteLinesFromText(const char* text) { (void)text; return 1; }
+int GetNoteLinesFromText(const char* text) {
+  (void)text;
+  return 1;
+}
 
 static void dummy_update(AppData* app, StatusBarModule* m, Panel* panel) {
-  (void)app;(void)m;(void)panel;
+  (void)app;
+  (void)m;
+  (void)panel;
 }
 
 /**

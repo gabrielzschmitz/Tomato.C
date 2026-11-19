@@ -12,10 +12,11 @@
 
 #include "core/config.h"
 #include "core/error.h"
-#include "input/input.h"
-#include "features/pomodoro/pomodoro.h"
-#include "test_helpers.h"
 #include "core/util.h"
+#include "features/pomodoro/pomodoro.h"
+#include "input/input.h"
+#include "test_anim_stubs.h"
+#include "test_helpers.h"
 
 /* Stub — util.c may call LogError on allocation failures */
 Config g_config;
@@ -218,16 +219,13 @@ int main(void) {
   RUN_TEST(test_tick_advances_time,
            "tick advances step time and total elapsed");
   RUN_TEST(test_work_to_short_pause, "work transitions to short pause");
-  RUN_TEST(test_short_pause_to_work,
-           "short pause transitions back to work");
+  RUN_TEST(test_short_pause_to_work, "short pause transitions back to work");
   RUN_TEST(test_long_pause_after_last_cycle,
            "last work cycle goes to long pause");
   RUN_TEST(test_cycle_increments_after_pause,
            "cycle increments after short pause");
-  RUN_TEST(test_full_cycle_all_steps,
-           "all steps in a full pomodoro cycle");
-  RUN_TEST(test_is_step_ended_utility,
-           "IsStepEnded used by timer (boundary)");
+  RUN_TEST(test_full_cycle_all_steps, "all steps in a full pomodoro cycle");
+  RUN_TEST(test_is_step_ended_utility, "IsStepEnded used by timer (boundary)");
   RUN_TEST(test_total_elapsed_accumulates,
            "total elapsed accumulates across ticks");
   RUN_TEST(test_session_index_reset_after_cycle,

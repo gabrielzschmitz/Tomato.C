@@ -9,11 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "features/bar/bar.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
+#include "features/bar/bar.h"
+#include "test_anim_stubs.h"
 #include "test_helpers.h"
-#include "app/ui/ui.h"
 
 Config g_config;
 
@@ -35,10 +36,14 @@ void LogError(const char* context, ErrorType error) {
   (void)context;
   (void)error;
 }
-void HistStreak(const char* path, int year, int month, int day,
-                int* current, int* longest) {
-  (void)path; (void)year; (void)month; (void)day;
-  *current = 0; *longest = 0;
+void HistStreak(const char* path, int year, int month, int day, int* current,
+                int* longest) {
+  (void)path;
+  (void)year;
+  (void)month;
+  (void)day;
+  *current = 0;
+  *longest = 0;
 }
 void RenderCriticalQuitConfirmation(AppData* app) { (void)app; }
 int GetNoteLines(int start_line, int max_lines, int* cursor_line) {
@@ -260,8 +265,10 @@ static void test_default_right_modules(void) {
   g_config.visual.status_bar_right_count = 2;
   g_config.visual.status_bar_right_modules[0] = "Scene";
   g_config.visual.status_bar_right_modules[1] = "LineColumn";
-  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_right_modules[0]));
-  ASSERT_NOT_NULL(ModuleFromString(g_config.visual.status_bar_right_modules[1]));
+  ASSERT_NOT_NULL(
+    ModuleFromString(g_config.visual.status_bar_right_modules[0]));
+  ASSERT_NOT_NULL(
+    ModuleFromString(g_config.visual.status_bar_right_modules[1]));
 }
 
 /**
@@ -312,14 +319,18 @@ static void test_terminal_size_module_no_icon(void) {
   TEST("TerminalSizeModule content without icon shows WxH");
   char out[24];
   formatTerminalSizeModule(out, sizeof(out), "", 80, 24);
-  ASSERT_STR_EQ(out, "80\xc3\x97" "24");
+  ASSERT_STR_EQ(out,
+                "80\xc3\x97"
+                "24");
 }
 
 static void test_terminal_size_module_with_icon(void) {
   TEST("TerminalSizeModule content with icon shows icon + WxH");
   char out[24];
   formatTerminalSizeModule(out, sizeof(out), "\xe2\x96\xa1", 120, 40);
-  ASSERT_STR_EQ(out, "\xe2\x96\xa1 120\xc3\x97" "40");
+  ASSERT_STR_EQ(out,
+                "\xe2\x96\xa1 120\xc3\x97"
+                "40");
 }
 
 static void test_streak_module_no_icon(void) {
@@ -361,8 +372,7 @@ int main(void) {
            "ModuleFromString resolves InputMode");
   RUN_TEST(test_module_from_string_real_time,
            "ModuleFromString resolves RealTime");
-  RUN_TEST(test_module_from_string_scene,
-           "ModuleFromString resolves Scene");
+  RUN_TEST(test_module_from_string_scene, "ModuleFromString resolves Scene");
   RUN_TEST(test_module_from_string_current_status,
            "ModuleFromString resolves CurrentStatus");
   RUN_TEST(test_module_from_string_line_column,
@@ -371,8 +381,7 @@ int main(void) {
            "ModuleFromString unknown name returns NULL");
   RUN_TEST(test_module_from_string_empty,
            "ModuleFromString empty name returns NULL");
-  RUN_TEST(test_module_from_string_null,
-           "ModuleFromString NULL returns NULL");
+  RUN_TEST(test_module_from_string_null, "ModuleFromString NULL returns NULL");
   RUN_TEST(test_max_status_bar_modules,
            "MAX_STATUS_BAR_MODULES allows 8 modules per position");
   RUN_TEST(test_default_left_modules,
