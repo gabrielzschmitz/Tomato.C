@@ -24,6 +24,21 @@ The loop uses curses input timeouts rather than a fixed idle polling delay.
 Pomodoro time advances from elapsed monotonic time, so a delayed UI cycle can
 catch up without losing timer ticks.
 
+## Sprite animations
+
+Sprite resources use a section-based `.asc` format. A file contains one or more
+`[animation.NAME]` blocks. Each animation declares `icon-type`,
+`default-frame-duration`, `loop`, and `default-color`. Frames live in
+`[[frame]]` blocks, use optional `frame-duration` overrides, and store decoded
+cell content inside `[[content]]`. The parser reports diagnostics with source
+filename and line number.
+
+`SpriteLibrary` owns immutable decoded animation data. `Rollfilm` stores only
+mutable playback state and references one animation and icon type. The library
+loads each resource once, so all rollfilms share frames. Frames cache terminal
+dimensions. Rendering advances by decoded `wcwidth` cell width, not by source
+byte count.
+
 ## Timer IPC
 
 The timer server runs in a child process. It owns a Unix-domain stream socket
