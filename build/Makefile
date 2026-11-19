@@ -21,6 +21,7 @@ include config.mk
 
 SRCS = $(SRCDIR)/app/tomato.c \
        $(SRCDIR)/features/animation/anim.c \
+       $(SRCDIR)/features/animation/sprite.c \
        $(SRCDIR)/features/audio/audio.c \
        $(SRCDIR)/features/bar/bar.c \
        $(SRCDIR)/core/config.c \
