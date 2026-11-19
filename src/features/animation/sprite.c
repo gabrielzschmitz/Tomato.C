@@ -11,9 +11,7 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <float.h>
 #include <inttypes.h>
-#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -24,6 +22,7 @@
 #include <string.h>
 #include <wchar.h>
 
+#include "core/arena.h"
 #include "core/error.h"
 
 /** Size of the formatted diagnostic context buffer. */
@@ -35,31 +34,8 @@
 /** Alignment used for every finalized storage region. */
 #define SPRITE_STORAGE_ALIGNMENT 16u
 
-/** Minimum size of a new arena chunk. */
-#define SPRITE_ARENA_CHUNK_SIZE 4096u
-
 _Static_assert(sizeof(void*) <= SPRITE_STORAGE_ALIGNMENT,
                "storage alignment must cover pointers");
-
-/** Memory chunk used by the temporary sprite builder. */
-typedef struct spriteArenaChunk {
-  struct spriteArenaChunk* next; /**< Next allocated chunk. */
-  size_t used;                   /**< Bytes used in this chunk. */
-  size_t capacity;               /**< Bytes available in this chunk. */
-  unsigned char data[];          /**< Aligned payload storage. */
-} spriteArenaChunk;
-
-/** Free block stored inside a released arena allocation. */
-typedef struct spriteArenaFreeBlock {
-  struct spriteArenaFreeBlock* next; /**< Next free block. */
-  size_t size;                       /**< Usable bytes in this block. */
-} spriteArenaFreeBlock;
-
-/** Arena allocator for temporary parsing data. */
-typedef struct {
-  spriteArenaChunk* head;            /**< Most recently allocated chunk. */
-  spriteArenaFreeBlock* free_blocks; /**< Reusable released blocks. */
-} spriteArena;
 
 /** Deduplicating string pool used during finalization. */
 typedef struct {
@@ -86,9 +62,6 @@ typedef struct {
 _Static_assert(sizeof(spriteCellData) == sizeof(SpriteCell),
                "temporary and finalized cells must have equal size");
 
-_Static_assert(sizeof(spriteArenaFreeBlock) <= SPRITE_STORAGE_ALIGNMENT,
-               "free block metadata must fit arena alignment");
-
 /** Temporary frame state while one frame is parsed. */
 typedef struct {
   uint32_t first_row;   /**< First row index owned by this frame. */
@@ -114,7 +87,7 @@ typedef struct {
 
 /** Temporary animation definition stored in the builder. */
 typedef struct {
-  spriteArena* arena;         /**< Arena owning temporary arrays. */
+  Arena* arena;               /**< Arena owning temporary arrays. */
   char* name;                 /**< Animation name. */
   char* source;               /**< Source filename for diagnostics. */
   uint32_t source_line;       /**< Declaration line for diagnostics. */
@@ -144,7 +117,7 @@ typedef struct {
 
 /** Temporary list of builder definitions. */
 typedef struct {
-  spriteArena* arena;             /**< Arena owning the item array. */
+  Arena* arena;                   /**< Arena owning the item array. */
   spriteBuilderAnimation** items; /**< Definition pointers. */
   uint32_t count;                 /**< Number of definitions. */
   uint32_t capacity;              /**< Capacity of items. */
@@ -169,21 +142,17 @@ typedef struct {
 static bool checkedAddSize(size_t left, size_t right, size_t* result);
 static bool checkedMulSize(size_t left, size_t right, size_t* result);
 static size_t alignUpSize(size_t value, size_t alignment);
-static bool arenaBlockSize(size_t size, size_t alignment, size_t* block_size);
-static void* arenaAllocate(spriteArena* arena, size_t size, size_t alignment);
-static void arenaRelease(spriteArena* arena, void* pointer, size_t size);
-static void arenaFree(spriteArena* arena);
-static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
+static bool arenaReserve(Arena* arena, void** data, uint32_t* capacity,
                          uint32_t needed, size_t element_size);
-static char* arenaDuplicateRange(spriteArena* arena, const char* start,
+static char* arenaDuplicateRange(Arena* arena, const char* start,
                                  size_t length);
-static uint32_t stringPoolAppend(spriteArena* arena, spriteStringPool* pool,
+static uint32_t stringPoolAppend(Arena* arena, spriteStringPool* pool,
                                  const char* text, bool* ok);
 
 static ErrorType reportDiagnostic(ErrorType code, ErrorType* error,
                                   const char* filename, uint32_t line,
                                   const char* format, ...);
-static char* readLine(FILE* file, spriteArena* arena, char** buffer,
+static char* readLine(FILE* file, Arena* arena, char** buffer,
                       uint32_t* capacity, uint32_t* length, bool* failed);
 
 static void trimRange(const char* line, const char** start, const char** end);
@@ -237,20 +206,19 @@ static bool appendDefinition(spriteBuilderList* definitions,
 static bool mergeDefinitions(spriteBuilderLibrary* library,
                              spriteBuilderList* definitions, ErrorType* error);
 static bool parseSpriteFile(const char* filename, spriteBuilderLibrary* library,
-                            spriteArena* arena, ErrorType* error);
+                            Arena* arena, ErrorType* error);
 
 static bool validateBuilder(const spriteBuilderLibrary* library,
                             const char* filename, ErrorType* error);
 static bool calculateLayout(const spriteBuilderLibrary* library,
                             const spriteStringPool* pool,
                             spriteStorageLayout* layout, ErrorType* error);
-static bool finalizeLibrary(const spriteBuilderLibrary* library,
-                            spriteArena* arena, SpriteLibrary** output,
-                            ErrorType* error);
+static bool finalizeLibrary(const spriteBuilderLibrary* library, Arena* arena,
+                            SpriteLibrary** output, ErrorType* error);
 static bool validateLibrary(const SpriteLibrary* library);
+static const char* stringAt(const SpriteAnimation* animation, uint32_t offset);
 static const SpriteFrame* animationFrame(const SpriteAnimation* animation,
                                          size_t index);
-static const char* stringAt(const SpriteAnimation* animation, uint32_t offset);
 
 /**
  * Add two sizes with overflow checks.
@@ -291,104 +259,6 @@ static size_t alignUpSize(size_t value, size_t alignment) {
 }
 
 /**
- * Calculate the padded size of one arena allocation.
- * @param size Requested payload size.
- * @param alignment Required power-of-two alignment.
- * @param block_size Output: padded allocation size.
- * @return true when the padded size is representable.
- */
-static bool arenaBlockSize(size_t size, size_t alignment, size_t* block_size) {
-  size_t minimum =
-    size > sizeof(spriteArenaFreeBlock) ? size : sizeof(spriteArenaFreeBlock);
-  size_t padded = alignUpSize(minimum, alignment);
-  if (padded == SIZE_MAX) return false;
-  *block_size = padded;
-  return true;
-}
-
-/**
- * Allocate aligned temporary storage from an arena.
- * @param arena Arena to allocate from.
- * @param size Number of bytes to allocate.
- * @param alignment Required power-of-two alignment.
- * @return Aligned pointer, or NULL on allocation failure.
- */
-static void* arenaAllocate(spriteArena* arena, size_t size, size_t alignment) {
-  size_t effective_alignment =
-    alignment > SPRITE_STORAGE_ALIGNMENT ? alignment : SPRITE_STORAGE_ALIGNMENT;
-  size_t span;
-  if (!arenaBlockSize(size, effective_alignment, &span)) return NULL;
-
-  spriteArenaFreeBlock** link = &arena->free_blocks;
-  while (*link != NULL) {
-    spriteArenaFreeBlock* block = *link;
-    if (block->size >= span) {
-      *link = block->next;
-      return block;
-    }
-    link = &block->next;
-  }
-
-  for (spriteArenaChunk* chunk = arena->head; chunk != NULL;
-       chunk = chunk->next) {
-    uintptr_t raw = (uintptr_t)(chunk->data + chunk->used);
-    uintptr_t aligned = (raw + (uintptr_t)effective_alignment - 1) &
-                        ~((uintptr_t)effective_alignment - 1);
-    size_t offset = (size_t)(aligned - (uintptr_t)chunk->data);
-    size_t end;
-    if (!checkedAddSize(offset, span, &end) || end > chunk->capacity) continue;
-    chunk->used = end;
-    return (void*)aligned;
-  }
-
-  size_t payload;
-  if (!checkedAddSize(span, effective_alignment - 1, &payload)) return NULL;
-  if (payload < SPRITE_ARENA_CHUNK_SIZE) payload = SPRITE_ARENA_CHUNK_SIZE;
-  size_t chunk_size;
-  if (!checkedAddSize(sizeof(spriteArenaChunk), payload, &chunk_size))
-    return NULL;
-  spriteArenaChunk* chunk = (spriteArenaChunk*)malloc(chunk_size);
-  if (chunk == NULL) return NULL;
-  chunk->next = arena->head;
-  chunk->used = 0;
-  chunk->capacity = payload;
-  arena->head = chunk;
-  return arenaAllocate(arena, size, alignment);
-}
-
-/**
- * Return one arena allocation to the reusable free list.
- * @param arena Arena owning the allocation.
- * @param pointer Allocation to release.
- * @param size Payload size originally requested.
- */
-static void arenaRelease(spriteArena* arena, void* pointer, size_t size) {
-  if (pointer == NULL || size == 0) return;
-  size_t span;
-  if (!arenaBlockSize(size, SPRITE_STORAGE_ALIGNMENT, &span)) return;
-
-  spriteArenaFreeBlock* block = (spriteArenaFreeBlock*)pointer;
-  block->size = span;
-  block->next = arena->free_blocks;
-  arena->free_blocks = block;
-}
-
-/**
- * Release every chunk owned by an arena.
- * @param arena Arena to release.
- */
-static void arenaFree(spriteArena* arena) {
-  spriteArenaChunk* chunk = arena->head;
-  while (chunk != NULL) {
-    spriteArenaChunk* next = chunk->next;
-    free(chunk);
-    chunk = next;
-  }
-  arena->head = NULL;
-  arena->free_blocks = NULL;
-}
-
-/**
  * Grow an arena-backed array with overflow checks.
  * @param arena Arena owning the allocation.
  * @param data Pointer to the array pointer.
@@ -397,7 +267,7 @@ static void arenaFree(spriteArena* arena) {
  * @param element_size Size of one element.
  * @return true when the array has enough capacity.
  */
-static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
+static bool arenaReserve(Arena* arena, void** data, uint32_t* capacity,
                          uint32_t needed, size_t element_size) {
   if (needed <= *capacity) return true;
 
@@ -417,11 +287,11 @@ static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
       !checkedMulSize(*capacity, element_size, &old_bytes))
     return false;
 
-  void* resized = arenaAllocate(arena, bytes, SPRITE_STORAGE_ALIGNMENT);
+  void* resized = ArenaAllocate(arena, bytes);
   if (resized == NULL) return false;
   if (old_bytes > 0) {
     memcpy(resized, *data, old_bytes);
-    arenaRelease(arena, *data, old_bytes);
+    ArenaRelease(arena, *data, old_bytes);
   }
   *data = resized;
   *capacity = new_capacity;
@@ -435,11 +305,11 @@ static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
  * @param length Number of characters to copy.
  * @return NUL-terminated copy, or NULL on allocation failure.
  */
-static char* arenaDuplicateRange(spriteArena* arena, const char* start,
+static char* arenaDuplicateRange(Arena* arena, const char* start,
                                  size_t length) {
   size_t bytes;
   if (!checkedAddSize(length, 1, &bytes)) return NULL;
-  char* copy = (char*)arenaAllocate(arena, bytes, SPRITE_STORAGE_ALIGNMENT);
+  char* copy = (char*)ArenaAllocate(arena, bytes);
   if (copy == NULL) return NULL;
   memcpy(copy, start, length);
   copy[length] = '\0';
@@ -454,7 +324,7 @@ static char* arenaDuplicateRange(spriteArena* arena, const char* start,
  * @param ok Output: false on allocation failure.
  * @return Offset of the string in the pool.
  */
-static uint32_t stringPoolAppend(spriteArena* arena, spriteStringPool* pool,
+static uint32_t stringPoolAppend(Arena* arena, spriteStringPool* pool,
                                  const char* text, bool* ok) {
   *ok = true;
   if (text == NULL) {
@@ -532,7 +402,7 @@ static ErrorType reportDiagnostic(ErrorType code, ErrorType* error,
  * @param failed Output: true on allocation failure.
  * @return Buffer containing the line, or NULL at EOF or failure.
  */
-static char* readLine(FILE* file, spriteArena* arena, char** buffer,
+static char* readLine(FILE* file, Arena* arena, char** buffer,
                       uint32_t* capacity, uint32_t* length, bool* failed) {
   uint32_t used = 0;
   int character = EOF;
@@ -544,15 +414,14 @@ static char* readLine(FILE* file, spriteArena* arena, char** buffer,
         *failed = true;
         return NULL;
       }
-      char* resized =
-        (char*)arenaAllocate(arena, needed, SPRITE_STORAGE_ALIGNMENT);
+      char* resized = (char*)ArenaAllocate(arena, needed);
       if (resized == NULL) {
         *failed = true;
         return NULL;
       }
       if (*buffer != NULL) {
         if (used > 0) memcpy(resized, *buffer, used);
-        arenaRelease(arena, *buffer, *capacity);
+        ArenaRelease(arena, *buffer, *capacity);
       }
       *buffer = resized;
       *capacity = needed;
@@ -1355,9 +1224,9 @@ static bool finalizeAnimation(spriteBuilderAnimation* pending,
     return false;
   }
 
-  spriteArena* arena = pending->arena;
-  spriteBuilderAnimation* finished = (spriteBuilderAnimation*)arenaAllocate(
-    arena, sizeof(*finished), SPRITE_STORAGE_ALIGNMENT);
+  Arena* arena = pending->arena;
+  spriteBuilderAnimation* finished =
+    (spriteBuilderAnimation*)ArenaAllocate(arena, sizeof(*finished));
   if (finished == NULL) {
     reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
                      "allocation failure");
@@ -1434,7 +1303,7 @@ static bool mergeDefinitions(spriteBuilderLibrary* library,
  * @return true on success.
  */
 static bool parseSpriteFile(const char* filename, spriteBuilderLibrary* library,
-                            spriteArena* arena, ErrorType* error) {
+                            Arena* arena, ErrorType* error) {
   FILE* file = fopen(filename, "rb");
   if (file == NULL) {
     reportDiagnostic(FILE_ERROR, error, filename, 0, "cannot open sprite file");
@@ -1803,9 +1672,8 @@ static bool calculateLayout(const spriteBuilderLibrary* library,
  * @param error Optional diagnostic output.
  * @return true on success.
  */
-static bool finalizeLibrary(const spriteBuilderLibrary* library,
-                            spriteArena* arena, SpriteLibrary** output,
-                            ErrorType* error) {
+static bool finalizeLibrary(const spriteBuilderLibrary* library, Arena* arena,
+                            SpriteLibrary** output, ErrorType* error) {
   if (library->definitions.count == 0) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, "<library>", 0,
                      "no animation definitions");
@@ -2016,20 +1884,6 @@ static bool validateLibrary(const SpriteLibrary* library) {
 }
 
 /**
- * Resolve a pooled string offset.
- * @param animation Owning animation.
- * @param offset Offset in the string pool.
- * @return Pointer to the NUL-terminated string, or NULL for a bad offset.
- */
-static const char* stringAt(const SpriteAnimation* animation, uint32_t offset) {
-  const SpriteLibrary* library = (const SpriteLibrary*)animation->base;
-  const unsigned char* base = (const unsigned char*)library;
-  if (offset < library->string_offset || offset >= library->storage_size)
-    return NULL;
-  return (const char*)base + offset;
-}
-
-/**
  * Load every sprite file into one library.
  * Duplicate icon-type assignments for the same animation name are rejected.
  * Detailed file and line diagnostics are logged through LogError.
@@ -2050,24 +1904,25 @@ ErrorType LoadSpriteLibrary(const char* const* filenames, size_t count,
     return reportDiagnostic(INVALID_ARGUMENT_ERROR, &error, "<library>", 0,
                             "no sprite files supplied");
 
-  spriteArena arena = {0};
+  Arena arena;
+  ArenaInit(&arena, ARENA_CHUNK_SIZE);
   spriteBuilderLibrary builder = {0};
   builder.definitions.arena = &arena;
   for (size_t i = 0; i < count; i++) {
     if (filenames[i] == NULL) {
-      arenaFree(&arena);
+      ArenaDestroy(&arena);
       return reportDiagnostic(INVALID_ARGUMENT_ERROR, &error, "<library>", 0,
                               "NULL sprite filename");
     }
     if (!parseSpriteFile(filenames[i], &builder, &arena, &error)) {
-      arenaFree(&arena);
+      ArenaDestroy(&arena);
       return error == NO_ERROR ? ANIMATION_DESERIALIZATION_ERROR : error;
     }
   }
 
   SpriteLibrary* loaded = NULL;
   bool finalized = finalizeLibrary(&builder, &arena, &loaded, &error);
-  arenaFree(&arena);
+  ArenaDestroy(&arena);
   if (!finalized)
     return error == NO_ERROR ? ANIMATION_DESERIALIZATION_ERROR : error;
   *library = loaded;
@@ -2080,21 +1935,6 @@ ErrorType LoadSpriteLibrary(const char* const* filenames, size_t count,
  * @param library Pointer to the library to free.
  */
 void FreeSpriteLibrary(SpriteLibrary* library) { free(library); }
-
-/**
- * Get an animation frame.
- * @param animation Pointer to the animation definition.
- * @param index Frame index.
- * @return Immutable frame, or NULL when index is out of range.
- */
-static const SpriteFrame* animationFrame(const SpriteAnimation* animation,
-                                         size_t index) {
-  if (animation == NULL || index >= animation->frame_count) return NULL;
-  const SpriteFrame* frames =
-    (const SpriteFrame*)((const unsigned char*)animation->base +
-                         animation->frame_offset);
-  return &frames[index];
-}
 
 /**
  * Find an animation definition for a name and icon type.
@@ -2119,6 +1959,20 @@ const SpriteAnimation* SpriteLibraryFind(const SpriteLibrary* library,
 }
 
 /**
+ * Resolve a pooled string offset.
+ * @param animation Owning animation.
+ * @param offset Offset in the string pool.
+ * @return Pointer to the NUL-terminated string, or NULL for a bad offset.
+ */
+static const char* stringAt(const SpriteAnimation* animation, uint32_t offset) {
+  const SpriteLibrary* library = (const SpriteLibrary*)animation->base;
+  const unsigned char* base = (const unsigned char*)library;
+  if (offset < library->string_offset || offset >= library->storage_size)
+    return NULL;
+  return (const char*)base + offset;
+}
+
+/**
  * Get an animation name.
  * @param animation Pointer to the animation definition.
  * @return Name string owned by the library.
@@ -2136,6 +1990,21 @@ const char* SpriteAnimationName(const SpriteAnimation* animation) {
 const SpriteFrame* SpriteAnimationFrame(const SpriteAnimation* animation,
                                         size_t index) {
   return animationFrame(animation, index);
+}
+
+/**
+ * Get an animation frame.
+ * @param animation Pointer to the animation definition.
+ * @param index Frame index.
+ * @return Immutable frame, or NULL when index is out of range.
+ */
+static const SpriteFrame* animationFrame(const SpriteAnimation* animation,
+                                         size_t index) {
+  if (animation == NULL || index >= animation->frame_count) return NULL;
+  const SpriteFrame* frames =
+    (const SpriteFrame*)((const unsigned char*)animation->base +
+                         animation->frame_offset);
+  return &frames[index];
 }
 
 /**

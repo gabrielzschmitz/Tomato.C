@@ -78,6 +78,7 @@ HELPERS = helpers/test_helpers.h helpers/test_anim_stubs.h
 UNIT_BINS = \
 	unit/test_gap_buffer \
 	unit/test_history \
+	unit/test_arena \
 	unit/test_config \
 	unit/test_draw \
 	unit/test_input \
@@ -111,6 +112,10 @@ unit/test_gap_buffer: unit/test_gap_buffer.c $(SRCDIR)/input/gap_buffer.c $(HELP
 
 #/** @brief history — standalone, no ncurses */
 unit/test_history: unit/test_history.c $(SRCDIR)/input/history.c $(HELPERS)
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
+
+#/** @brief arena — standalone allocator tests */
+unit/test_arena: unit/test_arena.c $(SRCDIR)/core/arena.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
 
 #/** @brief config — header-only macros (config.h), no .c linking needed */
@@ -171,7 +176,7 @@ unit/test_config_debug: unit/test_config_debug.c $(SRCDIR)/core/config.c $(SRCDI
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim — test stubs replace util.c and error.c dependencies */
-unit/test_anim: unit/test_anim.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
+unit/test_anim: unit/test_anim.c $(SRCDIR)/core/arena.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief bar — structural tests; stubs notes.c functions */
@@ -183,7 +188,7 @@ unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/fea
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim_malloc — wrapped malloc to test OOM paths in anim.c */
-unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
+unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/core/arena.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief init — InitBorder structural test (standalone, no init.c links) */

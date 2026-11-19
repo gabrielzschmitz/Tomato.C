@@ -25,6 +25,7 @@ SRCS = $(SRCDIR)/app/tomato.c \
        $(SRCDIR)/features/audio/audio.c \
        $(SRCDIR)/features/bar/bar.c \
        $(SRCDIR)/core/config.c \
+       $(SRCDIR)/core/arena.c \
        $(SRCDIR)/app/draw.c \
        $(SRCDIR)/core/error.c \
        $(SRCDIR)/input/gap_buffer.c \
