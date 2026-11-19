@@ -9,6 +9,8 @@
 # * Overridable variables:
 # *   PREFIX  — installation prefix (default /usr/local)
 # *   DEBUG   — set to 1 to add -DDEBUG_FLAG and extra -g
+# *   TOMATO_DEV_ROOT — project root embedded in debug builds (default:
+# *                     parent of build/)
 # */
 
 #/**
@@ -22,6 +24,7 @@ SRCDIR = ../src
 PREFIX = /usr/local
 APPPREFIX = $(PREFIX)/share/applications
 DATAPREFIX = ./resources
+TOMATO_DEV_ROOT ?= $(abspath $(CURDIR)/..)
 INCLUDES = -I$(SRCDIR) -I$(PREFIX)/include
 LIBDIR = -L$(PREFIX)/lib
 VERSION := $(shell cat ../VERSION 2>/dev/null)
@@ -90,9 +93,9 @@ endif
 # * ---------------------------------------------------------------------------
 # */
 
-DEBUG :Wall?= 0
+DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-    DFLAGS += -DDEBUG_FLAG
+    DFLAGS += -DDEBUG_FLAG -DTOMATO_DEV_ROOT=\"$(TOMATO_DEV_ROOT)\"
     CFLAGS += -g
 endif
 

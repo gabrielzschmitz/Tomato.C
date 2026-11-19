@@ -10,7 +10,7 @@
 # * Usage: ./build.sh [--debug] [--no-move] [--verbose] [--output-dir=<dir>]
 # *
 # * Options:
-# *   --debug              Enable debug mode (DEBUG=1)
+# *   --debug              Enable debug mode and project-local .tmp paths
 # *   --no-move            Keep the binary inside build/
 # *   --verbose            Verbose make output
 # *   --output-dir=<dir>   Custom output directory for the binary
@@ -81,7 +81,7 @@ usage() {
   echo ""
   echo "Usage: $0 [--debug] [--no-move] [--verbose] [--output-dir=<dir>]"
   echo ""
-  echo "  --debug              Enable debug mode (DEBUG=1)"
+  echo "  --debug              Enable debug mode and project-local .tmp paths"
   echo "  --no-move            Keep the binary inside build/"
   echo "  --verbose            Verbose make output"
   echo "  --output-dir=<dir>   Custom output directory for the binary"
