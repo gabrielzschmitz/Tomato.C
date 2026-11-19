@@ -8,12 +8,12 @@
 
 #include <stdlib.h>
 
-#include "bar.h"
-#include "config.h"
-#include "error.h"
+#include "features/bar/bar.h"
+#include "core/config.h"
+#include "core/error.h"
 #include "test_helpers.h"
 #include "test_malloc.h"
-#include "ui.h"
+#include "ui/ui.h"
 
 Config g_config;
 

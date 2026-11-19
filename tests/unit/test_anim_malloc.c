@@ -8,9 +8,9 @@
 
 #include <stdlib.h>
 
-#include "anim.h"
-#include "config.h"
-#include "error.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "features/animation/anim.h"
 #include "test_helpers.h"
 #include "test_malloc.h"
 

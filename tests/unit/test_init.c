@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-#include "init.h"
+#include "core/config.h"
+#include "app/init.h"
 #include "test_helpers.h"
-#include "ui.h"
+#include "ui/ui.h"
 
 Config g_config;
 

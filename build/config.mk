@@ -18,10 +18,11 @@
 # */
 
 SRCDIR = ../src
+# Project headers are included relative to $(SRCDIR), e.g. "core/util.h".
 PREFIX = /usr/local
 APPPREFIX = $(PREFIX)/share/applications
 DATAPREFIX = ./resources
-INCLUDES = -I$(PREFIX)/include
+INCLUDES = -I$(SRCDIR) -I$(PREFIX)/include
 LIBDIR = -L$(PREFIX)/lib
 VERSION := $(shell cat ../VERSION 2>/dev/null)
 ifeq ($(strip $(VERSION)),)

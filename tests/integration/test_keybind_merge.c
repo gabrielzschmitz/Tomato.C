@@ -17,9 +17,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "config.c"
-#include "config.h"
-#include "input.h"
+#include "core/config.c"
+#include "core/config.h"
+#include "input/input.h"
 #include "external/toml-c.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"

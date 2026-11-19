@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "pomodoro.h"
+#include "features/pomodoro/pomodoro.h"
 #include "test_helpers.h"
 
 /**

@@ -10,10 +10,10 @@
 
 #define DATADIR "/usr/share/tomato"
 
-#include "config.h"
-#include "input.h"
+#include "core/config.h"
+#include "input/input.h"
 #include "test_helpers.h"
-#include "tomato.h"
+#include "app/tomato.h"
 
 Config g_config;
 

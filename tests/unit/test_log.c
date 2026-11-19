@@ -16,11 +16,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "error.h"
-#include "log.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "core/log.h"
+#include "app/tomato.h"
 #include "test_helpers.h"
-#include "tomato.h"
 
 Config g_config;
 

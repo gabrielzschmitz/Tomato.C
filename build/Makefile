@@ -19,13 +19,26 @@ include config.mk
 # * ---------------------------------------------------------------------------
 # */
 
-SRCS = $(SRCDIR)/tomato.c $(SRCDIR)/anim.c $(SRCDIR)/audio.c $(SRCDIR)/bar.c \
-       $(SRCDIR)/config.c $(SRCDIR)/draw.c $(SRCDIR)/error.c \
-       $(SRCDIR)/gap_buffer.c $(SRCDIR)/history.c $(SRCDIR)/init.c \
-       $(SRCDIR)/input.c $(SRCDIR)/log.c $(SRCDIR)/notes.c \
-       $(SRCDIR)/notify.c $(SRCDIR)/pomodoro.c $(SRCDIR)/ui.c \
-       $(SRCDIR)/update.c $(SRCDIR)/util.c
+SRCS = $(SRCDIR)/app/tomato.c \
+       $(SRCDIR)/features/animation/anim.c \
+       $(SRCDIR)/features/audio/audio.c \
+       $(SRCDIR)/features/bar/bar.c \
+       $(SRCDIR)/core/config.c \
+       $(SRCDIR)/app/draw.c \
+       $(SRCDIR)/core/error.c \
+       $(SRCDIR)/input/gap_buffer.c \
+       $(SRCDIR)/input/history.c \
+       $(SRCDIR)/app/init.c \
+       $(SRCDIR)/input/input.c \
+       $(SRCDIR)/core/log.c \
+       $(SRCDIR)/features/notes/notes.c \
+       $(SRCDIR)/features/notifications/notify.c \
+       $(SRCDIR)/features/pomodoro/pomodoro.c \
+       $(SRCDIR)/ui/ui.c \
+       $(SRCDIR)/app/update.c \
+       $(SRCDIR)/core/util.c
 OBJS = $(SRCS:.c=.o)
+DEPS = $(OBJS:.o=.d)
 
 .PHONY: all clean clean-all
 
@@ -43,7 +56,7 @@ tomato: $(OBJS)
 
 #/** @brief Remove all build artifacts */
 clean:
-	rm -rf tomato $(SRCDIR)/*.o $(SRCDIR)/*.d
+	rm -rf tomato $(OBJS) $(DEPS)
 
 clean-all: all
-	rm -rf $(SRCDIR)/*.o $(SRCDIR)/*.d
+	rm -f $(OBJS) $(DEPS)

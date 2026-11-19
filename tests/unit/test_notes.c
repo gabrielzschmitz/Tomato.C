@@ -13,13 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-#include "error.h"
-#include "gap_buffer.h"
-#include "history.h"
-#include "notes.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "features/notes/notes.h"
+#include "input/gap_buffer.h"
+#include "input/history.h"
 #include "test_helpers.h"
-#include "ui.h"
+#include "ui/ui.h"
 
 typedef struct AppData {
   int dummy;
@@ -52,7 +52,7 @@ void LogError(const char* context, ErrorType type) {
 
 #define SetError(app, ctx, type) ((void)0)
 
-#include "notes.c"
+#include "features/notes/notes.c"
 
 static AppData mock_app;
 

@@ -9,10 +9,10 @@
 #include <string.h>
 #include <time.h>
 
-#include "config.h"
-#include "error.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "app/tomato.h"
 #include "test_helpers.h"
-#include "tomato.h"
 
 Config g_config;
 

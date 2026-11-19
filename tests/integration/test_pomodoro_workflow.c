@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-#include "error.h"
-#include "input.h"
-#include "pomodoro.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "input/input.h"
+#include "features/pomodoro/pomodoro.h"
 #include "test_helpers.h"
-#include "util.h"
+#include "core/util.h"
 
 /* Stub — util.c may call LogError on allocation failures */
 Config g_config;

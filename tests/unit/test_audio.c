@@ -8,9 +8,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "audio.h"
-#include "config.h"
-#include "error.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "features/audio/audio.h"
 #include "test_helpers.h"
 
 Config g_config;

@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "anim.h"
-#include "config.h"
-#include "error.h"
+#include "features/animation/anim.h"
+#include "core/config.h"
+#include "core/error.h"
 #include "test_helpers.h"
 
 typedef struct AppData {

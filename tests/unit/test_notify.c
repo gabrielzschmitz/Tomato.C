@@ -13,10 +13,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "audio.h"
-#include "config.h"
-#include "error.h"
-#include "notify.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "features/audio/audio.h"
+#include "features/notifications/notify.h"
 #include "test_helpers.h"
 
 Config g_config;

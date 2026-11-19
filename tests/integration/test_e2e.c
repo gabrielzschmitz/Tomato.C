@@ -14,11 +14,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "error.h"
-#include "log.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "core/log.h"
+#include "core/util.h"
 #include "test_helpers.h"
-#include "util.h"
 
 Config g_config;
 

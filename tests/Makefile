@@ -16,9 +16,10 @@
 
 SRCDIR = ../src
 TEST_CC ?= gcc
+# Project headers use paths relative to $(SRCDIR), e.g. "core/util.h".
 BASE_CFLAGS = -std=c99 -g -O0 -Wall -Wextra -Wno-unused-variable -Wno-unused-function \
               -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 \
-              -I$(SRCDIR) -I$(SRCDIR)/external -Ihelpers -DUNIT_TEST
+              -I$(SRCDIR) -Ihelpers -DUNIT_TEST
 NCURSES_CFLAGS = $(shell pkg-config --cflags ncursesw 2>/dev/null || echo "")
 NCURSES_LIBS = $(shell pkg-config --libs ncursesw 2>/dev/null || echo "-lncurses -ltinfo")
 NCURSES_LIBDIRS = $(shell pkg-config --libs-only-L ncursesw 2>/dev/null | sed 's/-L//g')
@@ -104,11 +105,11 @@ build: build-unit build-integration
 build-unit: $(UNIT_BINS)
 
 #/** @brief gap_buffer — stubs LogError in the test file */
-unit/test_gap_buffer: unit/test_gap_buffer.c $(SRCDIR)/gap_buffer.c $(HELPERS)
+unit/test_gap_buffer: unit/test_gap_buffer.c $(SRCDIR)/input/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
 
 #/** @brief history — standalone, no ncurses */
-unit/test_history: unit/test_history.c $(SRCDIR)/history.c $(HELPERS)
+unit/test_history: unit/test_history.c $(SRCDIR)/input/history.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(TEST_LDLIBS)
 
 #/** @brief config — header-only macros (config.h), no .c linking needed */
@@ -116,28 +117,28 @@ unit/test_config: unit/test_config.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief notes — #includes notes.c; links gap_buffer, history */
-unit/test_notes: unit/test_notes.c $(SRCDIR)/gap_buffer.c $(SRCDIR)/history.c $(HELPERS)
+unit/test_notes: unit/test_notes.c $(SRCDIR)/input/gap_buffer.c $(SRCDIR)/input/history.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief util — SetColor calls ncurses attrset */
-unit/test_util: unit/test_util.c $(SRCDIR)/util.c $(HELPERS)
+unit/test_util: unit/test_util.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief error — links error.c + util.c; stubs RenderCriticalQuitConfirmation */
-unit/test_error: unit/test_error.c $(SRCDIR)/error.c $(SRCDIR)/util.c $(HELPERS)
+unit/test_error: unit/test_error.c $(SRCDIR)/core/error.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief log — links log.c + deps; stubs remaining deps in test file */
-unit/test_log: unit/test_log.c $(SRCDIR)/log.c $(SRCDIR)/error.c $(SRCDIR)/util.c \
-               $(SRCDIR)/gap_buffer.c $(HELPERS)
+unit/test_log: unit/test_log.c $(SRCDIR)/core/log.c $(SRCDIR)/core/error.c $(SRCDIR)/core/util.c \
+               $(SRCDIR)/input/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief draw — links draw.c + util.c; stubs all external deps for DrawScreen */
-unit/test_draw: unit/test_draw.c $(SRCDIR)/draw.c $(SRCDIR)/util.c $(HELPERS)
+unit/test_draw: unit/test_draw.c $(SRCDIR)/app/draw.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief audio — links audio.c and covers PlayAudio guard behavior */
-unit/test_audio: unit/test_audio.c $(SRCDIR)/audio.c $(HELPERS)
+unit/test_audio: unit/test_audio.c $(SRCDIR)/features/audio/audio.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS) -pthread $(AUDIO_LIBS)
 
 #/** @brief ui — mirrors RegisterClickRegion/CreateScreen panel logic (standalone, no ui.c link) */
@@ -145,7 +146,7 @@ unit/test_ui: unit/test_ui.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief pomodoro — links pomodoro.c; no external calls outside input.h */
-unit/test_pomodoro: unit/test_pomodoro.c $(SRCDIR)/pomodoro.c $(HELPERS)
+unit/test_pomodoro: unit/test_pomodoro.c $(SRCDIR)/features/pomodoro/pomodoro.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief tomato — mirrors CLI argument parsing logic (standalone, no tomato.c link) */
@@ -161,23 +162,23 @@ unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) he
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief config_load — includes config.c; tests loadTomlFile diagnostics */
-unit/test_config_load: unit/test_config_load.c $(SRCDIR)/config.c $(SRCDIR)/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+unit/test_config_load: unit/test_config_load.c $(SRCDIR)/core/config.c $(SRCDIR)/core/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
 	$(TEST_CC) $(TEST_CFLAGS) -DSAMPLE_CONFIG_PATH=\"$(abspath $(SRCDIR)/../sample_config.toml)\" -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim — links util.c and error.c */
-unit/test_anim: unit/test_anim.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
+unit/test_anim: unit/test_anim.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/core/util.c $(SRCDIR)/core/error.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief bar — structural tests; stubs notes.c functions */
-unit/test_bar: unit/test_bar.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
+unit/test_bar: unit/test_bar.c $(SRCDIR)/features/bar/bar.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief bar_malloc — wrapped malloc to test OOM paths in bar.c */
-unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/bar.c $(SRCDIR)/util.c $(HELPERS)
+unit/test_bar_malloc: unit/test_bar_malloc.c helpers/test_malloc.c $(SRCDIR)/features/bar/bar.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim_malloc — wrapped malloc to test OOM paths in anim.c */
-unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/anim.c $(SRCDIR)/util.c $(SRCDIR)/error.c $(HELPERS)
+unit/test_anim_malloc: unit/test_anim_malloc.c helpers/test_malloc.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/core/util.c $(SRCDIR)/core/error.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(WRAP_MALLOC) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief init — InitBorder structural test (standalone, no init.c links) */
@@ -187,7 +188,7 @@ unit/test_init: unit/test_init.c $(HELPERS)
 #/** @brief notify — links notify.c with PlayAudio/LogError stubs */
 NOTIFY_CFLAGS = $(shell pkg-config --cflags libnotify 2>/dev/null)
 NOTIFY_LIBS = $(shell pkg-config --libs libnotify 2>/dev/null)
-unit/test_notify: unit/test_notify.c $(SRCDIR)/notify.c $(HELPERS)
+unit/test_notify: unit/test_notify.c $(SRCDIR)/features/notifications/notify.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) $(NOTIFY_CFLAGS) -o $@ $(filter %.c,$^) \
 	  $(NCURSES_LIBS) $(TEST_LDLIBS) $(NOTIFY_LIBS) -pthread
 
@@ -207,15 +208,15 @@ INTEGRATION_BINS = \
 build-integration: $(INTEGRATION_BINS)
 
 #/** @brief pomodoro_workflow — links pomodoro.c + util.c for state machine + IsStepEnded */
-integration/test_pomodoro_workflow: integration/test_pomodoro_workflow.c $(SRCDIR)/pomodoro.c $(SRCDIR)/util.c $(HELPERS)
+integration/test_pomodoro_workflow: integration/test_pomodoro_workflow.c $(SRCDIR)/features/pomodoro/pomodoro.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief pomodoro_timer — same deps as pomodoro_workflow */
-integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/pomodoro.c $(SRCDIR)/util.c $(HELPERS)
+integration/test_pomodoro_timer: integration/test_pomodoro_timer.c $(SRCDIR)/features/pomodoro/pomodoro.c $(SRCDIR)/core/util.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief e2e — links log.c + util.c + gap_buffer.c for end-to-end CLI tests */
-integration/test_e2e: integration/test_e2e.c $(SRCDIR)/log.c $(SRCDIR)/util.c $(SRCDIR)/gap_buffer.c $(HELPERS)
+integration/test_e2e: integration/test_e2e.c $(SRCDIR)/core/log.c $(SRCDIR)/core/util.c $(SRCDIR)/input/gap_buffer.c $(HELPERS)
 	$(TEST_CC) $(TEST_CFLAGS) -o $@ $(filter %.c,$^) $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief keybind_resolution — includes config.c; stubs all action functions; tests resolution logic */

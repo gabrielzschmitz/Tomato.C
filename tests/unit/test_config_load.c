@@ -17,14 +17,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "input.h"
+#include "core/config.h"
+#include "input/input.h"
 #include "external/toml-c.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"
 
 /* Now include the actual config.c source */
-#include "config.c"
+#include "core/config.c"
 
 static void write_file(const char* path, const char* text) {
   FILE* f = fopen(path, "w");

@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "test_helpers.h"
-#include "util.h"
+#include "core/util.h"
 
 #define MAX_CLICK_REGIONS 32
 #define MAX_PANELS 2

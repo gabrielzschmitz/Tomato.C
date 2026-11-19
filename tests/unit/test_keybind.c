@@ -19,14 +19,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-#include "input.h"
+#include "core/config.h"
+#include "input/input.h"
 #include "external/toml-c.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"
 
 /* Now include the actual config.c source */
-#include "config.c"
+#include "core/config.c"
 
 /* Helper: reset g_config via setDefaults() */
 static void reset_defaults(void) {

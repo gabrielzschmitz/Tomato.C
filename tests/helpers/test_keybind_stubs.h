@@ -4,7 +4,7 @@
  *
  * Provides an AppData typedef and stub implementations for every action
  * function referenced in config.c's DEFAULT_KEYS array so that tests
- * which #include "config.c" can compile without linking against the
+ * which #include "core/config.c" can compile without linking against the
  * real input.o / ui.o modules.
  *
  * Also stubs EnsureDir() which is called by the config-loading path.
@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 
-#include "error.h"
+#include "core/error.h"
 
 typedef struct AppData {
   int dummy;

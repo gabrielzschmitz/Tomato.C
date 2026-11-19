@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
-#include "input.h"
+#include "core/error.h"
+#include "input/input.h"
 #include "test_helpers.h"
 
 /**

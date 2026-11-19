@@ -8,8 +8,8 @@
 
 #include <stdlib.h>
 
-#include "error.h"
-#include "gap_buffer.h"
+#include "core/error.h"
+#include "input/gap_buffer.h"
 #include "test_helpers.h"
 
 /* Stub for LogError — gap_buffer.c calls it on allocation failure */

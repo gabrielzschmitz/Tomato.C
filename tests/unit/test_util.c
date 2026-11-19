@@ -10,10 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-#include "error.h"
+#include "core/config.h"
+#include "core/error.h"
+#include "core/util.h"
 #include "test_helpers.h"
-#include "util.h"
 
 /* Stub — util.c may call LogError on allocation failures */
 void LogError(const char* context, ErrorType type) {

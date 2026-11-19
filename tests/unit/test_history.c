@@ -9,11 +9,11 @@
 
 #include <stdlib.h>
 
-#include "history.h"
+#include "input/history.h"
 #include "test_helpers.h"
 
 /* Stub for LogError — history.c calls it on allocation failures */
-#include "error.h"
+#include "core/error.h"
 void LogError(const char* context, ErrorType type) {
   (void)context;
   (void)type;
