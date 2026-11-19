@@ -7,6 +7,42 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-11-19
+
+### Added
+
+- **Compile database generation** — `build.sh` now generates
+  `compile_commands.json` with Bear for GCC, TinyCC, and Zig. Bare `tcc` and
+  `zig` drivers get a Bear compiler mapping, and Zig builds restore the `cc`
+  subcommand dropped by Bear.
+
+### Changed
+
+- **Source tree layout** — Sources now live in `app/`, `core/`, `input/`,
+  `app/ui/`, and `features/*/`. Includes use paths relative to `src/`, build
+  and test source lists are explicit, and Doxygen scans subdirectories.
+- **Header boundaries and naming** — Replaced redundant includes with forward
+  declarations, moved `PomodoroData` to `pomodoro.h`, removed unused static
+  declarations, and standardized include guards, struct fields and names,
+  private helper naming, and function placement.
+- **Script formatting** — Applied `shfmt` formatting to `install.sh` and
+  `run_tests.sh`.
+
+### Fixed
+
+- **Test memory leaks** — Released allocated bindings, strings, cloned notes,
+  and history instances in config-load, history, and notes tests.
+- **Documentation coverage** — Restored `default_keys` declarations and added
+  missing Doxygen parameter, return, enum-value, and private-section
+  documentation across headers, config, input, and UI code.
+
+### Documentation
+
+- **Contributing rules** — Clarified private declaration and implementation
+  ordering and placement requirements in `CONTRIBUTE.md`.
+- **Versioned Doxygen output** — `docs/generate.sh` now writes the current
+  `VERSION` into Doxygen `PROJECT_NUMBER` before generating documentation.
+
 ## [1.3.2] - 2026-11-16
 
 ### Changed
