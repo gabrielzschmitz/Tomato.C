@@ -790,7 +790,7 @@ static void test_blank_queries(void) {
 }
 
 static void test_rendering_geometry_and_colors(void) {
-  TEST("render Unicode, blank cells, and foreground/background state");
+  TEST("render Unicode, skip blank cells, and track color state");
   const char* text =
     "[animation.render]\nicon-type = \"ascii\"\n"
     "default-frame-duration = \"1ms\"\n"
@@ -813,26 +813,26 @@ static void test_rendering_geometry_and_colors(void) {
   resetRenderCapture();
   RenderRollfilm(film, 2, 4);
 
-  ASSERT_EQ(g_render_count, 8);
+  ASSERT_EQ(g_render_count, 5);
   ASSERT_EQ(g_render_calls[0].y, 2);
   ASSERT_EQ(g_render_calls[0].x, 4);
   ASSERT_STR_EQ(g_render_calls[0].text, "A");
   ASSERT_EQ(g_render_calls[0].foreground, 7);
   ASSERT_EQ(g_render_calls[1].x, 5);
   ASSERT_STR_EQ(g_render_calls[1].text, "\xF0\x9F\x98\x80");
-  ASSERT_EQ(g_render_calls[2].x, 7);
-  ASSERT_STR_EQ(g_render_calls[2].text, " ");
-  ASSERT_EQ(g_render_calls[3].x, 8);
-  ASSERT_EQ(g_render_calls[4].x, 9);
-  ASSERT_EQ(g_render_calls[5].x, 10);
-  ASSERT_STR_EQ(g_render_calls[5].text, "Z");
-  ASSERT_EQ(g_render_calls[6].y, 3);
-  ASSERT_EQ(g_render_calls[6].x, 4);
-  ASSERT_EQ(g_render_calls[6].foreground, 3);
-  ASSERT_EQ(g_render_calls[6].background, 5);
-  ASSERT_EQ(g_render_calls[6].attribute, A_BOLD);
-  ASSERT_EQ(g_render_calls[7].foreground, 3);
-  ASSERT_EQ(g_render_calls[7].background, 5);
+  ASSERT_EQ(g_render_calls[2].x, 10);
+  ASSERT_STR_EQ(g_render_calls[2].text, "Z");
+  ASSERT_EQ(g_render_calls[3].y, 3);
+  ASSERT_EQ(g_render_calls[3].x, 4);
+  ASSERT_STR_EQ(g_render_calls[3].text, "Q");
+  ASSERT_EQ(g_render_calls[3].foreground, 3);
+  ASSERT_EQ(g_render_calls[3].background, 5);
+  ASSERT_EQ(g_render_calls[3].attribute, A_BOLD);
+  ASSERT_EQ(g_render_calls[4].y, 4);
+  ASSERT_EQ(g_render_calls[4].x, 4);
+  ASSERT_STR_EQ(g_render_calls[4].text, "R");
+  ASSERT_EQ(g_render_calls[4].foreground, 3);
+  ASSERT_EQ(g_render_calls[4].background, 5);
 
   FreeRollfilm(film);
   FreeSpriteLibrary(library);
@@ -878,7 +878,7 @@ int main(void) {
            "cache dimensions and pick largest film");
   RUN_TEST(test_blank_queries, "locate blank cell runs");
   RUN_TEST(test_rendering_geometry_and_colors,
-           "render Unicode, blanks, and color state");
+           "render Unicode, skip blank cells, and track color state");
   RUN_TEST(test_create_rollfilm_missing_animation,
            "reject animations that are not loaded");
 

@@ -320,9 +320,8 @@ void RenderRollfilm(const Rollfilm* rollfilm, int start_y, int start_x) {
         active_background = background;
       }
 
-      if (SpriteCellIsBlank(cell)) {
-        mvprintw(y, x, " ");
-      } else {
+      /* Blank cells are transparent so underlying notes stay visible. */
+      if (!SpriteCellIsBlank(cell)) {
         char utf8[5];
         size_t length = encodeUtf8(SpriteCellCodepoint(cell), utf8);
         utf8[length] = '\0';
