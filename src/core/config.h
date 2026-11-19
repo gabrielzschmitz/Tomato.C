@@ -429,10 +429,6 @@ extern const char* system_config_path;
 extern const char* default_user_config_dir;
 /** 0/1 — WSL mode (default: 0). */
 #define WSL (g_config.misc.wsl)
-/** Sprite separator string. */
-#define SEPARATOR                                                              \
-  "--------------------------------------------------------------------------" \
-  "-"
 /** Maximum animation frame rate (default: 30). */
 #define FPS (g_config.misc.fps)
 /** Maximum hierarchical note depth, 0-3 (default: 1). */

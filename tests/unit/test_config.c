@@ -10,10 +10,10 @@
 
 #define DATADIR "/usr/share/tomato"
 
+#include "app/tomato.h"
 #include "core/config.h"
 #include "input/input.h"
 #include "test_helpers.h"
-#include "app/tomato.h"
 
 Config g_config;
 
@@ -89,11 +89,6 @@ static void test_keycode_aliases(void) {
   ASSERT_EQ(CTRLR, 18); /* Ctrl-R */
   ASSERT_EQ(CTRLW, 23); /* Ctrl-W */
   ASSERT_EQ(CTRLH, 8);  /* Ctrl-H */
-}
-
-static void test_separator_length(void) {
-  TEST("SEPARATOR is correct length");
-  ASSERT_EQ(strlen(SEPARATOR), 75);
 }
 
 static void test_fpms_macro(void) {
@@ -174,9 +169,7 @@ int main(void) {
            "scene enum bit positions are powers of two");
   RUN_TEST(test_mode_constants, "mode constants have correct values");
   RUN_TEST(test_keycode_aliases, "CTRL aliases match ASCII control codes");
-  RUN_TEST(test_separator_length, "SEPARATOR is correct length");
-  RUN_TEST(test_fpms_macro,
-           "FPMS macro evaluates correctly with parentheses");
+  RUN_TEST(test_fpms_macro, "FPMS macro evaluates correctly with parentheses");
   RUN_TEST(test_expand_datadir_no_marker,
            "expandDatadir copies string unchanged when no $DATADIR marker");
   RUN_TEST(test_expand_datadir_marker_only,
