@@ -31,10 +31,17 @@ in the repository through `TOMATO_CONFIG_DIR`, `TOMATO_STATE_DIR`, and
 actual user configuration. The shell does not override the `XDG_*` environment
 variables.
 
+Debug builds use the same `.tmp/` directories without relying on the shell.
+`./build.sh --debug` embeds the project root, so `./tomato` reads
+`.tmp/config/tomato/config.toml`, writes state to `.tmp/state/tomato`, and
+places the timer socket in `.tmp/runtime`. Explicit `TOMATO_*` overrides still
+win. Copy `sample_config.toml` to `.tmp/config/tomato/config.toml` if you want
+the sample values in a debug build.
+
 Build and run tests from inside the development shell:
 
 ```bash
-./build.sh
+./build.sh --debug
 ./run_tests.sh
 ```
 
