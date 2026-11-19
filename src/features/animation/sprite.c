@@ -1,6 +1,6 @@
 /**
  * @file sprite.c
- * @brief Section-format sprite parser and immutable sprite queries.
+ * @brief Section-format sprite parser, builder, and immutable sprite queries.
  */
 
 #ifndef _XOPEN_SOURCE
@@ -11,9 +11,14 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <float.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,59 +32,159 @@
 /** Largest accepted frame duration in milliseconds. */
 #define SPRITE_MAX_DURATION_MS 1.0e12
 
-/** Private state while one frame is parsed. */
+/** Alignment used for every finalized storage region. */
+#define SPRITE_STORAGE_ALIGNMENT 16u
+
+/** Minimum size of a new arena chunk. */
+#define SPRITE_ARENA_CHUNK_SIZE 4096u
+
+_Static_assert(sizeof(void*) <= SPRITE_STORAGE_ALIGNMENT,
+               "storage alignment must cover pointers");
+
+/** Memory chunk used by the temporary sprite builder. */
+typedef struct spriteArenaChunk {
+  struct spriteArenaChunk* next; /**< Next allocated chunk. */
+  size_t used;                   /**< Bytes used in this chunk. */
+  size_t capacity;               /**< Bytes available in this chunk. */
+  unsigned char data[];          /**< Aligned payload storage. */
+} spriteArenaChunk;
+
+/** Free block stored inside a released arena allocation. */
+typedef struct spriteArenaFreeBlock {
+  struct spriteArenaFreeBlock* next; /**< Next free block. */
+  size_t size;                       /**< Usable bytes in this block. */
+} spriteArenaFreeBlock;
+
+/** Arena allocator for temporary parsing data. */
 typedef struct {
-  size_t first_row;     /**< First row index owned by this frame. */
-  size_t first_cell;    /**< First cell index owned by this frame. */
-  int foreground;       /**< Current foreground color. */
-  int background;       /**< Current background color. */
+  spriteArenaChunk* head;            /**< Most recently allocated chunk. */
+  spriteArenaFreeBlock* free_blocks; /**< Reusable released blocks. */
+} spriteArena;
+
+/** Deduplicating string pool used during finalization. */
+typedef struct {
+  char* data;        /**< NUL-terminated strings. */
+  uint32_t length;   /**< Bytes used. */
+  uint32_t capacity; /**< Bytes allocated. */
+} spriteStringPool;
+
+/** Temporary row span stored in a builder animation. */
+typedef struct {
+  uint32_t cell_offset; /**< First cell in this row. */
+  uint32_t cell_count;  /**< Number of cells in this row. */
+} spriteRowSpan;
+
+/** Temporary decoded cell stored in a builder animation. */
+typedef struct {
+  uint32_t codepoint; /**< Unicode codepoint. */
+  uint8_t foreground; /**< Explicit foreground color. */
+  uint8_t background; /**< Explicit background color. */
+  uint8_t width;      /**< Terminal display width. */
+  uint8_t flags;      /**< SPRITE_CELL_FLAG_* bit mask. */
+} spriteCellData;
+
+_Static_assert(sizeof(spriteCellData) == sizeof(SpriteCell),
+               "temporary and finalized cells must have equal size");
+
+_Static_assert(sizeof(spriteArenaFreeBlock) <= SPRITE_STORAGE_ALIGNMENT,
+               "free block metadata must fit arena alignment");
+
+/** Temporary frame state while one frame is parsed. */
+typedef struct {
+  uint32_t first_row;   /**< First row index owned by this frame. */
+  uint32_t first_cell;  /**< First cell index owned by this frame. */
+  uint8_t foreground;   /**< Current foreground color. */
+  uint8_t background;   /**< Current background color. */
+  bool foreground_set;  /**< True when a foreground color is active. */
+  bool background_set;  /**< True when a background color is active. */
   bool duration_set;    /**< True when a frame duration override was read. */
   double duration_ms;   /**< Frame duration override in milliseconds. */
   bool content_started; /**< True after [[content]]. */
   bool content_closed;  /**< True after [[/content]]. */
 } spriteFrameState;
 
-/** Private state while one animation definition is parsed. */
+/** Temporary frame metadata stored in the builder. */
 typedef struct {
+  uint32_t row_offset; /**< First row index owned by this frame. */
+  uint32_t row_count;  /**< Number of rows in this frame. */
+  uint16_t width;      /**< Maximum row width in terminal columns. */
+  uint16_t height;     /**< Number of rows. */
+  double duration_ms;  /**< Frame duration in milliseconds. */
+} spriteBuilderFrame;
+
+/** Temporary animation definition stored in the builder. */
+typedef struct {
+  spriteArena* arena;         /**< Arena owning temporary arrays. */
   char* name;                 /**< Animation name. */
   char* source;               /**< Source filename for diagnostics. */
-  size_t source_line;         /**< Declaration line for diagnostics. */
-  unsigned icon_mask;         /**< Bit mask of declared icon types. */
+  uint32_t source_line;       /**< Declaration line for diagnostics. */
+  uint32_t name_offset;       /**< Resolved name offset in the string pool. */
+  uint32_t source_offset;     /**< Resolved source offset in the pool. */
+  uint8_t icon_mask;          /**< Bit mask of declared icon types. */
+  uint8_t flags;              /**< SPRITE_ANIMATION_FLAG_* values. */
   bool icon_set;              /**< True when icon-type was read. */
-  bool duration_set;          /**< True when default-frame-duration was read. */
+  bool duration_set;          /**< True when default duration was read. */
   bool loop_set;              /**< True when loop was read. */
   bool color_set;             /**< True when default-color was read. */
-  double duration_ms;         /**< Default frame duration. */
   bool loop;                  /**< Playback loop setting. */
-  int default_color;          /**< Foreground color at frame start. */
-  struct SpriteFrame* frames; /**< Parsed frames. */
-  size_t frame_count;         /**< Number of frames. */
-  size_t frame_capacity;      /**< Capacity of frames. */
-  struct SpriteRow* rows;     /**< Parsed rows. */
-  size_t row_count;           /**< Number of rows. */
-  size_t row_capacity;        /**< Capacity of rows. */
-  struct SpriteCell* cells;   /**< Decoded cells. */
-  size_t cell_count;          /**< Number of cells. */
-  size_t cell_capacity;       /**< Capacity of cells. */
+  double duration_ms;         /**< Default frame duration. */
+  int16_t default_color;      /**< Frame-start color or SPRITE_NO_COLOR. */
+  spriteBuilderFrame* frames; /**< Parsed frames. */
+  uint32_t frame_count;       /**< Number of frames. */
+  uint32_t frame_capacity;    /**< Capacity of frames. */
+  spriteRowSpan* rows;        /**< Parsed row spans. */
+  uint32_t row_count;         /**< Number of rows. */
+  uint32_t row_capacity;      /**< Capacity of rows. */
+  spriteCellData* cells;      /**< Decoded cells. */
+  uint32_t cell_count;        /**< Number of cells. */
+  uint32_t cell_capacity;     /**< Capacity of cells. */
   spriteFrameState frame;     /**< State of the open frame. */
   bool frame_open;            /**< True between [[frame]] and [[/frame]]. */
-} spritePendingAnimation;
+} spriteBuilderAnimation;
 
-/** Private list of completed definitions from one file. */
+/** Temporary list of builder definitions. */
 typedef struct {
-  struct SpriteAnimation** items; /**< Parsed definitions. */
-  size_t count;                   /**< Number of definitions. */
-  size_t capacity;                /**< Capacity of items. */
-} spriteDefinitionList;
+  spriteArena* arena;             /**< Arena owning the item array. */
+  spriteBuilderAnimation** items; /**< Definition pointers. */
+  uint32_t count;                 /**< Number of definitions. */
+  uint32_t capacity;              /**< Capacity of items. */
+} spriteBuilderList;
+
+/** Temporary library built from all sprite files. */
+typedef struct {
+  spriteBuilderList definitions; /**< Accepted definitions. */
+} spriteBuilderLibrary;
+
+/** Final storage layout offsets in bytes. */
+typedef struct {
+  uint32_t animations; /**< Offset of the animation array. */
+  uint32_t frames;     /**< Offset of the frame array. */
+  uint32_t rows;       /**< Offset of the row array. */
+  uint32_t cells;      /**< Offset of the cell array. */
+  uint32_t strings;    /**< Offset of the string pool. */
+  uint32_t total;      /**< Total allocation size. */
+} spriteStorageLayout;
 
 /* PRIVATE SPRITE FUNCTIONS */
-static bool reserveArray(void** data, size_t* capacity, size_t needed,
-                         size_t element_size);
-static char* duplicateStringRange(const char* start, size_t length);
+static bool checkedAddSize(size_t left, size_t right, size_t* result);
+static bool checkedMulSize(size_t left, size_t right, size_t* result);
+static size_t alignUpSize(size_t value, size_t alignment);
+static bool arenaBlockSize(size_t size, size_t alignment, size_t* block_size);
+static void* arenaAllocate(spriteArena* arena, size_t size, size_t alignment);
+static void arenaRelease(spriteArena* arena, void* pointer, size_t size);
+static void arenaFree(spriteArena* arena);
+static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
+                         uint32_t needed, size_t element_size);
+static char* arenaDuplicateRange(spriteArena* arena, const char* start,
+                                 size_t length);
+static uint32_t stringPoolAppend(spriteArena* arena, spriteStringPool* pool,
+                                 const char* text, bool* ok);
+
 static ErrorType reportDiagnostic(ErrorType code, ErrorType* error,
-                                  const char* filename, size_t line,
+                                  const char* filename, uint32_t line,
                                   const char* format, ...);
-static char* readLine(FILE* file);
+static char* readLine(FILE* file, spriteArena* arena, char** buffer,
+                      uint32_t* capacity, uint32_t* length, bool* failed);
 
 static void trimRange(const char* line, const char** start, const char** end);
 static size_t rangeLength(const char* start, const char* end);
@@ -92,91 +197,302 @@ static bool splitOption(const char* line, const char** key, size_t* key_length,
                         const char** value, size_t* value_length);
 static bool parseQuotedRange(const char* value, size_t length,
                              const char** inner, size_t* inner_length);
-static bool parseUnsignedRange(const char* value, size_t length, int maximum,
-                               int* result);
+static bool parseUnsignedRange(const char* value, size_t length,
+                               uint32_t maximum, uint32_t* result);
 static bool parseDurationRange(const char* value, size_t length,
                                double* result_ms);
-static bool parseIconTypes(const char* value, size_t length, unsigned* mask);
+static bool parseIconTypes(const char* value, size_t length, uint8_t* mask);
 static bool parseBoolRange(const char* value, size_t length, bool* result);
 
-static bool appendCell(struct SpriteCell** cells, size_t* count,
-                       size_t* capacity, uint32_t codepoint, int width,
-                       int foreground, int background, bool blank);
+static bool appendCell(spriteBuilderAnimation* animation, uint32_t codepoint,
+                       int32_t width, uint8_t foreground, uint8_t background,
+                       uint8_t flags, const char* filename, uint32_t line,
+                       ErrorType* error);
 static bool decodeUtf8(const unsigned char* input, size_t available,
                        uint32_t* codepoint, size_t* length);
 static bool parseColorEscape(const char* input, const char** end,
-                             int* foreground, int* background);
+                             uint8_t* foreground, uint8_t* background,
+                             bool* foreground_set, bool* background_set);
 static bool parseUnicodeEscape(const char* input, const char** end,
                                uint32_t* codepoint);
 static bool parseBlankRunEscape(const char* input, const char** end,
-                                int* count);
-static bool decodeContentLine(const char* line, spritePendingAnimation* pending,
-                              const char* filename, size_t line_number,
+                                uint32_t* count);
+static bool decodeContentLine(const char* line, spriteBuilderAnimation* pending,
+                              const char* filename, uint32_t line_number,
                               ErrorType* error);
 
-static void clearPendingFrame(spritePendingAnimation* pending);
-static void clearPendingAnimation(spritePendingAnimation* pending);
-static bool startFrame(spritePendingAnimation* pending, const char* filename,
-                       size_t line_number, ErrorType* error);
-static bool closeContent(spritePendingAnimation* pending, const char* filename,
-                         size_t line_number, ErrorType* error);
-static bool closeFrame(spritePendingAnimation* pending, const char* filename,
-                       size_t line_number, ErrorType* error);
-static bool finalizeAnimation(spritePendingAnimation* pending,
-                              spriteDefinitionList* definitions,
-                              const char* filename, size_t line_number,
+static void clearPendingFrame(spriteBuilderAnimation* pending);
+static bool startFrame(spriteBuilderAnimation* pending, const char* filename,
+                       uint32_t line_number, ErrorType* error);
+static bool closeContent(spriteBuilderAnimation* pending, const char* filename,
+                         uint32_t line_number, ErrorType* error);
+static bool closeFrame(spriteBuilderAnimation* pending, const char* filename,
+                       uint32_t line_number, ErrorType* error);
+static bool finalizeAnimation(spriteBuilderAnimation* pending,
+                              spriteBuilderList* definitions,
+                              const char* filename, uint32_t line_number,
                               ErrorType* error);
-static void freeSpriteAnimation(struct SpriteAnimation* animation);
-static void freeDefinitionList(spriteDefinitionList* definitions);
-static bool appendDefinition(spriteDefinitionList* definitions,
-                             struct SpriteAnimation* animation);
-static bool mergeDefinitions(SpriteLibrary* library,
-                             spriteDefinitionList* definitions,
-                             ErrorType* error);
-static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
+static bool appendDefinition(spriteBuilderList* definitions,
+                             spriteBuilderAnimation* animation);
+static bool mergeDefinitions(spriteBuilderLibrary* library,
+                             spriteBuilderList* definitions, ErrorType* error);
+static bool parseSpriteFile(const char* filename, spriteBuilderLibrary* library,
+                            spriteArena* arena, ErrorType* error);
+
+static bool validateBuilder(const spriteBuilderLibrary* library,
+                            const char* filename, ErrorType* error);
+static bool calculateLayout(const spriteBuilderLibrary* library,
+                            const spriteStringPool* pool,
+                            spriteStorageLayout* layout, ErrorType* error);
+static bool finalizeLibrary(const spriteBuilderLibrary* library,
+                            spriteArena* arena, SpriteLibrary** output,
                             ErrorType* error);
+static bool validateLibrary(const SpriteLibrary* library);
+static const SpriteFrame* animationFrame(const SpriteAnimation* animation,
+                                         size_t index);
+static const char* stringAt(const SpriteAnimation* animation, uint32_t offset);
 
 /**
- * Grow an array with overflow checks.
+ * Add two sizes with overflow checks.
+ * @param left First operand.
+ * @param right Second operand.
+ * @param result Output: checked sum.
+ * @return true when the sum is representable.
+ */
+static bool checkedAddSize(size_t left, size_t right, size_t* result) {
+  if (left > SIZE_MAX - right) return false;
+  *result = left + right;
+  return true;
+}
+
+/**
+ * Multiply two sizes with overflow checks.
+ * @param left First operand.
+ * @param right Second operand.
+ * @param result Output: checked product.
+ * @return true when the product is representable.
+ */
+static bool checkedMulSize(size_t left, size_t right, size_t* result) {
+  if (left != 0 && right > SIZE_MAX / left) return false;
+  *result = left * right;
+  return true;
+}
+
+/**
+ * Round a size up to an alignment boundary.
+ * @param value Size to align.
+ * @param alignment Power-of-two alignment.
+ * @return Aligned size, or SIZE_MAX on overflow.
+ */
+static size_t alignUpSize(size_t value, size_t alignment) {
+  size_t mask = alignment - 1;
+  if (value > SIZE_MAX - mask) return SIZE_MAX;
+  return (value + mask) & ~mask;
+}
+
+/**
+ * Calculate the padded size of one arena allocation.
+ * @param size Requested payload size.
+ * @param alignment Required power-of-two alignment.
+ * @param block_size Output: padded allocation size.
+ * @return true when the padded size is representable.
+ */
+static bool arenaBlockSize(size_t size, size_t alignment, size_t* block_size) {
+  size_t minimum =
+    size > sizeof(spriteArenaFreeBlock) ? size : sizeof(spriteArenaFreeBlock);
+  size_t padded = alignUpSize(minimum, alignment);
+  if (padded == SIZE_MAX) return false;
+  *block_size = padded;
+  return true;
+}
+
+/**
+ * Allocate aligned temporary storage from an arena.
+ * @param arena Arena to allocate from.
+ * @param size Number of bytes to allocate.
+ * @param alignment Required power-of-two alignment.
+ * @return Aligned pointer, or NULL on allocation failure.
+ */
+static void* arenaAllocate(spriteArena* arena, size_t size, size_t alignment) {
+  size_t effective_alignment =
+    alignment > SPRITE_STORAGE_ALIGNMENT ? alignment : SPRITE_STORAGE_ALIGNMENT;
+  size_t span;
+  if (!arenaBlockSize(size, effective_alignment, &span)) return NULL;
+
+  spriteArenaFreeBlock** link = &arena->free_blocks;
+  while (*link != NULL) {
+    spriteArenaFreeBlock* block = *link;
+    if (block->size >= span) {
+      *link = block->next;
+      return block;
+    }
+    link = &block->next;
+  }
+
+  for (spriteArenaChunk* chunk = arena->head; chunk != NULL;
+       chunk = chunk->next) {
+    uintptr_t raw = (uintptr_t)(chunk->data + chunk->used);
+    uintptr_t aligned = (raw + (uintptr_t)effective_alignment - 1) &
+                        ~((uintptr_t)effective_alignment - 1);
+    size_t offset = (size_t)(aligned - (uintptr_t)chunk->data);
+    size_t end;
+    if (!checkedAddSize(offset, span, &end) || end > chunk->capacity) continue;
+    chunk->used = end;
+    return (void*)aligned;
+  }
+
+  size_t payload;
+  if (!checkedAddSize(span, effective_alignment - 1, &payload)) return NULL;
+  if (payload < SPRITE_ARENA_CHUNK_SIZE) payload = SPRITE_ARENA_CHUNK_SIZE;
+  size_t chunk_size;
+  if (!checkedAddSize(sizeof(spriteArenaChunk), payload, &chunk_size))
+    return NULL;
+  spriteArenaChunk* chunk = (spriteArenaChunk*)malloc(chunk_size);
+  if (chunk == NULL) return NULL;
+  chunk->next = arena->head;
+  chunk->used = 0;
+  chunk->capacity = payload;
+  arena->head = chunk;
+  return arenaAllocate(arena, size, alignment);
+}
+
+/**
+ * Return one arena allocation to the reusable free list.
+ * @param arena Arena owning the allocation.
+ * @param pointer Allocation to release.
+ * @param size Payload size originally requested.
+ */
+static void arenaRelease(spriteArena* arena, void* pointer, size_t size) {
+  if (pointer == NULL || size == 0) return;
+  size_t span;
+  if (!arenaBlockSize(size, SPRITE_STORAGE_ALIGNMENT, &span)) return;
+
+  spriteArenaFreeBlock* block = (spriteArenaFreeBlock*)pointer;
+  block->size = span;
+  block->next = arena->free_blocks;
+  arena->free_blocks = block;
+}
+
+/**
+ * Release every chunk owned by an arena.
+ * @param arena Arena to release.
+ */
+static void arenaFree(spriteArena* arena) {
+  spriteArenaChunk* chunk = arena->head;
+  while (chunk != NULL) {
+    spriteArenaChunk* next = chunk->next;
+    free(chunk);
+    chunk = next;
+  }
+  arena->head = NULL;
+  arena->free_blocks = NULL;
+}
+
+/**
+ * Grow an arena-backed array with overflow checks.
+ * @param arena Arena owning the allocation.
  * @param data Pointer to the array pointer.
- * @param capacity Pointer to the stored capacity.
- * @param needed Minimum number of elements required.
+ * @param capacity Pointer to the stored element capacity.
+ * @param needed Minimum element count required.
  * @param element_size Size of one element.
  * @return true when the array has enough capacity.
  */
-static bool reserveArray(void** data, size_t* capacity, size_t needed,
-                         size_t element_size) {
+static bool arenaReserve(spriteArena* arena, void** data, uint32_t* capacity,
+                         uint32_t needed, size_t element_size) {
   if (needed <= *capacity) return true;
-  if (element_size == 0 || needed > SIZE_MAX / element_size) return false;
 
-  size_t new_capacity = *capacity == 0 ? 8 : *capacity;
+  uint32_t new_capacity = *capacity == 0 ? 8 : *capacity;
   while (new_capacity < needed) {
-    if (new_capacity > SIZE_MAX / 2) {
+    if (new_capacity > UINT32_MAX / 2) {
       new_capacity = needed;
       break;
     }
     new_capacity *= 2;
   }
 
-  void* resized = realloc(*data, new_capacity * element_size);
+  size_t bytes;
+  if (!checkedMulSize(new_capacity, element_size, &bytes)) return false;
+  size_t old_bytes = 0;
+  if (*data != NULL && *capacity > 0 &&
+      !checkedMulSize(*capacity, element_size, &old_bytes))
+    return false;
+
+  void* resized = arenaAllocate(arena, bytes, SPRITE_STORAGE_ALIGNMENT);
   if (resized == NULL) return false;
+  if (old_bytes > 0) {
+    memcpy(resized, *data, old_bytes);
+    arenaRelease(arena, *data, old_bytes);
+  }
   *data = resized;
   *capacity = new_capacity;
   return true;
 }
 
 /**
- * Duplicate a string range.
+ * Copy a character range into arena-owned storage.
+ * @param arena Arena to allocate from.
  * @param start First character to copy.
  * @param length Number of characters to copy.
- * @return Heap copy, or NULL on allocation failure.
+ * @return NUL-terminated copy, or NULL on allocation failure.
  */
-static char* duplicateStringRange(const char* start, size_t length) {
-  char* copy = (char*)malloc(length + 1);
+static char* arenaDuplicateRange(spriteArena* arena, const char* start,
+                                 size_t length) {
+  size_t bytes;
+  if (!checkedAddSize(length, 1, &bytes)) return NULL;
+  char* copy = (char*)arenaAllocate(arena, bytes, SPRITE_STORAGE_ALIGNMENT);
   if (copy == NULL) return NULL;
   memcpy(copy, start, length);
   copy[length] = '\0';
   return copy;
+}
+
+/**
+ * Append a string to the deduplicating pool.
+ * @param arena Arena to allocate from.
+ * @param pool String pool to update.
+ * @param text NUL-terminated string to append.
+ * @param ok Output: false on allocation failure.
+ * @return Offset of the string in the pool.
+ */
+static uint32_t stringPoolAppend(spriteArena* arena, spriteStringPool* pool,
+                                 const char* text, bool* ok) {
+  *ok = true;
+  if (text == NULL) {
+    *ok = false;
+    return 0;
+  }
+
+  size_t text_length = strlen(text);
+  if (text_length > UINT32_MAX) {
+    *ok = false;
+    return 0;
+  }
+  uint32_t length = (uint32_t)text_length;
+
+  uint32_t offset = 0;
+  while (offset < pool->length) {
+    const char* existing = pool->data + offset;
+    size_t existing_length = strlen(existing);
+    if (existing_length == text_length &&
+        memcmp(existing, text, text_length) == 0)
+      return offset;
+    offset += (uint32_t)existing_length + 1;
+  }
+
+  uint32_t needed = length + 1;
+  if (pool->length > UINT32_MAX - needed) {
+    *ok = false;
+    return 0;
+  }
+  if (!arenaReserve(arena, (void**)&pool->data, &pool->capacity,
+                    pool->length + needed, 1)) {
+    *ok = false;
+    return 0;
+  }
+  memcpy(pool->data + pool->length, text, needed);
+  offset = pool->length;
+  pool->length += needed;
+  return offset;
 }
 
 /**
@@ -189,10 +505,11 @@ static char* duplicateStringRange(const char* start, size_t length) {
  * @return The reported error type.
  */
 static ErrorType reportDiagnostic(ErrorType code, ErrorType* error,
-                                  const char* filename, size_t line,
+                                  const char* filename, uint32_t line,
                                   const char* format, ...) {
   char context[SPRITE_DIAGNOSTIC_SIZE];
-  int prefix = snprintf(context, sizeof(context), "%s:%zu: ", filename, line);
+  int prefix =
+    snprintf(context, sizeof(context), "%s:%" PRIu32 ": ", filename, line);
   if (prefix < 0 || (size_t)prefix >= sizeof(context)) return code;
 
   va_list args;
@@ -206,35 +523,48 @@ static ErrorType reportDiagnostic(ErrorType code, ErrorType* error,
 }
 
 /**
- * Read one line without a fixed buffer.
+ * Read one line into an arena-backed reusable buffer.
  * @param file Open file.
- * @return Heap line without newline, or NULL at EOF.
+ * @param arena Arena owning the buffer.
+ * @param buffer Reusable line buffer.
+ * @param capacity Capacity of the reusable buffer.
+ * @param length Output: bytes read before the newline.
+ * @param failed Output: true on allocation failure.
+ * @return Buffer containing the line, or NULL at EOF or failure.
  */
-static char* readLine(FILE* file) {
-  size_t capacity = 128;
-  size_t length = 0;
-  char* line = (char*)malloc(capacity);
-  if (line == NULL) return NULL;
-
-  int character;
+static char* readLine(FILE* file, spriteArena* arena, char** buffer,
+                      uint32_t* capacity, uint32_t* length, bool* failed) {
+  uint32_t used = 0;
+  int character = EOF;
   while ((character = fgetc(file)) != EOF) {
     if (character == '\n') break;
-    if (length + 1 >= capacity) {
-      if (!reserveArray((void**)&line, &capacity, length + 2, sizeof(char))) {
-        free(line);
+    if (used + 1 >= *capacity) {
+      uint32_t needed = *capacity == 0 ? 128 : *capacity * 2;
+      if (needed <= *capacity) {
+        *failed = true;
         return NULL;
       }
+      char* resized =
+        (char*)arenaAllocate(arena, needed, SPRITE_STORAGE_ALIGNMENT);
+      if (resized == NULL) {
+        *failed = true;
+        return NULL;
+      }
+      if (*buffer != NULL) {
+        if (used > 0) memcpy(resized, *buffer, used);
+        arenaRelease(arena, *buffer, *capacity);
+      }
+      *buffer = resized;
+      *capacity = needed;
     }
-    line[length++] = (char)character;
+    (*buffer)[used++] = (char)character;
   }
 
-  if (character == EOF && length == 0) {
-    free(line);
-    return NULL;
-  }
-  if (length > 0 && line[length - 1] == '\r') length--;
-  line[length] = '\0';
-  return line;
+  if (character == EOF && used == 0) return NULL;
+  if (used > 0 && (*buffer)[used - 1] == '\r') used--;
+  (*buffer)[used] = '\0';
+  *length = used;
+  return *buffer;
 }
 
 /**
@@ -391,13 +721,13 @@ static bool parseQuotedRange(const char* value, size_t length,
  * @param result Output: parsed value.
  * @return true when valid and in range.
  */
-static bool parseUnsignedRange(const char* value, size_t length, int maximum,
-                               int* result) {
+static bool parseUnsignedRange(const char* value, size_t length,
+                               uint32_t maximum, uint32_t* result) {
   if (length == 0) return false;
-  int parsed = 0;
+  uint32_t parsed = 0;
   for (size_t i = 0; i < length; i++) {
     if (!isdigit((unsigned char)value[i])) return false;
-    int digit = value[i] - '0';
+    uint32_t digit = (uint32_t)(value[i] - '0');
     if (parsed > (maximum - digit) / 10) return false;
     parsed = parsed * 10 + digit;
   }
@@ -442,8 +772,10 @@ static bool parseDurationRange(const char* value, size_t length,
     return false;
   }
 
-  char* number = duplicateStringRange(inner, number_length);
-  if (number == NULL) return false;
+  char number[SPRITE_DIAGNOSTIC_SIZE];
+  if (number_length >= sizeof(number)) return false;
+  memcpy(number, inner, number_length);
+  number[number_length] = '\0';
 
   errno = 0;
   char* end = NULL;
@@ -451,7 +783,6 @@ static bool parseDurationRange(const char* value, size_t length,
   bool valid = end != number && *end == '\0' && errno != ERANGE &&
                isfinite(parsed) && parsed > 0.0 &&
                parsed <= SPRITE_MAX_DURATION_MS / multiplier;
-  free(number);
   if (!valid) return false;
 
   *result_ms = parsed * multiplier;
@@ -465,13 +796,13 @@ static bool parseDurationRange(const char* value, size_t length,
  * @param mask Output: bit mask of icon types.
  * @return true when all names are valid and distinct.
  */
-static bool parseIconTypes(const char* value, size_t length, unsigned* mask) {
+static bool parseIconTypes(const char* value, size_t length, uint8_t* mask) {
   static const char* const names[SPRITE_ICON_TYPE_COUNT] = {"nerd-icons",
                                                             "emojis", "ascii"};
   const char* p = value;
   const char* end = value + length;
-  unsigned parsed_mask = 0;
-  int count = 0;
+  uint32_t parsed_mask = 0;
+  uint32_t count = 0;
   bool array = false;
   bool need_item = false;
 
@@ -495,8 +826,8 @@ static bool parseIconTypes(const char* value, size_t length, unsigned* mask) {
     size_t item_length = (size_t)(item_end - item_start);
     p = item_end + 1;
 
-    int index = -1;
-    for (int i = 0; i < SPRITE_ICON_TYPE_COUNT; i++)
+    int32_t index = -1;
+    for (int32_t i = 0; i < SPRITE_ICON_TYPE_COUNT; i++)
       if (rangeEquals(item_start, item_length, names[i])) index = i;
     if (index < 0 || (parsed_mask & (1u << index)) != 0) return false;
 
@@ -522,7 +853,7 @@ static bool parseIconTypes(const char* value, size_t length, unsigned* mask) {
   }
   if (p != end || count == 0) return false;
 
-  *mask = parsed_mask;
+  *mask = (uint8_t)parsed_mask;
   return true;
 }
 
@@ -546,36 +877,44 @@ static bool parseBoolRange(const char* value, size_t length, bool* result) {
 }
 
 /**
- * Append one decoded cell to the animation cell array.
- * @param cells Cell array.
- * @param count Cell count.
- * @param capacity Cell capacity.
+ * Append one decoded cell to a builder animation.
+ * @param animation Target builder animation.
  * @param codepoint Unicode codepoint.
- * @param width Terminal width override, or -1 to use wcwidth.
+ * @param width Display width override, or -1 to use wcwidth.
  * @param foreground Foreground color.
  * @param background Background color.
- * @param blank True for a blank terminal cell.
+ * @param flags Cell flags.
+ * @param filename Source filename.
+ * @param line Source line number.
+ * @param error Optional diagnostic output.
  * @return true when appended.
  */
-static bool appendCell(struct SpriteCell** cells, size_t* count,
-                       size_t* capacity, uint32_t codepoint, int width,
-                       int foreground, int background, bool blank) {
-  if (!reserveArray((void**)cells, capacity, *count + 1,
-                    sizeof(struct SpriteCell)))
-    return false;
-
-  int display_width = width;
+static bool appendCell(spriteBuilderAnimation* animation, uint32_t codepoint,
+                       int32_t width, uint8_t foreground, uint8_t background,
+                       uint8_t flags, const char* filename, uint32_t line,
+                       ErrorType* error) {
+  int32_t display_width = width;
   if (display_width < 0) {
-    display_width = wcwidth((wchar_t)codepoint);
-    if (display_width < 0) display_width = 1;
+    int decoded = wcwidth((wchar_t)codepoint);
+    display_width = decoded < 0 ? 1 : decoded;
+  }
+  if (display_width < 0 || display_width > UINT8_MAX) {
+    reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename, line,
+                     "cell width overflow");
+    return false;
   }
 
-  struct SpriteCell* cell = &(*cells)[(*count)++];
+  if (!arenaReserve(animation->arena, (void**)&animation->cells,
+                    &animation->cell_capacity, animation->cell_count + 1,
+                    sizeof(spriteCellData)))
+    return false;
+
+  spriteCellData* cell = &animation->cells[animation->cell_count++];
   cell->codepoint = codepoint;
-  cell->width = display_width;
   cell->foreground = foreground;
   cell->background = background;
-  cell->blank = blank;
+  cell->width = (uint8_t)display_width;
+  cell->flags = flags;
   return true;
 }
 
@@ -635,14 +974,18 @@ static bool decodeUtf8(const unsigned char* input, size_t available,
  * @param input Pointer to the backslash.
  * @param end Output: first character after the escape.
  * @param foreground Output: foreground color.
- * @param background Output: background color or SPRITE_NO_COLOR.
+ * @param background Output: background color.
+ * @param foreground_set Output: true when foreground was declared.
+ * @param background_set Output: true when background was declared.
  * @return true for a valid color escape.
  */
 static bool parseColorEscape(const char* input, const char** end,
-                             int* foreground, int* background) {
+                             uint8_t* foreground, uint8_t* background,
+                             bool* foreground_set, bool* background_set) {
   const char* p = input + 2;
-  int parsed_foreground;
-  int parsed_background = SPRITE_NO_COLOR;
+  uint32_t parsed_foreground;
+  uint32_t parsed_background = 0;
+  bool parsed_background_set = false;
 
   if (*p == '{') {
     const char* close = strchr(p + 1, '}');
@@ -654,6 +997,7 @@ static bool parseColorEscape(const char* input, const char** end,
           !parseUnsignedRange(dot + 1, (size_t)(close - (dot + 1)),
                               SPRITE_MAX_COLOR, &parsed_background))
         return false;
+      parsed_background_set = true;
     } else if (!parseUnsignedRange(p + 1, (size_t)(close - (p + 1)),
                                    SPRITE_MAX_COLOR, &parsed_foreground)) {
       return false;
@@ -668,8 +1012,10 @@ static bool parseColorEscape(const char* input, const char** end,
       return false;
   }
 
-  *foreground = parsed_foreground;
-  *background = parsed_background;
+  *foreground = (uint8_t)parsed_foreground;
+  *background = (uint8_t)parsed_background;
+  *foreground_set = true;
+  *background_set = parsed_background_set;
   *end = p;
   return true;
 }
@@ -688,20 +1034,20 @@ static bool parseUnicodeEscape(const char* input, const char** end,
   p++;
 
   uint32_t value = 0;
-  size_t digits = 0;
+  uint32_t digits = 0;
   while (*p != '\0' && *p != '}') {
     unsigned char character = (unsigned char)*p;
-    int digit;
+    uint32_t digit;
     if (character >= '0' && character <= '9')
-      digit = character - '0';
+      digit = (uint32_t)(character - '0');
     else if (character >= 'a' && character <= 'f')
-      digit = character - 'a' + 10;
+      digit = (uint32_t)(character - 'a' + 10);
     else if (character >= 'A' && character <= 'F')
-      digit = character - 'A' + 10;
+      digit = (uint32_t)(character - 'A' + 10);
     else
       return false;
     if (++digits > 6) return false;
-    value = (value << 4) | (uint32_t)digit;
+    value = (value << 4) | digit;
     p++;
   }
 
@@ -722,14 +1068,14 @@ static bool parseUnicodeEscape(const char* input, const char** end,
  * @return true for a valid escape.
  */
 static bool parseBlankRunEscape(const char* input, const char** end,
-                                int* count) {
+                                uint32_t* count) {
   const char* p = input + 2;
   const char* digit_start = p;
   while (isdigit((unsigned char)*p)) p++;
   if (p == digit_start || *p != '}') return false;
   if (!parseUnsignedRange(digit_start, (size_t)(p - digit_start),
                           SPRITE_MAX_BLANK_RUN, count) ||
-      *count <= 0)
+      *count == 0)
     return false;
   *end = p + 1;
   return true;
@@ -738,85 +1084,85 @@ static bool parseBlankRunEscape(const char* input, const char** end,
 /**
  * Decode one raw content line into cells and append one row.
  * @param line Raw content line.
- * @param pending Pending animation state.
+ * @param pending Pending builder animation.
  * @param filename Source filename.
  * @param line_number Source line number.
  * @param error Optional diagnostic output.
  * @return true when decoded.
  */
-static bool decodeContentLine(const char* line, spritePendingAnimation* pending,
-                              const char* filename, size_t line_number,
+static bool decodeContentLine(const char* line, spriteBuilderAnimation* pending,
+                              const char* filename, uint32_t line_number,
                               ErrorType* error) {
-  size_t first_cell = pending->cell_count;
-  const char* p = line;
+  uint32_t first_cell = pending->cell_count;
+  const unsigned char* p = (const unsigned char*)line;
+  const unsigned char* end = p + strlen(line);
 
-  while (*p != '\0') {
-    if (*p == '\\' && p[1] == 'c') {
+  while (p < end) {
+    if (*p == '\\' && p + 1 < end && p[1] == 'c') {
       const char* after;
-      if (!parseColorEscape(p, &after, &pending->frame.foreground,
-                            &pending->frame.background)) {
+      if (!parseColorEscape((const char*)p, &after, &pending->frame.foreground,
+                            &pending->frame.background,
+                            &pending->frame.foreground_set,
+                            &pending->frame.background_set)) {
         reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                          line_number, "malformed color escape");
         return false;
       }
-      p = after;
+      p = (const unsigned char*)after;
       continue;
     }
-    if (*p == '\\' && p[1] == 'u') {
+    if (*p == '\\' && p + 1 < end && p[1] == 'u') {
       const char* after;
       uint32_t codepoint;
-      if (!parseUnicodeEscape(p, &after, &codepoint)) {
+      if (!parseUnicodeEscape((const char*)p, &after, &codepoint)) {
         reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                          line_number, "invalid Unicode escape");
         return false;
       }
-      if (!appendCell(&pending->cells, &pending->cell_count,
-                      &pending->cell_capacity, codepoint, -1,
-                      pending->frame.foreground, pending->frame.background,
-                      false)) {
-        reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
-                         "allocation failure");
+      if (!appendCell(
+            pending, codepoint, -1, pending->frame.foreground,
+            pending->frame.background,
+            (pending->frame.foreground_set ? SPRITE_CELL_FLAG_FOREGROUND : 0) |
+              (pending->frame.background_set ? SPRITE_CELL_FLAG_BACKGROUND : 0),
+            filename, line_number, error))
         return false;
-      }
-      p = after;
+      p = (const unsigned char*)after;
       continue;
     }
-    if (*p == '\\' && p[1] == '{') {
+    if (*p == '\\' && p + 1 < end && p[1] == '{') {
       const char* after;
-      int count;
-      if (!parseBlankRunEscape(p, &after, &count)) {
+      uint32_t count;
+      if (!parseBlankRunEscape((const char*)p, &after, &count)) {
         reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                          line_number, "invalid blank-cell count");
         return false;
       }
-      for (int i = 0; i < count; i++)
-        if (!appendCell(&pending->cells, &pending->cell_count,
-                        &pending->cell_capacity, ' ', 1,
-                        pending->frame.foreground, pending->frame.background,
-                        true)) {
-          reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
-                           "allocation failure");
+      uint8_t flags = SPRITE_CELL_FLAG_BLANK;
+      if (pending->frame.foreground_set) flags |= SPRITE_CELL_FLAG_FOREGROUND;
+      if (pending->frame.background_set) flags |= SPRITE_CELL_FLAG_BACKGROUND;
+      for (uint32_t i = 0; i < count; i++)
+        if (!appendCell(pending, ' ', 1, pending->frame.foreground,
+                        pending->frame.background, flags, filename, line_number,
+                        error))
           return false;
-        }
-      p = after;
+      p = (const unsigned char*)after;
       continue;
     }
-    if (*p == '\\' && p[1] == 's') {
-      if (!appendCell(
-            &pending->cells, &pending->cell_count, &pending->cell_capacity, ' ',
-            1, pending->frame.foreground, pending->frame.background, true)) {
-        reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
-                         "allocation failure");
+    if (*p == '\\' && p + 1 < end && p[1] == 's') {
+      uint8_t flags = SPRITE_CELL_FLAG_BLANK;
+      if (pending->frame.foreground_set) flags |= SPRITE_CELL_FLAG_FOREGROUND;
+      if (pending->frame.background_set) flags |= SPRITE_CELL_FLAG_BACKGROUND;
+      if (!appendCell(pending, ' ', 1, pending->frame.foreground,
+                      pending->frame.background, flags, filename, line_number,
+                      error))
         return false;
-      }
       p += 2;
       continue;
     }
 
     uint32_t codepoint;
     size_t consumed;
-    if (!decodeUtf8((const unsigned char*)p, strlen(p), &codepoint,
-                    &consumed)) {
+    if (!decodeUtf8(p, (size_t)(end - p), &codepoint, &consumed)) {
       reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                        line_number, "invalid UTF-8 sequence");
       return false;
@@ -826,24 +1172,24 @@ static bool decodeContentLine(const char* line, spritePendingAnimation* pending,
                        line_number, "NUL in sprite content");
       return false;
     }
-    if (!appendCell(&pending->cells, &pending->cell_count,
-                    &pending->cell_capacity, codepoint, -1,
-                    pending->frame.foreground, pending->frame.background,
-                    false)) {
-      reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
-                       "allocation failure");
+    uint8_t flags = 0;
+    if (pending->frame.foreground_set) flags |= SPRITE_CELL_FLAG_FOREGROUND;
+    if (pending->frame.background_set) flags |= SPRITE_CELL_FLAG_BACKGROUND;
+    if (!appendCell(pending, codepoint, -1, pending->frame.foreground,
+                    pending->frame.background, flags, filename, line_number,
+                    error))
       return false;
-    }
     p += consumed;
   }
 
-  if (!reserveArray((void**)&pending->rows, &pending->row_capacity,
-                    pending->row_count + 1, sizeof(struct SpriteRow))) {
+  if (!arenaReserve(pending->arena, (void**)&pending->rows,
+                    &pending->row_capacity, pending->row_count + 1,
+                    sizeof(spriteRowSpan))) {
     reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
                      "allocation failure");
     return false;
   }
-  struct SpriteRow* row = &pending->rows[pending->row_count++];
+  spriteRowSpan* row = &pending->rows[pending->row_count++];
   row->cell_offset = first_cell;
   row->cell_count = pending->cell_count - first_cell;
   return true;
@@ -851,41 +1197,30 @@ static bool decodeContentLine(const char* line, spritePendingAnimation* pending,
 
 /**
  * Reset state for a new frame.
- * @param pending Pending animation state.
+ * @param pending Pending builder animation.
  */
-static void clearPendingFrame(spritePendingAnimation* pending) {
+static void clearPendingFrame(spriteBuilderAnimation* pending) {
   memset(&pending->frame, 0, sizeof(pending->frame));
-  pending->frame.foreground = pending->default_color;
-  pending->frame.background = SPRITE_NO_COLOR;
+  if (pending->default_color == SPRITE_NO_COLOR) {
+    pending->frame.foreground_set = false;
+  } else {
+    pending->frame.foreground = (uint8_t)pending->default_color;
+    pending->frame.foreground_set = true;
+  }
   pending->frame.duration_ms = pending->duration_ms;
   pending->frame_open = false;
 }
 
 /**
- * Release all state owned by a pending animation.
- * @param pending Pending animation state.
- */
-static void clearPendingAnimation(spritePendingAnimation* pending) {
-  free(pending->name);
-  free(pending->source);
-  free(pending->frames);
-  free(pending->rows);
-  free(pending->cells);
-  memset(pending, 0, sizeof(*pending));
-  pending->default_color = SPRITE_NO_COLOR;
-  clearPendingFrame(pending);
-}
-
-/**
  * Open a new frame declaration.
- * @param pending Pending animation state.
+ * @param pending Pending builder animation.
  * @param filename Source filename.
  * @param line_number Source line number.
  * @param error Optional diagnostic output.
  * @return true when opened.
  */
-static bool startFrame(spritePendingAnimation* pending, const char* filename,
-                       size_t line_number, ErrorType* error) {
+static bool startFrame(spriteBuilderAnimation* pending, const char* filename,
+                       uint32_t line_number, ErrorType* error) {
   if (pending->frame_open) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                      line_number, "nested frame declaration");
@@ -900,14 +1235,14 @@ static bool startFrame(spritePendingAnimation* pending, const char* filename,
 
 /**
  * Close the content block of a frame.
- * @param pending Pending animation state.
+ * @param pending Pending builder animation.
  * @param filename Source filename.
  * @param line_number Source line number.
  * @param error Optional diagnostic output.
  * @return true when closed.
  */
-static bool closeContent(spritePendingAnimation* pending, const char* filename,
-                         size_t line_number, ErrorType* error) {
+static bool closeContent(spriteBuilderAnimation* pending, const char* filename,
+                         uint32_t line_number, ErrorType* error) {
   if (!pending->frame_open || !pending->frame.content_started) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                      line_number, "misplaced [[/content]]");
@@ -923,15 +1258,15 @@ static bool closeContent(spritePendingAnimation* pending, const char* filename,
 }
 
 /**
- * Close a frame and append its metadata to the animation.
- * @param pending Pending animation state.
+ * Close a frame and append its metadata to the builder.
+ * @param pending Pending builder animation.
  * @param filename Source filename.
  * @param line_number Source line number.
  * @param error Optional diagnostic output.
  * @return true when closed.
  */
-static bool closeFrame(spritePendingAnimation* pending, const char* filename,
-                       size_t line_number, ErrorType* error) {
+static bool closeFrame(spriteBuilderAnimation* pending, const char* filename,
+                       uint32_t line_number, ErrorType* error) {
   if (!pending->frame_open) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                      line_number, "misplaced [[/frame]]");
@@ -944,46 +1279,46 @@ static bool closeFrame(spritePendingAnimation* pending, const char* filename,
     return false;
   }
 
-  size_t row_count = pending->row_count - pending->frame.first_row;
+  uint32_t row_count = pending->row_count - pending->frame.first_row;
   if (row_count == 0) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                      line_number, "frame has no content rows");
     return false;
   }
-  if (row_count > INT_MAX) {
+  if (row_count > UINT16_MAX) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                      line_number, "frame height overflow");
     return false;
   }
 
-  int width = 0;
-  for (size_t i = pending->frame.first_row; i < pending->row_count; i++) {
-    int row_width = 0;
-    const struct SpriteRow* row = &pending->rows[i];
-    for (size_t j = 0; j < row->cell_count; j++) {
-      if (row_width > INT_MAX - pending->cells[row->cell_offset + j].width) {
+  uint32_t width = 0;
+  for (uint32_t i = pending->frame.first_row; i < pending->row_count; i++) {
+    uint32_t row_width = 0;
+    const spriteRowSpan* row = &pending->rows[i];
+    for (uint32_t j = 0; j < row->cell_count; j++) {
+      uint32_t cell_width = pending->cells[row->cell_offset + j].width;
+      if (row_width > UINT16_MAX - cell_width) {
         reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                          line_number, "frame width overflow");
         return false;
       }
-      row_width += pending->cells[row->cell_offset + j].width;
+      row_width += cell_width;
     }
     if (row_width > width) width = row_width;
   }
 
-  if (!reserveArray((void**)&pending->frames, &pending->frame_capacity,
-                    pending->frame_count + 1, sizeof(struct SpriteFrame))) {
+  if (!arenaReserve(pending->arena, (void**)&pending->frames,
+                    &pending->frame_capacity, pending->frame_count + 1,
+                    sizeof(spriteBuilderFrame))) {
     reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
                      "allocation failure");
     return false;
   }
-  struct SpriteFrame* frame = &pending->frames[pending->frame_count++];
+  spriteBuilderFrame* frame = &pending->frames[pending->frame_count++];
   frame->row_offset = pending->frame.first_row;
   frame->row_count = row_count;
-  frame->cell_offset = pending->frame.first_cell;
-  frame->cell_count = pending->cell_count - pending->frame.first_cell;
-  frame->width = width;
-  frame->height = (int)row_count;
+  frame->width = (uint16_t)width;
+  frame->height = (uint16_t)row_count;
   frame->duration_ms = pending->frame.duration_set ? pending->frame.duration_ms
                                                    : pending->duration_ms;
 
@@ -993,16 +1328,16 @@ static bool closeFrame(spritePendingAnimation* pending, const char* filename,
 
 /**
  * Finish one animation declaration and move it into the definition list.
- * @param pending Pending animation state.
+ * @param pending Pending builder animation.
  * @param definitions Completed definitions.
  * @param filename Source filename.
  * @param line_number Source line number.
  * @param error Optional diagnostic output.
  * @return true when finalized.
  */
-static bool finalizeAnimation(spritePendingAnimation* pending,
-                              spriteDefinitionList* definitions,
-                              const char* filename, size_t line_number,
+static bool finalizeAnimation(spriteBuilderAnimation* pending,
+                              spriteBuilderList* definitions,
+                              const char* filename, uint32_t line_number,
                               ErrorType* error) {
   if (pending->frame_open) {
     reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
@@ -1020,108 +1355,58 @@ static bool finalizeAnimation(spritePendingAnimation* pending,
     return false;
   }
 
-  struct SpriteAnimation* animation =
-    (struct SpriteAnimation*)calloc(1, sizeof(*animation));
-  if (animation == NULL) {
+  spriteArena* arena = pending->arena;
+  spriteBuilderAnimation* finished = (spriteBuilderAnimation*)arenaAllocate(
+    arena, sizeof(*finished), SPRITE_STORAGE_ALIGNMENT);
+  if (finished == NULL) {
     reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
                      "allocation failure");
     return false;
   }
-
-  animation->name = pending->name;
-  animation->source = pending->source;
-  animation->source_line = pending->source_line;
-  animation->icon_mask = pending->icon_mask;
-  animation->frames = pending->frames;
-  animation->frame_count = pending->frame_count;
-  animation->rows = pending->rows;
-  animation->row_count = pending->row_count;
-  animation->cells = pending->cells;
-  animation->cell_count = pending->cell_count;
-  animation->default_duration_ms = pending->duration_ms;
-  animation->loop = pending->loop;
-  animation->default_color = pending->default_color;
-
-  for (size_t i = 0; i < animation->row_count; i++)
-    animation->rows[i].cells = animation->cells;
-  for (size_t i = 0; i < animation->frame_count; i++)
-    animation->frames[i].rows =
-      animation->rows + animation->frames[i].row_offset;
-
-  for (size_t i = 0; i < animation->frame_count; i++) {
-    const struct SpriteFrame* frame = &animation->frames[i];
-    if (frame->width > animation->width) animation->width = frame->width;
-    if (frame->height > animation->height) animation->height = frame->height;
+  *finished = *pending;
+  finished->flags = pending->loop ? SPRITE_ANIMATION_FLAG_LOOP : 0;
+  if (!appendDefinition(definitions, finished)) {
+    reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
+                     "allocation failure");
+    return false;
   }
 
   memset(pending, 0, sizeof(*pending));
+  pending->arena = arena;
   pending->default_color = SPRITE_NO_COLOR;
   clearPendingFrame(pending);
-
-  if (!appendDefinition(definitions, animation)) {
-    reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
-                     "allocation failure");
-    freeSpriteAnimation(animation);
-    return false;
-  }
   return true;
 }
 
 /**
- * Free one animation definition.
- * @param animation Pointer to the animation to free.
- */
-static void freeSpriteAnimation(struct SpriteAnimation* animation) {
-  if (animation == NULL) return;
-  free(animation->name);
-  free(animation->source);
-  free(animation->frames);
-  free(animation->rows);
-  free(animation->cells);
-  free(animation);
-}
-
-/**
- * Free a definition list.
- * @param definitions Pointer to the list to free.
- */
-static void freeDefinitionList(spriteDefinitionList* definitions) {
-  if (definitions == NULL) return;
-  for (size_t i = 0; i < definitions->count; i++)
-    freeSpriteAnimation(definitions->items[i]);
-  free(definitions->items);
-  memset(definitions, 0, sizeof(*definitions));
-}
-
-/**
- * Append a definition to a list.
+ * Append a builder definition to a list.
  * @param definitions Target list.
- * @param animation Owned animation definition.
+ * @param animation Owned builder animation.
  * @return true when appended.
  */
-static bool appendDefinition(spriteDefinitionList* definitions,
-                             struct SpriteAnimation* animation) {
-  if (!reserveArray((void**)&definitions->items, &definitions->capacity,
-                    definitions->count + 1, sizeof(struct SpriteAnimation*)))
+static bool appendDefinition(spriteBuilderList* definitions,
+                             spriteBuilderAnimation* animation) {
+  if (!arenaReserve(definitions->arena, (void**)&definitions->items,
+                    &definitions->capacity, definitions->count + 1,
+                    sizeof(spriteBuilderAnimation*)))
     return false;
   definitions->items[definitions->count++] = animation;
   return true;
 }
 
 /**
- * Merge new definitions into a library and validate icon-type masks.
- * @param library Target library.
+ * Merge new definitions into a builder library and validate icon masks.
+ * @param library Target builder library.
  * @param definitions Definitions parsed from one file.
  * @param error Optional diagnostic output.
  * @return true when every definition was accepted.
  */
-static bool mergeDefinitions(SpriteLibrary* library,
-                             spriteDefinitionList* definitions,
-                             ErrorType* error) {
-  for (size_t i = 0; i < definitions->count; i++) {
-    struct SpriteAnimation* candidate = definitions->items[i];
-    for (size_t j = 0; j < library->count; j++) {
-      struct SpriteAnimation* existing = library->items[j];
+static bool mergeDefinitions(spriteBuilderLibrary* library,
+                             spriteBuilderList* definitions, ErrorType* error) {
+  for (uint32_t i = 0; i < definitions->count; i++) {
+    spriteBuilderAnimation* candidate = definitions->items[i];
+    for (uint32_t j = 0; j < library->definitions.count; j++) {
+      spriteBuilderAnimation* existing = library->definitions.items[j];
       if (strcmp(existing->name, candidate->name) == 0 &&
           (existing->icon_mask & candidate->icon_mask) != 0) {
         reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error,
@@ -1131,14 +1416,11 @@ static bool mergeDefinitions(SpriteLibrary* library,
         return false;
       }
     }
-    if (!reserveArray((void**)&library->items, &library->capacity,
-                      library->count + 1, sizeof(struct SpriteAnimation*))) {
+    if (!appendDefinition(&library->definitions, candidate)) {
       reportDiagnostic(MALLOC_ERROR, error, candidate->source,
                        candidate->source_line, "allocation failure");
       return false;
     }
-    library->items[library->count++] = candidate;
-    definitions->items[i] = NULL;
   }
   return true;
 }
@@ -1146,22 +1428,25 @@ static bool mergeDefinitions(SpriteLibrary* library,
 /**
  * Parse one sprite file into temporary definitions, then merge them.
  * @param filename Path to the file.
- * @param library Target library.
+ * @param library Target builder library.
+ * @param arena Arena for temporary allocations.
  * @param error Optional diagnostic output.
  * @return true on success.
  */
-static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
-                            ErrorType* error) {
+static bool parseSpriteFile(const char* filename, spriteBuilderLibrary* library,
+                            spriteArena* arena, ErrorType* error) {
   FILE* file = fopen(filename, "rb");
   if (file == NULL) {
     reportDiagnostic(FILE_ERROR, error, filename, 0, "cannot open sprite file");
     return false;
   }
 
-  spritePendingAnimation pending;
-  spriteDefinitionList definitions;
+  spriteBuilderAnimation pending;
+  spriteBuilderList definitions;
   memset(&pending, 0, sizeof(pending));
   memset(&definitions, 0, sizeof(definitions));
+  pending.arena = arena;
+  definitions.arena = arena;
   pending.default_color = SPRITE_NO_COLOR;
   clearPendingFrame(&pending);
 
@@ -1173,12 +1458,32 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
     STATE_IN_CONTENT         /**< Inside a content block. */
   } state = STATE_OUTSIDE_ANIMATION;
 
-  size_t line_number = 0;
-  char* line;
+  uint32_t line_number = 0;
+  char* buffer = NULL;
+  uint32_t buffer_capacity = 0;
   bool success = true;
 
-  while (success && (line = readLine(file)) != NULL) {
+  while (success) {
+    uint32_t line_length = 0;
+    bool read_failed = false;
+    char* line = readLine(file, arena, &buffer, &buffer_capacity, &line_length,
+                          &read_failed);
+    if (line == NULL) {
+      if (read_failed || ferror(file)) {
+        reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
+                         "allocation or read failure");
+        success = false;
+      }
+      break;
+    }
     line_number++;
+    if (memchr(line, '\0', line_length) != NULL) {
+      reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
+                       line_number, "NUL in sprite content");
+      success = false;
+      break;
+    }
+
     const char* start;
     const char* end;
     trimRange(line, &start, &end);
@@ -1195,14 +1500,10 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
         success =
           decodeContentLine(line, &pending, filename, line_number, error);
       }
-      free(line);
       continue;
     }
 
-    if (start == end || *start == '#') {
-      free(line);
-      continue;
-    }
+    if (start == end || *start == '#') continue;
 
     const char* name;
     size_t name_length;
@@ -1216,22 +1517,28 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
           success = finalizeAnimation(&pending, &definitions, filename,
                                       line_number, error);
         if (success) {
-          pending.name = duplicateStringRange(name, name_length);
-          pending.source = duplicateStringRange(filename, strlen(filename));
-          pending.source_line = line_number;
+          pending.name = arenaDuplicateRange(arena, name, name_length);
+          pending.source =
+            arenaDuplicateRange(arena, filename, strlen(filename));
           if (pending.name == NULL || pending.source == NULL) {
             reportDiagnostic(MALLOC_ERROR, error, filename, line_number,
                              "allocation failure");
             success = false;
           } else {
+            pending.source_line = line_number;
             pending.duration_ms = 1000.0;
             pending.loop = true;
             pending.default_color = SPRITE_NO_COLOR;
+            pending.icon_mask = 0;
+            pending.icon_set = false;
+            pending.duration_set = false;
+            pending.loop_set = false;
+            pending.color_set = false;
+            clearPendingFrame(&pending);
             state = STATE_IN_ANIMATION;
           }
         }
       }
-      free(line);
       continue;
     }
 
@@ -1308,14 +1615,17 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
                            line_number, "duplicate default-color option");
           success = false;
         } else {
-          success = parseUnsignedRange(value, value_length, SPRITE_MAX_COLOR,
-                                       &pending.default_color);
+          uint32_t color;
+          success =
+            parseUnsignedRange(value, value_length, SPRITE_MAX_COLOR, &color);
           if (!success) {
             reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
                              line_number, "invalid default-color option");
           } else {
             pending.color_set = true;
-            pending.frame.foreground = pending.default_color;
+            pending.default_color = (int16_t)color;
+            pending.frame.foreground = (uint8_t)color;
+            pending.frame.foreground_set = true;
           }
         }
       } else {
@@ -1349,15 +1659,8 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
                          : "misplaced frame or content delimiter");
       success = false;
     }
-
-    free(line);
   }
 
-  if (success && ferror(file)) {
-    reportDiagnostic(FILE_ERROR, error, filename, line_number,
-                     "error reading sprite file");
-    success = false;
-  }
   fclose(file);
 
   if (success && state == STATE_IN_CONTENT) {
@@ -1379,10 +1682,351 @@ static bool parseSpriteFile(const char* filename, SpriteLibrary* library,
     success = false;
   }
   if (success) success = mergeDefinitions(library, &definitions, error);
-
-  clearPendingAnimation(&pending);
-  freeDefinitionList(&definitions);
   return success;
+}
+
+/**
+ * Validate builder data before finalization.
+ * @param library Builder library to validate.
+ * @param filename Source filename for diagnostics.
+ * @param error Optional diagnostic output.
+ * @return true when every definition is internally consistent.
+ */
+static bool validateBuilder(const spriteBuilderLibrary* library,
+                            const char* filename, ErrorType* error) {
+  for (uint32_t i = 0; i < library->definitions.count; i++) {
+    const spriteBuilderAnimation* animation = library->definitions.items[i];
+    if (animation->name == NULL || animation->source == NULL ||
+        animation->icon_mask == 0 || animation->frame_count == 0)
+      return reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, filename,
+                              animation->source_line,
+                              "invalid animation metadata") == NO_ERROR;
+
+    for (uint32_t f = 0; f < animation->frame_count; f++) {
+      const spriteBuilderFrame* frame = &animation->frames[f];
+      if (frame->row_count == 0 || frame->row_offset > animation->row_count ||
+          frame->row_count > animation->row_count - frame->row_offset ||
+          !isfinite(frame->duration_ms) || frame->duration_ms <= 0.0)
+        return reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error,
+                                filename, animation->source_line,
+                                "invalid frame metadata") == NO_ERROR;
+    }
+
+    for (uint32_t r = 0; r < animation->row_count; r++) {
+      const spriteRowSpan* row = &animation->rows[r];
+      if (row->cell_offset > animation->cell_count ||
+          row->cell_count > animation->cell_count - row->cell_offset)
+        return reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error,
+                                filename, animation->source_line,
+                                "invalid row cell span") == NO_ERROR;
+    }
+
+    for (uint32_t c = 0; c < animation->cell_count; c++) {
+      const spriteCellData* cell = &animation->cells[c];
+      if (cell->codepoint > 0x10FFFF ||
+          (cell->codepoint >= 0xD800 && cell->codepoint <= 0xDFFF) ||
+          (cell->flags &
+           ~(SPRITE_CELL_FLAG_BLANK | SPRITE_CELL_FLAG_FOREGROUND |
+             SPRITE_CELL_FLAG_BACKGROUND)) != 0)
+        return reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error,
+                                filename, animation->source_line,
+                                "invalid sprite cell") == NO_ERROR;
+    }
+  }
+  return true;
+}
+
+/**
+ * Calculate aligned offsets for the finalized storage block.
+ * @param library Builder library.
+ * @param pool Deduplicated string pool.
+ * @param layout Output: calculated offsets.
+ * @param error Optional diagnostic output.
+ * @return true when the layout fits in uint32_t offsets.
+ */
+static bool calculateLayout(const spriteBuilderLibrary* library,
+                            const spriteStringPool* pool,
+                            spriteStorageLayout* layout, ErrorType* error) {
+  uint64_t frames = 0;
+  uint64_t rows = 0;
+  uint64_t cells = 0;
+  for (uint32_t i = 0; i < library->definitions.count; i++) {
+    const spriteBuilderAnimation* animation = library->definitions.items[i];
+    if (frames > UINT64_MAX - animation->frame_count ||
+        rows > UINT64_MAX - animation->row_count ||
+        cells > UINT64_MAX - animation->cell_count)
+      return false;
+    frames += animation->frame_count;
+    rows += animation->row_count;
+    cells += animation->cell_count;
+  }
+
+  uint64_t sizes[5] = {
+    (uint64_t)library->definitions.count * sizeof(SpriteAnimation),
+    frames * sizeof(SpriteFrame),
+    rows * sizeof(SpriteRow),
+    cells * sizeof(SpriteCell),
+    pool->length,
+  };
+  uint64_t cursor =
+    alignUpSize(sizeof(SpriteLibrary), SPRITE_STORAGE_ALIGNMENT);
+  uint64_t offsets[6] = {cursor};
+  for (size_t i = 0; i < 5; i++) {
+    if (sizes[i] > UINT32_MAX) return false;
+    cursor = alignUpSize((size_t)cursor, SPRITE_STORAGE_ALIGNMENT);
+    if (cursor > UINT32_MAX - sizes[i]) return false;
+    cursor += sizes[i];
+    offsets[i + 1] = cursor;
+  }
+  cursor = alignUpSize((size_t)cursor, SPRITE_STORAGE_ALIGNMENT);
+  if (cursor == SIZE_MAX || cursor > UINT32_MAX) {
+    reportDiagnostic(MALLOC_ERROR, error, "<library>", 0,
+                     "sprite storage too large");
+    return false;
+  }
+  offsets[5] = cursor;
+
+  layout->animations = (uint32_t)offsets[0];
+  layout->frames = (uint32_t)offsets[1];
+  layout->rows = (uint32_t)offsets[2];
+  layout->cells = (uint32_t)offsets[3];
+  layout->strings = (uint32_t)offsets[4];
+  layout->total = (uint32_t)offsets[5];
+  return true;
+}
+
+/**
+ * Build the finalized one-allocation library from builder data.
+ * @param library Builder library.
+ * @param arena Arena holding builder data.
+ * @param output Output receiving the finalized library.
+ * @param error Optional diagnostic output.
+ * @return true on success.
+ */
+static bool finalizeLibrary(const spriteBuilderLibrary* library,
+                            spriteArena* arena, SpriteLibrary** output,
+                            ErrorType* error) {
+  if (library->definitions.count == 0) {
+    reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, "<library>", 0,
+                     "no animation definitions");
+    return false;
+  }
+  if (!validateBuilder(library, "<library>", error)) return false;
+
+  spriteStringPool pool = {0};
+  for (uint32_t i = 0; i < library->definitions.count; i++) {
+    spriteBuilderAnimation* animation = library->definitions.items[i];
+    bool pool_ok;
+    animation->name_offset =
+      stringPoolAppend(arena, &pool, animation->name, &pool_ok);
+    if (!pool_ok) {
+      reportDiagnostic(MALLOC_ERROR, error, animation->source,
+                       animation->source_line, "allocation failure");
+      return false;
+    }
+    animation->source_offset =
+      stringPoolAppend(arena, &pool, animation->source, &pool_ok);
+    if (!pool_ok) {
+      reportDiagnostic(MALLOC_ERROR, error, animation->source,
+                       animation->source_line, "allocation failure");
+      return false;
+    }
+  }
+
+  spriteStorageLayout layout;
+  if (!calculateLayout(library, &pool, &layout, error)) return false;
+
+  void* storage = calloc(1, layout.total);
+  if (storage == NULL) {
+    reportDiagnostic(MALLOC_ERROR, error, "<library>", 0, "allocation failure");
+    return false;
+  }
+
+  SpriteLibrary* finalized = (SpriteLibrary*)storage;
+  finalized->items =
+    (SpriteAnimation*)((unsigned char*)storage + layout.animations);
+  finalized->count = library->definitions.count;
+  finalized->string_offset = layout.strings;
+  finalized->storage_size = layout.total;
+
+  SpriteAnimation* animations = finalized->items;
+  SpriteFrame* frames = (SpriteFrame*)((unsigned char*)storage + layout.frames);
+  SpriteRow* rows = (SpriteRow*)((unsigned char*)storage + layout.rows);
+  SpriteCell* cells = (SpriteCell*)((unsigned char*)storage + layout.cells);
+  unsigned char* strings = (unsigned char*)storage + layout.strings;
+  if (pool.length > 0) memcpy(strings, pool.data, pool.length);
+
+  uint32_t frame_index = 0;
+  uint32_t row_index = 0;
+  uint32_t cell_index = 0;
+  for (uint32_t i = 0; i < library->definitions.count; i++) {
+    const spriteBuilderAnimation* source = library->definitions.items[i];
+    SpriteAnimation* animation = &animations[i];
+    double cycle_duration = 0.0;
+    uint16_t width = 0;
+    uint16_t height = 0;
+
+    animation->base = storage;
+    animation->name_offset = layout.strings + source->name_offset;
+    animation->source_offset = layout.strings + source->source_offset;
+    animation->frame_offset =
+      layout.frames + (uint32_t)((size_t)frame_index * sizeof(SpriteFrame));
+    animation->frame_count = source->frame_count;
+    animation->row_offset =
+      layout.rows + (uint32_t)((size_t)row_index * sizeof(SpriteRow));
+    animation->row_count = source->row_count;
+    animation->cell_offset =
+      layout.cells + (uint32_t)((size_t)cell_index * sizeof(SpriteCell));
+    animation->cell_count = source->cell_count;
+    animation->source_line = source->source_line;
+    animation->icon_mask = source->icon_mask;
+    animation->flags = source->flags;
+    animation->default_color = source->default_color;
+    animation->default_duration_ms = source->duration_ms;
+
+    if (source->cell_count > 0)
+      memcpy(cells + cell_index, source->cells,
+             (size_t)source->cell_count * sizeof(spriteCellData));
+
+    for (uint32_t r = 0; r < source->row_count; r++) {
+      const spriteRowSpan* source_row = &source->rows[r];
+      SpriteRow* row = &rows[row_index + r];
+      row->cells = cells + cell_index;
+      row->cell_offset = source_row->cell_offset;
+      row->cell_count = source_row->cell_count;
+    }
+
+    for (uint32_t f = 0; f < source->frame_count; f++) {
+      const spriteBuilderFrame* source_frame = &source->frames[f];
+      SpriteFrame* frame = &frames[frame_index + f];
+      frame->rows = rows + row_index + source_frame->row_offset;
+      frame->row_offset = source_frame->row_offset;
+      frame->row_count = source_frame->row_count;
+      frame->width = source_frame->width;
+      frame->height = source_frame->height;
+      frame->duration_ms = source_frame->duration_ms;
+      cycle_duration += source_frame->duration_ms;
+      if (frame->width > width) width = frame->width;
+      if (frame->height > height) height = frame->height;
+    }
+    animation->width = width;
+    animation->height = height;
+    animation->cycle_duration_ms =
+      isfinite(cycle_duration) ? cycle_duration : 0.0;
+
+    frame_index += source->frame_count;
+    row_index += source->row_count;
+    cell_index += source->cell_count;
+  }
+
+  if (!validateLibrary(finalized)) {
+    free(storage);
+    reportDiagnostic(ANIMATION_DESERIALIZATION_ERROR, error, "<library>", 0,
+                     "invalid finalized sprite library");
+    return false;
+  }
+
+  *output = finalized;
+  return true;
+}
+
+/**
+ * Validate offsets, pointers, strings, and cells in a finalized library.
+ * @param library Library to validate.
+ * @return true when every invariant holds.
+ */
+static bool validateLibrary(const SpriteLibrary* library) {
+  const unsigned char* base = (const unsigned char*)library;
+  if (library->count == 0 || library->string_offset >= library->storage_size)
+    return false;
+  if ((const unsigned char*)library->items !=
+      base + alignUpSize(sizeof(SpriteLibrary), SPRITE_STORAGE_ALIGNMENT))
+    return false;
+
+  for (uint32_t i = 0; i < library->count; i++) {
+    const SpriteAnimation* animation = &library->items[i];
+    size_t frame_bytes;
+    if (animation->base != library || animation->icon_mask == 0 ||
+        animation->icon_mask > ((1u << SPRITE_ICON_TYPE_COUNT) - 1) ||
+        (animation->flags & ~SPRITE_ANIMATION_FLAG_LOOP) != 0 ||
+        (animation->default_color != SPRITE_NO_COLOR &&
+         animation->default_color > SPRITE_MAX_COLOR) ||
+        animation->frame_count == 0 ||
+        !checkedMulSize(animation->frame_count, sizeof(SpriteFrame),
+                        &frame_bytes) ||
+        animation->frame_offset > library->storage_size ||
+        frame_bytes > library->storage_size - animation->frame_offset)
+      return false;
+
+    const char* name = stringAt(animation, animation->name_offset);
+    const char* source = stringAt(animation, animation->source_offset);
+    if (name == NULL || source == NULL) return false;
+    if (memchr(name, '\0',
+               (size_t)(base + library->storage_size -
+                        (const unsigned char*)name)) == NULL)
+      return false;
+    if (memchr(source, '\0',
+               (size_t)(base + library->storage_size -
+                        (const unsigned char*)source)) == NULL)
+      return false;
+
+    const SpriteFrame* frame_array =
+      (const SpriteFrame*)(base + animation->frame_offset);
+    if (animation->row_offset > library->storage_size ||
+        animation->row_count >
+          (library->storage_size - animation->row_offset) / sizeof(SpriteRow) ||
+        animation->cell_offset > library->storage_size ||
+        animation->cell_count >
+          (library->storage_size - animation->cell_offset) / sizeof(SpriteCell))
+      return false;
+
+    for (uint32_t f = 0; f < animation->frame_count; f++) {
+      const SpriteFrame* frame = &frame_array[f];
+      if (frame->rows != (const SpriteRow*)(base + animation->row_offset) +
+                           frame->row_offset ||
+          frame->row_offset > animation->row_count ||
+          frame->row_count > animation->row_count - frame->row_offset ||
+          !isfinite(frame->duration_ms) || frame->duration_ms <= 0.0)
+        return false;
+    }
+
+    const SpriteRow* row_array =
+      (const SpriteRow*)(base + animation->row_offset);
+    for (uint32_t r = 0; r < animation->row_count; r++) {
+      const SpriteRow* row = &row_array[r];
+      if (row->cells != (const SpriteCell*)(base + animation->cell_offset) ||
+          row->cell_offset > animation->cell_count ||
+          row->cell_count > animation->cell_count - row->cell_offset)
+        return false;
+    }
+
+    const SpriteCell* cell_array =
+      (const SpriteCell*)(base + animation->cell_offset);
+    for (uint32_t c = 0; c < animation->cell_count; c++) {
+      const SpriteCell* cell = &cell_array[c];
+      if (cell->codepoint > 0x10FFFF ||
+          (cell->codepoint >= 0xD800 && cell->codepoint <= 0xDFFF) ||
+          (cell->flags &
+           ~(SPRITE_CELL_FLAG_BLANK | SPRITE_CELL_FLAG_FOREGROUND |
+             SPRITE_CELL_FLAG_BACKGROUND)) != 0)
+        return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Resolve a pooled string offset.
+ * @param animation Owning animation.
+ * @param offset Offset in the string pool.
+ * @return Pointer to the NUL-terminated string, or NULL for a bad offset.
+ */
+static const char* stringAt(const SpriteAnimation* animation, uint32_t offset) {
+  const SpriteLibrary* library = (const SpriteLibrary*)animation->base;
+  const unsigned char* base = (const unsigned char*)library;
+  if (offset < library->string_offset || offset >= library->storage_size)
+    return NULL;
+  return (const char*)base + offset;
 }
 
 /**
@@ -1406,38 +2050,50 @@ ErrorType LoadSpriteLibrary(const char* const* filenames, size_t count,
     return reportDiagnostic(INVALID_ARGUMENT_ERROR, &error, "<library>", 0,
                             "no sprite files supplied");
 
-  SpriteLibrary* loaded = (SpriteLibrary*)calloc(1, sizeof(*loaded));
-  if (loaded == NULL)
-    return reportDiagnostic(MALLOC_ERROR, &error, "<library>", 0,
-                            "allocation failure");
-
+  spriteArena arena = {0};
+  spriteBuilderLibrary builder = {0};
+  builder.definitions.arena = &arena;
   for (size_t i = 0; i < count; i++) {
     if (filenames[i] == NULL) {
-      FreeSpriteLibrary(loaded);
+      arenaFree(&arena);
       return reportDiagnostic(INVALID_ARGUMENT_ERROR, &error, "<library>", 0,
                               "NULL sprite filename");
     }
-    if (!parseSpriteFile(filenames[i], loaded, &error)) {
-      FreeSpriteLibrary(loaded);
+    if (!parseSpriteFile(filenames[i], &builder, &arena, &error)) {
+      arenaFree(&arena);
       return error == NO_ERROR ? ANIMATION_DESERIALIZATION_ERROR : error;
     }
   }
 
+  SpriteLibrary* loaded = NULL;
+  bool finalized = finalizeLibrary(&builder, &arena, &loaded, &error);
+  arenaFree(&arena);
+  if (!finalized)
+    return error == NO_ERROR ? ANIMATION_DESERIALIZATION_ERROR : error;
   *library = loaded;
   return NO_ERROR;
 }
 
 /**
- * Free a sprite library and all animation data it owns.
+ * Free a sprite library and its single backing allocation.
  * Every Rollfilm created from the library must be freed first.
  * @param library Pointer to the library to free.
  */
-void FreeSpriteLibrary(SpriteLibrary* library) {
-  if (library == NULL) return;
-  for (size_t i = 0; i < library->count; i++)
-    freeSpriteAnimation(library->items[i]);
-  free(library->items);
-  free(library);
+void FreeSpriteLibrary(SpriteLibrary* library) { free(library); }
+
+/**
+ * Get an animation frame.
+ * @param animation Pointer to the animation definition.
+ * @param index Frame index.
+ * @return Immutable frame, or NULL when index is out of range.
+ */
+static const SpriteFrame* animationFrame(const SpriteAnimation* animation,
+                                         size_t index) {
+  if (animation == NULL || index >= animation->frame_count) return NULL;
+  const SpriteFrame* frames =
+    (const SpriteFrame*)((const unsigned char*)animation->base +
+                         animation->frame_offset);
+  return &frames[index];
 }
 
 /**
@@ -1452,10 +2108,11 @@ const SpriteAnimation* SpriteLibraryFind(const SpriteLibrary* library,
   if (library == NULL || name == NULL || icon_type < 0 ||
       icon_type >= SPRITE_ICON_TYPE_COUNT)
     return NULL;
-  unsigned bit = 1u << icon_type;
-  for (size_t i = 0; i < library->count; i++) {
-    const struct SpriteAnimation* animation = library->items[i];
-    if ((animation->icon_mask & bit) != 0 && strcmp(animation->name, name) == 0)
+  uint8_t bit = (uint8_t)(1u << icon_type);
+  for (uint32_t i = 0; i < library->count; i++) {
+    const SpriteAnimation* animation = &library->items[i];
+    if ((animation->icon_mask & bit) != 0 &&
+        strcmp(SpriteAnimationName(animation), name) == 0)
       return animation;
   }
   return NULL;
@@ -1467,7 +2124,7 @@ const SpriteAnimation* SpriteLibraryFind(const SpriteLibrary* library,
  * @return Name string owned by the library.
  */
 const char* SpriteAnimationName(const SpriteAnimation* animation) {
-  return animation == NULL ? NULL : animation->name;
+  return animation == NULL ? NULL : stringAt(animation, animation->name_offset);
 }
 
 /**
@@ -1478,8 +2135,7 @@ const char* SpriteAnimationName(const SpriteAnimation* animation) {
  */
 const SpriteFrame* SpriteAnimationFrame(const SpriteAnimation* animation,
                                         size_t index) {
-  if (animation == NULL || index >= animation->frame_count) return NULL;
-  return &animation->frames[index];
+  return animationFrame(animation, index);
 }
 
 /**
@@ -1519,12 +2175,22 @@ double SpriteAnimationDefaultDurationMS(const SpriteAnimation* animation) {
 }
 
 /**
+ * Get the cached total duration of one animation cycle.
+ * @param animation Pointer to the animation definition.
+ * @return Sum of all frame durations, or zero when unavailable.
+ */
+double SpriteAnimationCycleDurationMS(const SpriteAnimation* animation) {
+  return animation == NULL ? 0.0 : animation->cycle_duration_ms;
+}
+
+/**
  * Get the configured loop flag.
  * @param animation Pointer to the animation definition.
  * @return true when playback repeats.
  */
 bool SpriteAnimationLoop(const SpriteAnimation* animation) {
-  return animation != NULL && animation->loop;
+  return animation != NULL &&
+         (animation->flags & SPRITE_ANIMATION_FLAG_LOOP) != 0;
 }
 
 /**
@@ -1566,7 +2232,7 @@ int SpriteFrameWidth(const SpriteFrame* frame) {
 }
 
 /**
- * Get the cached frame height in rows.
+ * Get the frame height in rows.
  * @param frame Pointer to the frame.
  * @return Frame height.
  */
@@ -1624,26 +2290,30 @@ int SpriteCellWidth(const SpriteCell* cell) {
 /**
  * Get the foreground color of a cell.
  * @param cell Pointer to the cell.
- * @return Color index, or SPRITE_NO_COLOR.
+ * @return Color index, or SPRITE_NO_COLOR when not declared.
  */
 int SpriteCellForeground(const SpriteCell* cell) {
-  return cell == NULL ? SPRITE_NO_COLOR : cell->foreground;
+  if (cell == NULL || (cell->flags & SPRITE_CELL_FLAG_FOREGROUND) == 0)
+    return SPRITE_NO_COLOR;
+  return cell->foreground;
 }
 
 /**
  * Get the background color of a cell.
  * @param cell Pointer to the cell.
- * @return Color index, or SPRITE_NO_COLOR.
+ * @return Color index, or SPRITE_NO_COLOR when not declared.
  */
 int SpriteCellBackground(const SpriteCell* cell) {
-  return cell == NULL ? SPRITE_NO_COLOR : cell->background;
+  if (cell == NULL || (cell->flags & SPRITE_CELL_FLAG_BACKGROUND) == 0)
+    return SPRITE_NO_COLOR;
+  return cell->background;
 }
 
 /**
- * Check whether a cell is a blank terminal cell.
+ * Check whether a cell is a transparent blank terminal cell.
  * @param cell Pointer to the cell.
- * @return true when the cell must be drawn as a space.
+ * @return true when the renderer advances the column without writing.
  */
 bool SpriteCellIsBlank(const SpriteCell* cell) {
-  return cell != NULL && cell->blank;
+  return cell != NULL && (cell->flags & SPRITE_CELL_FLAG_BLANK) != 0;
 }

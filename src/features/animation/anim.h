@@ -16,6 +16,14 @@ typedef struct Rollfilm Rollfilm;
 typedef struct SpriteLibrary SpriteLibrary;
 
 /**
+ * Definition used to create one rollfilm in a batch.
+ */
+typedef struct {
+  const char* name; /**< Animation name. */
+  int icon_type;    /**< Icon type index (0=nerd-icons, 1=emojis, 2=ascii). */
+} RollfilmDefinition;
+
+/**
  * ---------------------------------------------------------------------------
  * Rollfilm Lifecycle
  * ---------------------------------------------------------------------------
@@ -37,6 +45,28 @@ Rollfilm* CreateRollfilm(const SpriteLibrary* library, const char* name,
  * @param rollfilm Pointer to the rollfilm to free.
  */
 void FreeRollfilm(Rollfilm* rollfilm);
+
+/**
+ * Create several rollfilms in one allocation.
+ * The sprite library must outlive every returned rollfilm.
+ * @param library Owning sprite library.
+ * @param definitions Definitions for each requested rollfilm.
+ * @param count Number of definitions.
+ * @param out Output array receiving count rollfilm pointers. Cleared on failure.
+ * @return Owning storage handle, or NULL when a definition is missing or an
+ *         allocation fails. Release with FreeRollfilms, not FreeRollfilm.
+ */
+Rollfilm* CreateRollfilms(const SpriteLibrary* library,
+                          const RollfilmDefinition* definitions, size_t count,
+                          Rollfilm** out);
+
+/**
+ * Free one rollfilm batch and clear its pointer array.
+ * @param storage Storage handle returned by CreateRollfilms.
+ * @param out Pointer array filled by CreateRollfilms.
+ * @param count Number of pointers in out.
+ */
+void FreeRollfilms(Rollfilm* storage, Rollfilm** out, size_t count);
 
 /**
  * Set the loop override for selected rollfilms.

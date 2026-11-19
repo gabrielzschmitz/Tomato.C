@@ -5,6 +5,7 @@
 
 #include "features/animation/anim.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,21 +14,44 @@
 #include "core/util.h"
 #include "features/animation/sprite.h"
 
+/** Number of bytes reserved for one batched UTF-8 output run. */
+#define RENDER_BATCH_SIZE 256u
+
+_Static_assert(sizeof(uint32_t) == 4, "uint32_t must occupy four bytes");
+_Static_assert(SPRITE_NO_COLOR >= INT16_MIN && SPRITE_NO_COLOR <= INT16_MAX,
+               "SPRITE_NO_COLOR must fit in int16_t");
+_Static_assert(SPRITE_MAX_COLOR <= INT16_MAX,
+               "SPRITE_MAX_COLOR must fit in int16_t");
+
 /** Mutable playback state for one sprite animation. */
 struct Rollfilm {
   const SpriteAnimation* animation; /**< Immutable shared sprite data. */
-  int current_frame;                /**< Index of the displayed frame. */
-  int default_frame;                /**< Frame used for static display. */
+  uint32_t current_frame;           /**< Index of the displayed frame. */
+  uint32_t default_frame;           /**< Frame used for static display. */
   bool loop;                        /**< Mutable playback override. */
   double last_tick_ms;              /**< Time of the last frame transition. */
 };
 
 /* PRIVATE ANIM FUNCTIONS */
+static uint32_t frameCount(const Rollfilm* rollfilm);
 static const SpriteFrame* currentFrame(const Rollfilm* rollfilm);
-static int resolveForeground(const Rollfilm* rollfilm, int foreground);
+static int16_t resolveForeground(const Rollfilm* rollfilm, int16_t foreground);
 static size_t encodeUtf8(uint32_t codepoint, char output[5]);
 static bool findBlank(const Rollfilm* rollfilm, bool last, int* out_x,
                       int* out_y);
+static void flushRenderBatch(int y, int x, char* batch, size_t* length);
+static double timeToWrap(const Rollfilm* rollfilm, double cycle_duration_ms);
+
+/**
+ * Get the frame count as an unsigned index limit.
+ * @param rollfilm Pointer to the rollfilm.
+ * @return Frame count, or zero when unavailable.
+ */
+static uint32_t frameCount(const Rollfilm* rollfilm) {
+  if (rollfilm == NULL || rollfilm->animation == NULL) return 0;
+  size_t count = SpriteAnimationFrameCount(rollfilm->animation);
+  return count > UINT32_MAX ? 0 : (uint32_t)count;
+}
 
 /**
  * Get the current frame metadata.
@@ -43,45 +67,48 @@ static const SpriteFrame* currentFrame(const Rollfilm* rollfilm) {
 /**
  * Resolve a cell color to a value ncurses can use.
  * @param rollfilm Pointer to the rollfilm.
- * @param foreground Cell foreground color.
+ * @param foreground Cell foreground color or SPRITE_NO_COLOR.
  * @return Effective foreground color.
  */
-static int resolveForeground(const Rollfilm* rollfilm, int foreground) {
+static int16_t resolveForeground(const Rollfilm* rollfilm, int16_t foreground) {
   if (foreground != SPRITE_NO_COLOR) return foreground;
   int configured = SpriteAnimationDefaultColor(rollfilm->animation);
-  return configured == SPRITE_NO_COLOR ? 7 : configured;
+  if (configured < 0 || configured > SPRITE_MAX_COLOR) return 7;
+  return (int16_t)configured;
 }
 
 /**
  * Encode a Unicode codepoint as UTF-8.
+ * Codepoint zero writes no bytes and preserves the original empty output.
  * @param codepoint Codepoint to encode.
  * @param output Output buffer of at least five bytes.
  * @return Number of bytes written.
  */
 static size_t encodeUtf8(uint32_t codepoint, char output[5]) {
-  if (codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
+  if (codepoint == 0) return 0;
+  if (codepoint > 0x10FFFFu || (codepoint >= 0xD800u && codepoint <= 0xDFFFu))
     codepoint = '?';
 
-  if (codepoint < 0x80) {
+  if (codepoint < 0x80u) {
     output[0] = (char)codepoint;
     return 1;
   }
-  if (codepoint < 0x800) {
-    output[0] = (char)(0xC0 | (codepoint >> 6));
-    output[1] = (char)(0x80 | (codepoint & 0x3F));
+  if (codepoint < 0x800u) {
+    output[0] = (char)(0xC0u | (codepoint >> 6));
+    output[1] = (char)(0x80u | (codepoint & 0x3Fu));
     return 2;
   }
-  if (codepoint < 0x10000) {
-    output[0] = (char)(0xE0 | (codepoint >> 12));
-    output[1] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-    output[2] = (char)(0x80 | (codepoint & 0x3F));
+  if (codepoint < 0x10000u) {
+    output[0] = (char)(0xE0u | (codepoint >> 12));
+    output[1] = (char)(0x80u | ((codepoint >> 6) & 0x3Fu));
+    output[2] = (char)(0x80u | (codepoint & 0x3Fu));
     return 3;
   }
 
-  output[0] = (char)(0xF0 | (codepoint >> 18));
-  output[1] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-  output[2] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-  output[3] = (char)(0x80 | (codepoint & 0x3F));
+  output[0] = (char)(0xF0u | (codepoint >> 18));
+  output[1] = (char)(0x80u | ((codepoint >> 12) & 0x3Fu));
+  output[2] = (char)(0x80u | ((codepoint >> 6) & 0x3Fu));
+  output[3] = (char)(0x80u | (codepoint & 0x3Fu));
   return 4;
 }
 
@@ -96,11 +123,11 @@ static size_t encodeUtf8(uint32_t codepoint, char output[5]) {
 static bool findBlank(const Rollfilm* rollfilm, bool last, int* out_x,
                       int* out_y) {
   if (rollfilm == NULL || out_x == NULL || out_y == NULL) return false;
-  int frame_count = RollfilmFrameCount(rollfilm);
-  if (frame_count <= 0) return false;
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0) return false;
 
   const SpriteFrame* frame =
-    SpriteAnimationFrame(rollfilm->animation, (size_t)(frame_count - 1));
+    SpriteAnimationFrame(rollfilm->animation, (size_t)(count - 1));
   if (frame == NULL) return false;
 
   bool found = false;
@@ -110,7 +137,7 @@ static bool findBlank(const Rollfilm* rollfilm, bool last, int* out_x,
     const SpriteRow* row = SpriteFrameRow(frame, row_index);
     if (row == NULL) continue;
 
-    int x = 0;
+    int32_t x = 0;
     for (size_t cell_index = 0; cell_index < SpriteRowCellCount(row);
          cell_index++) {
       const SpriteCell* cell = SpriteRowCell(row, cell_index);
@@ -125,6 +152,43 @@ static bool findBlank(const Rollfilm* rollfilm, bool last, int* out_x,
     }
   }
   return found;
+}
+
+/**
+ * Write a complete batched UTF-8 run.
+ * @param y Terminal row.
+ * @param x Terminal column.
+ * @param batch Buffer holding the UTF-8 bytes.
+ * @param length Pointer to the current byte count. Reset to zero on return.
+ */
+static void flushRenderBatch(int y, int x, char* batch, size_t* length) {
+  if (*length == 0) return;
+  batch[*length] = '\0';
+  mvprintw(y, x, "%s", batch);
+  *length = 0;
+}
+
+/**
+ * Sum durations from the current frame through the end of the cycle.
+ * @param rollfilm Pointer to the rollfilm.
+ * @param cycle_duration_ms Cached total cycle duration.
+ * @return Time before playback wraps to frame zero.
+ */
+static double timeToWrap(const Rollfilm* rollfilm, double cycle_duration_ms) {
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0) return 0.0;
+
+  double remaining = 0.0;
+  for (uint32_t index = rollfilm->current_frame; index < count; index++) {
+    const SpriteFrame* frame =
+      SpriteAnimationFrame(rollfilm->animation, (size_t)index);
+    double duration = SpriteFrameDurationMS(frame);
+    if (!isfinite(duration) || duration <= 0.0 ||
+        remaining > cycle_duration_ms - duration)
+      return 0.0;
+    remaining += duration;
+  }
+  return remaining;
 }
 
 /**
@@ -161,6 +225,62 @@ Rollfilm* CreateRollfilm(const SpriteLibrary* library, const char* name,
 void FreeRollfilm(Rollfilm* rollfilm) { free(rollfilm); }
 
 /**
+ * Create several rollfilms in one allocation.
+ * @param library Owning sprite library.
+ * @param definitions Definitions for each requested rollfilm.
+ * @param count Number of definitions.
+ * @param out Output array receiving count rollfilm pointers.
+ * @return Owning storage handle, or NULL on failure.
+ */
+Rollfilm* CreateRollfilms(const SpriteLibrary* library,
+                          const RollfilmDefinition* definitions, size_t count,
+                          Rollfilm** out) {
+  if (definitions == NULL || out == NULL || count == 0) return NULL;
+  for (size_t i = 0; i < count; i++) out[i] = NULL;
+
+  if (count > SIZE_MAX / sizeof(Rollfilm)) {
+    LogError("CreateRollfilms", MALLOC_ERROR);
+    return NULL;
+  }
+
+  Rollfilm* storage = (Rollfilm*)malloc(count * sizeof(*storage));
+  if (storage == NULL) {
+    LogError("CreateRollfilms", MALLOC_ERROR);
+    return NULL;
+  }
+
+  for (size_t i = 0; i < count; i++) {
+    const SpriteAnimation* animation =
+      SpriteLibraryFind(library, definitions[i].name, definitions[i].icon_type);
+    if (animation == NULL) {
+      free(storage);
+      for (size_t j = 0; j < count; j++) out[j] = NULL;
+      return NULL;
+    }
+
+    storage[i].animation = animation;
+    storage[i].current_frame = 0;
+    storage[i].default_frame = 0;
+    storage[i].loop = SpriteAnimationLoop(animation);
+    storage[i].last_tick_ms = GetCurrentTimeMS();
+    out[i] = &storage[i];
+  }
+  return storage;
+}
+
+/**
+ * Free one rollfilm batch and clear its pointer array.
+ * @param storage Storage handle returned by CreateRollfilms.
+ * @param out Pointer array filled by CreateRollfilms.
+ * @param count Number of pointers in out.
+ */
+void FreeRollfilms(Rollfilm* storage, Rollfilm** out, size_t count) {
+  if (out != NULL)
+    for (size_t i = 0; i < count; i++) out[i] = NULL;
+  free(storage);
+}
+
+/**
  * Set the loop override for selected rollfilms.
  * @param film Array of rollfilm pointers.
  * @param indices Indices to update.
@@ -171,7 +291,7 @@ void SetRollfilmLoop(Rollfilm** film, const int* indices, size_t count,
                      bool loop) {
   if (film == NULL || indices == NULL) return;
   for (size_t i = 0; i < count; i++) {
-    int index = indices[i];
+    int32_t index = indices[i];
     if (index < 0 || film[index] == NULL) continue;
     film[index]->loop = loop;
   }
@@ -179,23 +299,30 @@ void SetRollfilmLoop(Rollfilm** film, const int* indices, size_t count,
 
 /**
  * Advance a rollfilm using accumulated wall-clock time.
- * Multiple frames are consumed when enough time has elapsed.
+ * Complete looping cycles are skipped without visiting every frame.
  * @param rollfilm Pointer to the rollfilm to update.
  */
 void UpdateRollfilm(Rollfilm* rollfilm) {
   const SpriteFrame* frame = currentFrame(rollfilm);
   if (frame == NULL) return;
 
-  int frame_count = RollfilmFrameCount(rollfilm);
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0) return;
+
   double now = GetCurrentTimeMS();
   double elapsed = now - rollfilm->last_tick_ms;
   if (elapsed <= 0.0) return;
+
+  double cycle_duration_ms =
+    SpriteAnimationCycleDurationMS(rollfilm->animation);
+  double until_wrap =
+    rollfilm->loop ? timeToWrap(rollfilm, cycle_duration_ms) : 0.0;
 
   while (elapsed > 0.0) {
     frame = currentFrame(rollfilm);
     if (frame == NULL) return;
 
-    if (!rollfilm->loop && rollfilm->current_frame >= frame_count - 1) {
+    if (!rollfilm->loop && rollfilm->current_frame >= count - 1) {
       rollfilm->last_tick_ms = now;
       return;
     }
@@ -203,11 +330,37 @@ void UpdateRollfilm(Rollfilm* rollfilm) {
     double duration = SpriteFrameDurationMS(frame);
     if (duration <= 0.0 || elapsed < duration) return;
 
+    if (rollfilm->loop && until_wrap > 0.0 && cycle_duration_ms > 0.0 &&
+        elapsed >= until_wrap) {
+      elapsed -= until_wrap;
+      rollfilm->last_tick_ms += until_wrap;
+      rollfilm->current_frame = 0;
+      until_wrap = cycle_duration_ms;
+
+      if (elapsed >= cycle_duration_ms) {
+        double skipped_cycles = floor(elapsed / cycle_duration_ms);
+        double skipped_ms = skipped_cycles * cycle_duration_ms;
+        elapsed -= skipped_ms;
+        rollfilm->last_tick_ms += skipped_ms;
+      }
+      continue;
+    }
+
     elapsed -= duration;
-    rollfilm->current_frame = rollfilm->loop
-                                ? (rollfilm->current_frame + 1) % frame_count
-                                : rollfilm->current_frame + 1;
     rollfilm->last_tick_ms += duration;
+
+    if (!rollfilm->loop) {
+      rollfilm->current_frame++;
+      continue;
+    }
+
+    if (rollfilm->current_frame + 1 >= count) {
+      rollfilm->current_frame = 0;
+      until_wrap = cycle_duration_ms;
+    } else {
+      rollfilm->current_frame++;
+      until_wrap -= duration;
+    }
   }
 }
 
@@ -226,16 +379,18 @@ bool RollfilmTryAdvance(Rollfilm* rollfilm, int direction) {
   double duration = SpriteFrameDurationMS(frame);
   if (duration <= 0.0 || now - rollfilm->last_tick_ms < duration) return false;
 
-  int frame_count = RollfilmFrameCount(rollfilm);
-  int step = direction < 0 ? -1 : 1;
-  int target = rollfilm->current_frame + step;
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0) return false;
 
-  if (target < 0 || target >= frame_count) {
+  int32_t step = direction < 0 ? -1 : 1;
+  int32_t target = (int32_t)rollfilm->current_frame + step;
+
+  if (target < 0 || (uint32_t)target >= count) {
     if (!rollfilm->loop) {
       rollfilm->last_tick_ms = now;
       return false;
     }
-    target = (target + frame_count) % frame_count;
+    target = (target + (int32_t)count) % (int32_t)count;
   }
 
   RollfilmSeekFrame(rollfilm, target);
@@ -249,9 +404,9 @@ bool RollfilmTryAdvance(Rollfilm* rollfilm, int direction) {
  */
 void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index) {
   if (rollfilm == NULL || rollfilm->animation == NULL) return;
-  int frame_count = RollfilmFrameCount(rollfilm);
-  if (frame_count <= 0 || frame_index < 0 || frame_index >= frame_count) return;
-  rollfilm->current_frame = frame_index;
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0 || frame_index < 0 || (uint32_t)frame_index >= count) return;
+  rollfilm->current_frame = (uint32_t)frame_index;
   rollfilm->last_tick_ms = GetCurrentTimeMS();
 }
 
@@ -262,17 +417,17 @@ void RollfilmSeekFrame(Rollfilm* rollfilm, int frame_index) {
  */
 void RollfilmSetDefaultFrame(Rollfilm* rollfilm, int frame_index) {
   if (rollfilm == NULL) return;
-  int frame_count = RollfilmFrameCount(rollfilm);
-  if (frame_count <= 0) {
+  uint32_t count = frameCount(rollfilm);
+  if (count == 0) {
     rollfilm->default_frame = 0;
     return;
   }
   if (frame_index < 0)
     rollfilm->default_frame = 0;
-  else if (frame_index >= frame_count)
-    rollfilm->default_frame = frame_count - 1;
+  else if ((uint32_t)frame_index >= count)
+    rollfilm->default_frame = count - 1;
   else
-    rollfilm->default_frame = frame_index;
+    rollfilm->default_frame = (uint32_t)frame_index;
 }
 
 /**
@@ -281,11 +436,12 @@ void RollfilmSetDefaultFrame(Rollfilm* rollfilm, int frame_index) {
  */
 void RollfilmSeekDefault(Rollfilm* rollfilm) {
   if (rollfilm == NULL) return;
-  RollfilmSeekFrame(rollfilm, rollfilm->default_frame);
+  RollfilmSeekFrame(rollfilm, (int)rollfilm->default_frame);
 }
 
 /**
  * Render the current frame at the given screen position.
+ * Consecutive nonblank cells with equal attributes are written as one run.
  * @param rollfilm Pointer to the rollfilm to render.
  * @param start_y Starting terminal row.
  * @param start_x Starting terminal column.
@@ -294,42 +450,66 @@ void RenderRollfilm(const Rollfilm* rollfilm, int start_y, int start_x) {
   const SpriteFrame* frame = currentFrame(rollfilm);
   if (frame == NULL) return;
 
-  int active_foreground = SPRITE_NO_COLOR;
-  int active_background = SPRITE_NO_COLOR;
-  int y = start_y;
+  int16_t active_foreground = SPRITE_NO_COLOR;
+  int16_t active_background = SPRITE_NO_COLOR;
+  int32_t y = start_y;
+  int32_t batch_x = start_x;
+  int32_t batch_y = start_y;
+  char batch[RENDER_BATCH_SIZE + 4u];
+  size_t batch_length = 0;
 
   for (size_t row_index = 0; row_index < SpriteFrameRowCount(frame);
        row_index++) {
     const SpriteRow* row = SpriteFrameRow(frame, row_index);
     if (row == NULL) {
+      flushRenderBatch((int)batch_y, (int)batch_x, batch, &batch_length);
       y++;
+      batch_x = start_x;
+      batch_y = y;
       continue;
     }
 
-    int x = start_x;
+    int32_t x = start_x;
+    batch_x = x;
+    batch_y = y;
     for (size_t cell_index = 0; cell_index < SpriteRowCellCount(row);
          cell_index++) {
       const SpriteCell* cell = SpriteRowCell(row, cell_index);
       if (cell == NULL) continue;
 
-      int foreground = resolveForeground(rollfilm, SpriteCellForeground(cell));
-      int background = SpriteCellBackground(cell);
+      int16_t foreground =
+        resolveForeground(rollfilm, (int16_t)SpriteCellForeground(cell));
+      int16_t background = (int16_t)SpriteCellBackground(cell);
       if (foreground != active_foreground || background != active_background) {
+        flushRenderBatch((int)batch_y, (int)batch_x, batch, &batch_length);
         SetColor((short)foreground, (short)background, A_BOLD);
         active_foreground = foreground;
         active_background = background;
+        batch_x = x;
+        batch_y = y;
       }
 
-      /* Blank cells are transparent so underlying notes stay visible. */
-      if (!SpriteCellIsBlank(cell)) {
-        char utf8[5];
-        size_t length = encodeUtf8(SpriteCellCodepoint(cell), utf8);
-        utf8[length] = '\0';
-        mvprintw(y, x, "%s", utf8);
+      if (SpriteCellIsBlank(cell)) {
+        flushRenderBatch((int)batch_y, (int)batch_x, batch, &batch_length);
+        x += SpriteCellWidth(cell);
+        batch_x = x;
+        continue;
       }
+
+      char utf8[5];
+      size_t length = encodeUtf8(SpriteCellCodepoint(cell), utf8);
+      if (batch_length + length > RENDER_BATCH_SIZE) {
+        flushRenderBatch((int)batch_y, (int)batch_x, batch, &batch_length);
+        batch_x = x;
+      }
+      memcpy(batch + batch_length, utf8, length);
+      batch_length += length;
       x += SpriteCellWidth(cell);
     }
+    flushRenderBatch((int)batch_y, (int)batch_x, batch, &batch_length);
     y++;
+    batch_x = start_x;
+    batch_y = y;
   }
 }
 
@@ -339,8 +519,7 @@ void RenderRollfilm(const Rollfilm* rollfilm, int start_y, int start_x) {
  * @return Frame count.
  */
 int RollfilmFrameCount(const Rollfilm* rollfilm) {
-  if (rollfilm == NULL) return 0;
-  return (int)SpriteAnimationFrameCount(rollfilm->animation);
+  return (int)frameCount(rollfilm);
 }
 
 /**
@@ -349,7 +528,7 @@ int RollfilmFrameCount(const Rollfilm* rollfilm) {
  * @return Current frame index.
  */
 int RollfilmFrameIndex(const Rollfilm* rollfilm) {
-  return rollfilm == NULL ? 0 : rollfilm->current_frame;
+  return rollfilm == NULL ? 0 : (int)rollfilm->current_frame;
 }
 
 /**
@@ -433,23 +612,23 @@ int RollfilmLargest(Rollfilm* const animations[], const int* indices,
                     int indices_count) {
   if (animations == NULL || indices == NULL || indices_count <= 0) return -1;
 
-  int best_index = -1;
-  int best_width = -1;
-  int best_height = -1;
+  int32_t best_index = -1;
+  int32_t best_width = -1;
+  int32_t best_height = -1;
 
-  for (int i = 0; i < indices_count; i++) {
-    int index = indices[i];
+  for (int32_t i = 0; i < indices_count; i++) {
+    int32_t index = indices[i];
     if (index < 0) continue;
     const Rollfilm* rollfilm = animations[index];
     if (rollfilm == NULL) continue;
 
-    int width = RollfilmWidth(rollfilm);
-    int height = RollfilmHeight(rollfilm);
+    int32_t width = RollfilmWidth(rollfilm);
+    int32_t height = RollfilmHeight(rollfilm);
     if (height > best_height || (height == best_height && width > best_width)) {
       best_index = index;
       best_width = width;
       best_height = height;
     }
   }
-  return best_index;
+  return (int)best_index;
 }

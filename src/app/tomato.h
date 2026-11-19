@@ -99,6 +99,8 @@ struct AppData {
     [MAX_ICON_TYPES]
     [MAX_ANIMATIONS];           /**< Loaded animations for all icon types */
   struct Rollfilm** animations; /**< Pointer to active icon type's animations */
+  struct Rollfilm*
+    rollfilm_storage;            /**< Owning batch allocation for rollfilms */
   SpriteLibrary* sprite_library; /**< Owning sprite data shared by rollfilms */
   bool is_paused;                /**< Whether the timer is paused */
   bool running; /**< Whether the app is running (false = exit) */

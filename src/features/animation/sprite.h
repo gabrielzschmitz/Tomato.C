@@ -24,69 +24,99 @@
 /** Number of supported icon types. */
 #define SPRITE_ICON_TYPE_COUNT 3
 
+/** Cell flag: transparent blank cell. */
+#define SPRITE_CELL_FLAG_BLANK UINT8_C(0x01)
+
+/** Cell flag: foreground color was declared explicitly. */
+#define SPRITE_CELL_FLAG_FOREGROUND UINT8_C(0x02)
+
+/** Cell flag: background color was declared explicitly. */
+#define SPRITE_CELL_FLAG_BACKGROUND UINT8_C(0x04)
+
+/** Animation flag: playback repeats. */
+#define SPRITE_ANIMATION_FLAG_LOOP UINT8_C(0x01)
+
+_Static_assert(sizeof(uint8_t) == 1, "uint8_t must occupy one byte");
+_Static_assert(sizeof(uint16_t) == 2, "uint16_t must occupy two bytes");
+_Static_assert(sizeof(uint32_t) == 4, "uint32_t must occupy four bytes");
+_Static_assert(SPRITE_NO_COLOR >= INT16_MIN && SPRITE_NO_COLOR <= INT16_MAX,
+               "SPRITE_NO_COLOR must fit in int16_t");
+_Static_assert(SPRITE_MAX_COLOR <= UINT8_MAX,
+               "SPRITE_MAX_COLOR must fit in uint8_t");
+_Static_assert(SPRITE_MAX_BLANK_RUN <= UINT16_MAX,
+               "SPRITE_MAX_BLANK_RUN must fit in uint16_t");
+
 /**
  * Immutable decoded sprite cell.
  * The library owns every cell and keeps the data valid for the library lifetime.
  */
 typedef struct SpriteCell {
   uint32_t codepoint; /**< Unicode codepoint to render. */
-  int width;          /**< Terminal display width in columns. */
-  int foreground;     /**< Foreground color or SPRITE_NO_COLOR. */
-  int background;     /**< Background color or SPRITE_NO_COLOR. */
-  bool blank;         /**< True for a blank terminal cell. */
+  uint8_t foreground; /**< Explicit foreground color, or zero when unset. */
+  uint8_t background; /**< Explicit background color, or zero when unset. */
+  uint8_t width;      /**< Terminal display width in columns. */
+  uint8_t flags;      /**< Bit mask of SPRITE_CELL_FLAG_* values. */
 } SpriteCell;
+
+_Static_assert(sizeof(SpriteCell) == 8, "SpriteCell must occupy 8 bytes");
 
 /**
  * Immutable sprite row: a contiguous span of cells in the owning cell array.
+ * The cells pointer is resolved once at finalization; the fixed accessor
+ * signature has no animation context from which to derive it.
  */
 typedef struct SpriteRow {
-  size_t cell_offset;      /**< Offset into the owning cell array. */
-  size_t cell_count;       /**< Number of cells in this row. */
   const SpriteCell* cells; /**< Owning animation cell array. */
+  uint32_t cell_offset;    /**< First cell in this row. */
+  uint32_t cell_count;     /**< Number of cells in this row. */
 } SpriteRow;
 
 /**
- * Immutable sprite frame metadata and offsets into row and cell arrays.
+ * Immutable sprite frame metadata and offsets into the owning row array.
+ * The rows pointer is resolved once at finalization for the fixed accessor API.
  */
 typedef struct SpriteFrame {
-  size_t row_offset;     /**< Offset into the owning row array. */
-  size_t row_count;      /**< Number of rows in this frame. */
-  size_t cell_offset;    /**< Offset into the owning cell array. */
-  size_t cell_count;     /**< Number of cells in this frame. */
   const SpriteRow* rows; /**< Owning animation row array. */
-  int width;             /**< Maximum row width in terminal columns. */
-  int height;            /**< Number of rows. */
+  uint32_t row_offset;   /**< First row in this frame. */
+  uint32_t row_count;    /**< Number of rows in this frame. */
+  uint16_t width;        /**< Maximum row width in terminal columns. */
+  uint16_t height;       /**< Number of rows. */
   double duration_ms;    /**< Frame duration in milliseconds. */
 } SpriteFrame;
 
 /**
  * Immutable animation definition shared by one or more icon types.
+ * All offsets are relative to the owning library allocation base.
  */
 typedef struct SpriteAnimation {
-  char* name;                 /**< Animation name. */
-  char* source;               /**< Source filename for diagnostics. */
-  size_t source_line;         /**< Declaration line for diagnostics. */
-  unsigned icon_mask;         /**< Bit mask of declared icon types. */
-  SpriteFrame* frames;        /**< Frame metadata. */
-  size_t frame_count;         /**< Number of frames. */
-  SpriteRow* rows;            /**< Row spans. */
-  size_t row_count;           /**< Number of rows. */
-  SpriteCell* cells;          /**< Decoded cells. */
-  size_t cell_count;          /**< Number of cells. */
-  int width;                  /**< Maximum frame width. */
-  int height;                 /**< Maximum frame height. */
+  const void* base;       /**< Start of the owning library allocation. */
+  uint32_t name_offset;   /**< Offset of the name in the string pool. */
+  uint32_t source_offset; /**< Offset of the source filename in the pool. */
+  uint32_t frame_offset;  /**< Offset of this animation's frame array. */
+  uint32_t frame_count;   /**< Number of frames. */
+  uint32_t row_offset;    /**< Offset of this animation's row array. */
+  uint32_t row_count;     /**< Number of rows. */
+  uint32_t cell_offset;   /**< Offset of this animation's cell array. */
+  uint32_t cell_count;    /**< Number of cells. */
+  uint32_t source_line;   /**< Declaration line for diagnostics. */
+  uint16_t width;         /**< Maximum frame width. */
+  uint16_t height;        /**< Maximum frame height. */
+  uint8_t icon_mask;      /**< Bit mask of declared icon types. */
+  uint8_t flags;          /**< Bit mask of SPRITE_ANIMATION_FLAG_* values. */
+  int16_t default_color;  /**< Frame-start color, or SPRITE_NO_COLOR. */
   double default_duration_ms; /**< Default frame duration. */
-  bool loop;                  /**< Loop setting. */
-  int default_color;          /**< Foreground color at frame start. */
+  double cycle_duration_ms;   /**< Sum of all frame durations. */
 } SpriteAnimation;
 
 /**
  * Owning collection of all animation definitions loaded from sprite files.
+ * The header and every referenced array live in one allocation.
  */
 typedef struct SpriteLibrary {
-  SpriteAnimation** items; /**< Owned animation definitions. */
-  size_t count;            /**< Number of definitions. */
-  size_t capacity;         /**< Capacity of items. */
+  SpriteAnimation* items; /**< Animations stored in the same allocation. */
+  uint32_t count;         /**< Number of definitions. */
+  uint32_t string_offset; /**< Offset of the string pool. */
+  uint32_t storage_size;  /**< Total size of the allocation. */
 } SpriteLibrary;
 
 /**
@@ -102,7 +132,7 @@ ErrorType LoadSpriteLibrary(const char* const* filenames, size_t count,
                             SpriteLibrary** library);
 
 /**
- * Free a sprite library and all animation data it owns.
+ * Free a sprite library and its single backing allocation.
  * Every Rollfilm created from the library must be freed first.
  * @param library Pointer to the library to free.
  */
@@ -161,6 +191,13 @@ int SpriteAnimationHeight(const SpriteAnimation* animation);
  * @return Default frame duration.
  */
 double SpriteAnimationDefaultDurationMS(const SpriteAnimation* animation);
+
+/**
+ * Get the cached total duration of one animation cycle.
+ * @param animation Pointer to the animation definition.
+ * @return Sum of all frame durations, or zero when unavailable.
+ */
+double SpriteAnimationCycleDurationMS(const SpriteAnimation* animation);
 
 /**
  * Get the configured loop flag.
@@ -244,21 +281,21 @@ int SpriteCellWidth(const SpriteCell* cell);
 /**
  * Get the foreground color of a cell.
  * @param cell Pointer to the cell.
- * @return Color index, or SPRITE_NO_COLOR.
+ * @return Color index, or SPRITE_NO_COLOR when not declared.
  */
 int SpriteCellForeground(const SpriteCell* cell);
 
 /**
  * Get the background color of a cell.
  * @param cell Pointer to the cell.
- * @return Color index, or SPRITE_NO_COLOR.
+ * @return Color index, or SPRITE_NO_COLOR when not declared.
  */
 int SpriteCellBackground(const SpriteCell* cell);
 
 /**
- * Check whether a cell is a blank terminal cell.
+ * Check whether a cell is a transparent blank terminal cell.
  * @param cell Pointer to the cell.
- * @return true when the cell must be drawn as a space.
+ * @return true when the renderer advances the column without writing.
  */
 bool SpriteCellIsBlank(const SpriteCell* cell);
 

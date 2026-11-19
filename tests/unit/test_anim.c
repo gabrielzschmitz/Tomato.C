@@ -12,6 +12,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -414,6 +415,165 @@ static void test_parse_escape_variants(void) {
   removeTemporarySprite(path);
 }
 
+static void test_parse_long_content_line(void) {
+  TEST("parse a content line larger than one arena chunk");
+  const size_t content_length = 9000;
+  const char suffix[] = "\n[[/content]]\n[[/frame]]\n";
+  char* text = (char*)malloc(content_length + 256u);
+  ASSERT_NOT_NULL(text);
+  if (text == NULL) return;
+
+  int prefix = snprintf(text, content_length + 256u,
+                        "[animation.long]\n"
+                        "icon-type = \"ascii\"\n"
+                        "default-frame-duration = \"1ms\"\n"
+                        "[[frame]]\n"
+                        "[[content]]\n");
+  ASSERT_TRUE(prefix > 0 && (size_t)prefix < content_length + 256u);
+  memset(text + prefix, 'A', content_length);
+  memcpy(text + prefix + content_length, suffix, sizeof(suffix));
+
+  char* path = NULL;
+  SpriteLibrary* library = loadSpriteText(text, &path, NULL);
+  free(text);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    removeTemporarySprite(path);
+    return;
+  }
+
+  const SpriteAnimation* animation = SpriteLibraryFind(library, "long", 2);
+  ASSERT_NOT_NULL(animation);
+  if (animation != NULL) {
+    ASSERT_EQ(SpriteAnimationFrameCount(animation), 1);
+    const SpriteFrame* frame = SpriteAnimationFrame(animation, 0);
+    ASSERT_EQ(SpriteFrameRowCount(frame), 1);
+    ASSERT_EQ(SpriteRowCellCount(SpriteFrameRow(frame, 0)),
+              (int)content_length);
+  }
+
+  FreeSpriteLibrary(library);
+  removeTemporarySprite(path);
+}
+
+static void test_finalized_storage_layout(void) {
+  TEST("store finalized animations, rows, cells, and strings contiguously");
+  const char* text =
+    "[animation.first]\n"
+    "icon-type = \"ascii\"\n"
+    "default-frame-duration = \"1ms\"\n"
+    "[[frame]]\n[[content]]\nAB\n[[/content]]\n[[/frame]]\n"
+    "\n"
+    "[animation.second]\n"
+    "icon-type = \"ascii\"\n"
+    "default-frame-duration = \"1ms\"\n"
+    "[[frame]]\n[[content]]\nC\\sD\nEF\n[[/content]]\n[[/frame]]\n";
+  char* path = NULL;
+  SpriteLibrary* library = loadSpriteText(text, &path, NULL);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    removeTemporarySprite(path);
+    return;
+  }
+
+  ASSERT_EQ(sizeof(SpriteCell), 8);
+  ASSERT_EQ(library->count, 2);
+  const unsigned char* base = (const unsigned char*)library;
+  const unsigned char* end = base + library->storage_size;
+  ASSERT_TRUE((const unsigned char*)library->items >= base);
+  ASSERT_TRUE((const unsigned char*)library->items < end);
+  ASSERT_TRUE(library->string_offset < library->storage_size);
+
+  for (size_t i = 0; i < library->count; i++) {
+    const SpriteAnimation* animation = &library->items[i];
+    ASSERT_TRUE(animation->base == library);
+    const char* name = SpriteAnimationName(animation);
+    ASSERT_NOT_NULL(name);
+    ASSERT_TRUE((const unsigned char*)name >= base + library->string_offset);
+    ASSERT_TRUE((const unsigned char*)name < end);
+
+    const SpriteFrame* frames =
+      (const SpriteFrame*)(base + animation->frame_offset);
+    const SpriteRow* rows = (const SpriteRow*)(base + animation->row_offset);
+    const SpriteCell* cells =
+      (const SpriteCell*)(base + animation->cell_offset);
+    ASSERT_TRUE((const unsigned char*)frames >= base);
+    ASSERT_TRUE((const unsigned char*)frames < end);
+    ASSERT_TRUE((const unsigned char*)rows >= base);
+    ASSERT_TRUE((const unsigned char*)rows < end);
+    ASSERT_TRUE((const unsigned char*)cells >= base);
+    ASSERT_TRUE((const unsigned char*)cells < end);
+
+    for (size_t f = 0; f < SpriteAnimationFrameCount(animation); f++) {
+      const SpriteFrame* frame = SpriteAnimationFrame(animation, f);
+      ASSERT_TRUE(frame == &frames[f]);
+      ASSERT_TRUE(frame->rows == rows + frame->row_offset);
+      for (size_t r = 0; r < SpriteFrameRowCount(frame); r++) {
+        const SpriteRow* row = SpriteFrameRow(frame, r);
+        ASSERT_TRUE(row == rows + frame->row_offset + r);
+        ASSERT_TRUE(row->cells == cells);
+        ASSERT_TRUE(row->cell_offset <= animation->cell_count);
+        if (i == 1 && r == 1) ASSERT_EQ(row->cell_offset, 3);
+        for (size_t c = 0; c < SpriteRowCellCount(row); c++)
+          ASSERT_TRUE(SpriteRowCell(row, c) ==
+                      row->cells + row->cell_offset + c);
+      }
+    }
+  }
+
+  FreeSpriteLibrary(library);
+  removeTemporarySprite(path);
+}
+
+static void test_batch_rollfilm_creation(void) {
+  TEST("create and free several rollfilms from one batch allocation");
+  const char* text =
+    "[animation.a]\n"
+    "icon-type = [\"nerd-icons\", \"emojis\", \"ascii\"]\n"
+    "default-frame-duration = \"1ms\"\n"
+    "[[frame]]\n[[content]]\nA\n[[/content]]\n[[/frame]]\n";
+  char* path = NULL;
+  SpriteLibrary* library = loadSpriteText(text, &path, NULL);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    removeTemporarySprite(path);
+    return;
+  }
+
+  const RollfilmDefinition definitions[] = {
+    {"a", 0},
+    {"a", 1},
+    {"a", 2},
+  };
+  Rollfilm* out[3] = {NULL, NULL, NULL};
+  g_now_ms = 0;
+  Rollfilm* storage = CreateRollfilms(library, definitions, 3, out);
+  ASSERT_NOT_NULL(storage);
+  if (storage != NULL) {
+    for (size_t i = 0; i < 3; i++) {
+      ASSERT_NOT_NULL(out[i]);
+      ASSERT_EQ(RollfilmFrameCount(out[i]), 1);
+    }
+    uintptr_t first = (uintptr_t)out[0];
+    uintptr_t second = (uintptr_t)out[1];
+    uintptr_t third = (uintptr_t)out[2];
+    ASSERT_TRUE(second > first);
+    ASSERT_EQ(second - first, third - second);
+    RollfilmSetDefaultFrame(out[2], 0);
+
+    FreeRollfilms(storage, out, 3);
+    for (size_t i = 0; i < 3; i++) ASSERT_NULL(out[i]);
+  }
+
+  const RollfilmDefinition missing[] = {{"missing", 2}};
+  Rollfilm* failed_out[1] = {(Rollfilm*)1};
+  ASSERT_NULL(CreateRollfilms(library, missing, 1, failed_out));
+  ASSERT_NULL(failed_out[0]);
+
+  FreeSpriteLibrary(library);
+  removeTemporarySprite(path);
+}
+
 /**
  * Load a sprite file that must fail and check the diagnostic.
  * @param text Sprite file contents.
@@ -638,6 +798,58 @@ static void test_playback_large_elapsed_updates(void) {
   removeTemporarySprite(path);
 }
 
+static void test_playback_skips_complete_cycles(void) {
+  TEST("skip complete cycles while preserving the timing remainder");
+  char* path = NULL;
+  g_now_ms = 0;
+  SpriteLibrary* library = loadThreeFrameLibrary(&path, true);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    removeTemporarySprite(path);
+    return;
+  }
+
+  const SpriteAnimation* animation = SpriteLibraryFind(library, "play", 2);
+  ASSERT_NOT_NULL(animation);
+  ASSERT_DBL_NEAR(SpriteAnimationCycleDurationMS(animation), 30.0);
+
+  Rollfilm* film = CreateRollfilm(library, "play", 2);
+  ASSERT_NOT_NULL(film);
+  if (film == NULL) {
+    FreeSpriteLibrary(library);
+    removeTemporarySprite(path);
+    return;
+  }
+
+  g_now_ms = 100003;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 1);
+  g_now_ms = 100009;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 1);
+  g_now_ms = 100010;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 2);
+
+  RollfilmSeekFrame(film, 2);
+  g_now_ms = 200015;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 0);
+  g_now_ms = 200020;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 1);
+  g_now_ms = 200029;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 1);
+  g_now_ms = 200030;
+  UpdateRollfilm(film);
+  ASSERT_EQ(RollfilmFrameIndex(film), 2);
+
+  FreeRollfilm(film);
+  FreeSpriteLibrary(library);
+  removeTemporarySprite(path);
+}
+
 static void test_nonlooping_playback_and_override(void) {
   TEST("stop at the last frame when looping is disabled");
   char* path = NULL;
@@ -813,28 +1025,56 @@ static void test_rendering_geometry_and_colors(void) {
   resetRenderCapture();
   RenderRollfilm(film, 2, 4);
 
-  ASSERT_EQ(g_render_count, 5);
+  ASSERT_EQ(g_render_count, 4);
   ASSERT_EQ(g_render_calls[0].y, 2);
   ASSERT_EQ(g_render_calls[0].x, 4);
-  ASSERT_STR_EQ(g_render_calls[0].text, "A");
+  ASSERT_STR_EQ(g_render_calls[0].text, "A\xF0\x9F\x98\x80");
   ASSERT_EQ(g_render_calls[0].foreground, 7);
-  ASSERT_EQ(g_render_calls[1].x, 5);
-  ASSERT_STR_EQ(g_render_calls[1].text, "\xF0\x9F\x98\x80");
-  ASSERT_EQ(g_render_calls[2].x, 10);
-  ASSERT_STR_EQ(g_render_calls[2].text, "Z");
-  ASSERT_EQ(g_render_calls[3].y, 3);
+  ASSERT_EQ(g_render_calls[0].background, -1);
+  ASSERT_EQ(g_render_calls[1].y, 2);
+  ASSERT_EQ(g_render_calls[1].x, 10);
+  ASSERT_STR_EQ(g_render_calls[1].text, "Z");
+  ASSERT_EQ(g_render_calls[2].y, 3);
+  ASSERT_EQ(g_render_calls[2].x, 4);
+  ASSERT_STR_EQ(g_render_calls[2].text, "Q");
+  ASSERT_EQ(g_render_calls[2].foreground, 3);
+  ASSERT_EQ(g_render_calls[2].background, 5);
+  ASSERT_EQ(g_render_calls[2].attribute, A_BOLD);
+  ASSERT_EQ(g_render_calls[3].y, 4);
   ASSERT_EQ(g_render_calls[3].x, 4);
-  ASSERT_STR_EQ(g_render_calls[3].text, "Q");
+  ASSERT_STR_EQ(g_render_calls[3].text, "R");
   ASSERT_EQ(g_render_calls[3].foreground, 3);
   ASSERT_EQ(g_render_calls[3].background, 5);
-  ASSERT_EQ(g_render_calls[3].attribute, A_BOLD);
-  ASSERT_EQ(g_render_calls[4].y, 4);
-  ASSERT_EQ(g_render_calls[4].x, 4);
-  ASSERT_STR_EQ(g_render_calls[4].text, "R");
-  ASSERT_EQ(g_render_calls[4].foreground, 3);
-  ASSERT_EQ(g_render_calls[4].background, 5);
 
   FreeRollfilm(film);
+  FreeSpriteLibrary(library);
+  removeTemporarySprite(path);
+}
+
+static void test_render_nul_codepoint_is_noop(void) {
+  TEST("render a NUL codepoint without truncating the batch");
+  const char* text =
+    "[animation.nul]\nicon-type = \"ascii\"\n"
+    "default-frame-duration = \"1ms\"\n"
+    "[[frame]]\n[[content]]\nA\\u{0}B\n[[/content]]\n[[/frame]]\n";
+  char* path = NULL;
+  SpriteLibrary* library = loadSpriteText(text, &path, NULL);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    removeTemporarySprite(path);
+    return;
+  }
+
+  Rollfilm* film = CreateRollfilm(library, "nul", 2);
+  ASSERT_NOT_NULL(film);
+  if (film != NULL) {
+    resetRenderCapture();
+    RenderRollfilm(film, 0, 0);
+    ASSERT_EQ(g_render_count, 1);
+    ASSERT_STR_EQ(g_render_calls[0].text, "AB");
+    FreeRollfilm(film);
+  }
+
   FreeSpriteLibrary(library);
   removeTemporarySprite(path);
 }
@@ -866,11 +1106,18 @@ int main(void) {
   RUN_TEST(test_parse_shared_and_repeated_definitions,
            "parse shared and repeated animation definitions");
   RUN_TEST(test_parse_escape_variants, "parse all supported escape forms");
+  RUN_TEST(test_parse_long_content_line,
+           "parse content larger than one arena chunk");
+  RUN_TEST(test_finalized_storage_layout,
+           "store finalized animation data contiguously");
+  RUN_TEST(test_batch_rollfilm_creation, "create rollfilms in one batch");
   RUN_TEST(test_parse_errors, "reject malformed sprite files");
   RUN_TEST(test_parse_failure_cleanup_and_missing_file,
            "clean up after parse failures");
   RUN_TEST(test_playback_large_elapsed_updates,
            "advance multiple frames per elapsed update");
+  RUN_TEST(test_playback_skips_complete_cycles,
+           "skip complete cycles with the timing remainder intact");
   RUN_TEST(test_nonlooping_playback_and_override,
            "stop non-looping playback at the final frame");
   RUN_TEST(test_try_advance_and_seeking, "advance and seek deterministically");
@@ -879,6 +1126,8 @@ int main(void) {
   RUN_TEST(test_blank_queries, "locate blank cell runs");
   RUN_TEST(test_rendering_geometry_and_colors,
            "render Unicode, skip blank cells, and track color state");
+  RUN_TEST(test_render_nul_codepoint_is_noop,
+           "render NUL codepoints without truncating output");
   RUN_TEST(test_create_rollfilm_missing_animation,
            "reject animations that are not loaded");
 

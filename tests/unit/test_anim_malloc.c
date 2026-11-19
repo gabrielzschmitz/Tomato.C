@@ -115,9 +115,41 @@ static void test_create_rollfilm_malloc_fail(void) {
   free(path);
 }
 
+/** @brief CreateRollfilms returns NULL when its allocation fails. */
+static void test_create_rollfilms_malloc_fail(void) {
+  TEST("CreateRollfilms returns NULL when malloc fails");
+
+  char* path = NULL;
+  ASSERT_TRUE(createSpriteFile(&path));
+  if (path == NULL) return;
+
+  const char* files[] = {path};
+  SpriteLibrary* library = NULL;
+  ASSERT_EQ(LoadSpriteLibrary(files, 1, &library), NO_ERROR);
+  ASSERT_NOT_NULL(library);
+  if (library == NULL) {
+    unlink(path);
+    free(path);
+    return;
+  }
+
+  const RollfilmDefinition definitions[] = {{"a", 2}};
+  Rollfilm* out[1] = {(Rollfilm*)1};
+  TestMallocFailAfter(0);
+  ASSERT_NULL(CreateRollfilms(library, definitions, 1, out));
+  ASSERT_NULL(out[0]);
+  TestMallocReset();
+
+  FreeSpriteLibrary(library);
+  unlink(path);
+  free(path);
+}
+
 int main(void) {
   test_begin("anim_malloc");
   RUN_TEST(test_create_rollfilm_malloc_fail,
            "CreateRollfilm returns NULL when malloc fails");
+  RUN_TEST(test_create_rollfilms_malloc_fail,
+           "CreateRollfilms returns NULL when malloc fails");
   return test_end();
 }

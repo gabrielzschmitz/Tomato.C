@@ -198,11 +198,9 @@ static ErrorType initStatusBar(AppData* app) {
  * @param app Pointer to the application data.
  */
 static void freeRollfilms(AppData* app) {
-  for (int t = 0; t < MAX_ICON_TYPES; t++)
-    for (int i = 0; i < MAX_ANIMATIONS; i++) {
-      FreeRollfilm(app->icon_animations[t][i]);
-      app->icon_animations[t][i] = NULL;
-    }
+  FreeRollfilms(app->rollfilm_storage, &app->icon_animations[0][0],
+                (size_t)MAX_ICON_TYPES * (size_t)MAX_ANIMATIONS);
+  app->rollfilm_storage = NULL;
   app->animations = NULL;
 }
 
@@ -214,19 +212,30 @@ static void freeRollfilms(AppData* app) {
  */
 static ErrorType createRollfilms(AppData* app,
                                  const AnimationDefinition* definitions) {
+  RollfilmDefinition specs[MAX_ICON_TYPES * MAX_ANIMATIONS];
+  size_t index = 0;
   for (int t = 0; t < MAX_ICON_TYPES; t++)
     for (int i = 0; i < MAX_ANIMATIONS; i++) {
-      Rollfilm* film =
-        CreateRollfilm(app->sprite_library, definitions[i].name, t);
-      if (film == NULL) {
-        freeRollfilms(app);
-        FreeSpriteLibrary(app->sprite_library);
-        app->sprite_library = NULL;
-        return ANIMATION_DESERIALIZATION_ERROR;
-      }
-      app->icon_animations[t][i] = film;
-      RollfilmSetDefaultFrame(film, definitions[i].default_frame);
+      specs[index].name = definitions[i].name;
+      specs[index].icon_type = t;
+      index++;
     }
+
+  const size_t count = (size_t)MAX_ICON_TYPES * (size_t)MAX_ANIMATIONS;
+  Rollfilm* storage = CreateRollfilms(app->sprite_library, specs, count,
+                                      &app->icon_animations[0][0]);
+  if (storage == NULL) {
+    freeRollfilms(app);
+    FreeSpriteLibrary(app->sprite_library);
+    app->sprite_library = NULL;
+    return ANIMATION_DESERIALIZATION_ERROR;
+  }
+  app->rollfilm_storage = storage;
+
+  for (int t = 0; t < MAX_ICON_TYPES; t++)
+    for (int i = 0; i < MAX_ANIMATIONS; i++)
+      RollfilmSetDefaultFrame(app->icon_animations[t][i],
+                              definitions[i].default_frame);
   return NO_ERROR;
 }
 
@@ -606,11 +615,7 @@ static void initPrefsData(PrefsState* state) {
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 ErrorType EndApp(AppData* app) {
-  for (int t = 0; t < MAX_ICON_TYPES; t++)
-    for (int i = 0; i < MAX_ANIMATIONS; i++) {
-      FreeRollfilm(app->icon_animations[t][i]);
-      app->icon_animations[t][i] = NULL;
-    }
+  freeRollfilms(app);
   FreeSpriteLibrary(app->sprite_library);
   app->sprite_library = NULL;
   for (int i = 0; i < MAX_MENUS; i++) {
