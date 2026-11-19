@@ -83,6 +83,7 @@ UNIT_BINS = \
 	unit/test_input \
 	unit/test_keybind \
 	unit/test_config_load \
+	unit/test_config_debug \
 	unit/test_audio \
 	unit/test_ui \
 	unit/test_notes \
@@ -164,6 +165,10 @@ unit/test_keybind: unit/test_keybind.c $(SRCDIR)/external/toml-c.h $(HELPERS) he
 #/** @brief config_load — includes config.c; tests loadTomlFile diagnostics */
 unit/test_config_load: unit/test_config_load.c $(SRCDIR)/core/config.c $(SRCDIR)/core/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
 	$(TEST_CC) $(TEST_CFLAGS) -DSAMPLE_CONFIG_PATH=\"$(abspath $(SRCDIR)/../sample_config.toml)\" -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
+
+#/** @brief config_debug — debug builds default to project-local .tmp paths */
+unit/test_config_debug: unit/test_config_debug.c $(SRCDIR)/core/config.c $(SRCDIR)/core/config.h $(SRCDIR)/external/toml-c.h $(HELPERS) helpers/test_keybind_stubs.h
+	$(TEST_CC) $(TEST_CFLAGS) -o $@ $< $(NCURSES_LIBS) $(TEST_LDLIBS)
 
 #/** @brief anim — test stubs replace util.c and error.c dependencies */
 unit/test_anim: unit/test_anim.c $(SRCDIR)/features/animation/anim.c $(SRCDIR)/features/animation/sprite.c $(HELPERS)
