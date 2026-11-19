@@ -1,8 +1,8 @@
 #ifndef INIT_H_
 #define INIT_H_
 
+#include "app/ui/ui.h"
 #include "core/error.h"
-#include "ui/ui.h"
 
 /**
  * ---------------------------------------------------------------------------

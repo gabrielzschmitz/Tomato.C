@@ -3,6 +3,8 @@
 #include <ncurses.h>
 #include <stdlib.h>
 
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/log.h"
 #include "core/util.h"
@@ -10,9 +12,7 @@
 #include "features/bar/bar.h"
 #include "features/notifications/notify.h"
 #include "features/pomodoro/pomodoro.h"
-#include "app/tomato.h"
 #include "input/input.h"
-#include "ui/ui.h"
 
 static bool skip_auto_save = false;
 

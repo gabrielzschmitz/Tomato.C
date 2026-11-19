@@ -13,13 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "features/notes/notes.h"
 #include "input/gap_buffer.h"
 #include "input/history.h"
 #include "test_helpers.h"
-#include "ui/ui.h"
 
 typedef struct AppData {
   int dummy;

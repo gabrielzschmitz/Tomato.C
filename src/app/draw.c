@@ -5,14 +5,14 @@
 #include <string.h>
 
 #include "app/init.h"
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "core/util.h"
 #include "features/animation/anim.h"
 #include "features/notes/notes.h"
-#include "app/tomato.h"
 #include "input/input.h"
-#include "ui/ui.h"
 
 /* PRIVATE DRAW FUNCTIONS */
 static void renderPanel(AppData* app, Border border);

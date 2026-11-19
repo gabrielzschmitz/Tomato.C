@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "core/log.h"
@@ -14,9 +16,7 @@
 #include "features/audio/audio.h"
 #include "features/bar/bar.h"
 #include "features/notes/notes.h"
-#include "app/tomato.h"
 #include "input/input.h"
-#include "ui/ui.h"
 
 /* PRIVATE INIT FUNCTIONS */
 /* Components */

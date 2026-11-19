@@ -5,11 +5,11 @@
 #include <stdbool.h>
 #include <time.h>
 
+#include "app/ui/ui.h"
 #include "features/audio/audio.h"
 #include "features/bar/bar.h"
 #include "features/notes/notes.h"
 #include "features/notifications/notify.h"
-#include "ui/ui.h"
 
 #define PALETTE_SIZE (COLOR_WHITE - COLOR_BLACK + 1)
 #define MAX_ANIMATIONS 8

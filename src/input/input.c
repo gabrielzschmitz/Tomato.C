@@ -7,6 +7,8 @@
 
 #include "app/draw.h"
 #include "app/init.h"
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "core/log.h"
@@ -15,8 +17,6 @@
 #include "features/audio/audio.h"
 #include "features/notes/notes.h"
 #include "features/notifications/notify.h"
-#include "app/tomato.h"
-#include "ui/ui.h"
 
 /* macOS ncurses does not define BUTTON4/5_PRESSED (mouse wheel buttons). */
 #ifndef BUTTON4_PRESSED

@@ -12,7 +12,7 @@
 #include "core/config.h"
 #include "app/init.h"
 #include "test_helpers.h"
-#include "ui/ui.h"
+#include "app/ui/ui.h"
 
 Config g_config;
 

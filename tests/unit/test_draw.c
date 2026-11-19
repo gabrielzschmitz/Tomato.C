@@ -19,17 +19,17 @@
 
 #include "app/draw.h"
 #include "app/init.h"
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "core/util.h"
 #include "features/animation/anim.h"
 #include "features/bar/bar.h"
 #include "features/notes/notes.h"
-#include "app/tomato.h"
 #include "input/history.h"
 #include "input/input.h"
 #include "test_helpers.h"
-#include "ui/ui.h"
 
 /* Required global - draw.c (via config.h) and util.c reference g_config */
 Config g_config;

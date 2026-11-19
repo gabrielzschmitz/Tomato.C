@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/error.h"
 #include "core/util.h"
 #include "input/gap_buffer.h"
 #include "input/input.h"
-#include "ui/ui.h"
 
 /* PRIVATE NOTES FUNCTIONS */
 /* Utility */

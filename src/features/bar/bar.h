@@ -1,8 +1,8 @@
 #ifndef BAR_H_
 #define BAR_H_
 
+#include "app/ui/ui.h"
 #include "core/error.h"
-#include "ui/ui.h"
 
 /* Bar specific structs */
 typedef struct StatusBar StatusBar;

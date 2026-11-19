@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app/tomato.h"
+#include "app/ui/ui.h"
 #include "core/config.h"
 #include "core/util.h"
-#include "app/tomato.h"
-#include "ui/ui.h"
 
 static ErrorEntry error_stack[MAX_ERROR_ENTRIES] = {0};
 static int error_count = 0;

@@ -34,7 +34,7 @@ SRCS = $(SRCDIR)/app/tomato.c \
        $(SRCDIR)/features/notes/notes.c \
        $(SRCDIR)/features/notifications/notify.c \
        $(SRCDIR)/features/pomodoro/pomodoro.c \
-       $(SRCDIR)/ui/ui.c \
+       $(SRCDIR)/app/ui/ui.c \
        $(SRCDIR)/app/update.c \
        $(SRCDIR)/core/util.c
 OBJS = $(SRCS:.c=.o)
