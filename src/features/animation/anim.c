@@ -7,6 +7,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -253,6 +254,15 @@ Rollfilm* CreateRollfilms(const SpriteLibrary* library,
     const SpriteAnimation* animation =
       SpriteLibraryFind(library, definitions[i].name, definitions[i].icon_type);
     if (animation == NULL) {
+      static const char* icon_types[] = {"nerd-icons", "emojis", "ascii"};
+      const char* icon_name = "unknown";
+      if (definitions[i].icon_type >= 0 && definitions[i].icon_type < 3)
+        icon_name = icon_types[definitions[i].icon_type];
+      char context[256];
+      snprintf(context, sizeof(context),
+               "CreateRollfilms: animation '%s' (icon type '%s') not found",
+               definitions[i].name ? definitions[i].name : "(null)", icon_name);
+      LogError(context, ANIMATION_DESERIALIZATION_ERROR);
       free(storage);
       for (size_t j = 0; j < count; j++) out[j] = NULL;
       return NULL;

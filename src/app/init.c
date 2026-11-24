@@ -212,6 +212,14 @@ static void freeRollfilms(AppData* app) {
  */
 static ErrorType createRollfilms(AppData* app,
                                  const AnimationDefinition* definitions) {
+  static const char* slot_names[MAX_ANIMATIONS] = {
+    "animations.mainmenu",   "animations.worktime",
+    "animations.shortpause", "animations.longpause",
+    "animations.notes",      "animations.notes_transition",
+    "animations.help",       "animations.continue"};
+  static const char* icon_types[MAX_ICON_TYPES] = {"nerd-icons", "emojis",
+                                                   "ascii"};
+
   RollfilmDefinition specs[MAX_ICON_TYPES * MAX_ANIMATIONS];
   size_t index = 0;
   for (int t = 0; t < MAX_ICON_TYPES; t++)
@@ -225,6 +233,27 @@ static ErrorType createRollfilms(AppData* app,
   Rollfilm* storage = CreateRollfilms(app->sprite_library, specs, count,
                                       &app->icon_animations[0][0]);
   if (storage == NULL) {
+    for (int t = 0; t < MAX_ICON_TYPES; t++)
+      for (int i = 0; i < MAX_ANIMATIONS; i++) {
+        if (SpriteLibraryFind(app->sprite_library, definitions[i].name, t) !=
+            NULL)
+          continue;
+        char context[512];
+        snprintf(context, sizeof(context),
+                 "initAnimations: slot %s missing animation '%s' (file '%s', "
+                 "icon type '%s')",
+                 slot_names[i],
+                 definitions[i].name ? definitions[i].name : "(null)",
+                 definitions[i].filename ? definitions[i].filename : "(null)",
+                 icon_types[t]);
+        LogError(context, ANIMATION_DESERIALIZATION_ERROR);
+        freeRollfilms(app);
+        FreeSpriteLibrary(app->sprite_library);
+        app->sprite_library = NULL;
+        return ANIMATION_DESERIALIZATION_ERROR;
+      }
+    LogError("initAnimations: failed to create rollfilms",
+             ANIMATION_DESERIALIZATION_ERROR);
     freeRollfilms(app);
     FreeSpriteLibrary(app->sprite_library);
     app->sprite_library = NULL;
@@ -256,7 +285,22 @@ static ErrorType initAnimations(AppData* app) {
 
   ErrorType status =
     LoadSpriteLibrary(filenames, MAX_ANIMATIONS, &app->sprite_library);
-  if (status != NO_ERROR) return status;
+  if (status != NO_ERROR) {
+    static const char* slot_names[MAX_ANIMATIONS] = {
+      "animations.mainmenu",   "animations.worktime",
+      "animations.shortpause", "animations.longpause",
+      "animations.notes",      "animations.notes_transition",
+      "animations.help",       "animations.continue"};
+    for (int i = 0; i < MAX_ANIMATIONS; i++) {
+      char context[512];
+      snprintf(context, sizeof(context),
+               "initAnimations: slot %s name='%s' file='%s'", slot_names[i],
+               animations[i].name ? animations[i].name : "(null)",
+               animations[i].filename ? animations[i].filename : "(null)");
+      LogError(context, status);
+    }
+    return status;
+  }
 
   status = createRollfilms(app, animations);
   if (status != NO_ERROR) return status;
