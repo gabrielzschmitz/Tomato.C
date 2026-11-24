@@ -7,6 +7,45 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-24
+
+### Added
+
+- **Configurable animations** — Scene animations are configurable through
+  `[animations.*]` TOML tables. Each slot sets `name`, `filename`, and
+  `default_frame`, while slot order remains fixed to scene indices.
+- **Config path expansion** — Animation, notification, and noise paths expand
+  `~`, `$DATADIR`, `$HOME`, `$XDG_CONFIG_HOME`, and `$XDG_DATA_HOME`.
+  Non-absolute paths resolve relative to the config file directory.
+- **Animation load diagnostics** — Animation load failures log slot, animation
+  name, sprite file path, and icon type.
+- **Patch guide** — Added `docs/PATCHING.md` documenting animation slots,
+  config keys, path resolution, `.asc` sprite format, and escapes.
+- **Debug `.tmp` defaults** — Debug builds and dev shells use project-local
+  `.tmp/config`, `.tmp/state`, and `.tmp/runtime` paths. Dev shells seed
+  `sample_config.toml` when `.tmp/config/tomato/config.toml` is missing.
+
+### Changed
+
+- **Sprite animation system** — Replaced the legacy sprite loader with a
+  section-based `.asc` sprite library and rollfilm playback. Sprite libraries
+  own immutable decoded data; rollfilms keep mutable playback state. Cells,
+  rows, frames, animations, and deduplicated strings are packed into one
+  allocation per library, rollfilms are batch-allocated, rendering batches
+  same-color cells, and updates skip complete cycles.
+- **Sprite resources** — Migrated built-in sprite resources to the `.asc`
+  section format. Custom sprite files must use the section `.asc` format.
+
+### Fixed
+
+- **Transparent blank sprite cells** — Blank sprite cells remain transparent
+  during rendering.
+
+### Documentation
+
+- **Sprite architecture** — Documented the sprite animation design in
+  `ARCHITECTURE.md`.
+
 ## [1.3.3] - 2026-11-19
 
 ### Added
