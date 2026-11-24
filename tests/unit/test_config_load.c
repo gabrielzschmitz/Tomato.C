@@ -170,6 +170,87 @@ static void test_animation_config_overrides(void) {
   remove(tmp);
 }
 
+static void test_config_path_expansion_and_relative_resolution(void) {
+  TEST("config paths expand tokens and resolve relative to config dir");
+  char* old_home = save_env("HOME");
+  char* old_xdg_config = save_env("XDG_CONFIG_HOME");
+  char* old_xdg_data = save_env("XDG_DATA_HOME");
+
+  char dir[] = "/tmp/t_cfg_path_XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  char cfg_path[PATH_MAX];
+  snprintf(cfg_path, sizeof(cfg_path), "%s/config.toml", dir);
+
+  char home_dir[PATH_MAX];
+  char xdg_config_dir[PATH_MAX];
+  char xdg_data_dir[PATH_MAX];
+  snprintf(home_dir, sizeof(home_dir), "%s/home", dir);
+  snprintf(xdg_config_dir, sizeof(xdg_config_dir), "%s/xdg-config", dir);
+  snprintf(xdg_data_dir, sizeof(xdg_data_dir), "%s/xdg-data", dir);
+  ASSERT_EQ(mkdir(home_dir, 0700), 0);
+  ASSERT_EQ(mkdir(xdg_config_dir, 0700), 0);
+  ASSERT_EQ(mkdir(xdg_data_dir, 0700), 0);
+
+  setenv("HOME", home_dir, 1);
+  setenv("XDG_CONFIG_HOME", xdg_config_dir, 1);
+  setenv("XDG_DATA_HOME", xdg_data_dir, 1);
+
+  write_file(cfg_path,
+             "[animations.mainmenu]\n"
+             "filename = \"sprites/mainmenu.asc\"\n"
+             "\n"
+             "[animations.worktime]\n"
+             "filename = \"~/sprites/work.asc\"\n"
+             "\n"
+             "[animations.shortpause]\n"
+             "filename = \"$HOME/sprites/short.asc\"\n"
+             "\n"
+             "[animations.longpause]\n"
+             "filename = \"$XDG_CONFIG_HOME/tomato/long.asc\"\n"
+             "\n"
+             "[animations.notes]\n"
+             "filename = \"$XDG_DATA_HOME/tomato/notes.asc\"\n"
+             "\n"
+             "[notifications.work]\n"
+             "audio_path = \"sounds/work.mp3\"\n"
+             "\n"
+             "[[noise.tracks]]\n"
+             "name = \"Rain\"\n"
+             "sound_path = \"$HOME/noise/rain.mp3\"\n"
+             "icons = [\"r\", \"r\", \"r\"]\n");
+
+  resetDefaults();
+  resetConfigWarnings();
+  loadTomlFile(cfg_path);
+
+  char expected[PATH_MAX];
+  snprintf(expected, sizeof(expected), "%s/sprites/mainmenu.asc", dir);
+  ASSERT_STR_EQ(g_config.animations.mainmenu.filename, expected);
+  snprintf(expected, sizeof(expected), "%s/sprites/work.asc", home_dir);
+  ASSERT_STR_EQ(g_config.animations.worktime.filename, expected);
+  snprintf(expected, sizeof(expected), "%s/sprites/short.asc", home_dir);
+  ASSERT_STR_EQ(g_config.animations.shortpause.filename, expected);
+  snprintf(expected, sizeof(expected), "%s/tomato/long.asc", xdg_config_dir);
+  ASSERT_STR_EQ(g_config.animations.longpause.filename, expected);
+  snprintf(expected, sizeof(expected), "%s/tomato/notes.asc", xdg_data_dir);
+  ASSERT_STR_EQ(g_config.animations.notes.filename, expected);
+  snprintf(expected, sizeof(expected), "%s/sounds/work.mp3", dir);
+  ASSERT_STR_EQ(g_config.notifications.work.audio_path, expected);
+  ASSERT_EQ(g_config.noise.track_count, 1);
+  snprintf(expected, sizeof(expected), "%s/noise/rain.mp3", home_dir);
+  ASSERT_STR_EQ(g_config.noise.tracks[0].sound_path, expected);
+
+  remove(cfg_path);
+  rmdir(xdg_data_dir);
+  rmdir(xdg_config_dir);
+  rmdir(home_dir);
+  rmdir(dir);
+
+  restore_env("XDG_DATA_HOME", old_xdg_data);
+  restore_env("XDG_CONFIG_HOME", old_xdg_config);
+  restore_env("HOME", old_home);
+}
+
 static void read_file(const char* path, char* buf, size_t size) {
   FILE* f = fopen(path, "rb");
   size_t n = f ? fread(buf, 1, size - 1, f) : 0;
@@ -560,6 +641,8 @@ int main(void) {
            "invalid visual.icons falls back to ascii with a warning");
   RUN_TEST(test_animation_config_overrides,
            "animation config overrides one slot and keeps other defaults");
+  RUN_TEST(test_config_path_expansion_and_relative_resolution,
+           "config paths expand tokens and resolve relative to config dir");
   RUN_TEST(test_stepper_keys_commit_and_cancel,
            "stepper: Enter commits, Esc/q/Ctrl-C cancel");
   RUN_TEST(test_save_keeps_comment_and_updates_value,

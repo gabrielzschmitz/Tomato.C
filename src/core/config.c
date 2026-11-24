@@ -649,6 +649,9 @@ static int config_warning_count = 0;
 /** Path of the user config file, set by LoadConfig(); empty if unknown. */
 static char user_config_path[1024] = "";
 
+/** Directory of the config file currently being parsed; empty outside loads. */
+static char loading_config_dir[PATH_MAX] = "";
+
 /**
  * Growable list of owned lines used when rewriting a config file.
  */
@@ -691,7 +694,9 @@ static void readString(toml_table_t* root, const char* path, const char** out);
 static void readPathString(toml_table_t* root, const char* path,
                            const char** out);
 /* Config */
-static char* expandDatadir(const char* input);
+static bool getHomeDir(char* out, size_t size);
+static void getPathDirname(const char* path, char* out, size_t size);
+static char* expandConfigPath(const char* input);
 static void readIconArray(toml_table_t* root, const char* path,
                           const char* out[3]);
 static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
@@ -1733,7 +1738,7 @@ static void readString(toml_table_t* root, const char* path, const char** out) {
 }
 
 /**
- * Read a path string and expand its $DATADIR token.
+ * Read a path string and expand config path tokens.
  * @param root Top-level TOML table
  * @param path Dot-separated path to the string key
  * @param out Output pointer, replaced only when the key is present
@@ -1744,10 +1749,10 @@ static void readPathString(toml_table_t* root, const char* path,
   readString(root, path, &value);
   if (!value) return;
 
-  char* expanded = expandDatadir(value);
+  char* expanded = expandConfigPath(value);
   configStringRelease(&value);
   if (!expanded) {
-    LogError("loadTomlFile", MALLOC_ERROR);
+    LogError("readPathString", MALLOC_ERROR);
     return;
   }
   if (!configStringReplace(out, expanded))
@@ -1755,33 +1760,137 @@ static void readPathString(toml_table_t* root, const char* path,
 }
 
 /**
- * Expand $DATADIR tokens in a config-file path to the compile-time
- * DATADIR value (e.g. "/usr/local/share/tomato").
- *
- * Shared by readPathString, readNotificationConfig, and readNoiseTracks.
- * When the token is absent the input is simply strdup'd so callers can
- * always free the result.  Returns NULL only on allocation failure.
- *
- * @param input  Path string that may contain "$DATADIR".
- * @return A malloc'd copy with $DATADIR expanded, or NULL on ENOMEM.
+ * Resolve the current user's home directory.
+ * @param out Output buffer for the absolute home path.
+ * @param size Size of the output buffer.
+ * @return true when a home directory was resolved.
  */
-static char* expandDatadir(const char* input) {
-  if (!input) return NULL;
-  const char* marker = "$DATADIR";
-  size_t mlen = strlen(marker);
-  const char* pos = strstr(input, marker);
+static bool getHomeDir(char* out, size_t size) {
+  const char* home = getenv("HOME");
+  if (home && home[0] == '/') {
+    snprintf(out, size, "%s", home);
+    return true;
+  }
+
+  struct passwd pw;
+  struct passwd* result = NULL;
+  char buf[1024];
+  if (getpwuid_r(getuid(), &pw, buf, sizeof(buf), &result) == 0 && result &&
+      result->pw_dir && result->pw_dir[0] == '/') {
+    snprintf(out, size, "%s", result->pw_dir);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Return the directory component of a path.
+ * @param path Input path.
+ * @param out Output buffer for the directory name.
+ * @param size Size of the output buffer.
+ */
+static void getPathDirname(const char* path, char* out, size_t size) {
+  if (!path || !path[0] || size == 0) {
+    if (size > 0) out[0] = '\0';
+    return;
+  }
+  snprintf(out, size, "%s", path);
+  char* slash = strrchr(out, '/');
+  if (!slash)
+    snprintf(out, size, ".");
+  else if (slash == out)
+    out[1] = '\0';
+  else
+    *slash = '\0';
+}
+
+static char* replaceToken(const char* input, const char* token,
+                          const char* value) {
+  if (!input || !token || !value) return NULL;
+  const char* pos = strstr(input, token);
   if (!pos) return strdup(input);
 
-  size_t prefix_len = pos - input;
-  const char* datadir = DATADIR;
-  size_t dlen = strlen(datadir);
-  size_t suffix_len = strlen(pos + mlen);
-  char* result = malloc(prefix_len + dlen + suffix_len + 1);
+  size_t prefix_len = (size_t)(pos - input);
+  size_t token_len = strlen(token);
+  size_t value_len = strlen(value);
+  size_t suffix_len = strlen(pos + token_len);
+  char* result = (char*)malloc(prefix_len + value_len + suffix_len + 1);
   if (!result) return NULL;
   memcpy(result, input, prefix_len);
-  memcpy(result + prefix_len, datadir, dlen);
-  memcpy(result + prefix_len + dlen, pos + mlen, suffix_len + 1);
+  memcpy(result + prefix_len, value, value_len);
+  memcpy(result + prefix_len + value_len, pos + token_len, suffix_len + 1);
   return result;
+}
+
+/**
+ * Expand path tokens and resolve relative config paths.
+ *
+ * Supported tokens: $DATADIR, $HOME, $XDG_CONFIG_HOME, $XDG_DATA_HOME.
+ * A leading ~ or ~/ expands to the user's home directory. If the expanded path
+ * is not absolute, it is resolved relative to the directory of the config file
+ * currently being loaded, when known.
+ *
+ * @param input  Path string from config.
+ * @return A malloc'd expanded path, or NULL on allocation failure.
+ */
+static char* expandConfigPath(const char* input) {
+  if (!input) return NULL;
+
+  char* expanded = NULL;
+  if (input[0] == '~' && (input[1] == '\0' || input[1] == '/')) {
+    char home[PATH_MAX];
+    if (getHomeDir(home, sizeof(home))) {
+      size_t home_len = strlen(home);
+      size_t suffix_len = strlen(input + 1);
+      expanded = (char*)malloc(home_len + suffix_len + 1);
+      if (!expanded) return NULL;
+      memcpy(expanded, home, home_len);
+      memcpy(expanded + home_len, input + 1, suffix_len + 1);
+    }
+  }
+  if (!expanded) {
+    expanded = strdup(input);
+    if (!expanded) return NULL;
+  }
+
+  struct {
+    const char* token;
+    const char* value;
+  } tokens[] = {
+    {"$DATADIR", DATADIR},
+    {"$HOME", getenv("HOME")},
+    {"$XDG_CONFIG_HOME", getenv("XDG_CONFIG_HOME")},
+    {"$XDG_DATA_HOME", getenv("XDG_DATA_HOME")},
+  };
+
+  for (size_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++) {
+    if (!tokens[i].value || !tokens[i].value[0]) continue;
+    if (!strstr(expanded, tokens[i].token)) continue;
+    char* replaced = replaceToken(expanded, tokens[i].token, tokens[i].value);
+    free(expanded);
+    expanded = replaced;
+    if (!expanded) return NULL;
+  }
+
+  bool datadir_token = strncmp(input, "$DATADIR", 8) == 0;
+  if (expanded[0] != '/' && loading_config_dir[0] != '\0' && !datadir_token) {
+    size_t dir_len = strlen(loading_config_dir);
+    size_t path_len = strlen(expanded);
+    int need_slash = dir_len > 0 && loading_config_dir[dir_len - 1] != '/';
+    char* joined = (char*)malloc(dir_len + (size_t)need_slash + path_len + 1);
+    if (!joined) {
+      free(expanded);
+      return NULL;
+    }
+    memcpy(joined, loading_config_dir, dir_len);
+    size_t pos = dir_len;
+    if (need_slash) joined[pos++] = '/';
+    memcpy(joined + pos, expanded, path_len + 1);
+    free(expanded);
+    expanded = joined;
+  }
+
+  return expanded;
 }
 
 /**
@@ -2194,9 +2303,11 @@ static void readAnimationConfig(toml_table_t* root, const char* prefix,
   snprintf(path, sizeof(path), "%s.filename", prefix);
   readString(root, path, &value);
   if (value) {
-    char* expanded = expandDatadir(value);
+    char* expanded = expandConfigPath(value);
     configStringRelease(&value);
-    if (expanded && !configStringReplace(&cfg->filename, expanded))
+    if (!expanded)
+      LogError("readAnimationConfig", MALLOC_ERROR);
+    else if (!configStringReplace(&cfg->filename, expanded))
       LogError("readAnimationConfig", MALLOC_ERROR);
   }
 
@@ -2232,12 +2343,12 @@ static void readNotificationConfig(toml_table_t* root, const char* prefix,
   snprintf(path, sizeof(path), "%s.audio_path", prefix);
   readString(root, path, &value);
   if (value) {
-    char* expanded = expandDatadir(value);
+    char* expanded = expandConfigPath(value);
     configStringRelease(&value);
-    if (expanded) {
-      if (!configStringReplace(&cfg->audio_path, expanded))
-        LogError("readNotificationConfig", MALLOC_ERROR);
-    }
+    if (!expanded)
+      LogError("readNotificationConfig", MALLOC_ERROR);
+    else if (!configStringReplace(&cfg->audio_path, expanded))
+      LogError("readNotificationConfig", MALLOC_ERROR);
   }
 }
 
@@ -2281,13 +2392,13 @@ static void readNoiseTracks(toml_table_t* root) {
     }
     v = toml_table_string(tbl, "sound_path");
     if (v.ok) {
-      char* expanded = expandDatadir(v.u.s);
+      char* expanded = expandConfigPath(v.u.s);
       free(v.u.s);
-      if (expanded) {
-        if (!configStringReplace(&g_config.noise.tracks[i].sound_path,
-                                 expanded))
-          LogError("readNoiseTracks", MALLOC_ERROR);
-      }
+      if (!expanded)
+        LogError("readNoiseTracks", MALLOC_ERROR);
+      else if (!configStringReplace(&g_config.noise.tracks[i].sound_path,
+                                    expanded))
+        LogError("readNoiseTracks", MALLOC_ERROR);
     }
     v = toml_table_int(tbl, "default_volume");
     if (v.ok) g_config.noise.tracks[i].default_volume = (int)v.u.i;
@@ -2344,6 +2455,8 @@ static void loadTomlFile(const char* path) {
     LogError(msg, FILE_ERROR);
     return;
   }
+
+  getPathDirname(path, loading_config_dir, sizeof(loading_config_dir));
 
   readInt(root, "visual.animations", &g_config.visual.animations);
   readString(root, "visual.icons", &g_config.visual.icons);
@@ -2527,6 +2640,7 @@ static void loadTomlFile(const char* path) {
   readKeybindings(root);
 
   toml_free(root);
+  loading_config_dir[0] = '\0';
 }
 
 /**
