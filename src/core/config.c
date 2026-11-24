@@ -697,6 +697,8 @@ static void readIconArray(toml_table_t* root, const char* path,
 static void readStringArrayFromTable(toml_table_t* tbl, const char* key,
                                      const char* out[], int* count, int max);
 static void readKeybindings(toml_table_t* root);
+static void readAnimationConfig(toml_table_t* root, const char* prefix,
+                                AnimationDefinition* cfg);
 static void readNotificationConfig(toml_table_t* root, const char* prefix,
                                    NotificationConfig* cfg);
 static void releaseNoiseTrack(ConfigNoiseTrack* track);
@@ -1338,6 +1340,39 @@ static void setDefaults(void) {
   g_config.visual.status_bar_position = 0;
   g_config.visual.unfocused_panel_color = 7;
   g_config.visual.focused_panel_color = 1;
+
+  g_config.animations.mainmenu =
+    (AnimationDefinition){.name = "mainmenu",
+                          .filename = DATADIR "/sprites/mainmenu.asc",
+                          .default_frame = 5};
+  g_config.animations.worktime =
+    (AnimationDefinition){.name = "worktime",
+                          .filename = DATADIR "/sprites/worktime.asc",
+                          .default_frame = 0};
+  g_config.animations.shortpause =
+    (AnimationDefinition){.name = "shortpause",
+                          .filename = DATADIR "/sprites/shortpause.asc",
+                          .default_frame = 0};
+  g_config.animations.longpause =
+    (AnimationDefinition){.name = "longpause",
+                          .filename = DATADIR "/sprites/longpause.asc",
+                          .default_frame = 0};
+  g_config.animations.notes =
+    (AnimationDefinition){.name = "notes",
+                          .filename = DATADIR "/sprites/notes.asc",
+                          .default_frame = 6};
+  g_config.animations.notes_transition =
+    (AnimationDefinition){.name = "notes_transition",
+                          .filename = DATADIR "/sprites/notes_transition.asc",
+                          .default_frame = 5};
+  g_config.animations.help =
+    (AnimationDefinition){.name = "help",
+                          .filename = DATADIR "/sprites/help.asc",
+                          .default_frame = 4};
+  g_config.animations.continue_animation =
+    (AnimationDefinition){.name = "continue",
+                          .filename = DATADIR "/sprites/continue.asc",
+                          .default_frame = 3};
 
   g_config.notifications.work.title = "Work!";
   g_config.notifications.work.description = "You need to focus";
@@ -2138,6 +2173,39 @@ cleanup:
 }
 
 /**
+ * Read an AnimationDefinition from a dotted TOML prefix.
+ * @param root   Top-level TOML table.
+ * @param prefix Dot-separated prefix path, e.g. "animations.worktime".
+ * @param cfg    Output AnimationDefinition to populate.
+ */
+static void readAnimationConfig(toml_table_t* root, const char* prefix,
+                                AnimationDefinition* cfg) {
+  char path[PATH_MAX];
+  const char* value = NULL;
+
+  snprintf(path, sizeof(path), "%s.name", prefix);
+  readString(root, path, &value);
+  if (value) {
+    configStringRelease(&cfg->name);
+    cfg->name = value;
+    value = NULL;
+  }
+
+  snprintf(path, sizeof(path), "%s.filename", prefix);
+  readString(root, path, &value);
+  if (value) {
+    char* expanded = expandDatadir(value);
+    configStringRelease(&value);
+    if (expanded && !configStringReplace(&cfg->filename, expanded))
+      LogError("readAnimationConfig", MALLOC_ERROR);
+  }
+
+  snprintf(path, sizeof(path), "%s.default_frame", prefix);
+  readInt(root, path, &cfg->default_frame);
+  if (cfg->default_frame < 0) cfg->default_frame = 0;
+}
+
+/**
  * Read a NotificationConfig from a dotted TOML prefix (e.g. "notifications.work").
  * @param root   Top-level TOML table
  * @param prefix Dot-separated prefix path
@@ -2393,6 +2461,21 @@ static void loadTomlFile(const char* path) {
                 g_config.visual.ui.icons.misc.terminal_size_module);
   readIconArray(root, "visual.ui.icons.misc.icons_module",
                 g_config.visual.ui.icons.misc.icons_module);
+
+  readAnimationConfig(root, "animations.mainmenu",
+                      &g_config.animations.mainmenu);
+  readAnimationConfig(root, "animations.worktime",
+                      &g_config.animations.worktime);
+  readAnimationConfig(root, "animations.shortpause",
+                      &g_config.animations.shortpause);
+  readAnimationConfig(root, "animations.longpause",
+                      &g_config.animations.longpause);
+  readAnimationConfig(root, "animations.notes", &g_config.animations.notes);
+  readAnimationConfig(root, "animations.notes_transition",
+                      &g_config.animations.notes_transition);
+  readAnimationConfig(root, "animations.help", &g_config.animations.help);
+  readAnimationConfig(root, "animations.continue",
+                      &g_config.animations.continue_animation);
 
   readInt(root, "pomodoro.amount", &g_config.pomodoro.amount);
   if (g_config.pomodoro.amount < 1) g_config.pomodoro.amount = 1;

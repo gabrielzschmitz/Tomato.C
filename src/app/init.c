@@ -240,36 +240,15 @@ static ErrorType createRollfilms(AppData* app,
 }
 
 /**
- * Initialize animations by loading sprites from files.
+ * Initialize animations from the configured sprite definitions.
  * @param app Pointer to the application data
  * @return ErrorType NO_ERROR on success, or an error code on failure
  */
 static ErrorType initAnimations(AppData* app) {
-  static const AnimationDefinition animations[MAX_ANIMATIONS] = {
-    {.name = "mainmenu",
-     .filename = DATADIR "/sprites/mainmenu.asc",
-     .default_frame = 5},
-    {.name = "worktime",
-     .filename = DATADIR "/sprites/worktime.asc",
-     .default_frame = 0},
-    {.name = "shortpause",
-     .filename = DATADIR "/sprites/shortpause.asc",
-     .default_frame = 0},
-    {.name = "longpause",
-     .filename = DATADIR "/sprites/longpause.asc",
-     .default_frame = 0},
-    {.name = "notes",
-     .filename = DATADIR "/sprites/notes.asc",
-     .default_frame = 6},
-    {.name = "notes_transition",
-     .filename = DATADIR "/sprites/notes_transition.asc",
-     .default_frame = 5},
-    {.name = "help",
-     .filename = DATADIR "/sprites/help.asc",
-     .default_frame = 4},
-    {.name = "continue",
-     .filename = DATADIR "/sprites/continue.asc",
-     .default_frame = 3}};
+  const AnimationDefinition animations[MAX_ANIMATIONS] = {
+    ANIMATION_MAINMENU,   ANIMATION_WORKTIME, ANIMATION_SHORT_PAUSE,
+    ANIMATION_LONG_PAUSE, ANIMATION_NOTES,    ANIMATION_NOTES_TRANSITION,
+    ANIMATION_HELP,       ANIMATION_CONTINUE};
 
   const char* filenames[MAX_ANIMATIONS];
   for (int i = 0; i < MAX_ANIMATIONS; i++)

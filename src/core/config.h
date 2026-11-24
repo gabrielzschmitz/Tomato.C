@@ -21,6 +21,15 @@ typedef struct StatusBarModule StatusBarModule;
 #define MAX_STATUS_BAR_MODULES 10
 
 /**
+ * Static description of one application animation.
+ */
+typedef struct {
+  const char* filename; /**< Sprite file path. */
+  const char* name;     /**< Animation name stored in the sprite file. */
+  int default_frame;    /**< Frame used for static display. */
+} AnimationDefinition;
+
+/**
  * Icons for pomodoro-stage screens.
  */
 typedef struct {
@@ -145,6 +154,25 @@ typedef struct {
   NotificationConfig end_cycle;
 } ConfigNotifications;
 
+/**
+ * Configurable animation slots.
+ *
+ * Slot order matches the first eight SceneType values. The order is fixed so
+ * existing scene-index lookups keep working. Each slot maps to one
+ * AnimationDefinition used during sprite library loading.
+ */
+typedef struct {
+  AnimationDefinition mainmenu;         /**< Main-menu animation slot. */
+  AnimationDefinition worktime;         /**< Work-timer animation slot. */
+  AnimationDefinition shortpause;       /**< Short-pause animation slot. */
+  AnimationDefinition longpause;        /**< Long-pause animation slot. */
+  AnimationDefinition notes;            /**< Notes editor animation slot. */
+  AnimationDefinition notes_transition; /**< Notes transition animation slot. */
+  AnimationDefinition help;             /**< Help screen animation slot. */
+  AnimationDefinition
+    continue_animation; /**< Continue dialog animation slot. */
+} ConfigAnimations;
+
 /** Maximum number of white-noise tracks. */
 #define MAX_NOISE_TRACKS 16
 
@@ -211,6 +239,7 @@ typedef struct {
   ConfigVisual visual;
   ConfigPomodoro pomodoro;
   ConfigNotifications notifications;
+  ConfigAnimations animations;
   ConfigNoise noise;
   ConfigLogging logging;
   ConfigAutostart autostart;
@@ -368,6 +397,25 @@ void SyncIconsFromIndex(void);
 #define SHORT_PAUSE_TIME (g_config.pomodoro.short_pause)
 /** Long pause minutes, 5-60 step 5 (default: 30). */
 #define LONG_PAUSE_TIME (g_config.pomodoro.long_pause)
+
+/* Animation Settings ------------------------------------------------------- */
+
+/** Main-menu animation definition. */
+#define ANIMATION_MAINMENU (g_config.animations.mainmenu)
+/** Work-timer animation definition. */
+#define ANIMATION_WORKTIME (g_config.animations.worktime)
+/** Short-pause animation definition. */
+#define ANIMATION_SHORT_PAUSE (g_config.animations.shortpause)
+/** Long-pause animation definition. */
+#define ANIMATION_LONG_PAUSE (g_config.animations.longpause)
+/** Notes editor animation definition. */
+#define ANIMATION_NOTES (g_config.animations.notes)
+/** Notes transition animation definition. */
+#define ANIMATION_NOTES_TRANSITION (g_config.animations.notes_transition)
+/** Help screen animation definition. */
+#define ANIMATION_HELP (g_config.animations.help)
+/** Continue dialog animation definition. */
+#define ANIMATION_CONTINUE (g_config.animations.continue_animation)
 
 /* Notification Settings ---------------------------------------------------- */
 

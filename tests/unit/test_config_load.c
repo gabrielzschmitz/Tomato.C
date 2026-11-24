@@ -18,8 +18,8 @@
 #include <unistd.h>
 
 #include "core/config.h"
-#include "input/input.h"
 #include "external/toml-c.h"
+#include "input/input.h"
 #include "test_helpers.h"
 #include "test_keybind_stubs.h"
 
@@ -105,6 +105,10 @@ static void test_sample_config_matches_defaults(void) {
 
   ASSERT_EQ(GetConfigWarningCount(), 0);
   ASSERT_EQ(g_config.visual.clock_24h, default_clock);
+  ASSERT_STR_EQ(g_config.animations.continue_animation.name, "continue");
+  ASSERT_STR_EQ(g_config.animations.continue_animation.filename,
+                DATADIR "/sprites/continue.asc");
+  ASSERT_EQ(g_config.animations.continue_animation.default_frame, 3);
 }
 
 static void test_invalid_icons_fall_back_to_ascii(void) {
@@ -126,6 +130,43 @@ static void test_invalid_icons_fall_back_to_ascii(void) {
   const char* msg = GetConfigWarning(0, &level);
   ASSERT_EQ(level, ERROR_LEVEL_WARNING);
   ASSERT_NOT_NULL(strstr(msg, "nerdfont"));
+  remove(tmp);
+}
+
+static void test_animation_config_overrides(void) {
+  TEST("animation config overrides one slot and keeps other defaults");
+  char tmp[] = "/tmp/t_cfg_anim_XXXXXX";
+  int fd = mkstemp(tmp);
+  ASSERT_GT(fd, -1);
+  close(fd);
+  write_file(tmp,
+             "[animations.worktime]\n"
+             "name = \"custom-work\"\n"
+             "filename = \"$DATADIR/sprites/custom.asc\"\n"
+             "default_frame = 3\n"
+             "\n"
+             "[animations.help]\n"
+             "default_frame = 99\n"
+             "\n"
+             "[animations.notes]\n"
+             "default_frame = -4\n");
+
+  resetDefaults();
+  resetConfigWarnings();
+  loadTomlFile(tmp);
+
+  ASSERT_EQ(GetConfigWarningCount(), 0);
+  ASSERT_STR_EQ(g_config.animations.worktime.name, "custom-work");
+  ASSERT_STR_EQ(g_config.animations.worktime.filename,
+                DATADIR "/sprites/custom.asc");
+  ASSERT_EQ(g_config.animations.worktime.default_frame, 3);
+  ASSERT_STR_EQ(g_config.animations.help.name, "help");
+  ASSERT_STR_EQ(g_config.animations.help.filename, DATADIR "/sprites/help.asc");
+  ASSERT_EQ(g_config.animations.help.default_frame, 99);
+  ASSERT_EQ(g_config.animations.notes.default_frame, 0);
+  ASSERT_STR_EQ(g_config.animations.mainmenu.filename,
+                DATADIR "/sprites/mainmenu.asc");
+  ASSERT_EQ(g_config.animations.mainmenu.default_frame, 5);
   remove(tmp);
 }
 
@@ -397,6 +438,10 @@ static void test_reload_replaces_owned_strings(void) {
     "description = \"Desc one\"\n"
     "audio_path = \"$DATADIR/one.mp3\"\n"
     "\n"
+    "[animations.notes]\n"
+    "name = \"n1\"\n"
+    "filename = \"$DATADIR/notes.asc\"\n"
+    "\n"
     "[[noise.tracks]]\n"
     "name = \"Rain\"\n"
     "sound_path = \"/tmp/rain.mp3\"\n"
@@ -413,6 +458,8 @@ static void test_reload_replaces_owned_strings(void) {
     ASSERT_EQ(g_config.visual.status_bar_left_count, 1);
     ASSERT_STR_EQ(g_config.notifications.work.title, "One");
     ASSERT_NOT_NULL(g_config.notifications.work.audio_path);
+    ASSERT_STR_EQ(g_config.animations.notes.name, "n1");
+    ASSERT_STR_EQ(g_config.animations.notes.filename, DATADIR "/notes.asc");
     ASSERT_EQ(g_config.noise.track_count, 1);
     ASSERT_STR_EQ(g_config.noise.tracks[0].name, "Rain");
     ASSERT_STR_EQ(g_config.noise.tracks[0].icons[1], "r2");
@@ -511,6 +558,8 @@ int main(void) {
            "sample_config.toml loads cleanly and matches defaults");
   RUN_TEST(test_invalid_icons_fall_back_to_ascii,
            "invalid visual.icons falls back to ascii with a warning");
+  RUN_TEST(test_animation_config_overrides,
+           "animation config overrides one slot and keeps other defaults");
   RUN_TEST(test_stepper_keys_commit_and_cancel,
            "stepper: Enter commits, Esc/q/Ctrl-C cancel");
   RUN_TEST(test_save_keeps_comment_and_updates_value,

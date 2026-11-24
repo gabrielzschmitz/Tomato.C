@@ -23,15 +23,6 @@ typedef struct SpriteLibrary SpriteLibrary;
 #define MAX_ERROR_ENTRIES 128
 #define FPMS (1000.0 / (FPS))
 
-/**
- * Static description of one application animation.
- */
-typedef struct {
-  const char* filename; /**< Sprite file path. */
-  const char* name;     /**< Animation name stored in the sprite file. */
-  int default_frame;    /**< Frame used for static display. */
-} AnimationDefinition;
-
 #ifdef DEBUG_FLAG
 #define DEBUG 1
 #else

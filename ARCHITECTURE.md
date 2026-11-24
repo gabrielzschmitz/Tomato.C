@@ -39,6 +39,11 @@ loads each resource once, so all rollfilms share frames. Frames cache terminal
 dimensions. Rendering advances by decoded `wcwidth` cell width, not by source
 byte count.
 
+Startup loads the eight scene animation slots from `[animations.*]` TOML
+tables. Each table sets the `.asc` filename, the `[animation.NAME]` to select,
+and the static frame. Slot order stays fixed because scenes index the loaded
+rollfilms directly.
+
 ## Timer IPC
 
 The timer server runs in a child process. It owns a Unix-domain stream socket
