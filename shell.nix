@@ -58,6 +58,11 @@ pkgs.mkShell {
     mkdir -p "$TOMATO_CONFIG_DIR" "$TOMATO_STATE_DIR" "$TOMATO_RUNTIME_DIR"
     chmod 700 "$TOMATO_RUNTIME_DIR"
 
+    if [ ! -f "$TOMATO_CONFIG_DIR/config.toml" ] &&
+      [ -f "$TOMATO_DEV_ROOT/sample_config.toml" ]; then
+      cp "$TOMATO_DEV_ROOT/sample_config.toml" "$TOMATO_CONFIG_DIR/config.toml"
+    fi
+
     # Runtime shared libraries
     export LD_LIBRARY_PATH="${
       pkgs.lib.makeLibraryPath [

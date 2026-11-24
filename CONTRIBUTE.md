@@ -35,8 +35,8 @@ Debug builds use the same `.tmp/` directories without relying on the shell.
 `./build.sh --debug` embeds the project root, so `./tomato` reads
 `.tmp/config/tomato/config.toml`, writes state to `.tmp/state/tomato`, and
 places the timer socket in `.tmp/runtime`. Explicit `TOMATO_*` overrides still
-win. Copy `sample_config.toml` to `.tmp/config/tomato/config.toml` if you want
-the sample values in a debug build.
+win. Development shells copy `sample_config.toml` to
+`.tmp/config/tomato/config.toml` when that file is missing.
 
 Build and run tests from inside the development shell:
 
